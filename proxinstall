@@ -1,0 +1,1729 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+use IPC::Open3;
+use IO::File;
+use IO::Dir;
+use IO::Select;
+use Cwd 'abs_path';
+use Gtk2 '-init';
+use Gtk2::Html2;
+use Gtk2::Gdk::Keysyms;
+use Encode;
+
+my $release = '2.0';
+
+my $kapi = `uname -r`;
+chomp $kapi;
+
+my $opt_testmode;
+
+if (!GetOptions ('testmode=s' => \$opt_testmode)) {
+    die "usage error\n";
+    exit (-1);
+}
+
+my $logfd = IO::File->new (">/tmp/install.log");
+
+my $proxmox_dir = $opt_testmode ? "." : "/var/lib/pve-installer";
+
+$ENV{DEBIAN_FRONTEND} = 'noninteractive';
+$ENV{LC_ALL} = 'C';
+
+my ($window, $cmdbox, $inbox, $document, $htmlview);
+my ($next, $next_fctn, $target_hd, $master_hd);
+my ($progress, $progress_status);
+my ($ipaddress, $ip_1, $ip_2, $ip_3, $ip_4);
+my ($netmask, $mask_1, $mask_2, $mask_3, $mask_4);
+my ($gateway, $gw_1, $gw_2, $gw_3, $gw_4);
+my ($dnsserver, $dns_1, $dns_2, $dns_3, $dns_4);
+my $hostname = 'proxmox';
+my $domain = 'domain.tld';
+my $cmdline = `cat /proc/cmdline` || '';
+my $ipconf;
+my $country;
+my $timezone = 'Europe/Vienna';
+my $password;
+my $mailto;
+my $keymap = 'en-us';
+my $cmap;
+
+my $filesys = ($cmdline =~ m/\sext4(\s.*)$/) ? 'ext4' : 'ext3';
+
+my $postfix_main_cf = <<_EOD;
+# See /usr/share/postfix/main.cf.dist for a commented, more complete version
+
+myhostname=__FQDN__
+
+smtpd_banner = \$myhostname ESMTP \$mail_name (Debian/GNU)
+biff = no
+
+# appending .domain is the MUA's job.
+append_dot_mydomain = no
+
+# Uncomment the next line to generate "delayed mail" warnings
+#delay_warning_time = 4h
+
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+mydestination = \$myhostname, localhost.\$mydomain, localhost
+relayhost = 
+mynetworks = 127.0.0.0/8
+inet_interfaces = loopback-only
+recipient_delimiter = +
+
+_EOD
+
+sub syscmd { 
+    my ($cmd) = @_;
+
+    return run_command ($cmd, undef, undef, 1);
+}
+ 
+sub run_command {
+    my ($cmd, $func, $input, $noout) = @_;
+
+    my $cmdtxt;
+    if ($input && ($cmd !~ m/chpasswd/)) {
+	$cmdtxt = "# $cmd <<EOD\n$input";
+	chomp $cmdtxt;
+	$cmdtxt .= "\nEOD\n";
+    } else {
+	$cmdtxt = "# $cmd\n";
+    }
+    print $cmdtxt;
+    STDOUT->flush();
+    print $logfd $cmdtxt;
+
+    my $reader = IO::File->new();
+    my $writer = IO::File->new();
+    my $error  = IO::File->new();
+
+    my $orig_pid = $$;
+
+    my $pid;
+    eval {
+	$pid = open3 ($writer, $reader, $error, $cmd) || die $!;
+    };
+
+    my $err = $@;
+
+    # catch exec errors
+    if ($orig_pid != $$) {
+	POSIX::_exit (1); 
+	kill ('KILL', $$); 
+    }
+
+    die $err if $err;
+
+    print $writer $input if defined $input;
+    close $writer;
+
+    my $select = new IO::Select;
+    $select->add ($reader);
+    $select->add ($error);
+
+    my ($ostream, $logout) = ('', '', '');
+
+    while ($select->count) {
+	my @handles = $select->can_read (0.2);
+
+	Gtk2->main_iteration while Gtk2->events_pending;
+
+	next if !scalar (@handles); # timeout
+
+	foreach my $h (@handles) {
+	    my $buf = '';
+	    my $count = sysread ($h, $buf, 4096);
+	    if (!defined ($count)) {
+		my $err = $!;
+		kill (9, $pid);
+		waitpid ($pid, 0);
+		die "command '$cmd' failed: $err";
+	    }
+	    $select->remove ($h) if !$count;
+	    if ($h eq $reader) {
+		$ostream .= $buf if !($noout || $func);
+		$logout .= $buf;
+		while ($logout =~ s/^([^\010\r\n]*)(\r|\n|(\010)+|\r\n)//s) {
+		    my $line = $1;
+		    &$func($line) if $func;
+		}
+
+	    } elsif ($h eq $error) {
+		$ostream .= $buf if !($noout || $func);
+	    }
+	    print $buf;
+	    STDOUT->flush();
+	    print $logfd $buf;
+	}
+    }
+
+    &$func($logout) if $func;
+
+    my $rv = waitpid ($pid, 0);
+
+    return $? if $noout; # behave like standard system();
+
+    my $ec = ($? >> 8);
+
+    if ($ec) {  
+	die "command '$cmd' failed with exit code $ec";
+    }
+
+    return $ostream;
+}
+
+sub detect_country {
+
+    print "trying to detect country...\n";
+    open (TMP, "traceroute -N 1 -q 1 -n www.debian.org|");
+    
+    my $country;
+
+    my $previous_alarm = alarm (10);
+    eval  {
+	local $SIG{ALRM} = sub { die "timed out!\n" };
+	my $line;
+	while (defined ($line = <TMP>)) {
+	    print $logfd "DC TRACEROUTE: $line";
+	    if ($line =~ m/\s*\d+\s+(\d+\.\d+\.\d+\.\d+)\s/) {
+		my $geoip = `geoiplookup $1`;
+		print $logfd "DC GEOIP: $geoip";
+		if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
+		    $country = lc ($1);
+		    last;
+		}
+	    }
+	}
+    };
+
+    my $err = $@;
+
+    alarm ($previous_alarm);
+
+    close (TMP);
+
+    if ($err) {
+	print "unable to detect country - $err\n";
+    } elsif ($country) {
+	print "detected country: " . uc($country) . "\n";
+    } else {
+	print "unable to detect country\n";
+    }
+
+    return $country;
+}
+
+sub get_memtotal {
+
+    open (MEMINFO, "/proc/meminfo");
+
+    my $res = 512; # default to 512 if something goes wrong
+    while (my $line = <MEMINFO>) {
+	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
+	    $res = int ($1 / 1024);
+	} 
+    }
+
+    close (MEMINFO);
+
+    return $res;
+}
+
+my $total_memory = get_memtotal();
+
+sub link_points_to {
+    my ($src, $dest) = @_;
+
+    my ($dev1,$ino1) = stat ($src);
+    my ($dev2,$ino2) = stat ($dest);
+
+    return 0 if !($dev1 && $dev2 && $ino1 && $ino2);
+
+    return $ino1 == $ino2 && $dev1 == $dev2;
+}
+
+sub find_stable_path {
+    my ($stabledir, $bdev) = @_;
+
+    my $dh = IO::Dir->new ($stabledir);
+    if ($dh) {
+	while (defined(my $tmp = $dh->read)) {
+	    my $path = "$stabledir/$tmp";
+	    if (link_points_to ($path, $bdev)) {
+		return wantarray ? ($path, $tmp) : $path;
+	    }
+	}
+
+	$dh->close;
+    }
+
+    return wantarray ? () : undef;
+}
+
+sub find_dev_by_uuid {
+    my $bdev = shift;
+
+    my ($full_path, $name) = find_stable_path ("/dev/disk/by-uuid", $bdev);
+
+    return $name;
+}
+
+sub hd_list {
+
+    my $res = ();
+
+    if ($opt_testmode) {
+	push @$res, [-1, $opt_testmode, int((-s $opt_testmode)/512), "TESTDISK"];
+    }
+
+    my $count = 0;
+
+    foreach my $bd (</sys/block/*>) {
+	next if $bd =~ m|^/sys/block/ram\d+$|;
+	next if $bd =~ m|^/sys/block/loop\d+$|;
+	next if $bd =~ m|^/sys/block/md\d+$|;
+	next if $bd =~ m|^/sys/block/dm-.*$|;
+	next if $bd =~ m|^/sys/block/fd\d+$|;
+	next if $bd =~ m|^/sys/block/sr\d+$|;
+
+	my $dev = `cat '$bd/dev'`;
+	chomp $dev;
+	
+	next if !$dev;
+
+	my $info = `udevadm info --path $bd --query all`;
+	next if !$info;
+
+	next if $info !~ m/^E: DEVTYPE=disk$/m;
+
+	next if $info =~ m/^E: ID_CDROM/m;
+
+	my ($name) = $info =~ m/^N: (\S+)$/m;
+
+	if ($name) { 
+	    my $real_name = "/dev/$name";
+
+	    my $size = `cat '$bd/size'`;
+	    chomp $size;
+	    $size = undef if !($size && $size =~ m/^\d+$/);
+
+	    my $model = `cat '$bd/device/model'`;
+	    $model =~ s/^\s+//;
+	    $model =~ s/\s+$//;
+	    if (length ($model) > 30) {
+		$model = substr ($model, 0, 30);
+	    }
+	    push @$res, [$count++, $real_name, $size, $model] if $size;
+	} else {
+	    print STDERR "ERROR: unable to map device $dev ($bd)\n";
+	}
+    }
+
+    return $res;
+}
+
+sub read_cmap {
+    my $countryfn = $opt_testmode ? "/usr/share/pve-manager/country.dat" : 
+	"/proxmox/country.dat";
+    open (TMP, "<$countryfn") || die "unable to open '$countryfn' - $!\n";
+    my $line;
+    my $country = {};
+    my $countryhash = {};
+    my $kmap = {};
+    my $kmaphash = {};
+    while (defined ($line = <TMP>)) {
+	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
+	    $kmap->{$1} = {
+		name => $2,
+		kvm => $3,
+		console => $4,
+		x11 => $5,
+		x11var => $6,
+	    };
+	    $kmaphash->{$2} = $1;
+	} elsif ($line =~ m|^([a-z]{2}):([^:]+):([^:]*):([^:]*):$|) {
+	    $country->{$1} = {
+		name => $2,
+		kmap => $3,
+		mirror => $4,
+	    };
+	    $countryhash->{lc($2)} = $1;
+	} else {
+	    warn "unable to parse 'country.dat' line: $line";
+	}
+    }
+    close (TMP);
+
+    my $zones = {};
+    my $cczones = {};
+    my $zonefn = "/usr/share/zoneinfo/zone.tab";
+    open (TMP, "<$zonefn") || die "unable to open '$zonefn' - $!\n";
+    while (defined ($line = <TMP>)) {
+	next if $line =~ m/^\#/;
+	next if $line =~ m/^\s*$/;
+	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
+	    my $cc = lc($1);
+	    $cczones->{$cc}->{$2} = 1;
+	    $country->{$cc}->{zone} = $2 if !defined ($country->{$cc}->{zone});
+	    $zones->{$2} = 1;
+
+	}
+    }
+    close (TMP);
+
+    return {
+	zones => $zones,
+	cczones => $cczones,
+	country => $country,
+	countryhash => $countryhash,
+	kmap => $kmap,
+	kmaphash => $kmaphash,
+    }
+}
+
+# search for Harddisks
+my $hds = hd_list ();
+
+sub hd_size {
+    my ($dev) = @_;
+
+    foreach my $hd (@$hds) {
+	my ($disk, $devname, $size, $model) = @$hd;
+	return int($size/2) if $devname eq $dev;
+    }
+
+    die "no such device '$dev'";
+}
+
+# find the master boot disk - return the first found scsi/ide disk
+sub find_master {
+    my ($target_hd) = @_; 
+
+    foreach my $hd (sort { ${$a}[1] cmp ${$b}[1] } @$hds) {
+	my ($disk, $devname) = @$hd;
+	next if $disk < 0;
+
+	if ($target_hd =~ m|^/dev/sd|) {
+	    return $devname if $devname =~ m|^/dev/sd|;
+	} elsif ($target_hd =~ m|^/dev/hd|) {
+	    return $devname if $devname =~ m|^/dev/hd|;
+	} elsif ($target_hd =~ m|^/dev/i2o/|) {
+	    return $devname if $devname =~ m|^/dev/i2o/|;
+	} elsif ($target_hd =~ m|^/dev/ataraid/|) {
+	    return $devname if $devname =~ m|^/dev/ataraid/|;
+	} elsif ($target_hd =~ m|^/dev/ida/|) {
+	    return $devname if $devname =~ m|^/dev/ida/|;
+	} elsif ($target_hd =~ m|^/dev/cciss/|) {
+	    return $devname if $devname =~ m|^/dev/cciss/|;
+	} elsif ($target_hd =~ m|^/dev/rd/|) {
+	    return $devname if $devname =~ m|^/dev/rd/|;
+	}
+    }
+
+    return $target_hd;
+}
+
+sub get_partition_dev {
+    my ($target_hd, $partnum) = @_;
+
+    if ($target_hd =~ m|^/dev/[hxsev]d[a-z]$|) {
+	return "${target_hd}$partnum";
+    } elsif ($target_hd =~ m|^/dev/[^/]+/c\d+d\d+$|) {
+	return "${target_hd}p$partnum";
+    } elsif ($target_hd =~ m|^/dev/[^/]+/d\d+$|) {
+	return "${target_hd}p$partnum";
+    } elsif ($target_hd =~ m|^/dev/[^/]+/hd[a-z]$|) {
+	return "${target_hd}$partnum";
+    } else {
+	die "unable to get device for partition $partnum on device $target_hd\n";
+    }
+
+}
+
+sub get_boot_part {
+    my ($target_hd, $gpt) = @_;
+
+    return get_partition_dev ($target_hd, $gpt ? 2 : 1);
+}
+
+sub get_lvm_part {
+    my ($target_hd, $gpt) = @_;
+
+    return get_partition_dev ($target_hd, $gpt ? 3 : 2);
+}
+
+sub write_config {
+    my ($text, $filename) = @_;
+
+    my $fd = IO::File->new (">$filename") ||
+	die "unable to open file '$filename' - $!";
+    print $fd $text;
+    $fd->close();
+}
+
+sub update_progress {
+    my ($frac, $start, $end, $text) = @_;
+
+    my $part = $end - $start;
+    my $res = $start + $frac*$part;
+
+    $progress->set_fraction ($res);
+    $progress->set_text (sprintf ("%d%%", int ($res*100)));
+    $progress_status->set_text ($text) if defined ($text);
+
+    Gtk2->main_iteration while Gtk2->events_pending;
+}
+
+sub create_filesystem {
+    my ($dev, $name, $type, $start, $end, $fs, $fe, $opts) = @_;
+
+    $opts = '' if !$opts;
+
+    my $range = $end - $start;
+    my $rs = $start + $range*$fs;
+    my $re = $start + $range*$fe;
+    my $max = 0;
+
+    update_progress (0, $rs, $re, "creating $name filesystem");
+
+    run_command ("mkfs.$type $opts -F $dev", sub {
+	my $line = shift;
+
+	if ($line =~ m/Writing inode tables:\s+(\d+)\/(\d+)/) {
+	    $max = $2;
+	} elsif ($max && $line =~ m/(\d+)\/$max/) {
+	    update_progress (($1/$max)*0.9, $rs, $re);
+	} elsif ($line =~ m/Creating journal.*done/) {
+	    update_progress (0.95, $rs, $re);
+	} elsif ($line =~ m/Writing superblocks and filesystem.*done/) {
+	    update_progress (1, $rs, $re);
+	} 
+    });
+}
+
+sub debconfig_set {
+    my ($targetdir, $dcdata) = @_;
+
+    my $cfgfile = "/tmp/debconf.txt";
+    write_config ($dcdata, "$targetdir/$cfgfile");
+    syscmd ("chroot $targetdir debconf-set-selections $cfgfile"); 
+    unlink "$targetdir/$cfgfile";    
+}
+
+sub diversion_add {
+    my ($targetdir, $cmd, $new_cmd) = @_;
+
+    syscmd ("chroot $targetdir dpkg-divert --package proxmox " .
+	    "--add --rename $cmd") == 0 ||
+	    die "unable to exec dpkg-divert\n";
+
+    syscmd ("ln -sf ${new_cmd} $targetdir/$cmd") == 0 ||
+	die "unable to link diversion to ${new_cmd}\n";  
+}
+
+sub diversion_remove {
+    my  ($targetdir, $cmd) = @_;
+
+    syscmd ("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0 ||
+	die "unable to remove $cmd diversion\n";
+	    
+    syscmd ("chroot $targetdir dpkg-divert --remove $cmd") == 0 ||
+	die "unable to remove $cmd diversion\n";
+}
+
+sub extract_data {
+    my ($tgzfile, $targetdir) = @_;
+
+    die "target '$targetdir' does not exist\n" if ! -d  $targetdir;
+
+    my $rootdev;
+    my $bootdev;
+    my $datadev;
+    my $swapfile;
+
+    my $ptype = 'msdos';
+
+    eval {
+
+	my $maxper = 0.25;
+
+	update_progress (0, 0, $maxper, "create partitions");
+
+	if ( -b $target_hd) {
+	    syscmd ("dd if=/dev/zero of=${target_hd} bs=512 count=256");
+	    my $hdsize = hd_size ($target_hd); # size in blocks (1024 bytes)
+
+	    if ($hdsize >= 2*1024*1024*1024) { # MBR can only handle 2 TB
+		$ptype = 'gpt';
+	    }
+
+	    my $bootsize_mb = 512;
+	    my $bootsize = $bootsize_mb * 1024;
+	    my $hdsize_mb = $hdsize/1024;
+
+	    my $pcmd = "parted --align optimal ${target_hd}";
+	    $pcmd .= " unit MiB";
+	    $pcmd .= " mklabel $ptype";
+
+	    my $pnum = 1;
+
+	    if ($ptype eq 'gpt') {
+		$pcmd .= " mkpart primary 1 2";
+		$pcmd .= " set $pnum bios_grub on";
+		$pnum++;
+	    };
+
+	    $pcmd .= " mkpart primary ext2 $pnum ${bootsize_mb}";
+	    $pcmd .= " set $pnum boot on";
+	    $pnum++;
+
+
+	    $pcmd .= " mkpart primary ext2 ${bootsize_mb} ${hdsize_mb}";
+	    $pcmd .= " set $pnum lvm on";
+
+	    syscmd($pcmd) == 0 ||
+		die "unable to partition harddisk '${target_hd}'\n";
+
+	    sleep(1); # give kernel time to reread part table
+
+	    my $lvmdev = get_lvm_part($target_hd, $ptype eq 'gpt');
+
+	    $rootdev = '/dev/pve/root';
+	    $datadev = '/dev/pve/data';
+	    $swapfile = '/dev/pve/swap';
+
+	    # we use --metadatasize 250k, which reseults in "pe_start = 512"
+	    # so pe_start is aligned on a 128k boundary (advantage for SSDs)
+	    syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
+		die "unable to initialize physical volume $lvmdev";
+	    syscmd ("/sbin/vgcreate pve $lvmdev") == 0 ||
+		die "unable to create volume group";
+
+	    my $hdgb = int($hdsize/(1024*1024));
+	    die "hardisk too small (${hdgb}GB)" if $hdgb < 4;
+
+	    my $swapsize;
+	    if ($cmdline =~ m/swapsize=(\d+)[\s\n]/i) {
+		$swapsize=$1*1024*1024;
+	    } else {
+		my $ss = int ($total_memory / 1024);
+		$ss = 4 if $ss < 4;
+		$ss = ($hdgb/8) if $ss > ($hdgb/8);
+		$swapsize = $ss*1024*1024;
+	    }
+
+	    my $space = (($hdgb > 32) ? 4 : ($hdgb/8))*1024*1024;
+
+	    my $maxroot;
+	    if ($cmdline =~ m/maxroot=(\d+)[\s\n]/i) {
+		$maxroot = $1;
+	    } else {
+		$maxroot = 96;
+	    }
+
+	    my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
+	    my $rest = int($hdsize) - $bootsize - $swapsize - $space - $rootsize; # in KB
+	    syscmd ("/sbin/lvcreate -L${swapsize}K -nswap pve") == 0 ||
+		die "unable to create swap volume";
+
+	    syscmd ("/sbin/lvcreate -L${rootsize}K -nroot pve") == 0 ||
+		die "unable to create root volume";
+
+	    syscmd ("/sbin/lvcreate -L${rest}K -ndata pve") == 0 ||
+		die "unable to create data volume";
+
+	    syscmd ("/sbin/vgchange -a y pve") == 0 ||
+		die "unable to activate volume group";
+
+	} else {
+	    $rootdev = $target_hd;
+	    syscmd ("umount $rootdev");
+	}
+
+	update_progress (0.03, 0, $maxper, "create swap space");
+	if ($swapfile) {
+	    syscmd ("mkswap $swapfile") == 0 ||
+		die "unable to create swap space\n";
+	}
+
+	update_progress (0.05, 0, $maxper, "creating filesystems");
+
+	if ( -b $target_hd) {
+	    $bootdev = get_boot_part ($target_hd, $ptype eq 'gpt');
+	    create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1);
+	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
+	    create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
+	} else {
+	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
+	}
+
+	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
+
+	if ( -b $target_hd) {
+
+	    # trigger udev to create /dev/disk/by-uuid
+	    syscmd ("udevadm trigger --subsystem-match block");
+	    syscmd ("udevadm settle --timeout 10");
+
+	    syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
+		die "unable to mount $rootdev\n";
+
+	    mkdir "$targetdir/boot";
+	    syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
+		die "unable to mount $bootdev\n";
+
+	    mkdir "$targetdir/var";
+	    mkdir "$targetdir/var/lib";
+	    mkdir "$targetdir/var/lib/vz";
+	    syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
+		die "unable to mount $datadev\n";
+
+	} else {
+	    syscmd ("mount $rootdev $targetdir -o loop,noatime,barrier=0") == 0 ||
+		die "unable to mount $rootdev\n";
+	}
+
+	display_html ("extract2-rulesystem.htm");
+	update_progress (1, 0.05, $maxper, "extracting base system");
+
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($tgzfile);
+	$ino || die "unable to open file '$tgzfile' - $!\n";
+	
+	my $files;
+	if ($opt_testmode) {
+	    $files = `cat /pve/$release/install/pve-base.cnt`;
+	} else {
+	    $files = `cat /proxmox/pve-base.cnt`;
+	}
+
+	my $per = 0;
+	my $count = 0;
+
+	run_command ("tar xvf $tgzfile -C $targetdir", sub {
+	    my $line = shift;
+	    $count++;
+	    my $nper = int (($count *100)/$files);
+	    if ($nper != $per) {
+		$per = $nper;
+		my $frac = $per > 100 ? 100 : $per/100;
+		update_progress ($frac, $maxper, 0.5);
+	    }
+	});
+
+	syscmd ("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 ||
+	    die "unable to mount tmpfs on $targetdir/tmp\n";
+	syscmd ("mount -n -t proc proc $targetdir/proc") == 0 ||
+	    die "unable to mount proc on $targetdir/proc\n";
+	syscmd ("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
+	    die "unable to mount sysfs on $targetdir/sys\n";
+
+	display_html ("extract3-spam.htm");
+	update_progress (1, $maxper, 0.5, "configuring base system");
+
+	# configure hosts
+
+	my $hosts = 
+	    "127.0.0.1 localhost.localdomain localhost\n" .
+	    "$ipaddress $hostname.$domain $hostname pvelocalhost\n\n" . 
+	    "# The following lines are desirable for IPv6 capable hosts\n\n" .
+	    "::1     ip6-localhost ip6-loopback\n" .
+	    "fe00::0 ip6-localnet\n" .
+	    "ff00::0 ip6-mcastprefix\n" .
+	    "ff02::1 ip6-allnodes\n" .
+	    "ff02::2 ip6-allrouters\n" .
+	    "ff02::3 ip6-allhosts\n";
+
+	write_config ($hosts, "$targetdir/etc/hosts"); 
+
+	write_config ("$hostname\n", "$targetdir/etc/hostname"); 
+
+	syscmd ("/bin/hostname $hostname") if !$opt_testmode;
+
+	# configure interfaces
+
+	my $ifaces = 
+	    "auto lo\niface lo inet loopback\n\n" .
+	    "auto vmbr0\niface vmbr0 inet static\n" .
+	    "\taddress $ipaddress\n" .
+	    "\tnetmask $netmask\n" .
+	    "\tgateway $gateway\n" .
+	    "\tbridge_ports eth0\n" .
+	    "\tbridge_stp off\n" .
+	    "\tbridge_fd 0\n";
+
+	write_config ($ifaces, "$targetdir/etc/network/interfaces");
+
+	# configure dns
+
+	my $resolfconf = "search $domain\nnameserver $dnsserver\n";
+	write_config ($resolfconf, "$targetdir/etc/resolv.conf");
+
+	# try to use UUID=XXX for boot device
+	my $boot_uuid = $bootdev;
+	if (my $uuid = find_dev_by_uuid ($bootdev)) {
+	    $boot_uuid = "UUID=$uuid";
+	}
+
+	# configure fstab
+
+	my $fstab = 
+	    "# <file system> <mount point> <type> <options> <dump> <pass>\n" .
+	    "$rootdev / $filesys errors=remount-ro 0 1\n";
+
+	$fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
+
+	$fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
+
+	$fstab .= "$swapfile none swap sw 0 0\n" if $swapfile;
+
+	$fstab .= "proc /proc proc defaults 0 0\n";
+
+	write_config ($fstab, "$targetdir/etc/fstab");
+	write_config ("", "$targetdir/etc/mtab");
+	
+	syscmd ("cp ${proxmox_dir}/policy-disable-rc.d " .
+		"$targetdir/usr/sbin/policy-rc.d") == 0 || 
+		die "unable to copy policy-rc.d\n";
+	syscmd ("cp ${proxmox_dir}/fake-start-stop-daemon " .
+		"$targetdir/sbin/") == 0 || 
+		die "unable to copy start-stop-daemon\n";
+
+	diversion_add ($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");
+	diversion_add ($targetdir, "/usr/sbin/update-grub", "/bin/true");
+	diversion_add ($targetdir, "/usr/sbin/update-initramfs", "/bin/true");
+
+	syscmd ("touch  $targetdir/proxmox_install_mode");
+
+	debconfig_set ($targetdir, <<_EOD);
+locales locales/default_environment_locale select en_US.UTF-8
+locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
+samba-common samba-common/dhcp boolean false
+samba-common samba-common/workgroup string WORKGROUP
+postfix postfix/main_mailer_type select Local only
+console-data console-data/keymap/policy select Don\'t touch keymap
+_EOD
+
+	write_config ("$mailto\n", "$targetdir/root/.forward");
+
+	my $pkgdir = $opt_testmode ? "packages" : "/proxmox/packages";
+	my $pkg_count = 0;
+	while (<$pkgdir/*.deb>) { $pkg_count++ };
+
+	$count = 0;
+	while (<$pkgdir/*.deb>) {
+	    chomp;
+	    my $path = $_;
+	    my ($deb) = $path =~ m/$pkgdir\/(.*\.deb)/;
+	    update_progress ($count/$pkg_count, 0.5, 0.75, "extracting $deb");
+	    print "extracting: $deb\n";
+	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
+		die "installation of package $deb failed\n";
+	    syscmd ("chroot $targetdir dpkg --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
+		die "installation of package $deb failed\n";	
+	    update_progress ((++$count)/$pkg_count, 0.5, 0.75);
+	}
+
+	display_html ("extract4-virus.htm");
+
+	my $cmd = "chroot $targetdir dpkg --force-confold --configure -a";
+	$count = 0;
+	run_command ($cmd, sub {
+	    my $line = shift;
+	    if ($line =~ m/Setting up\s+(\S+)/) {
+		update_progress ((++$count)/$pkg_count, 0.75, 0.95,
+				 "configuring $1");
+	    }
+	});
+	    
+	debconfig_set ($targetdir, <<_EOD); 
+postfix postfix/main_mailer_type select No configuration
+_EOD
+
+	unlink "$targetdir/etc/mailname";
+	$postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
+	write_config ($postfix_main_cf, "$targetdir/etc/postfix/main.cf");
+
+	# make sure we have all postfix directories
+	syscmd ("chroot $targetdir /usr/sbin/postfix check");
+	# cleanup mail queue
+	syscmd ("chroot $targetdir /usr/sbin/postsuper -d ALL");
+
+	unlink  "$targetdir/proxmox_install_mode";
+
+	# disable bacula-fd
+	syscmd ("touch '$targetdir/etc/bacula/do_not_run'");
+
+	# set timezone	
+	unlink ("$targetdir/etc/localtime");
+	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
+	write_config ("$timezone\n", "$targetdir/etc/timezone");
+
+	# set console keymap
+	if (my $kmapfile = $cmap->{kmap}->{$keymap}->{console}) {
+	    syscmd ("chroot $targetdir /usr/sbin/install-keymap '/usr/share/keymaps/i386/$kmapfile'");
+	}
+
+	my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
+	write_config ("keyboard: $vnckmap\n", 
+		      "$targetdir/etc/pve-installer.cfg");
+
+	# enable apache port redirect
+	syscmd ("chroot $targetdir a2ensite pve-redirect.conf");
+
+	# set apt mirror
+	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
+	    my $fn = "$targetdir/etc/apt/sources.list";
+	    syscmd ("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'"); 
+	}
+
+	# save installer settings
+	my $ucc = uc ($country);
+	debconfig_set ($targetdir, <<_EOD);
+pve-manager pve-manager/country string $ucc
+_EOD
+
+	update_progress (0.8, 0.95, 1, "make system bootable");
+
+	diversion_remove ($targetdir, "/usr/sbin/update-grub");
+	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
+
+	if (!$opt_testmode && -b $target_hd) {
+
+	    unlink ("$targetdir/etc/mtab");
+	    symlink ("/proc/mounts", "$targetdir/etc/mtab");
+	    syscmd ("mount -n --bind /dev $targetdir/dev");
+
+	    syscmd ("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
+		die "unable to install initramfs\n";
+
+	    syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy '(hd0)'") == 0 ||
+		die "unable to install the boot loader\n";
+
+	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
+		die "unable to install the boot loader\n";
+
+	    syscmd ("umount $targetdir/dev");
+	}
+
+
+	# cleanup 
+
+	# hack: remove dead.letter from sshd installation 
+	syscmd ("rm -rf $targetdir/dead.letter");
+
+	unlink ("$targetdir/etc/mtab");
+	syscmd ("touch $targetdir/etc/mtab");
+
+	unlink "$targetdir/usr/sbin/policy-rc.d";
+
+	diversion_remove ($targetdir, "/sbin/start-stop-daemon");
+
+	# set root password
+	my $octets = encode("utf-8", $password);	
+	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
+		     "root:$octets\n");
+    };
+
+    my $err = $@;
+
+    update_progress (1, 0, 1, "");
+
+    print $err if $err;
+
+    if ($opt_testmode) {
+	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
+    }
+
+    syscmd ("umount $targetdir/boot");
+    syscmd ("umount $targetdir/var/lib/vz");
+    syscmd ("umount $targetdir/tmp");
+    syscmd ("umount $targetdir/proc");
+    syscmd ("umount $targetdir/sys");
+    syscmd ("umount -d $targetdir");
+
+    die $err if $err;
+}
+
+sub display_html {
+    my ($filename) = @_;
+
+    $htmlview->set_document(undef);
+    $document->clear;
+    $htmlview->set_document($document);
+
+    $document->open_stream ("text/html");
+
+    my $fn = "${proxmox_dir}/html/$filename";
+    open (HTML, $fn) || 
+	die "unable to open file '$fn' - $!\n";
+    while (<HTML>) { $document->write_stream ($_); }
+    close (HTML);
+
+    $document->close_stream;
+}
+
+sub set_next {
+    my ($text, $fctn) = @_;
+
+    $next_fctn = $fctn;
+    $text = "_Next" if !$text;
+    $next->set_label ($text);
+    
+    $next->grab_focus ();
+}
+
+sub url_requested {
+    my ($doc, $url, $stream) = @_;
+	
+    $stream->set_cancel_func (sub {}); # hack: avoid warning
+
+    my $path = "${proxmox_dir}/html/$url";
+
+    if (-f $path) {
+	open (HTMLTMP, $path) ||
+	    die "unable to open file '$path' - $! ";
+	my $buf;
+	while (my $i = read (HTMLTMP, $buf, 4096)) {
+	    $stream->write ($buf);			
+	    Gtk2->main_iteration while Gtk2->events_pending;
+	}
+	close (HTMLTMP);
+    }
+
+    #$stream->close(); # hack: dont close - avoid crash
+}
+
+sub create_main_window {
+
+    $window = Gtk2::Window->new ();
+    $window->set_default_size (1024, 768);
+    $window->set_decorated (0) if !$opt_testmode;
+
+    my $vbox = Gtk2::VBox->new (0, 0);
+
+    my $image = Gtk2::Image->new_from_file  ("${proxmox_dir}/proxlogo.xpm");
+    $vbox->pack_start ($image, 0, 0, 0);
+
+    my $hbox = Gtk2::HBox->new (0, 0);
+    $vbox->pack_start ($hbox, 1, 1, 0);
+
+    my $f1 = Gtk2::Frame->new ();
+    $f1->set_shadow_type ('in');
+    $hbox->pack_start ($f1, 1, 1, 0);
+
+    my $sep1 = Gtk2::HSeparator->new;
+    $vbox->pack_start ($sep1, 0, 0, 0);
+
+    $cmdbox = Gtk2::HBox->new ();
+    $vbox->pack_start ($cmdbox, 0, 0, 10);
+
+    $next = Gtk2::Button->new ('_Next');
+    $next->signal_connect (clicked => sub { &$next_fctn (); });
+    $cmdbox->pack_end ($next, 0, 0, 10);
+    my $abort = Gtk2::Button->new ('_Abort');
+    $abort->can_focus (0);
+    $cmdbox->pack_start ($abort, 0, 0, 10);
+    $abort->signal_connect (clicked => sub { exit (-1); });
+
+    my $vbox2 = Gtk2::VBox->new (0, 0);
+    $f1->add ($vbox2);
+
+    $htmlview = new Gtk2::Html2::View;
+    # hack: create a separate style - else Gtk2::Html2 modifies
+    # main window style
+    my $rcs1 = Gtk2::RcStyle->new;
+    $htmlview->modify_style ($rcs1);
+
+    $document = new Gtk2::Html2::Document;
+    $document->signal_connect (request_url => \&url_requested);
+
+    $document->clear;
+    $htmlview->set_document ($document);
+
+    my $hbox2 = Gtk2::HBox->new (0, 0);
+    $hbox2->pack_start ($htmlview, 1, 1, 0);
+
+    $vbox2->pack_start ($hbox2, 1, 1, 0);
+
+    my $vbox3 = Gtk2::VBox->new (0, 0);
+    $vbox2->pack_start ($vbox3, 0, 0, 0);
+
+    my $sep2 = Gtk2::HSeparator->new;
+    $vbox3->pack_start ($sep2, 0, 0, 0);
+
+    $inbox = Gtk2::HBox->new (0, 0);
+    $vbox3->pack_start ($inbox, 0, 0, 0);
+
+    $window->add ($vbox);
+
+    $window->show_all;
+    $window->realize ();
+}
+
+sub cleanup_view {
+    my $list = $inbox->get_children;
+    foreach my $c ($list) {
+	next if !defined ($c);
+	$inbox->remove ($c);
+    }
+}
+
+sub check_num {
+    my ($entry, $event) = @_;
+
+    my $val = $event->keyval;
+
+    if ($val == ord '.') {
+	$entry->parent->child_focus ('right');
+	return 1;
+    }
+
+    if ($val == $Gtk2::Gdk::Keysyms{ISO_Left_Tab} || 
+	$val == $Gtk2::Gdk::Keysyms{Shift_L} || 
+	$val == $Gtk2::Gdk::Keysyms{Tab} ||
+	$val == $Gtk2::Gdk::Keysyms{BackSpace} ||
+	$val == $Gtk2::Gdk::Keysyms{Delete} ||
+	($val >= ord '0' && $val <= ord '9') ||
+	($val >= $Gtk2::Gdk::Keysyms{KP_0} && 
+	 $val <= $Gtk2::Gdk::Keysyms{KP_9})) {
+	return undef;
+    }
+
+    return 1;
+}
+
+sub check_range {
+    my ($entry, $event) = @_;
+
+    my $text = $entry->get_text;
+    if (!defined($text) || ($text !~ m/^(\d+)$/) || ($1 > 255)) {
+	$entry->set_text ($entry->{default});
+    }
+
+    return undef;
+}
+
+
+sub creat_text_input {
+    my ($default, $text) = @_;
+
+    my $hbox = Gtk2::HBox->new (0, 0);
+
+    my $label = Gtk2::Label->new ($text);
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox->pack_start ($label, 0, 0, 10);
+    my $e1 = Gtk2::Entry->new ();
+    $e1->set_width_chars (30);
+    $hbox->pack_start ($e1, 0, 0, 0);
+    $e1->set_text ($default);
+
+    return ($hbox, $e1);
+}
+
+sub creat_ip_input {
+    my ($init, $default, $text) = @_;
+
+    my (@ips) = split /\./, $init;
+    my (@defs) = split /\./, $default;
+
+    my $hbox = Gtk2::HBox->new (0, 0);
+
+    my $label = Gtk2::Label->new ($text);
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox->pack_start ($label, 0, 0, 10);
+    
+    my $e1 = Gtk2::Entry->new_with_max_length  (3);
+    $e1->{default} = $defs[0];
+    $hbox->pack_start ($e1, 0, 0, 0);
+    $e1->set_width_chars (3);
+    $e1->set_text ($ips[0]);
+    $e1->signal_connect (key_press_event => \&check_num);
+    $e1->signal_connect (focus_out_event => \&check_range);
+
+    my $l1 = Gtk2::Label->new (".");
+    $hbox->pack_start ($l1, 0, 0, 2);
+
+    my $e2 = Gtk2::Entry->new_with_max_length  (3);
+    $e2->{default} = $defs[1];
+    $hbox->pack_start ($e2, 0, 0, 0);
+    $e2->set_width_chars (3);
+    $e2->set_text ($ips[1]);
+    $e2->signal_connect (key_press_event => \&check_num);
+    $e2->signal_connect (focus_out_event => \&check_range);
+
+    my $l2 = Gtk2::Label->new (".");
+    $hbox->pack_start ($l2, 0, 0, 2);
+
+    my $e3 = Gtk2::Entry->new_with_max_length  (3);
+    $e3->{default} = $defs[2];
+    $hbox->pack_start ($e3, 0, 0, 0);
+    $e3->set_width_chars (3);
+    $e3->set_text ($ips[2]);
+    $e3->signal_connect (key_press_event => \&check_num);
+    $e3->signal_connect (focus_out_event => \&check_range);
+
+    my $l3 = Gtk2::Label->new (".");
+    $hbox->pack_start ($l3, 0, 0, 2);
+
+    my $e4 = Gtk2::Entry->new_with_max_length  (3);
+    $e4->{default} = $defs[3];
+    $hbox->pack_start ($e4, 0, 0, 0);
+    $e4->set_width_chars (3);
+    $e4->set_text ($ips[3]);
+    $e4->signal_connect (key_press_event => \&check_num);
+    $e4->signal_connect (focus_out_event => \&check_range);
+
+    return ($hbox, $e1, $e2, $e3, $e4);
+}
+
+sub get_ip_config {
+
+    my $ifconfig = `ifconfig eth0`;
+
+    my ($addr) = $ifconfig =~ m/inet addr:(\S*)/m;
+    my ($mask) = $ifconfig =~ m/Mask:(\S*)/m;
+
+    my $route = `route -n`;
+    my ($gateway) = $route =~ m/^0\.0\.0\.0\s+(\d+\.\d+\.\d+\.\d+)\s+/m;
+
+    my $resolvconf = `cat /etc/resolv.conf`;
+    my ($dnsserver) = $resolvconf =~ m/^nameserver\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/m;
+
+    return {
+	addr => $addr,
+	mask => $mask,
+	gateway => $gateway,
+	dnsserver => $dnsserver,
+    }
+}
+
+sub display_message {
+    my ($msg) = @_;
+
+    my $dialog = Gtk2::MessageDialog->new ($window, 'modal', 
+					   'info', 'ok', $msg);
+    $dialog->run();
+    $dialog->destroy();
+}
+
+sub display_error {
+    my ($msg) = @_;
+
+    my $dialog = Gtk2::MessageDialog->new ($window, 'modal', 
+					   'error', 'ok', $msg);
+    $dialog->run();
+    $dialog->destroy();
+}
+
+sub create_ipconf_view {
+
+    cleanup_view ();
+    display_html ("ipconf.htm");
+
+    my $vbox =  Gtk2::VBox->new (0, 0);
+    $inbox->pack_start ($vbox, 1, 0, 0);
+    my $hbox =  Gtk2::HBox->new (0, 0);
+    $vbox->pack_start ($hbox, 0, 0, 30);
+    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    $hbox->add ($vbox2);
+
+    my $addr = $ipconf->{addr} || '192.168.100.2';
+    my $mask = $ipconf->{mask} || '255.255.255.0';
+ 
+    my ($hostbox, $hostentry) = 
+	creat_text_input ('proxmox.domain.tld', 'Hostname (FQDN):');
+    $vbox2->pack_start ($hostbox, 0, 0, 2);
+
+    my $ipbox;
+    ($ipbox, $ip_1, $ip_2, $ip_3, $ip_4) = 
+	creat_ip_input ($addr, '0.0.0.0', 'IP Address:');
+    $vbox2->pack_start ($ipbox, 0, 0, 2);
+
+    my $maskbox;
+    ($maskbox, $mask_1, $mask_2, $mask_3, $mask_4) = 
+	creat_ip_input ($mask, '255.255.255.0', 'Netmask:');
+    $vbox2->pack_start ($maskbox, 0, 0, 2);
+
+    $gateway = $ipconf->{gateway} || '192.168.100.1';
+
+    my $gwbox;
+    ($gwbox, $gw_1, $gw_2, $gw_3, $gw_4) = 
+	creat_ip_input ($gateway, '0.0.0.0', 'Gateway:');
+
+    $vbox2->pack_start ($gwbox, 0, 0, 15);
+
+    $dnsserver = $ipconf->{dnsserver} || $gateway;
+
+    my $dnsbox;
+    ($dnsbox, $dns_1, $dns_2, $dns_3, $dns_4) = 
+	creat_ip_input ($dnsserver, '0.0.0.0', 'DNS Server:');
+
+    $vbox2->pack_start ($dnsbox, 0, 0, 0);
+
+    $inbox->show_all;
+    set_next (undef, sub { 
+	my $text = $hostentry->get_text();
+	
+	$text =~ s/^\s+//;
+	$text =~ s/\s+$//;
+
+	if ($text && $text =~ m/^[\w\-]+(\.[\w\-]+)+$/ && $text !~ m/.domain.tld$/ &&
+	    $text =~ m/^([^\.]+)\.(\S+)$/) {
+	    $hostname = $1;
+	    $domain = $2;
+	    create_extract_view ();
+	    return;
+	}
+	display_message ("Hostname does not look like a fully qualified domain name.");
+	$hostentry->grab_focus();
+    });
+
+    $hostentry->grab_focus();
+}
+
+sub get_device_desc {
+    my ($devname, $size, $model) = @_;
+
+    if ($size && ($size > 0) && $model) {
+	$size = int($size/2048); # size in MB
+
+	if ($size >= 1024) {
+	    $size = int($size/1024); # size in GB
+	    return "$devname (${size}GB, $model)";
+	} else {
+	    return "$devname (${size}MB, $model)";
+	}
+
+    } else {
+	return $devname;
+    }
+}
+
+sub update_layout {
+    my ($cb, $kmap) = @_;
+
+    my $ind;
+    my $def;
+    my $i = 0;
+    my $kmaphash = $cmap->{kmaphash};
+    foreach my $layout (sort keys %$kmaphash) {
+	$def = $i if $kmaphash->{$layout} eq 'en-us';
+	$ind = $i if $kmap && $kmaphash->{$layout} eq $kmap;
+	$i++;
+    }
+
+    $cb->set_active ($ind || $def || 0);
+}
+
+my $lastzonecb;
+sub update_zonelist {
+    my ($box, $cc) = @_;
+
+    my $cczones = $cmap->{cczones};
+    my $zones = $cmap->{zones};
+
+    my $sel;
+    if ($lastzonecb) {
+	$sel = $lastzonecb->get_active_text();
+	$box->remove ($lastzonecb);
+    } else {
+	$sel = $timezone; # used once to select default
+    }
+
+    my $cb = $lastzonecb = Gtk2::ComboBox->new_text (); 
+    $cb->set_size_request (200, -1);
+
+    $cb->signal_connect ('changed' => sub {
+	$timezone = $cb->get_active_text();
+    });
+
+    my @za;
+    if ($cc && defined ($cczones->{$cc})) {
+	@za = keys %{$cczones->{$cc}};
+    } else {
+	@za = keys %$zones;
+    }
+    my $ind;
+    my $i = 0;
+    foreach my $zone (sort @za) {
+	$ind = $i if $sel && $zone eq $sel;
+	$cb->append_text ($zone);
+	$i++;
+    }
+
+    $cb->set_active ($ind || 0);
+
+    $cb->show;
+    $box->pack_start ($cb, 0, 0, 0);
+}
+
+sub create_password_view {
+
+    cleanup_view ();
+
+    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    $inbox->pack_start ($vbox2, 1, 0, 0);
+    my $vbox =  Gtk2::VBox->new (0, 0);
+    $vbox2->pack_start ($vbox, 0, 0, 30);
+
+    my $hbox1 = Gtk2::HBox->new (0, 0);
+    my $label = Gtk2::Label->new ("Password");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox1->pack_start ($label, 0, 0, 10);
+    my $pwe1 = Gtk2::Entry->new ();  
+    $pwe1->set_visibility (0);
+    $pwe1->set_size_request (200, -1);
+    $hbox1->pack_start ($pwe1, 0, 0, 0);
+
+    my $hbox2 = Gtk2::HBox->new (0, 0);
+    $label = Gtk2::Label->new ("Confirm");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox2->pack_start ($label, 0, 0, 10);
+    my $pwe2 = Gtk2::Entry->new ();  
+    $pwe2->set_visibility (0);
+    $pwe2->set_size_request (200, -1);
+    $hbox2->pack_start ($pwe2, 0, 0, 0);
+
+    my $hbox3 = Gtk2::HBox->new (0, 0);
+    $label = Gtk2::Label->new ("E-Mail");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox3->pack_start ($label, 0, 0, 10);
+    my $eme = Gtk2::Entry->new ();  
+    $eme->set_size_request (200, -1);
+    $hbox3->pack_start ($eme, 0, 0, 0);
+
+
+    $vbox->pack_start ($hbox1, 0, 0, 5);
+    $vbox->pack_start ($hbox2, 0, 0, 5);
+    $vbox->pack_start ($hbox3, 0, 0, 15);
+
+    $inbox->show_all;
+
+    display_html ("passwd.htm");
+
+    set_next (undef,  sub {
+
+	my $t1 = $pwe1->get_text;
+	my $t2 = $pwe2->get_text;
+
+	if (length ($t1) < 5) {
+	    display_message ("Password is too short.");
+	    $pwe1->grab_focus();
+	    return;
+	}
+
+	if ($t1 ne $t2) {
+	    display_message ("Password does not match.");
+	    $pwe1->grab_focus();
+	    return;
+	}
+
+	my $t3 = $eme->get_text;
+	if ($t3 !~ m/^\S+\@\S+\.\S+$/) {
+	    display_message ("E-Mail does not look like a vaild address" .
+			     " (user\@domain.tld)");
+	    $eme->grab_focus();
+	    return;
+
+	}
+
+	$password = $t1;
+	$mailto = $t3;
+
+	create_ipconf_view();
+    });
+
+    $pwe1->grab_focus();
+
+}
+
+sub create_country_view {
+
+    cleanup_view ();
+
+    my $countryhash = $cmap->{countryhash};
+    my $ctr = $cmap->{country};
+
+    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    $inbox->pack_start ($vbox2, 1, 0, 0);
+    my $vbox =  Gtk2::VBox->new (0, 0);
+    $vbox2->pack_start ($vbox, 0, 0, 30);
+
+    my $w = Gtk2::Entry->new ();  
+    $w->set_size_request (200, -1);
+
+    my $c = Gtk2::EntryCompletion->new ();  
+    $c->set_text_column (0);
+    $c->set_minimum_key_length(0);
+    $c->set_popup_set_width (1);
+
+    my $hbox2 = Gtk2::HBox->new (0, 0);
+    my $label = Gtk2::Label->new ("Time zone");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox2->pack_start ($label, 0, 0, 10);
+    update_zonelist ($hbox2);
+
+    my $hbox3 = Gtk2::HBox->new (0, 0);
+    $label = Gtk2::Label->new ("Keyboard Layout");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $hbox3->pack_start ($label, 0, 0, 10);
+
+    my $kmapcb = Gtk2::ComboBox->new_text (); 
+    $kmapcb->set_size_request (200, -1);
+    foreach my $layout (sort keys %{$cmap->{kmaphash}}) {
+	$kmapcb->append_text ($layout);
+    }
+
+    update_layout ($kmapcb);
+    $hbox3->pack_start ($kmapcb, 0, 0, 0);
+
+    $kmapcb->signal_connect ('changed' => sub {
+	my $sel = $kmapcb->get_active_text();
+	if (my $kmap = $cmap->{kmaphash}->{$sel}) {
+	    my $xkmap = $cmap->{kmap}->{$kmap}->{x11};
+	    my $xvar = $cmap->{kmap}->{$kmap}->{x11var};
+	    syscmd ("setxkbmap $xkmap $xvar") if !$opt_testmode;
+	    $keymap = $kmap;
+	}
+    });
+
+    $w->signal_connect ('changed' => sub {
+	my ($entry, $event) = @_;
+	my $text = $entry->get_text;
+
+	if (my $cc = $countryhash->{lc($text)}) {
+	    update_zonelist ($hbox2, $cc);
+	    my $kmap = $ctr->{$cc}->{kmap} || 'en-us';
+	    update_layout ($kmapcb, $kmap);
+	}
+    });
+
+    $w->signal_connect (key_press_event => sub {
+	my ($entry, $event) = @_;
+	my $text = $entry->get_text;
+
+	my $val = $event->keyval;
+	if ($val == $Gtk2::Gdk::Keysyms{Tab}) {
+	    my $cc = $countryhash->{lc($text)};
+	    return undef if $cc;
+	    my $found = 0;
+	    my $compl;
+	    foreach my $cc (keys %$ctr) {
+		my $ct = $ctr->{$cc}->{name};
+		if ($ct =~ m/^\Q$text\E.*$/i) {
+		    $found++;
+		    $compl = $ct;
+		}
+		last if $found > 1;
+	    }
+	    if ($found == 1) {
+		$entry->set_text ($compl);
+		return undef;
+	    } else {
+		Gtk2::Gdk->beep();
+	    }
+
+	    $w->insert_text('', -1); # popup selection
+	    return 1;
+	}
+
+	return undef;
+    });
+
+    my $ls = Gtk2::ListStore->new('Glib::String');
+    foreach my $cc (sort {$ctr->{$a}->{name} cmp $ctr->{$b}->{name} } keys %$ctr) {
+	my $iter = $ls->append();
+	$ls->set ($iter, 0, $ctr->{$cc}->{name});
+    }
+    $c->set_model ($ls);
+
+    $w->set_completion ($c);    
+
+    my $hbox =  Gtk2::HBox->new (0, 0);
+
+    $label = Gtk2::Label->new ("Country");
+    $label->set_alignment (1, 0.5);
+    $label->set_size_request (150, -1);
+    $hbox->pack_start ($label, 0, 0, 10);
+    $hbox->pack_start ($w, 0, 0, 0);
+
+    $vbox->pack_start ($hbox, 0, 0, 5);
+    $vbox->pack_start ($hbox2, 0, 0, 5);
+    $vbox->pack_start ($hbox3, 0, 0, 5);
+
+    if ($country) {
+	$w->set_text ($ctr->{$country}->{name});
+    }
+
+    $inbox->show_all;
+
+    display_html ("country.htm");
+    set_next (undef,  sub {
+
+	my $text = $w->get_text;
+
+	if (my $cc = $countryhash->{lc($text)}) {
+	    $country = $cc;
+	    create_password_view();
+	    return;
+	} else {
+	    display_message ("Please select a country first.");
+	    $w->grab_focus();
+	}
+    });
+
+    $w->grab_focus();
+}
+
+sub create_hdsel_view {
+
+    cleanup_view ();
+
+    my $vbox =  Gtk2::VBox->new (0, 0);
+    $inbox->pack_start ($vbox, 1, 0, 0);
+    my $hbox =  Gtk2::HBox->new (0, 0);
+    $vbox->pack_start ($hbox, 0, 0, 30);
+	
+    my ($disk, $devname, $size, $model) = @{@$hds[0]};
+    $target_hd = $devname;
+    $master_hd = find_master ($target_hd);
+    my $label;
+
+    if (scalar (@$hds) == 1) {
+	my $devdesc = get_device_desc ($devname, $size, $model);
+	$label = Gtk2::Label->new ("Target Harddisk: $devdesc");
+	$hbox->pack_start ($label, 0, 0, 0);
+    } else {
+	$label = Gtk2::Label->new ("Target Harddisks: ");
+	$hbox->pack_start ($label, 0, 0, 0);
+
+	my $combo = Gtk2::ComboBox->new_text ();
+
+	foreach my $hd (@$hds) {
+	    ($disk, $devname, $size, $model) = @$hd;
+	    $combo->append_text (get_device_desc ($devname, $size, $model)); 
+	}
+
+	$combo->set_active (0); 
+	$combo->signal_connect (changed => sub { 
+	    $a = shift->get_active;
+	    my ($disk, $devname) = @{@$hds[$a]};
+	    $target_hd = $devname;
+	    $master_hd = find_master ($target_hd);
+	});
+
+	$hbox->pack_start ($combo, 0, 0, 0);
+    }
+
+    $inbox->show_all;
+
+    display_html ("page1.htm");
+    set_next (undef, \&create_country_view);
+}
+
+sub create_extract_view {
+
+    $ipaddress = $ip_1->get_text . "." . $ip_2->get_text . "." . 
+	$ip_3->get_text . "." . $ip_4->get_text;
+    
+    $netmask = $mask_1->get_text . "." . $mask_2->get_text . "." . 
+	$mask_3->get_text . "." . $mask_4->get_text;
+
+    $gateway = $gw_1->get_text . "." . $gw_2->get_text . "." . 
+	$gw_3->get_text . "." . $gw_4->get_text;
+
+    $dnsserver = $dns_1->get_text . "." . $dns_2->get_text . "." . 
+	$dns_3->get_text . "." . $dns_4->get_text;
+
+    # print "TEST $ipaddress $netmask $gateway $dnsserver\n";
+    cleanup_view ();
+
+    display_html ("extract1-license.htm");
+    $next->set_sensitive (0);
+
+    my $vbox =  Gtk2::VBox->new (0, 0);
+    $inbox->pack_start ($vbox, 1, 0, 0);
+    my $hbox =  Gtk2::HBox->new (0, 0);
+    $vbox->pack_start ($hbox, 0, 0, 30);
+
+    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    $hbox->pack_start ($vbox2, 0, 0, 0);
+
+    $progress_status = Gtk2::Label->new ();
+    $vbox2->pack_start ($progress_status, 1, 1, 0);
+    
+    $progress = Gtk2::ProgressBar->new;
+    $progress->set_size_request (400, -1);
+
+    $vbox2->pack_start ($progress, 0, 0, 0);
+
+    $inbox->show_all;
+
+    my $tdir = $opt_testmode ? "target" : "/target";
+    mkdir $tdir;
+    my $base = $opt_testmode ? "/pve/$release/install/pve-base.tar" : "/proxmox/pve-base.tar";
+
+    eval  { extract_data ($base, $tdir); };
+    my $err = $@;
+
+    $next->set_sensitive (1);
+
+    set_next ("_Reboot", sub { exit (0); } );
+
+    display_html ($err ? "fail.htm" : "success.htm");
+
+    display_error ($err) if $err;
+}
+
+sub mupdate_progress {
+    my $per = shift;
+    print "GOT1: $per\n";
+
+}
+
+sub create_intro_view {
+
+    cleanup_view ();
+
+    display_html ("license.htm");
+
+    set_next ("I a_gree", \&create_hdsel_view);
+}
+
+$ipconf = get_ip_config ();
+
+$country = detect_country () if $ipconf->{addr};
+
+# read country, kmap and timezone infos
+$cmap = read_cmap ();
+
+create_main_window ();
+
+if (!defined ($hds) || (scalar (@$hds) <= 0)) {
+    print "no hardisks found\n";
+    display_html ("nohds.htm");
+    set_next ("Reboot", sub { exit (0); } );
+} else {
+
+    foreach my $hd (@$hds) {
+	my ($disk, $devname) = @$hd;
+	next if $devname =~ m|^/dev/md\d+$|;
+	print "found Disk$disk N:$devname\n";
+    }
+
+    create_intro_view ();
+}
+
+Gtk2->main;
+
+exit 0;

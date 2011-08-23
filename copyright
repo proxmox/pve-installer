@@ -1,0 +1,212 @@
+Please note: this document may contain more than one Proxmox end user
+license agreement and one or more third party end user license
+agreements. By indicating your acceptance, you are agreeing to the
+terms and conditions of all these agreements.
+
+Proxmox Software License Agreement
+
+Please read this agreement carefully. By installing or otherwise using
+the software (including its components), you agree to the terms of
+this agreement. If you do not agree with these terms, do not download,
+install or use the software. The software may not be sold,
+transferred, of further distributed without prior written
+authorization from Proxmox.
+
+Rights and Licenses
+
+This Proxmox Software License Agreement ("Agreement") is a legal
+agreement between you (an entity or a person) and Proxmox Server
+Solutions GmbH ("Proxmox") with respect to the software product
+identified in the title of this Agreement, media (if any) and
+accompanying documentation (collectively the "Software").
+
+The Software is a collective work of Proxmox. You must acquire a
+license for each installation of the Software and for each additional
+copy (or partial copy) of the Software stored or loaded in memory or
+virtual memory beyond the initial copy necessary for execution of the
+Software installed on the hardware.
+
+The Software is a modular operating system. Most of the components are
+open source packages, developed independently, and accompanied by
+separate license terms. Your license rights with respect to individual
+components accompanied by separate license terms are defined by those
+terms; nothing in this Agreement shall restrict, limit, or otherwise
+affect any rights or obligations you may have, or conditions to which
+you may be subject, under such license terms.
+
+While the license terms for a component may authorize you to
+distribute the component, you may not use any Proxmox marks in
+distributing the component, whether or not the component contains
+Proxmox marks.
+
+Other license terms and restrictions
+
+The Software is protected by the copyright laws and treaties of
+Austria and other countries and is subject to the terms of this
+Agreement. The Software is licensed to you, not sold.
+
+The Software may be bundled with other software programs ("Bundled
+Programs"). Your license rights with respect to Bundled Programs
+accompanied by separate license terms are defined by those terms;
+nothing in this Agreement shall restrict, limit, or otherwise affect
+any rights or obligations you may have, or conditions to which you may
+be subject, under such license terms.
+
+Proxmox reserves all rights not expressly granted to you. You may not:
+(1) reverse engineer, decompile, or disassemble the Software except
+and only to the extent it is expressly permitted by applicable law or
+the license terms accompanying a component of the Software; or (2)
+transfer the Software or your license rights under this Agreement, in
+whole or in part.
+
+Maintenance and support
+
+Your rights with respect to updates, patches, or other materials
+received under a subscription to a Proxmox maintenance program for the
+Software are defined by the relevant maintenance program terms.
+
+Proxmox has no obligation under this Agreement to provide maintenance
+or support for the Software. Depending on how you acquired the
+Software, you may have also acquired a maintenance subscription for
+the Software. For more information on Proxmox´s current maintenance
+and support offerings, see http://www.proxmox.com.
+
+Ownership rights
+
+No title to or ownership of the Software is transferred to
+you. Proxmox and/or its licensors owns and retains all title and
+ownership of all intellectual property rights in the Software,
+including any adaptations or copies. You acquire only a license to use
+the Software.
+
+Warranty
+
+The Software is being delivered to you "as is" and Proxmox makes no
+warranty as to its use or performance. Proxmox and its suppliers do
+not and cannot warrant the performance or results you may obtain by
+using the software. Except for any warranty, condition, representation
+or term to the extent to which the same cannot or may not be excluded
+or limited by law applicable to you in your jurisdiction, Proxmox and
+its suppliers make no warranties conditions, representations, or terms
+(express or implied whether by statute, common law, custom, usage or
+otherwise) as to any matter including without limitation
+non-infringement of third party rights, merchantability, integration,
+satisfactory quality, or fitness for any particular purpose.
+
+The software is not designed, manufactured or intended for use or
+distribution with on- line control equipment in hazardous environments
+requiring fail-safe performance, such as in the operation of nuclear
+facilities, aircraft navigation, communication, or control systems, or
+other uses in which failure of the software could lead directly to
+death, personal injury, or severe physical or environmental damage.
+
+The software is only compatible with certain computers and operating
+systems. The software is not warranted for non-compatible
+systems. Call Proxmox or your dealer for information about
+compatibility.
+
+Non-Proxmox Products. The Software may include or be bundled with
+hardware or other software programs licensed or sold by a licensor
+other than Proxmox. Proxmox does not warrant non-Proxmox products. Any
+such products are provided on an "as is" basis. Any warranty service
+for Proxmox products is provided by the product licensor in accordance
+with the applicable licensor warranty.
+
+Expect as otherwise restricted by law, Proxmox disclaims and excludes
+any and all implied warranties including any warranties of
+merchantability, title, non-infringement, or fitness for a particular
+purpose. Proxmox makes no warranty, representation or promise not
+expressly set forth in this limited warranty. Proxmox does not warrant
+that the software will satisfy your requirements or that the operation
+of the software will be uninterrupted. Some jurisdictions do not allow
+certain disclaimers and limitations of warranties, so portions of the
+above limitations may not apply to you. This limited warranty gives
+you specific rights and you may also have other rights which vary from
+state to state.
+
+Limitation of liability
+
+In no event will Proxmox or its suppliers be liable for any loss of
+data, loss of income, loss of opportunity or profits, cost of recovery
+or any other special, incidental, consequential or indirect damages
+arising out of or in connection with this agreement, or the use of the
+software, reference materials or accompanying documentation, however
+caused and on any theory of liability. This limitation will apply even
+if Proxmox, its suppliers or authorized distributors have been advised
+of the possibility of such damage.  In no event shall the liability of
+Proxmox exceed the amount paid for the licensed software at issue. You
+acknowledge that the license fee reflects this allocation of risk.
+Some jurisdictions do not allow the limitation or exclusion of
+liability for incidental or consequential damages, so the above
+limitation or exclusion may not apply to you.
+
+General terms
+
+Term. This Agreement becomes effective on the date you legally acquire
+the Software and will automatically terminate if you breach any of its
+terms. Upon termination of this Agreement, you must destroy the
+original and all copies of the Software or return them to Proxmox and
+delete the Software from your systems.
+
+Benchmark Testing.  This benchmark testing restriction applies to you
+if you are a software vendor or if you are performing testing on the
+Software at the direction of or on behalf of a software vendor. You
+may not, without Proxmox's prior written consent not to be
+unreasonably withheld, publish or disclose to any third party the
+results of any benchmark test of the Software. If you are a vendor of
+products that are functionally similar to or compete with the Software
+("Similar Products"), or are acting on behalf of such a vendor, and
+you publish or disclose benchmark information on the Software in
+violation of this restriction, then notwithstanding anything to the
+contrary in the Similar Product's end user license agreement, and in
+addition to any other remedies Proxmox may have, Proxmox shall have
+the right to perform benchmark testing on Similar Products and to
+disclose and publish that benchmark information and you hereby
+represent that you have authority to grant such right to Proxmox.
+
+Transfer. This Agreement may not be transferred or assigned without
+the prior written approval of Proxmox.
+
+Law and Jurisdiction. This Agreement is governed by the laws of
+Austria, Europe. Any action at law relating to this Agreement may only
+be brought before the courts of competent jurisdiction of Austria.
+
+Entire Agreement. This Agreement and the Upgrade/Additive Agreement
+(if applicable) sets forth the entire understanding and agreement
+between you and Proxmox and may be amended only in a writing signed by
+both parties. No licensor, distributor, dealer, retailer, reseller,
+sales person, or employee is authorized to modify this agreement or to
+make any representation or promise that is different from, or in
+addition to, the terms of this agreement.
+
+Waiver. No waiver of any right under this Agreement will be effective
+unless in writing, signed by a duly authorized representative of the
+party to be bound. No waiver of any past or present right arising from
+any breach or failure to perform will be deemed to be a waiver of any
+future right arising under this Agreement.
+
+Severability. If any provision in this Agreement is invalid or
+unenforceable, that provision will be construed, limited, modified or,
+if necessary, severed, to the extent necessary, to eliminate its
+invalidity or unenforceability, and the other provisions of this
+Agreement will remain unaffected.
+
+Export Compliance. Any person or entity exporting or re-exporting
+Proxmox products directly or indirectly and via any means, including
+electronic transfer, is wholly responsible for doing so in accordance
+with the Austrian Export Administration Regulations and the laws of
+host countries. Proxmox assumes no responsibility or liability for
+your failure to obtain any necessary export approvals. Approvals are
+dependent upon an item's technical characteristics, the destination,
+end-use and end-user, as well as other activities of the end user.
+Specifically, no Proxmox product may be exported to embargoed or
+otherwise restricted countries or end users. Please consult the Bureau
+of Industry and Security web page and other sources before exporting
+Proxmox products and familiarize yourself with the laws of destination
+countries before re-exporting Proxmox products. This provision shall
+survive the expiration or earlier termination of this Agreement.
+
+Other. The application of the United Nations Convention of Contracts
+for the International Sale of Goods is expressly excluded.
+
+(c) 2011 Proxmox Server Solutions GmbH, All Rights Reserved.

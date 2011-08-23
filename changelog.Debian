@@ -1,0 +1,107 @@
+pve-installer (2.0-2) unstable; urgency=low
+
+  * support new kernel parameter 'ext4' switch (use ext4 instead of ext3)
+
+  * use 'ext3' by default
+  
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 04 Aug 2011 12:58:27 +0200
+
+pve-installer (2.0-1) unstable; urgency=low
+
+  * use ext4 fs
+
+  * align LVM on 128k boundary 
+
+  * use 'parted' to create partitions
+
+  * support > 2TB disks (use GPT partition tables)
+
+  * mount with barrier=0 during install (speedup)
+	
+  * write keyboard settings to /etc/pve-installer.cfg
+
+  * adjust for pve2
+
+  * avoid to run update-grub or update-initramfs during install
+
+  * use --no-triggers for faster unpack
+
+  * also mount sysfs to /target/sys
+
+  * do not write /etc/default/grub - not really needed
+
+  * we now use openbox instead of metacity
+
+  * wait one second after partitioning (give kernel time to reread part
+    table)
+
+  * use update-initramfs -c (instead of -u)
+
+  * do not write /etc/apache2/ports.conf (not really needed)
+
+  * enable apache port redirect (a2ensite pve-redirect.conf)
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 15 Feb 2010 14:09:46 +0100
+
+pve-installer (1.0-9) unstable; urgency=low
+
+  * fix netmask bug
+
+  * use 'udevadm info' to detect disks
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 22 Jan 2010 13:13:11 +0100
+
+pve-installer (1.0-8) unstable; urgency=low
+
+  * use UUID= for /boot in fstab
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 22 Jan 2010 13:11:58 +0100
+
+pve-installer (1.0-7) unstable; urgency=low
+
+  * unconfigured.sh: use -q flag for modprobe
+
+  * proxinstall: use 'removable' flag on older kernels (instead
+    of 'capability') to detect cdroms.
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 04 Dec 2009 18:03:59 +0100
+
+pve-installer (1.0-6) unstable; urgency=low
+
+  * pass --no-floppy to grub-install (some users reported delays)
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 19 Jun 2009 10:48:37 +0200
+
+pve-installer (1.0-5) unstable; urgency=low
+
+  * fixes for debian lenny
+
+  * support dynamically allocated virtio blk devices
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 08 May 2009 16:53:42 +0200
+
+pve-installer (1.0-4) unstable; urgency=low
+
+  * proxinstall: better postfix configuration
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 12 Jan 2009 12:21:13 +0100
+
+pve-installer (1.0-3) unstable; urgency=low
+
+  * ause grub instead of lilo
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 20 Aug 2008 14:39:57 +0200
+
+pve-installer (1.0-2) stable; urgency=low
+
+  * proxinstall (extract_data): added maxroot and swapsize boot parameters,
+    set bridge parameters (stp = on, fd = 0)
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue,  8 Jul 2008 06:54:03 +0200
+
+pve-installer (1.0-1) stable; urgency=low
+
+  * initial release
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 19 Nov 2007 15:48:05 +0100
+

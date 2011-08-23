@@ -1,0 +1,5 @@
+#!/bin/sh
+
+#do nothing
+
+echo "fake start-stop-daemon called"

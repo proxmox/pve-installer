@@ -1,0 +1,9 @@
+Package: pve-installer
+Version: 2.0-2
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: 
+Maintainer: Proxmox Support Team <support@proxmox.com>
+Description: The Proxmox Installer
+ This package contains Proxmox graphical installer
