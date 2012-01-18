@@ -806,8 +806,6 @@ postfix postfix/main_mailer_type select Local only
 console-data console-data/keymap/policy select Don\'t touch keymap
 _EOD
 
-	write_config ("$mailto\n", "$targetdir/root/.forward");
-
 	my $pkgdir = $opt_testmode ? "packages" : "/proxmox/packages";
 	my $pkg_count = 0;
 	while (<$pkgdir/*.deb>) { $pkg_count++ };
@@ -865,10 +863,6 @@ _EOD
 	if (my $kmapfile = $cmap->{kmap}->{$keymap}->{console}) {
 	    syscmd ("chroot $targetdir /usr/sbin/install-keymap '/usr/share/keymaps/i386/$kmapfile'");
 	}
-
-	my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
-	write_config ("keyboard: $vnckmap\n", 
-		      "$targetdir/etc/pve-installer.cfg");
 
 	# enable apache port redirect
 	syscmd ("chroot $targetdir a2ensite pve-redirect.conf");
@@ -929,6 +923,24 @@ _EOD
 	my $octets = encode("utf-8", $password);	
 	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
 		     "root:$octets\n");
+
+	# create pmxcfs DB
+
+	my $tmpdir = "$targetdir/tmp/pve";
+	mkdir $tmpdir;
+
+	# write vnc keymap to datacenter.cfg
+	my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
+	write_config ("keyboard: $vnckmap\n", 
+		      "$tmpdir/datacenter.cfg");
+
+	# save admin email
+	write_config ("user:root\@pam:1:0:::${mailto}::\n", 
+		      "$tmpdir/user.cfg");
+	
+	run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
+
+	syscmd ("rm -rf $tmpdir");
     };
 
     my $err = $@;
