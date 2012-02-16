@@ -615,7 +615,7 @@ sub extract_data {
 		$swapsize = $ss*1024*1024;
 	    }
 
-	    my $space = (($hdgb > 32) ? 4 : ($hdgb/8))*1024*1024;
+	    my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
 
 	    my $maxroot;
 	    if ($cmdline =~ m/maxroot=(\d+)[\s\n]/i) {

@@ -1,3 +1,9 @@
+pve-installer (2.0-3) unstable; urgency=low
+
+  * increase free space on LVM up to 16GB
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 16 Feb 2012 11:59:55 +0100
+
 pve-installer (2.0-2) unstable; urgency=low
 
   * support new kernel parameter 'ext4' switch (use ext4 instead of ext3)
