@@ -885,6 +885,9 @@ _EOD
 
 	update_progress (0.8, 0.95, 1, "make system bootable");
 
+	# update default grub settings
+	syscmd ("sed -e 's/^GRUB_DISTRIBUTOR.*/GRUB_DISTRIBUTOR=\"Proxmox Virtual Environment\"/' -e 's/#GRUB_DISABLE_LINUX_RECOVERY=.*/GRUB_DISABLE_LINUX_RECOVERY=\"true\"/' /etc/default/grub");
+
 	diversion_remove ($targetdir, "/usr/sbin/update-grub");
 	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
 
