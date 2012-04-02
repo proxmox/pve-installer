@@ -1291,7 +1291,9 @@ sub create_ipconf_view {
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
 
-	if ($text && $text =~ m/^[\w\-]+(\.[\w\-]+)+$/ && $text !~ m/.domain.tld$/ &&
+	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
+ 
+ 	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.domain.tld$/ &&
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
 	    $hostname = $1;
 	    $domain = $2;
