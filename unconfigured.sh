@@ -99,9 +99,6 @@ mount -t tmpfs tmpfs /etc/network/run
 # set the hostname 
 hostname proxmox
 
-#check system time
-/usr/bin/checktime
-
 # try to get ip config with dhcp
 echo -n "Detecting network settings... "
 /etc/init.d/networking start >/dev/tty2 2>&1

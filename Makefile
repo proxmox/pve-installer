@@ -1,5 +1,5 @@
 # achtung: also set release in proxinstall!
-RELEASE=2.0
+RELEASE=2.1
 
 DEB=pve-installer_2.0-3_all.deb
 
