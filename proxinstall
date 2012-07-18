@@ -625,7 +625,21 @@ sub extract_data {
 	    }
 
 	    my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
-	    my $rest = int($hdsize) - $bootsize - $swapsize - $space - $rootsize; # in KB
+	    my $rest = int($hdsize) - $bootsize - $swapsize - $rootsize; # in KB
+
+	    my $minfree;
+            if ($cmdline =~ m/minfree=(\d+)[\s\n]/i) {
+		$minfree = (($1*1024*1024) >= $rest ) ? $space : $1*1024*1024 ;
+            } else {
+		$minfree = $space;
+            }
+
+	    $rest = $rest - $minfree;
+
+            if ($cmdline =~ m/maxvz=(\d+)[\s\n]/i) {
+		$rest = (($1*1024*1024) <= $rest) ? $1*1024*1024 : $rest;
+	    } 
+
 	    syscmd ("/sbin/lvcreate -L${swapsize}K -nswap pve") == 0 ||
 		die "unable to create swap volume";
 

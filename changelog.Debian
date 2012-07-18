@@ -1,3 +1,9 @@
+pve-installer (2.0-4) unstable; urgency=low
+
+  * fix bug #226 && #227: new minfree and maxvz boot options
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 18 Jul 2012 05:51:47 +0200
+
 pve-installer (2.0-3) unstable; urgency=low
 
   * increase free space on LVM up to 16GB
