@@ -1,3 +1,9 @@
+pve-installer (2.0-5) unstable; urgency=low
+
+  * add 'hdsize' boot parameter to specify maximum size used.
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 30 Nov 2012 06:18:55 +0100
+
 pve-installer (2.0-4) unstable; urgency=low
 
   * fix bug #226 && #227: new minfree and maxvz boot options

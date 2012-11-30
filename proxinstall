@@ -68,19 +68,19 @@ append_dot_mydomain = no
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
 mydestination = \$myhostname, localhost.\$mydomain, localhost
-relayhost = 
+relayhost =
 mynetworks = 127.0.0.0/8
 inet_interfaces = loopback-only
 recipient_delimiter = +
 
 _EOD
 
-sub syscmd { 
+sub syscmd {
     my ($cmd) = @_;
 
     return run_command ($cmd, undef, undef, 1);
 }
- 
+
 sub run_command {
     my ($cmd, $func, $input, $noout) = @_;
 
@@ -111,8 +111,8 @@ sub run_command {
 
     # catch exec errors
     if ($orig_pid != $$) {
-	POSIX::_exit (1); 
-	kill ('KILL', $$); 
+	POSIX::_exit (1);
+	kill ('KILL', $$);
     }
 
     die $err if $err;
@@ -168,7 +168,7 @@ sub run_command {
 
     my $ec = ($? >> 8);
 
-    if ($ec) {  
+    if ($ec) {
 	die "command '$cmd' failed with exit code $ec";
     }
 
@@ -179,7 +179,7 @@ sub detect_country {
 
     print "trying to detect country...\n";
     open (TMP, "traceroute -N 1 -q 1 -n www.debian.org|");
-    
+
     my $country;
 
     my $previous_alarm = alarm (10);
@@ -224,7 +224,7 @@ sub get_memtotal {
     while (my $line = <MEMINFO>) {
 	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
 	    $res = int ($1 / 1024);
-	} 
+	}
     }
 
     close (MEMINFO);
@@ -291,7 +291,7 @@ sub hd_list {
 
 	my $dev = `cat '$bd/dev'`;
 	chomp $dev;
-	
+
 	next if !$dev;
 
 	my $info = `udevadm info --path $bd --query all`;
@@ -303,7 +303,7 @@ sub hd_list {
 
 	my ($name) = $info =~ m/^N: (\S+)$/m;
 
-	if ($name) { 
+	if ($name) {
 	    my $real_name = "/dev/$name";
 
 	    my $size = `cat '$bd/size'`;
@@ -326,7 +326,7 @@ sub hd_list {
 }
 
 sub read_cmap {
-    my $countryfn = $opt_testmode ? "/usr/share/pve-manager/country.dat" : 
+    my $countryfn = $opt_testmode ? "/usr/share/pve-manager/country.dat" :
 	"/proxmox/country.dat";
     open (TMP, "<$countryfn") || die "unable to open '$countryfn' - $!\n";
     my $line;
@@ -400,7 +400,7 @@ sub hd_size {
 
 # find the master boot disk - return the first found scsi/ide disk
 sub find_master {
-    my ($target_hd) = @_; 
+    my ($target_hd) = @_;
 
     foreach my $hd (sort { ${$a}[1] cmp ${$b}[1] } @$hds) {
 	my ($disk, $devname) = @$hd;
@@ -500,7 +500,7 @@ sub create_filesystem {
 	    update_progress (0.95, $rs, $re);
 	} elsif ($line =~ m/Writing superblocks and filesystem.*done/) {
 	    update_progress (1, $rs, $re);
-	} 
+	}
     });
 }
 
@@ -509,8 +509,8 @@ sub debconfig_set {
 
     my $cfgfile = "/tmp/debconf.txt";
     write_config ($dcdata, "$targetdir/$cfgfile");
-    syscmd ("chroot $targetdir debconf-set-selections $cfgfile"); 
-    unlink "$targetdir/$cfgfile";    
+    syscmd ("chroot $targetdir debconf-set-selections $cfgfile");
+    unlink "$targetdir/$cfgfile";
 }
 
 sub diversion_add {
@@ -521,7 +521,7 @@ sub diversion_add {
 	    die "unable to exec dpkg-divert\n";
 
     syscmd ("ln -sf ${new_cmd} $targetdir/$cmd") == 0 ||
-	die "unable to link diversion to ${new_cmd}\n";  
+	die "unable to link diversion to ${new_cmd}\n";
 }
 
 sub diversion_remove {
@@ -529,7 +529,7 @@ sub diversion_remove {
 
     syscmd ("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0 ||
 	die "unable to remove $cmd diversion\n";
-	    
+
     syscmd ("chroot $targetdir dpkg-divert --remove $cmd") == 0 ||
 	die "unable to remove $cmd diversion\n";
 }
@@ -558,6 +558,16 @@ sub extract_data {
 
 	    if ($hdsize >= 2*1024*1024*1024) { # MBR can only handle 2 TB
 		$ptype = 'gpt';
+	    }
+
+	    my $maxhdsize; # max hdsize passed on cmdline (GB)
+	    if ($cmdline =~ m/hdsize=(\d+)[\s\n]/i) {
+		$maxhdsize=$1*1024*1024;
+	    }
+
+	    # use $maxhdsize if specified size is lower than hdsize
+	    if ($maxhdsize < $hdsize) {
+		$hdsize = $maxhdsize;
 	    }
 
 	    my $bootsize_mb = 512;
@@ -638,7 +648,7 @@ sub extract_data {
 
             if ($cmdline =~ m/maxvz=(\d+)[\s\n]/i) {
 		$rest = (($1*1024*1024) <= $rest) ? $1*1024*1024 : $rest;
-	    } 
+	    }
 
 	    syscmd ("/sbin/lvcreate -L${swapsize}K -nswap pve") == 0 ||
 		die "unable to create swap volume";
@@ -705,7 +715,7 @@ sub extract_data {
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($tgzfile);
 	$ino || die "unable to open file '$tgzfile' - $!\n";
-	
+
 	my $files;
 	if ($opt_testmode) {
 	    $files = `cat /pve/$release/install/pve-base.cnt`;
@@ -739,9 +749,9 @@ sub extract_data {
 
 	# configure hosts
 
-	my $hosts = 
+	my $hosts =
 	    "127.0.0.1 localhost.localdomain localhost\n" .
-	    "$ipaddress $hostname.$domain $hostname pvelocalhost\n\n" . 
+	    "$ipaddress $hostname.$domain $hostname pvelocalhost\n\n" .
 	    "# The following lines are desirable for IPv6 capable hosts\n\n" .
 	    "::1     ip6-localhost ip6-loopback\n" .
 	    "fe00::0 ip6-localnet\n" .
@@ -750,15 +760,15 @@ sub extract_data {
 	    "ff02::2 ip6-allrouters\n" .
 	    "ff02::3 ip6-allhosts\n";
 
-	write_config ($hosts, "$targetdir/etc/hosts"); 
+	write_config ($hosts, "$targetdir/etc/hosts");
 
-	write_config ("$hostname\n", "$targetdir/etc/hostname"); 
+	write_config ("$hostname\n", "$targetdir/etc/hostname");
 
 	syscmd ("/bin/hostname $hostname") if !$opt_testmode;
 
 	# configure interfaces
 
-	my $ifaces = 
+	my $ifaces =
 	    "auto lo\niface lo inet loopback\n\n" .
 	    "auto vmbr0\niface vmbr0 inet static\n" .
 	    "\taddress $ipaddress\n" .
@@ -783,7 +793,7 @@ sub extract_data {
 
 	# configure fstab
 
-	my $fstab = 
+	my $fstab =
 	    "# <file system> <mount point> <type> <options> <dump> <pass>\n" .
 	    "$rootdev / $filesys errors=remount-ro 0 1\n";
 
@@ -797,12 +807,12 @@ sub extract_data {
 
 	write_config ($fstab, "$targetdir/etc/fstab");
 	write_config ("", "$targetdir/etc/mtab");
-	
+
 	syscmd ("cp ${proxmox_dir}/policy-disable-rc.d " .
-		"$targetdir/usr/sbin/policy-rc.d") == 0 || 
+		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
 		die "unable to copy policy-rc.d\n";
 	syscmd ("cp ${proxmox_dir}/fake-start-stop-daemon " .
-		"$targetdir/sbin/") == 0 || 
+		"$targetdir/sbin/") == 0 ||
 		die "unable to copy start-stop-daemon\n";
 
 	diversion_add ($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");
@@ -834,7 +844,7 @@ _EOD
 	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
 		die "installation of package $deb failed\n";
 	    syscmd ("chroot $targetdir dpkg --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
-		die "installation of package $deb failed\n";	
+		die "installation of package $deb failed\n";
 	    update_progress ((++$count)/$pkg_count, 0.5, 0.75);
 	}
 
@@ -849,8 +859,8 @@ _EOD
 				 "configuring $1");
 	    }
 	});
-	    
-	debconfig_set ($targetdir, <<_EOD); 
+
+	debconfig_set ($targetdir, <<_EOD);
 postfix postfix/main_mailer_type select No configuration
 _EOD
 
@@ -868,7 +878,7 @@ _EOD
 	# disable bacula-fd
 	syscmd ("touch '$targetdir/etc/bacula/do_not_run'");
 
-	# set timezone	
+	# set timezone
 	unlink ("$targetdir/etc/localtime");
 	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
 	write_config ("$timezone\n", "$targetdir/etc/timezone");
@@ -884,7 +894,7 @@ _EOD
 	# set apt mirror
 	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
 	    my $fn = "$targetdir/etc/apt/sources.list";
-	    syscmd ("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'"); 
+	    syscmd ("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'");
 	}
 
 	# create extended_states for apt (avoid cron job warning if that
@@ -924,9 +934,9 @@ _EOD
 	}
 
 
-	# cleanup 
+	# cleanup
 
-	# hack: remove dead.letter from sshd installation 
+	# hack: remove dead.letter from sshd installation
 	syscmd ("rm -rf $targetdir/dead.letter");
 
 	unlink ("$targetdir/etc/mtab");
@@ -937,7 +947,7 @@ _EOD
 	diversion_remove ($targetdir, "/sbin/start-stop-daemon");
 
 	# set root password
-	my $octets = encode("utf-8", $password);	
+	my $octets = encode("utf-8", $password);
 	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
 		     "root:$octets\n");
 
@@ -948,13 +958,13 @@ _EOD
 
 	# write vnc keymap to datacenter.cfg
 	my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
-	write_config ("keyboard: $vnckmap\n", 
+	write_config ("keyboard: $vnckmap\n",
 		      "$tmpdir/datacenter.cfg");
 
 	# save admin email
-	write_config ("user:root\@pam:1:0:::${mailto}::\n", 
+	write_config ("user:root\@pam:1:0:::${mailto}::\n",
 		      "$tmpdir/user.cfg");
-	
+
 	run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 
 	syscmd ("rm -rf $tmpdir");
@@ -990,7 +1000,7 @@ sub display_html {
     $document->open_stream ("text/html");
 
     my $fn = "${proxmox_dir}/html/$filename";
-    open (HTML, $fn) || 
+    open (HTML, $fn) ||
 	die "unable to open file '$fn' - $!\n";
     while (<HTML>) { $document->write_stream ($_); }
     close (HTML);
@@ -1004,13 +1014,13 @@ sub set_next {
     $next_fctn = $fctn;
     $text = "_Next" if !$text;
     $next->set_label ($text);
-    
+
     $next->grab_focus ();
 }
 
 sub url_requested {
     my ($doc, $url, $stream) = @_;
-	
+
     $stream->set_cancel_func (sub {}); # hack: avoid warning
 
     my $path = "${proxmox_dir}/html/$url";
@@ -1020,7 +1030,7 @@ sub url_requested {
 	    die "unable to open file '$path' - $! ";
 	my $buf;
 	while (my $i = read (HTMLTMP, $buf, 4096)) {
-	    $stream->write ($buf);			
+	    $stream->write ($buf);
 	    Gtk2->main_iteration while Gtk2->events_pending;
 	}
 	close (HTMLTMP);
@@ -1114,13 +1124,13 @@ sub check_num {
 	return 1;
     }
 
-    if ($val == $Gtk2::Gdk::Keysyms{ISO_Left_Tab} || 
-	$val == $Gtk2::Gdk::Keysyms{Shift_L} || 
+    if ($val == $Gtk2::Gdk::Keysyms{ISO_Left_Tab} ||
+	$val == $Gtk2::Gdk::Keysyms{Shift_L} ||
 	$val == $Gtk2::Gdk::Keysyms{Tab} ||
 	$val == $Gtk2::Gdk::Keysyms{BackSpace} ||
 	$val == $Gtk2::Gdk::Keysyms{Delete} ||
 	($val >= ord '0' && $val <= ord '9') ||
-	($val >= $Gtk2::Gdk::Keysyms{KP_0} && 
+	($val >= $Gtk2::Gdk::Keysyms{KP_0} &&
 	 $val <= $Gtk2::Gdk::Keysyms{KP_9})) {
 	return undef;
     }
@@ -1169,7 +1179,7 @@ sub creat_ip_input {
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox->pack_start ($label, 0, 0, 10);
-    
+
     my $e1 = Gtk2::Entry->new_with_max_length  (3);
     $e1->{default} = $defs[0];
     $hbox->pack_start ($e1, 0, 0, 0);
@@ -1238,7 +1248,7 @@ sub get_ip_config {
 sub display_message {
     my ($msg) = @_;
 
-    my $dialog = Gtk2::MessageDialog->new ($window, 'modal', 
+    my $dialog = Gtk2::MessageDialog->new ($window, 'modal',
 					   'info', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
@@ -1247,7 +1257,7 @@ sub display_message {
 sub display_error {
     my ($msg) = @_;
 
-    my $dialog = Gtk2::MessageDialog->new ($window, 'modal', 
+    my $dialog = Gtk2::MessageDialog->new ($window, 'modal',
 					   'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
@@ -1267,25 +1277,25 @@ sub create_ipconf_view {
 
     my $addr = $ipconf->{addr} || '192.168.100.2';
     my $mask = $ipconf->{mask} || '255.255.255.0';
- 
-    my ($hostbox, $hostentry) = 
+
+    my ($hostbox, $hostentry) =
 	creat_text_input ('proxmox.domain.tld', 'Hostname (FQDN):');
     $vbox2->pack_start ($hostbox, 0, 0, 2);
 
     my $ipbox;
-    ($ipbox, $ip_1, $ip_2, $ip_3, $ip_4) = 
+    ($ipbox, $ip_1, $ip_2, $ip_3, $ip_4) =
 	creat_ip_input ($addr, '0.0.0.0', 'IP Address:');
     $vbox2->pack_start ($ipbox, 0, 0, 2);
 
     my $maskbox;
-    ($maskbox, $mask_1, $mask_2, $mask_3, $mask_4) = 
+    ($maskbox, $mask_1, $mask_2, $mask_3, $mask_4) =
 	creat_ip_input ($mask, '255.255.255.0', 'Netmask:');
     $vbox2->pack_start ($maskbox, 0, 0, 2);
 
     $gateway = $ipconf->{gateway} || '192.168.100.1';
 
     my $gwbox;
-    ($gwbox, $gw_1, $gw_2, $gw_3, $gw_4) = 
+    ($gwbox, $gw_1, $gw_2, $gw_3, $gw_4) =
 	creat_ip_input ($gateway, '0.0.0.0', 'Gateway:');
 
     $vbox2->pack_start ($gwbox, 0, 0, 15);
@@ -1293,20 +1303,20 @@ sub create_ipconf_view {
     $dnsserver = $ipconf->{dnsserver} || $gateway;
 
     my $dnsbox;
-    ($dnsbox, $dns_1, $dns_2, $dns_3, $dns_4) = 
+    ($dnsbox, $dns_1, $dns_2, $dns_3, $dns_4) =
 	creat_ip_input ($dnsserver, '0.0.0.0', 'DNS Server:');
 
     $vbox2->pack_start ($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
-    set_next (undef, sub { 
+    set_next (undef, sub {
 	my $text = $hostentry->get_text();
-	
+
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
 
 	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
- 
+
  	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.domain.tld$/ &&
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
 	    $hostname = $1;
@@ -1370,7 +1380,7 @@ sub update_zonelist {
 	$sel = $timezone; # used once to select default
     }
 
-    my $cb = $lastzonecb = Gtk2::ComboBox->new_text (); 
+    my $cb = $lastzonecb = Gtk2::ComboBox->new_text ();
     $cb->set_size_request (200, -1);
 
     $cb->signal_connect ('changed' => sub {
@@ -1411,7 +1421,7 @@ sub create_password_view {
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox1->pack_start ($label, 0, 0, 10);
-    my $pwe1 = Gtk2::Entry->new ();  
+    my $pwe1 = Gtk2::Entry->new ();
     $pwe1->set_visibility (0);
     $pwe1->set_size_request (200, -1);
     $hbox1->pack_start ($pwe1, 0, 0, 0);
@@ -1421,7 +1431,7 @@ sub create_password_view {
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox2->pack_start ($label, 0, 0, 10);
-    my $pwe2 = Gtk2::Entry->new ();  
+    my $pwe2 = Gtk2::Entry->new ();
     $pwe2->set_visibility (0);
     $pwe2->set_size_request (200, -1);
     $hbox2->pack_start ($pwe2, 0, 0, 0);
@@ -1431,7 +1441,7 @@ sub create_password_view {
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox3->pack_start ($label, 0, 0, 10);
-    my $eme = Gtk2::Entry->new ();  
+    my $eme = Gtk2::Entry->new ();
     $eme->set_size_request (200, -1);
     $hbox3->pack_start ($eme, 0, 0, 0);
 
@@ -1492,10 +1502,10 @@ sub create_country_view {
     my $vbox =  Gtk2::VBox->new (0, 0);
     $vbox2->pack_start ($vbox, 0, 0, 30);
 
-    my $w = Gtk2::Entry->new ();  
+    my $w = Gtk2::Entry->new ();
     $w->set_size_request (200, -1);
 
-    my $c = Gtk2::EntryCompletion->new ();  
+    my $c = Gtk2::EntryCompletion->new ();
     $c->set_text_column (0);
     $c->set_minimum_key_length(0);
     $c->set_popup_set_width (1);
@@ -1513,7 +1523,7 @@ sub create_country_view {
     $label->set_alignment (1, 0.5);
     $hbox3->pack_start ($label, 0, 0, 10);
 
-    my $kmapcb = Gtk2::ComboBox->new_text (); 
+    my $kmapcb = Gtk2::ComboBox->new_text ();
     $kmapcb->set_size_request (200, -1);
     foreach my $layout (sort keys %{$cmap->{kmaphash}}) {
 	$kmapcb->append_text ($layout);
@@ -1582,7 +1592,7 @@ sub create_country_view {
     }
     $c->set_model ($ls);
 
-    $w->set_completion ($c);    
+    $w->set_completion ($c);
 
     my $hbox =  Gtk2::HBox->new (0, 0);
 
@@ -1628,7 +1638,7 @@ sub create_hdsel_view {
     $inbox->pack_start ($vbox, 1, 0, 0);
     my $hbox =  Gtk2::HBox->new (0, 0);
     $vbox->pack_start ($hbox, 0, 0, 30);
-	
+
     my ($disk, $devname, $size, $model) = @{@$hds[0]};
     $target_hd = $devname;
     $master_hd = find_master ($target_hd);
@@ -1646,11 +1656,11 @@ sub create_hdsel_view {
 
 	foreach my $hd (@$hds) {
 	    ($disk, $devname, $size, $model) = @$hd;
-	    $combo->append_text (get_device_desc ($devname, $size, $model)); 
+	    $combo->append_text (get_device_desc ($devname, $size, $model));
 	}
 
-	$combo->set_active (0); 
-	$combo->signal_connect (changed => sub { 
+	$combo->set_active (0);
+	$combo->signal_connect (changed => sub {
 	    $a = shift->get_active;
 	    my ($disk, $devname) = @{@$hds[$a]};
 	    $target_hd = $devname;
@@ -1668,16 +1678,16 @@ sub create_hdsel_view {
 
 sub create_extract_view {
 
-    $ipaddress = $ip_1->get_text . "." . $ip_2->get_text . "." . 
+    $ipaddress = $ip_1->get_text . "." . $ip_2->get_text . "." .
 	$ip_3->get_text . "." . $ip_4->get_text;
-    
-    $netmask = $mask_1->get_text . "." . $mask_2->get_text . "." . 
+
+    $netmask = $mask_1->get_text . "." . $mask_2->get_text . "." .
 	$mask_3->get_text . "." . $mask_4->get_text;
 
-    $gateway = $gw_1->get_text . "." . $gw_2->get_text . "." . 
+    $gateway = $gw_1->get_text . "." . $gw_2->get_text . "." .
 	$gw_3->get_text . "." . $gw_4->get_text;
 
-    $dnsserver = $dns_1->get_text . "." . $dns_2->get_text . "." . 
+    $dnsserver = $dns_1->get_text . "." . $dns_2->get_text . "." .
 	$dns_3->get_text . "." . $dns_4->get_text;
 
     # print "TEST $ipaddress $netmask $gateway $dnsserver\n";
@@ -1696,7 +1706,7 @@ sub create_extract_view {
 
     $progress_status = Gtk2::Label->new ();
     $vbox2->pack_start ($progress_status, 1, 1, 0);
-    
+
     $progress = Gtk2::ProgressBar->new;
     $progress->set_size_request (400, -1);
 
