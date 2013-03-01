@@ -1,7 +1,7 @@
 # achtung: also set release in proxinstall!
-RELEASE=2.2
+RELEASE=2.3
 
-DEB=pve-installer_2.0-5_all.deb
+DEB=pve-installer_2.0-6_all.deb
 
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\

@@ -12,7 +12,7 @@ use Gtk2::Html2;
 use Gtk2::Gdk::Keysyms;
 use Encode;
 
-my $release = '2.0';
+my $release = '2.3';
 
 my $kapi = `uname -r`;
 chomp $kapi;
@@ -560,14 +560,14 @@ sub extract_data {
 		$ptype = 'gpt';
 	    }
 
-	    my $maxhdsize; # max hdsize passed on cmdline (GB)
 	    if ($cmdline =~ m/hdsize=(\d+)[\s\n]/i) {
-		$maxhdsize=$1*1024*1024;
-	    }
+		# max hdsize passed on cmdline (GB)
+		my $maxhdsize=$1*1024*1024;
 
-	    # use $maxhdsize if specified size is lower than hdsize
-	    if ($maxhdsize < $hdsize) {
-		$hdsize = $maxhdsize;
+		# use $maxhdsize if specified size is lower than hdsize
+		if ($maxhdsize < $hdsize) {
+		    $hdsize = $maxhdsize;
+		}
 	    }
 
 	    my $bootsize_mb = 512;
