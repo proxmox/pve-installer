@@ -12,7 +12,7 @@ use Gtk2::Html2;
 use Gtk2::Gdk::Keysyms;
 use Encode;
 
-my $release = '2.3';
+my $release = '3.0';
 
 my $kapi = `uname -r`;
 chomp $kapi;
