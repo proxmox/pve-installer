@@ -1587,11 +1587,14 @@ sub create_country_view {
 	    }
 	    if ($found == 1) {
 		$entry->set_text($compl);
+		$c->complete();
 		return undef;
 	    } else {
 		#Gtk3::Gdk::beep();
 		print chr(7); # beep ?
 	    }
+
+	    $c->complete();
 
 	    my $buf = $w->get_buffer();
 	    $buf->insert_text(-1, '', -1); # popup selection
