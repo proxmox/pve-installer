@@ -66,7 +66,7 @@ test.img:
 	dd if=/dev/zero of=test.img bs=1024 count=800000
 
 check: packages test.img
-	./proxinstall -t test.img
+	G_SLICE=always-malloc ./proxinstall -t test.img
 
 .phony: clean
 clean:

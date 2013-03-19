@@ -1,5 +1,8 @@
 #!/usr/bin/perl -w
 
+$ENV{DEBIAN_FRONTEND} = 'noninteractive';
+$ENV{LC_ALL} = 'C';
+
 use strict;
 use Getopt::Long;
 use IPC::Open3;
@@ -7,10 +10,10 @@ use IO::File;
 use IO::Dir;
 use IO::Select;
 use Cwd 'abs_path';
-use Gtk2 '-init';
-use Gtk2::Html2;
-use Gtk2::Gdk::Keysyms;
+use Gtk3 '-init';
+use Gtk3::WebKit;
 use Encode;
+use Data::Dumper;
 
 my $release = '3.0';
 
@@ -19,6 +22,10 @@ chomp $kapi;
 
 my $opt_testmode;
 
+if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
+    die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
+}
+
 if (!GetOptions ('testmode=s' => \$opt_testmode)) {
     die "usage error\n";
     exit (-1);
@@ -26,12 +33,10 @@ if (!GetOptions ('testmode=s' => \$opt_testmode)) {
 
 my $logfd = IO::File->new (">/tmp/install.log");
 
-my $proxmox_dir = $opt_testmode ? "." : "/var/lib/pve-installer";
+my $proxmox_dir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
 
-$ENV{DEBIAN_FRONTEND} = 'noninteractive';
-$ENV{LC_ALL} = 'C';
 
-my ($window, $cmdbox, $inbox, $document, $htmlview);
+my ($window, $cmdbox, $inbox, $htmlview);
 my ($next, $next_fctn, $target_hd, $master_hd);
 my ($progress, $progress_status);
 my ($ipaddress, $ip_1, $ip_2, $ip_3, $ip_4);
@@ -129,7 +134,7 @@ sub run_command {
     while ($select->count) {
 	my @handles = $select->can_read (0.2);
 
-	Gtk2->main_iteration while Gtk2->events_pending;
+	Gtk3->main_iteration while Gtk3->events_pending;
 
 	next if !scalar (@handles); # timeout
 
@@ -474,7 +479,7 @@ sub update_progress {
     $progress->set_text (sprintf ("%d%%", int ($res*100)));
     $progress_status->set_text ($text) if defined ($text);
 
-    Gtk2->main_iteration while Gtk2->events_pending;
+    Gtk3->main_iteration while Gtk3->events_pending;
 }
 
 sub create_filesystem {
@@ -993,7 +998,17 @@ _EOD
 sub display_html {
     my ($filename) = @_;
 
+    my $url = "file://${proxmox_dir}/html/$filename";
+    $htmlview->load_uri($url);
+}
+
+sub display_html_old {
+    my ($filename) = @_;
+
     $htmlview->set_document(undef);
+
+    my $document;
+
     $document->clear;
     $htmlview->set_document($document);
 
@@ -1031,7 +1046,7 @@ sub url_requested {
 	my $buf;
 	while (my $i = read (HTMLTMP, $buf, 4096)) {
 	    $stream->write ($buf);
-	    Gtk2->main_iteration while Gtk2->events_pending;
+	    Gtk3->main_iteration while Gtk3->events_pending;
 	}
 	close (HTMLTMP);
     }
@@ -1041,63 +1056,55 @@ sub url_requested {
 
 sub create_main_window {
 
-    $window = Gtk2::Window->new ();
+    $window = Gtk3::Window->new ();
     $window->set_default_size (1024, 768);
     $window->set_decorated (0) if !$opt_testmode;
 
-    my $vbox = Gtk2::VBox->new (0, 0);
+    my $vbox = Gtk3::VBox->new (0, 0);
 
-    my $image = Gtk2::Image->new_from_file  ("${proxmox_dir}/proxlogo.xpm");
+    my $image = Gtk3::Image->new_from_file  ("${proxmox_dir}/proxlogo.xpm");
     $vbox->pack_start ($image, 0, 0, 0);
 
-    my $hbox = Gtk2::HBox->new (0, 0);
+    my $hbox = Gtk3::HBox->new (0, 0);
     $vbox->pack_start ($hbox, 1, 1, 0);
 
-    my $f1 = Gtk2::Frame->new ();
-    $f1->set_shadow_type ('in');
-    $hbox->pack_start ($f1, 1, 1, 0);
+ #  my $f1 = Gtk3::Frame->new ('test');
+ #  $f1->set_shadow_type ('none');
+ #  $hbox->pack_start ($f1, 1, 1, 0);
 
-    my $sep1 = Gtk2::HSeparator->new;
+    my $sep1 = Gtk3::HSeparator->new;
     $vbox->pack_start ($sep1, 0, 0, 0);
 
-    $cmdbox = Gtk2::HBox->new ();
+    $cmdbox = Gtk3::HBox->new ();
     $vbox->pack_start ($cmdbox, 0, 0, 10);
 
-    $next = Gtk2::Button->new ('_Next');
+    $next = Gtk3::Button->new ('_Next');
     $next->signal_connect (clicked => sub { &$next_fctn (); });
     $cmdbox->pack_end ($next, 0, 0, 10);
-    my $abort = Gtk2::Button->new ('_Abort');
-    $abort->can_focus (0);
+    my $abort = Gtk3::Button->new ('_Abort');
+    $abort->set_can_focus (0);
     $cmdbox->pack_start ($abort, 0, 0, 10);
     $abort->signal_connect (clicked => sub { exit (-1); });
 
-    my $vbox2 = Gtk2::VBox->new (0, 0);
-    $f1->add ($vbox2);
+    my $vbox2 = Gtk3::VBox->new (0, 0);
+    $hbox->add ($vbox2);
 
-    $htmlview = new Gtk2::Html2::View;
-    # hack: create a separate style - else Gtk2::Html2 modifies
-    # main window style
-    my $rcs1 = Gtk2::RcStyle->new;
-    $htmlview->modify_style ($rcs1);
-
-    $document = new Gtk2::Html2::Document;
-    $document->signal_connect (request_url => \&url_requested);
-
-    $document->clear;
-    $htmlview->set_document ($document);
-
-    my $hbox2 = Gtk2::HBox->new (0, 0);
-    $hbox2->pack_start ($htmlview, 1, 1, 0);
+    $htmlview = Gtk3::WebKit::WebView->new();
+    my $scrolls = Gtk3::ScrolledWindow->new();
+    $scrolls->add($htmlview);
+   
+    my $hbox2 = Gtk3::HBox->new (0, 0);
+    $hbox2->pack_start ($scrolls, 1, 1, 0);
 
     $vbox2->pack_start ($hbox2, 1, 1, 0);
 
-    my $vbox3 = Gtk2::VBox->new (0, 0);
+    my $vbox3 = Gtk3::VBox->new (0, 0);
     $vbox2->pack_start ($vbox3, 0, 0, 0);
 
-    my $sep2 = Gtk2::HSeparator->new;
+    my $sep2 = Gtk3::HSeparator->new;
     $vbox3->pack_start ($sep2, 0, 0, 0);
 
-    $inbox = Gtk2::HBox->new (0, 0);
+    $inbox = Gtk3::HBox->new (0, 0);
     $vbox3->pack_start ($inbox, 0, 0, 0);
 
     $window->add ($vbox);
@@ -1108,7 +1115,7 @@ sub create_main_window {
 
 sub cleanup_view {
     my $list = $inbox->get_children;
-    foreach my $c ($list) {
+    foreach my $c (@$list) {
 	next if !defined ($c);
 	$inbox->remove ($c);
     }
@@ -1117,21 +1124,22 @@ sub cleanup_view {
 sub check_num {
     my ($entry, $event) = @_;
 
-    my $val = $event->keyval;
+
+    my $val = $event->get_keyval;
 
     if ($val == ord '.') {
 	$entry->parent->child_focus ('right');
 	return 1;
     }
 
-    if ($val == $Gtk2::Gdk::Keysyms{ISO_Left_Tab} ||
-	$val == $Gtk2::Gdk::Keysyms{Shift_L} ||
-	$val == $Gtk2::Gdk::Keysyms{Tab} ||
-	$val == $Gtk2::Gdk::Keysyms{BackSpace} ||
-	$val == $Gtk2::Gdk::Keysyms{Delete} ||
+    if ($val == Gtk3::Gdk::KEY_ISO_Left_Tab ||
+	$val == Gtk3::Gdk::KEY_Shift_L ||
+	$val == Gtk3::Gdk::KEY_Tab ||
+	$val == Gtk3::Gdk::KEY_BackSpace ||
+	$val == Gtk3::Gdk::KEY_Delete ||
 	($val >= ord '0' && $val <= ord '9') ||
-	($val >= $Gtk2::Gdk::Keysyms{KP_0} &&
-	 $val <= $Gtk2::Gdk::Keysyms{KP_9})) {
+	($val >= Gtk3::Gdk::KEY_KP_0 &&
+	 $val <= Gtk3::Gdk::KEY_KP_9)) {
 	return undef;
     }
 
@@ -1153,13 +1161,13 @@ sub check_range {
 sub creat_text_input {
     my ($default, $text) = @_;
 
-    my $hbox = Gtk2::HBox->new (0, 0);
+    my $hbox = Gtk3::HBox->new (0, 0);
 
-    my $label = Gtk2::Label->new ($text);
+    my $label = Gtk3::Label->new ($text);
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox->pack_start ($label, 0, 0, 10);
-    my $e1 = Gtk2::Entry->new ();
+    my $e1 = Gtk3::Entry->new ();
     $e1->set_width_chars (30);
     $hbox->pack_start ($e1, 0, 0, 0);
     $e1->set_text ($default);
@@ -1173,14 +1181,15 @@ sub creat_ip_input {
     my (@ips) = split /\./, $init;
     my (@defs) = split /\./, $default;
 
-    my $hbox = Gtk2::HBox->new (0, 0);
+    my $hbox = Gtk3::HBox->new (0, 0);
 
-    my $label = Gtk2::Label->new ($text);
+    my $label = Gtk3::Label->new ($text);
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox->pack_start ($label, 0, 0, 10);
 
-    my $e1 = Gtk2::Entry->new_with_max_length  (3);
+    my $e1 = Gtk3::Entry->new();
+    $e1->set_max_length(3);
     $e1->{default} = $defs[0];
     $hbox->pack_start ($e1, 0, 0, 0);
     $e1->set_width_chars (3);
@@ -1188,10 +1197,11 @@ sub creat_ip_input {
     $e1->signal_connect (key_press_event => \&check_num);
     $e1->signal_connect (focus_out_event => \&check_range);
 
-    my $l1 = Gtk2::Label->new (".");
+    my $l1 = Gtk3::Label->new (".");
     $hbox->pack_start ($l1, 0, 0, 2);
 
-    my $e2 = Gtk2::Entry->new_with_max_length  (3);
+    my $e2 = Gtk3::Entry->new();
+    $e2->set_max_length(3);
     $e2->{default} = $defs[1];
     $hbox->pack_start ($e2, 0, 0, 0);
     $e2->set_width_chars (3);
@@ -1199,10 +1209,11 @@ sub creat_ip_input {
     $e2->signal_connect (key_press_event => \&check_num);
     $e2->signal_connect (focus_out_event => \&check_range);
 
-    my $l2 = Gtk2::Label->new (".");
+    my $l2 = Gtk3::Label->new (".");
     $hbox->pack_start ($l2, 0, 0, 2);
 
-    my $e3 = Gtk2::Entry->new_with_max_length  (3);
+    my $e3 = Gtk3::Entry->new();
+    $e3->set_max_length(3);
     $e3->{default} = $defs[2];
     $hbox->pack_start ($e3, 0, 0, 0);
     $e3->set_width_chars (3);
@@ -1210,10 +1221,11 @@ sub creat_ip_input {
     $e3->signal_connect (key_press_event => \&check_num);
     $e3->signal_connect (focus_out_event => \&check_range);
 
-    my $l3 = Gtk2::Label->new (".");
+    my $l3 = Gtk3::Label->new (".");
     $hbox->pack_start ($l3, 0, 0, 2);
 
-    my $e4 = Gtk2::Entry->new_with_max_length  (3);
+    my $e4 = Gtk3::Entry->new();
+    $e4->set_max_length(3);
     $e4->{default} = $defs[3];
     $hbox->pack_start ($e4, 0, 0, 0);
     $e4->set_width_chars (3);
@@ -1248,7 +1260,7 @@ sub get_ip_config {
 sub display_message {
     my ($msg) = @_;
 
-    my $dialog = Gtk2::MessageDialog->new ($window, 'modal',
+    my $dialog = Gtk3::MessageDialog->new ($window, 'modal',
 					   'info', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
@@ -1257,7 +1269,7 @@ sub display_message {
 sub display_error {
     my ($msg) = @_;
 
-    my $dialog = Gtk2::MessageDialog->new ($window, 'modal',
+    my $dialog = Gtk3::MessageDialog->new ($window, 'modal',
 					   'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
@@ -1268,11 +1280,11 @@ sub create_ipconf_view {
     cleanup_view ();
     display_html ("ipconf.htm");
 
-    my $vbox =  Gtk2::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk2::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new (0, 0);
     $vbox->pack_start ($hbox, 0, 0, 30);
-    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->add ($vbox2);
 
     my $addr = $ipconf->{addr} || '192.168.100.2';
@@ -1380,7 +1392,7 @@ sub update_zonelist {
 	$sel = $timezone; # used once to select default
     }
 
-    my $cb = $lastzonecb = Gtk2::ComboBox->new_text ();
+    my $cb = $lastzonecb = Gtk3::ComboBoxText->new_with_entry();
     $cb->set_size_request (200, -1);
 
     $cb->signal_connect ('changed' => sub {
@@ -1411,37 +1423,37 @@ sub create_password_view {
 
     cleanup_view ();
 
-    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    my $vbox2 =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox2, 1, 0, 0);
-    my $vbox =  Gtk2::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new (0, 0);
     $vbox2->pack_start ($vbox, 0, 0, 30);
 
-    my $hbox1 = Gtk2::HBox->new (0, 0);
-    my $label = Gtk2::Label->new ("Password");
+    my $hbox1 = Gtk3::HBox->new (0, 0);
+    my $label = Gtk3::Label->new ("Password");
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox1->pack_start ($label, 0, 0, 10);
-    my $pwe1 = Gtk2::Entry->new ();
+    my $pwe1 = Gtk3::Entry->new ();
     $pwe1->set_visibility (0);
     $pwe1->set_size_request (200, -1);
     $hbox1->pack_start ($pwe1, 0, 0, 0);
 
-    my $hbox2 = Gtk2::HBox->new (0, 0);
-    $label = Gtk2::Label->new ("Confirm");
+    my $hbox2 = Gtk3::HBox->new (0, 0);
+    $label = Gtk3::Label->new ("Confirm");
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox2->pack_start ($label, 0, 0, 10);
-    my $pwe2 = Gtk2::Entry->new ();
+    my $pwe2 = Gtk3::Entry->new ();
     $pwe2->set_visibility (0);
     $pwe2->set_size_request (200, -1);
     $hbox2->pack_start ($pwe2, 0, 0, 0);
 
-    my $hbox3 = Gtk2::HBox->new (0, 0);
-    $label = Gtk2::Label->new ("E-Mail");
+    my $hbox3 = Gtk3::HBox->new (0, 0);
+    $label = Gtk3::Label->new ("E-Mail");
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox3->pack_start ($label, 0, 0, 10);
-    my $eme = Gtk2::Entry->new ();
+    my $eme = Gtk3::Entry->new ();
     $eme->set_size_request (200, -1);
     $hbox3->pack_start ($eme, 0, 0, 0);
 
@@ -1497,33 +1509,33 @@ sub create_country_view {
     my $countryhash = $cmap->{countryhash};
     my $ctr = $cmap->{country};
 
-    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    my $vbox2 =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox2, 1, 0, 0);
-    my $vbox =  Gtk2::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new (0, 0);
     $vbox2->pack_start ($vbox, 0, 0, 30);
 
-    my $w = Gtk2::Entry->new ();
+    my $w = Gtk3::Entry->new ();
     $w->set_size_request (200, -1);
 
-    my $c = Gtk2::EntryCompletion->new ();
+    my $c = Gtk3::EntryCompletion->new ();
     $c->set_text_column (0);
     $c->set_minimum_key_length(0);
     $c->set_popup_set_width (1);
 
-    my $hbox2 = Gtk2::HBox->new (0, 0);
-    my $label = Gtk2::Label->new ("Time zone");
+    my $hbox2 = Gtk3::HBox->new (0, 0);
+    my $label = Gtk3::Label->new ("Time zone");
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox2->pack_start ($label, 0, 0, 10);
     update_zonelist ($hbox2);
 
-    my $hbox3 = Gtk2::HBox->new (0, 0);
-    $label = Gtk2::Label->new ("Keyboard Layout");
+    my $hbox3 = Gtk3::HBox->new (0, 0);
+    $label = Gtk3::Label->new ("Keyboard Layout");
     $label->set_size_request (150, -1);
     $label->set_alignment (1, 0.5);
     $hbox3->pack_start ($label, 0, 0, 10);
 
-    my $kmapcb = Gtk2::ComboBox->new_text ();
+    my $kmapcb = Gtk3::ComboBoxText->new_with_entry ();
     $kmapcb->set_size_request (200, -1);
     foreach my $layout (sort keys %{$cmap->{kmaphash}}) {
 	$kmapcb->append_text ($layout);
@@ -1557,12 +1569,14 @@ sub create_country_view {
 	my ($entry, $event) = @_;
 	my $text = $entry->get_text;
 
-	my $val = $event->keyval;
-	if ($val == $Gtk2::Gdk::Keysyms{Tab}) {
+	my $val = $event->get_keyval;
+
+	if ($val == Gtk3::Gdk::KEY_Tab) {
 	    my $cc = $countryhash->{lc($text)};
 	    return undef if $cc;
 	    my $found = 0;
 	    my $compl;
+
 	    foreach my $cc (keys %$ctr) {
 		my $ct = $ctr->{$cc}->{name};
 		if ($ct =~ m/^\Q$text\E.*$/i) {
@@ -1572,20 +1586,23 @@ sub create_country_view {
 		last if $found > 1;
 	    }
 	    if ($found == 1) {
-		$entry->set_text ($compl);
+		$entry->set_text($compl);
 		return undef;
 	    } else {
-		Gtk2::Gdk->beep();
+		#Gtk3::Gdk::beep();
+		print chr(7); # beep ?
 	    }
 
-	    $w->insert_text('', -1); # popup selection
+	    my $buf = $w->get_buffer();
+	    $buf->insert_text(-1, '', -1); # popup selection
+
 	    return 1;
 	}
 
 	return undef;
     });
-
-    my $ls = Gtk2::ListStore->new('Glib::String');
+ 
+    my $ls = Gtk3::ListStore->new('Glib::String');
     foreach my $cc (sort {$ctr->{$a}->{name} cmp $ctr->{$b}->{name} } keys %$ctr) {
 	my $iter = $ls->append();
 	$ls->set ($iter, 0, $ctr->{$cc}->{name});
@@ -1594,9 +1611,9 @@ sub create_country_view {
 
     $w->set_completion ($c);
 
-    my $hbox =  Gtk2::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new (0, 0);
 
-    $label = Gtk2::Label->new ("Country");
+    $label = Gtk3::Label->new ("Country");
     $label->set_alignment (1, 0.5);
     $label->set_size_request (150, -1);
     $hbox->pack_start ($label, 0, 0, 10);
@@ -1634,9 +1651,9 @@ sub create_hdsel_view {
 
     cleanup_view ();
 
-    my $vbox =  Gtk2::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk2::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new (0, 0);
     $vbox->pack_start ($hbox, 0, 0, 30);
 
     my ($disk, $devname, $size, $model) = @{@$hds[0]};
@@ -1646,13 +1663,15 @@ sub create_hdsel_view {
 
     if (scalar (@$hds) == 1) {
 	my $devdesc = get_device_desc ($devname, $size, $model);
-	$label = Gtk2::Label->new ("Target Harddisk: $devdesc");
+	$label = Gtk3::Label->new ("Target Harddisk: $devdesc");
 	$hbox->pack_start ($label, 0, 0, 0);
     } else {
-	$label = Gtk2::Label->new ("Target Harddisks: ");
+	$label = Gtk3::Label->new ("Target Harddisks: ");
 	$hbox->pack_start ($label, 0, 0, 0);
 
-	my $combo = Gtk2::ComboBox->new_text ();
+	my $combo = Gtk3::ComboBoxText->new_with_entry();
+	my $e = $combo->get_child();
+	$e->set_width_chars(40);
 
 	foreach my $hd (@$hds) {
 	    ($disk, $devname, $size, $model) = @$hd;
@@ -1696,19 +1715,19 @@ sub create_extract_view {
     display_html ("extract1-license.htm");
     $next->set_sensitive (0);
 
-    my $vbox =  Gtk2::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk2::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new (0, 0);
     $vbox->pack_start ($hbox, 0, 0, 30);
 
-    my $vbox2 =  Gtk2::VBox->new (0, 0);
+    my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->pack_start ($vbox2, 0, 0, 0);
 
-    $progress_status = Gtk2::Label->new ();
+    $progress_status = Gtk3::Label->new ('');
     $vbox2->pack_start ($progress_status, 1, 1, 0);
 
-    $progress = Gtk2::ProgressBar->new;
-    $progress->set_size_request (400, -1);
+    $progress = Gtk3::ProgressBar->new;
+    $progress->set_size_request (600, -1);
 
     $vbox2->pack_start ($progress, 0, 0, 0);
 
@@ -1769,6 +1788,6 @@ if (!defined ($hds) || (scalar (@$hds) <= 0)) {
     create_intro_view ();
 }
 
-Gtk2->main;
+Gtk3->main;
 
 exit 0;
