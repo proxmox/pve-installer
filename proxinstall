@@ -1730,6 +1730,7 @@ sub create_extract_view {
     $vbox2->pack_start ($progress_status, 1, 1, 0);
 
     $progress = Gtk3::ProgressBar->new;
+    $progress->set_show_text(1);
     $progress->set_size_request (600, -1);
 
     $vbox2->pack_start ($progress, 0, 0, 0);
@@ -1750,12 +1751,6 @@ sub create_extract_view {
     display_html ($err ? "fail.htm" : "success.htm");
 
     display_error ($err) if $err;
-}
-
-sub mupdate_progress {
-    my $per = shift;
-    print "GOT1: $per\n";
-
 }
 
 sub create_intro_view {
