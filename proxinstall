@@ -1283,7 +1283,7 @@ sub create_ipconf_view {
     my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
     my $hbox =  Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 0, 0, 30);
+    $vbox->pack_start ($hbox, 0, 0, 10);
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->add ($vbox2);
 
@@ -1310,7 +1310,7 @@ sub create_ipconf_view {
     ($gwbox, $gw_1, $gw_2, $gw_3, $gw_4) =
 	creat_ip_input ($gateway, '0.0.0.0', 'Gateway:');
 
-    $vbox2->pack_start ($gwbox, 0, 0, 15);
+    $vbox2->pack_start ($gwbox, 0, 0, 2);
 
     $dnsserver = $ipconf->{dnsserver} || $gateway;
 
@@ -1426,7 +1426,7 @@ sub create_password_view {
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox2, 1, 0, 0);
     my $vbox =  Gtk3::VBox->new (0, 0);
-    $vbox2->pack_start ($vbox, 0, 0, 30);
+    $vbox2->pack_start ($vbox, 0, 0, 10);
 
     my $hbox1 = Gtk3::HBox->new (0, 0);
     my $label = Gtk3::Label->new ("Password");
@@ -1512,7 +1512,7 @@ sub create_country_view {
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox2, 1, 0, 0);
     my $vbox =  Gtk3::VBox->new (0, 0);
-    $vbox2->pack_start ($vbox, 0, 0, 30);
+    $vbox2->pack_start ($vbox, 0, 0, 10);
 
     my $w = Gtk3::Entry->new ();
     $w->set_size_request (200, -1);
@@ -1657,7 +1657,7 @@ sub create_hdsel_view {
     my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
     my $hbox =  Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 0, 0, 30);
+    $vbox->pack_start ($hbox, 0, 0, 10);
 
     my ($disk, $devname, $size, $model) = @{@$hds[0]};
     $target_hd = $devname;
@@ -1721,7 +1721,7 @@ sub create_extract_view {
     my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
     my $hbox =  Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 0, 0, 30);
+    $vbox->pack_start ($hbox, 0, 0, 10);
 
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->pack_start ($vbox2, 0, 0, 0);
