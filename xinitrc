@@ -1,4 +1,4 @@
 /usr/bin/xrdb -load /.Xdefaults
 /usr/bin/X11/xsetroot -solid grey
 openbox &
-/usr/bin/proxinstall
+G_SLICE=always-malloc /usr/bin/proxinstall
