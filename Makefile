@@ -13,7 +13,7 @@ INSTALLER_SOURCES=		\
 	checktime		\
 	proxinstall
 
-HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.png)
+HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png)
 
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
 	rm -rf debian

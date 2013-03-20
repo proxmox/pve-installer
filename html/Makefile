@@ -3,6 +3,7 @@ all:
 
 .phony: install
 install:
+	install -D -m 644 pve-installer.css ${DESTDIR}/var/lib/pve-installer/html/pve-installer.css
 	install -D -m 644 page1.htm ${DESTDIR}/var/lib/pve-installer/html/page1.htm
 	install -D -m 644 country.htm ${DESTDIR}/var/lib/pve-installer/html/country.htm
 	install -D -m 644 passwd.htm ${DESTDIR}/var/lib/pve-installer/html/passwd.htm
