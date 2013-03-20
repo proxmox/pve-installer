@@ -1748,9 +1748,13 @@ sub create_extract_view {
 
     set_next ("_Reboot", sub { exit (0); } );
 
-    display_html ($err ? "fail.htm" : "success.htm");
-
-    display_error ($err) if $err;
+    if ($err) {
+	display_html ("fail.htm");
+	display_error ($err);
+    } else {
+	cleanup_view ();
+	display_html ("success.htm");
+    }
 }
 
 sub create_intro_view {
