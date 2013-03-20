@@ -18,7 +18,7 @@ parse_cmdline() {
 }
 
 debugsh() {
-    getty 38400 tty1 -i -n -l /bin/bash
+    /bin/bash
 }
 
 real_reboot() {
@@ -38,9 +38,6 @@ real_reboot() {
     fi
     echo "done."
 
-    umount -l -n /etc/network/run
-
-    umount -l -n /dev/shm
     umount -l -n /dev/.static/dev
     umount -l -n /dev
 
@@ -90,11 +87,6 @@ echo "Installing additional hardware drivers"
 export RUNLEVEL=S 
 export PREVLEVEL=N
 /etc/init.d/udev start
-
-# used by if up down scripts
-mount -t tmpfs none /dev/shm
-mkdir /dev/shm/network
-mount -t tmpfs tmpfs /etc/network/run
 
 # set the hostname 
 hostname proxmox
