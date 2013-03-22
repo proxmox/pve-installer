@@ -1521,6 +1521,7 @@ sub create_country_view {
     $c->set_text_column (0);
     $c->set_minimum_key_length(0);
     $c->set_popup_set_width (1);
+    $c->set_inline_completion (1);
 
     my $hbox2 = Gtk3::HBox->new (0, 0);
     my $label = Gtk3::Label->new ("Time zone");
@@ -1573,18 +1574,24 @@ sub create_country_view {
 
 	if ($val == Gtk3::Gdk::KEY_Tab) {
 	    my $cc = $countryhash->{lc($text)};
-	    return undef if $cc;
+	    
 	    my $found = 0;
 	    my $compl;
 
-	    foreach my $cc (keys %$ctr) {
-		my $ct = $ctr->{$cc}->{name};
-		if ($ct =~ m/^\Q$text\E.*$/i) {
-		    $found++;
-		    $compl = $ct;
+	    if ($cc) {
+		$found = 1;
+		$compl = $ctr->{$cc}->{name};
+	    } else {
+		foreach my $cc (keys %$ctr) {
+		    my $ct = $ctr->{$cc}->{name};
+		    if ($ct =~ m/^\Q$text\E.*$/i) {
+			$found++;
+			$compl = $ct;
+		    }
+		    last if $found > 1;
 		}
-		last if $found > 1;
 	    }
+
 	    if ($found == 1) {
 		$entry->set_text($compl);
 		$c->complete();
