@@ -1128,7 +1128,7 @@ sub check_num {
     my $val = $event->get_keyval;
 
     if ($val == ord '.') {
-	$entry->parent->child_focus ('right');
+	$entry->get_parent->child_focus ('right');
 	return 1;
     }
 
