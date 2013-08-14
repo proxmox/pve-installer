@@ -15,7 +15,7 @@ use Gtk3::WebKit;
 use Encode;
 use Data::Dumper;
 
-my $release = '3.0';
+my $release = '3.1';
 
 my $kapi = `uname -r`;
 chomp $kapi;
