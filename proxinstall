@@ -460,6 +460,21 @@ sub get_lvm_part {
     return get_partition_dev ($target_hd, $gpt ? 3 : 2);
 }
 
+sub file_get_contents {
+    my ($filename, $max) = @_;
+
+    my $fh = IO::File->new($filename, "r") ||
+	die "can't open '$filename' - $!\n";
+
+    local $/; # slurp mode
+
+    my $content = <$fh>;
+
+    close $fh;
+
+    return $content;
+}
+
 sub write_config {
     my ($text, $filename) = @_;
 
@@ -995,8 +1010,23 @@ _EOD
 sub display_html {
     my ($filename) = @_;
 
-    my $url = "file://${proxmox_dir}/html/$filename";
-    $htmlview->load_uri($url);
+    my $path = "${proxmox_dir}/html/$filename";
+    my $url = "file://$path";
+
+    my $data = file_get_contents($path);
+
+    if ($filename eq 'license.htm') {
+	my $licensefn = -f "/EULA" ? "/EULA" : 
+	    $opt_testmode ? "./copyright" : 
+	    "/usr/share/doc/pve-installer/copyright";
+	my $eula = decode('utf8', file_get_contents($licensefn));
+	$eula =~ s/^(.*\n)//;
+	my $title = $1;
+	$data =~ s/__LICENSE__/$eula/;
+	$data =~ s/__LICENSE_TITLE__/$title/;
+    }
+
+    $htmlview->load_html_string($data, $url);
 }
 
 sub display_html_old {
