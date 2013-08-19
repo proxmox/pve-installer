@@ -1019,10 +1019,10 @@ sub display_html {
 	my $licensefn = -f "/EULA" ? "/EULA" : 
 	    $opt_testmode ? "./copyright" : 
 	    "/usr/share/doc/pve-installer/copyright";
-	my $eula = decode('utf8', file_get_contents($licensefn));
-	$eula =~ s/^(.*\n)//;
-	my $title = $1;
-	$data =~ s/__LICENSE__/$eula/;
+	my $license = decode('utf8', file_get_contents($licensefn));
+	$license =~ m/^\s+(.+\n)/;
+	my $title = $licensefn eq '/EULA' ? "END USER LICENSE AGREEMENT (EULA)": $1;
+	$data =~ s/__LICENSE__/$license/;
 	$data =~ s/__LICENSE_TITLE__/$title/;
     }
 
