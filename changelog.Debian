@@ -1,3 +1,15 @@
+pve-installer (3.3-1) unstable; urgency=low
+
+  * update path for 3.3 release
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 08 Sep 2014 12:08:14 +0200
+
+pve-installer (3.0-2) unstable; urgency=low
+
+  * always use GUID partition tables
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 09 Jan 2014 16:00:25 +0100
+
 pve-installer (3.0-1) unstable; urgency=low
 
   * updates for debian wheezy
