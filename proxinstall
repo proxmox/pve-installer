@@ -942,7 +942,7 @@ _EOD
 	    syscmd ("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
 		die "unable to install initramfs\n";
 
-	    syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy '(hd0)'") == 0 ||
+	    syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy ${target_hd}") == 0 ||
 		die "unable to install the boot loader\n";
 
 	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
