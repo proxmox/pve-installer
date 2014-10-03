@@ -1,3 +1,11 @@
+pve-installer (3.3-2) unstable; urgency=low
+  
+  * support UEFI systems
+
+  * do not install xorg.conf (not needed, and makes problems with EFI boot)
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 01 Oct 2014 09:16:03 +0200
+
 pve-installer (3.3-1) unstable; urgency=low
 
   * update path for 3.3 release

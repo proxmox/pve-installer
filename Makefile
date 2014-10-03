@@ -1,11 +1,10 @@
 # achtung: also set release in proxinstall!
 RELEASE=3.3
 
-DEB=pve-installer_3.3-1_all.deb
+DEB=pve-installer_3.3-2_all.deb
 
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\
-	xorg.conf.fbdev		\
 	fake-start-stop-daemon	\
 	policy-disable-rc.d	\
 	interfaces		\
@@ -42,7 +41,6 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
-	install -D -m 644 xorg.conf.fbdev  ${DESTDIR}/etc/X11/xorg.conf
 	install -D -m 644 copyright ${DESTDIR}/usr/share/doc/pve-installer/copyright
 	install -D -m 644 changelog.Debian  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
 	gzip --best  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
@@ -63,7 +61,7 @@ packages: /pve/${RELEASE}/install/pve.files
 	mv packages.tmp packages
 
 test.img:
-	dd if=/dev/zero of=test.img bs=1024 count=800000
+	dd if=/dev/zero of=test.img bs=1024 count=1000000
 
 check: packages test.img
 	G_SLICE=always-malloc ./proxinstall -t test.img

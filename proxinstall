@@ -13,6 +13,7 @@ use Cwd 'abs_path';
 use Gtk3 '-init';
 use Gtk3::WebKit;
 use Encode;
+use String::ShellQuote;
 use Data::Dumper;
 
 my $release = '3.3';
@@ -35,6 +36,9 @@ my $logfd = IO::File->new (">/tmp/install.log");
 
 my $proxmox_dir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
 
+my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
+
+$grub_plattform = "efi-amd64" if -d "/sys/firmware/efi"; 
 
 my ($window, $cmdbox, $inbox, $htmlview);
 my ($next, $next_fctn, $target_hd, $master_hd);
@@ -80,6 +84,25 @@ recipient_delimiter = +
 
 _EOD
 
+sub shellquote {
+    my $str = shift;
+
+    return String::ShellQuote::shell_quote($str);
+}
+
+sub cmd2string {
+    my ($cmd) = @_;
+
+    die "no arguments" if !$cmd;
+
+    return $cmd if !ref($cmd);
+
+    my @qa = ();
+    foreach my $arg (@$cmd) { push @qa, shellquote($arg); }
+
+    return join (' ', @qa);
+}
+
 sub syscmd {
     my ($cmd) = @_;
 
@@ -89,13 +112,26 @@ sub syscmd {
 sub run_command {
     my ($cmd, $func, $input, $noout) = @_;
 
+    my $cmdstr;
+    if (!ref($cmd)) {
+	$cmdstr = $cmd;
+	if ($cmd =~ m/|/) {
+	    # see 'man bash' for option pipefail
+	    $cmd = [ '/bin/bash', '-c', "set -o pipefail && $cmd" ];
+	} else {
+	    $cmd = [ $cmd ];
+	}
+    } else {
+	$cmdstr = cmd2string($cmd);
+    }
+
     my $cmdtxt;
-    if ($input && ($cmd !~ m/chpasswd/)) {
-	$cmdtxt = "# $cmd <<EOD\n$input";
+    if ($input && ($cmdstr !~ m/chpasswd/)) {
+	$cmdtxt = "# $cmdstr <<EOD\n$input";
 	chomp $cmdtxt;
 	$cmdtxt .= "\nEOD\n";
     } else {
-	$cmdtxt = "# $cmd\n";
+	$cmdtxt = "# $cmdstr\n";
     }
     print $cmdtxt;
     STDOUT->flush();
@@ -109,7 +145,7 @@ sub run_command {
 
     my $pid;
     eval {
-	$pid = open3 ($writer, $reader, $error, $cmd) || die $!;
+	$pid = open3 ($writer, $reader, $error, @$cmd) || die $!;
     };
 
     my $err = $@;
@@ -183,7 +219,7 @@ sub run_command {
 sub detect_country {
 
     print "trying to detect country...\n";
-    open (TMP, "traceroute -N 1 -q 1 -n www.debian.org|");
+    open (TMP, "traceroute -N 1 -q 1 -n 8.8.8.8|");
 
     my $country;
 
@@ -448,18 +484,6 @@ sub get_partition_dev {
 
 }
 
-sub get_boot_part {
-    my ($target_hd, $gpt) = @_;
-
-    return get_partition_dev ($target_hd, $gpt ? 2 : 1);
-}
-
-sub get_lvm_part {
-    my ($target_hd, $gpt) = @_;
-
-    return get_partition_dev ($target_hd, $gpt ? 3 : 2);
-}
-
 sub file_get_contents {
     my ($filename, $max) = @_;
 
@@ -560,11 +584,10 @@ sub extract_data {
     die "target '$targetdir' does not exist\n" if ! -d  $targetdir;
 
     my $rootdev;
+    my $efibootdev;
     my $bootdev;
     my $datadev;
     my $swapfile;
-
-    my $ptype = 'msdos';
 
     eval {
 
@@ -576,8 +599,6 @@ sub extract_data {
 	    syscmd ("dd if=/dev/zero of=${target_hd} bs=512 count=256");
 	    my $hdsize = hd_size ($target_hd); # size in blocks (1024 bytes)
 
-	    $ptype = 'gpt';
-
 	    if ($cmdline =~ m/hdsize=(\d+)[\s\n]/i) {
 		# max hdsize passed on cmdline (GB)
 		my $maxhdsize=$1*1024*1024;
@@ -588,36 +609,56 @@ sub extract_data {
 		}
 	    }
 
+	    if ($grub_plattform =~ m/^efi/) {
+		$efibootdev = get_partition_dev($target_hd, 1);
+	    }
+	    $bootdev = get_partition_dev ($target_hd, 2);
+	    my $lvmdev = get_partition_dev ($target_hd, 3);
+
+	    my $efibootsize_mb = 512;
 	    my $bootsize_mb = 512;
-	    my $bootsize = $bootsize_mb * 1024;
+
 	    my $hdsize_mb = $hdsize/1024;
 
-	    my $pcmd = "parted --align optimal ${target_hd}";
-	    $pcmd .= " unit MiB";
-	    $pcmd .= " mklabel $ptype";
+	    my $pcmd = ['parted', '--script', '--align', 'optimal', $target_hd];
+	    push @$pcmd, 'unit', 'MiB';
+	    push @$pcmd, 'mklabel', 'gpt';
 
 	    my $pnum = 1;
 
-	    if ($ptype eq 'gpt') {
-		$pcmd .= " mkpart primary 1 2";
-		$pcmd .= " set $pnum bios_grub on";
-		$pnum++;
-	    };
-
-	    $pcmd .= " mkpart primary ext2 $pnum ${bootsize_mb}";
-	    $pcmd .= " set $pnum boot on";
+	    if ($efibootdev) {
+		push @$pcmd, 'mkpart', 'primary', 'fat32', 1, $efibootsize_mb;
+		push @$pcmd, 'set', $pnum, 'boot', 'on';
+		push @$pcmd, 'name', $pnum, 'EFI-System-Partition';
+	    } else {
+		push @$pcmd, 'mkpart', 'primary', 1, 2;
+		push @$pcmd, 'set', $pnum, 'bios_grub', 'on';
+		push @$pcmd, 'name', $pnum, 'Grub-Boot-Partition';
+	    }
 	    $pnum++;
 
+	    if ($efibootdev) {
+		push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb, $efibootsize_mb + $bootsize_mb;
+	    } else {
+		push @$pcmd, 'mkpart', 'primary', 'ext2', 2, $bootsize_mb;
+		push @$pcmd, 'set', $pnum, 'boot', 'on';
+	    }
+	    push @$pcmd, 'name', $pnum, 'PVE-Boot-Partition';
+	    $pnum++;
 
-	    $pcmd .= " mkpart primary ext2 ${bootsize_mb} ${hdsize_mb}";
-	    $pcmd .= " set $pnum lvm on";
+	    if ($efibootdev) {
+		push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb + $bootsize_mb, $hdsize_mb;
+	    } else {
+		push @$pcmd, 'mkpart', 'primary', 'ext2', $bootsize_mb, $hdsize_mb;
+	    }
+
+	    push @$pcmd, 'set', $pnum, 'lvm', 'on';
+	    push @$pcmd, 'name', $pnum, 'PVE-LVM2-Partition';
 
 	    syscmd($pcmd) == 0 ||
 		die "unable to partition harddisk '${target_hd}'\n";
 
 	    sleep(1); # give kernel time to reread part table
-
-	    my $lvmdev = get_lvm_part($target_hd, $ptype eq 'gpt');
 
 	    $rootdev = '/dev/pve/root';
 	    $datadev = '/dev/pve/data';
@@ -653,6 +694,10 @@ sub extract_data {
 	    }
 
 	    my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
+
+	    my $bootsize = $bootsize_mb * 1024;
+	    $bootsize += $efibootsize_mb * 1024 if $efibootdev;
+
 	    my $rest = int($hdsize) - $bootsize - $swapsize - $rootsize; # in KB
 
 	    my $minfree;
@@ -694,12 +739,14 @@ sub extract_data {
 	update_progress (0.05, 0, $maxper, "creating filesystems");
 
 	if ( -b $target_hd) {
-	    $bootdev = get_boot_part ($target_hd, $ptype eq 'gpt');
-	    create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1);
+	    if ($efibootdev) {
+		syscmd ("mkfs.vfat -F32 $efibootdev");
+	    }
+	    create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1, '-m 0');
 	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
 	    create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
 	} else {
-	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
+	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1, '-m 0');
 	}
 
 	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
@@ -716,6 +763,12 @@ sub extract_data {
 	    mkdir "$targetdir/boot";
 	    syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
 		die "unable to mount $bootdev\n";
+
+	    if ($efibootdev) {
+		mkdir "$targetdir/boot/efi";
+		syscmd ("mount -n $efibootdev $targetdir/boot/efi") == 0 ||
+		    die "unable to mount $efibootdev\n";
+	    }
 
 	    mkdir "$targetdir/var";
 	    mkdir "$targetdir/var/lib";
@@ -819,6 +872,15 @@ sub extract_data {
 
 	$fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
 
+	if ($efibootdev) {
+	    my $efi_boot_uuid = $efibootdev;
+	    if (my $uuid = find_dev_by_uuid ($efibootdev)) {
+		$efi_boot_uuid = "UUID=$uuid";
+	    }
+	    
+	    $fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
+	}
+
 	$fstab .= "$swapfile none swap sw 0 0\n" if $swapfile;
 
 	$fstab .= "proc /proc proc defaults 0 0\n";
@@ -857,6 +919,10 @@ _EOD
 	    chomp;
 	    my $path = $_;
 	    my ($deb) = $path =~ m/$pkgdir\/(.*\.deb)/;
+	    if ($deb =~ m/^grub-efi-/ && $deb !~ m/^grub-${grub_plattform}/) {
+		$count++;
+		next;
+	    }
 	    update_progress ($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print "extracting: $deb\n";
 	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
@@ -906,9 +972,6 @@ _EOD
 	    syscmd ("chroot $targetdir /usr/sbin/install-keymap '/usr/share/keymaps/i386/$kmapfile'");
 	}
 
-	# enable apache port redirect
-	syscmd ("chroot $targetdir a2ensite pve-redirect.conf");
-
 	# set apt mirror
 	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
 	    my $fn = "$targetdir/etc/apt/sources.list";
@@ -928,7 +991,7 @@ _EOD
 	update_progress (0.8, 0.95, 1, "make system bootable");
 
 	# update default grub settings
-	syscmd ("sed -i -e 's/^GRUB_DISTRIBUTOR.*/GRUB_DISTRIBUTOR=\"Proxmox Virtual Environment\"/' -e 's/#GRUB_DISABLE_LINUX_RECOVERY=.*/GRUB_DISABLE_LINUX_RECOVERY=\"true\"/' $targetdir/etc/default/grub");
+	syscmd ("sed -i -e 's/^GRUB_DISTRIBUTOR.*/GRUB_DISTRIBUTOR=\"Proxmox Virtual Environment\"/' -e 's/#GRUB_DISABLE_RECOVERY=.*/GRUB_DISABLE_RECOVERY=\"true\"/' $targetdir/etc/default/grub");
 
 	diversion_remove ($targetdir, "/usr/sbin/update-grub");
 	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
@@ -942,7 +1005,7 @@ _EOD
 	    syscmd ("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
 		die "unable to install initramfs\n";
 
-	    syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy ${target_hd}") == 0 ||
+	    syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy --bootloader-id='proxmox' ${target_hd}") == 0 ||
 		die "unable to install the boot loader\n";
 
 	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
@@ -995,6 +1058,7 @@ _EOD
 	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
     }
 
+    syscmd ("umount $targetdir/boot/efi") if $efibootdev;
     syscmd ("umount $targetdir/boot");
     syscmd ("umount $targetdir/var/lib/vz");
     syscmd ("umount $targetdir/tmp");
@@ -1083,6 +1147,7 @@ sub create_main_window {
 
     $window = Gtk3::Window->new ();
     $window->set_default_size (1024, 768);
+    $window->set_has_resize_grip(0);
     $window->set_decorated (0) if !$opt_testmode;
 
     my $vbox = Gtk3::VBox->new (0, 0);
