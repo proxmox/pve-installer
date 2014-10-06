@@ -1761,33 +1761,27 @@ sub create_hdsel_view {
     $master_hd = find_master ($target_hd);
     my $label;
 
-    if (scalar (@$hds) == 1) {
-	my $devdesc = get_device_desc ($devname, $size, $model);
-	$label = Gtk3::Label->new ("Target Harddisk: $devdesc");
-	$hbox->pack_start ($label, 0, 0, 0);
-    } else {
-	$label = Gtk3::Label->new ("Target Harddisks: ");
-	$hbox->pack_start ($label, 0, 0, 0);
+    $label = Gtk3::Label->new ("Target Harddisks: ");
+    $hbox->pack_start ($label, 0, 0, 0);
 
-	my $combo = Gtk3::ComboBoxText->new_with_entry();
-	my $e = $combo->get_child();
-	$e->set_width_chars(40);
+    my $combo = Gtk3::ComboBoxText->new_with_entry();
+    my $e = $combo->get_child();
+    $e->set_width_chars(40);
 
-	foreach my $hd (@$hds) {
-	    ($disk, $devname, $size, $model) = @$hd;
-	    $combo->append_text (get_device_desc ($devname, $size, $model));
-	}
-
-	$combo->set_active (0);
-	$combo->signal_connect (changed => sub {
-	    $a = shift->get_active;
-	    my ($disk, $devname) = @{@$hds[$a]};
-	    $target_hd = $devname;
-	    $master_hd = find_master ($target_hd);
-	});
-
-	$hbox->pack_start ($combo, 0, 0, 0);
+    foreach my $hd (@$hds) {
+	($disk, $devname, $size, $model) = @$hd;
+	$combo->append_text (get_device_desc ($devname, $size, $model));
     }
+
+    $combo->set_active (0);
+    $combo->signal_connect (changed => sub {
+	$a = shift->get_active;
+	my ($disk, $devname) = @{@$hds[$a]};
+	$target_hd = $devname;
+	$master_hd = find_master ($target_hd);
+    });
+
+    $hbox->pack_start ($combo, 0, 0, 0);
 
     $inbox->show_all;
 
