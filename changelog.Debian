@@ -1,6 +1,8 @@
 pve-installer (3.3-2) unstable; urgency=low
   
   * support UEFI systems
+  
+  * add new 'Options' Dialog
 
   * do not install xorg.conf (not needed, and makes problems with EFI boot)
 
