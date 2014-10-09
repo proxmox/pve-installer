@@ -158,8 +158,12 @@ sub run_command {
     } else {
 	$cmdtxt = "# $cmdstr\n";
     }
-    print $cmdtxt;
-    STDOUT->flush();
+
+    if ($opt_testmode) {
+	print $cmdtxt;
+	STDOUT->flush();
+    }
+
     print $logfd $cmdtxt;
 
     my $reader = IO::File->new();
@@ -235,7 +239,7 @@ sub run_command {
     my $ec = ($? >> 8);
 
     if ($ec) {
-	die "command '$cmd' failed with exit code $ec";
+	die "command '$cmdstr' failed with exit code $ec";
     }
 
     return $ostream;
