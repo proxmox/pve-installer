@@ -5,6 +5,7 @@ $ENV{LC_ALL} = 'C';
 
 use strict;
 use Getopt::Long;
+use IPC::Open2;
 use IPC::Open3;
 use IO::File;
 use IO::Dir;
@@ -243,7 +244,8 @@ sub run_command {
 sub detect_country {
 
     print "trying to detect country...\n";
-    open (TMP, "traceroute -N 1 -q 1 -n 8.8.8.8|");
+    my $cpid = open2(\*TMP, undef, "traceroute -N 1 -q 1 -n 8.8.8.8");
+    return undef if !$cpid;
 
     my $country;
 
@@ -258,6 +260,7 @@ sub detect_country {
 		print $logfd "DC GEOIP: $geoip";
 		if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
 		    $country = lc ($1);
+		    print $logfd "DC FOUND: $country\n";
 		    last;
 		}
 	    }
@@ -2048,7 +2051,7 @@ sub create_intro_view {
 
 $ipconf = get_ip_config ();
 
-$country = detect_country () if $ipconf->{addr};
+$country = detect_country() if $ipconf->{addr} || $opt_testmode;;
 
 # read country, kmap and timezone infos
 $cmap = read_cmap ();
