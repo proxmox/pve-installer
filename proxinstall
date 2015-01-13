@@ -63,7 +63,11 @@ my $cmap;
 
 my $config_options = {};
 
-$config_options->{filesys} = ($cmdline =~ m/\sext4(\s.*)$/) ? 'ext4' : 'ext3';
+if ($cmdline =~ m/\s(ext3|ext4|zfs)(\s.*)?$/) {
+    $config_options->{filesys} = $1;
+} else {
+    $config_options->{filesys} = 'ext3';
+}
 
 if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
     $config_options->{hdsize} = $1;
@@ -609,6 +613,25 @@ sub diversion_remove {
 	die "unable to remove $cmd diversion\n";
 }
 
+sub zfs_create_rpool {
+    my ($zfspoolname, $targetdev) = @_;
+
+    syscmd ("zpool create -f -o ashift=12 $zfspoolname $targetdev") == 0 ||
+	die "unable to create zfs root pool\n";
+
+    syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
+	die "unable to create zfs root pool\n";
+    
+    syscmd ("zfs create $zfspoolname/ROOT/pve-1")  == 0 ||
+	die "unable to create zfs root pool\n";
+
+    # disable atime during insatll
+    syscmd ("zfs set atime=off $zfspoolname") == 0 ||
+	die "unable to set zfs properties\n";
+    syscmd ("zfs set compression=on $zfspoolname") == 0 ||
+	die "unable to set zfs properties\n";
+}
+
 sub extract_data {
     my ($tgzfile, $targetdir) = @_;
 
@@ -622,6 +645,12 @@ sub extract_data {
 
     my $filesys = $config_options->{filesys};
 
+    my $zfspoolname = $opt_testmode ? "test_rpool" : 'rpool';
+    
+    my $use_zfs = $filesys eq 'zfs' ? 1 : 0;
+
+    $targetdir = "/$zfspoolname/ROOT/pve-1" if $use_zfs;
+
     eval {
 
 	my $maxper = 0.25;
@@ -629,6 +658,7 @@ sub extract_data {
 	update_progress (0, 0, $maxper, "create partitions");
 
 	if ( -b $target_hd) {
+
 	    syscmd ("dd if=/dev/zero of=${target_hd} bs=512 count=256");
 	    my $hdsize = hd_size ($target_hd); # size in blocks (1024 bytes)
 
@@ -678,91 +708,107 @@ sub extract_data {
 	    }
 	    push @$pcmd, 'name', $pnum, 'PVE-Boot-Partition';
 	    $pnum++;
-
+	    
+	    my $ptype = $use_zfs ? 'zfs' : 'ext2';
 	    if ($efibootdev) {
-		push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb + $bootsize_mb, $hdsize_mb;
+		push @$pcmd, 'mkpart', 'primary', $ptype, $efibootsize_mb + $bootsize_mb, $hdsize_mb;
 	    } else {
-		push @$pcmd, 'mkpart', 'primary', 'ext2', $bootsize_mb, $hdsize_mb;
+		push @$pcmd, 'mkpart', 'primary', $ptype, $bootsize_mb, $hdsize_mb;
 	    }
 
-	    push @$pcmd, 'set', $pnum, 'lvm', 'on';
-	    push @$pcmd, 'name', $pnum, 'PVE-LVM2-Partition';
+	    if ($use_zfs) {
+		push @$pcmd, 'name', $pnum, 'zfs';
+	    } else {
+		push @$pcmd, 'set', $pnum, 'lvm', 'on';
+		push @$pcmd, 'name', $pnum, 'PVE-LVM2-Partition';
+	    }
 
 	    syscmd($pcmd) == 0 ||
 		die "unable to partition harddisk '${target_hd}'\n";
 
 	    sleep(1); # give kernel time to reread part table
 
-	    $rootdev = '/dev/pve/root';
-	    $datadev = '/dev/pve/data';
-	    $swapfile = '/dev/pve/swap';
 
-	    # we use --metadatasize 250k, which reseults in "pe_start = 512"
-	    # so pe_start is aligned on a 128k boundary (advantage for SSDs)
-	    syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
-		die "unable to initialize physical volume $lvmdev";
-	    syscmd ("/sbin/vgcreate pve $lvmdev") == 0 ||
-		die "unable to create volume group";
-
-	    my $hdgb = int($hdsize/(1024*1024));
-	    die "hardisk too small (${hdgb}GB)" if $hdgb < 4;
-
-	    my $swapsize;
-	    if ($config_options->{swapsize}) {
-		$swapsize = $config_options->{swapsize}*1024*1024;
+	    if ($use_zfs) {
+		zfs_create_rpool($zfspoolname, $lvmdev);
 	    } else {
-		my $ss = int ($total_memory / 1024);
-		$ss = 4 if $ss < 4;
-		$ss = ($hdgb/8) if $ss > ($hdgb/8);
-		$swapsize = $ss*1024*1024;
+		$rootdev = '/dev/pve/root';
+		$datadev = '/dev/pve/data';
+		$swapfile = '/dev/pve/swap';
+
+		# we use --metadatasize 250k, which reseults in "pe_start = 512"
+		# so pe_start is aligned on a 128k boundary (advantage for SSDs)
+		syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
+		    die "unable to initialize physical volume $lvmdev";
+		syscmd ("/sbin/vgcreate pve $lvmdev") == 0 ||
+		    die "unable to create volume group";
+
+		my $hdgb = int($hdsize/(1024*1024));
+		die "hardisk too small (${hdgb}GB)" if $hdgb < 4;
+
+		my $swapsize;
+		if ($config_options->{swapsize}) {
+		    $swapsize = $config_options->{swapsize}*1024*1024;
+		} else {
+		    my $ss = int ($total_memory / 1024);
+		    $ss = 4 if $ss < 4;
+		    $ss = ($hdgb/8) if $ss > ($hdgb/8);
+		    $swapsize = $ss*1024*1024;
+		}
+
+		my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
+
+		my $maxroot;
+		if ($config_options->{maxroot}) {
+		    $maxroot = $config_options->{maxroot};
+		} else {
+		    $maxroot = 96;
+		}
+
+		my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
+
+		my $bootsize = $bootsize_mb * 1024;
+		$bootsize += $efibootsize_mb * 1024 if $efibootdev;
+
+		my $rest = int($hdsize) - $bootsize - $swapsize - $rootsize; # in KB
+
+		my $minfree;
+		if ($config_options->{minfree}) {
+		    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space : 
+			$config_options->{minfree}*1024*1024 ;
+		} else {
+		    $minfree = $space;
+		}
+
+		$rest = $rest - $minfree;
+
+		if ($config_options->{maxvz}) {
+		    $rest = (($config_options->{maxvz}*1024*1024) <= $rest) ? 
+			$config_options->{maxvz}*1024*1024 : $rest;
+		}
+
+		syscmd ("/sbin/lvcreate -L${swapsize}K -nswap pve") == 0 ||
+		    die "unable to create swap volume";
+
+		syscmd ("/sbin/lvcreate -L${rootsize}K -nroot pve") == 0 ||
+		    die "unable to create root volume";
+
+		syscmd ("/sbin/lvcreate -L${rest}K -ndata pve") == 0 ||
+		    die "unable to create data volume";
+
+		syscmd ("/sbin/vgchange -a y pve") == 0 ||
+		    die "unable to activate volume group";
 	    }
-
-	    my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
-
-	    my $maxroot;
-	    if ($config_options->{maxroot}) {
-		$maxroot = $config_options->{maxroot};
-	    } else {
-		$maxroot = 96;
-	    }
-
-	    my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
-
-	    my $bootsize = $bootsize_mb * 1024;
-	    $bootsize += $efibootsize_mb * 1024 if $efibootdev;
-
-	    my $rest = int($hdsize) - $bootsize - $swapsize - $rootsize; # in KB
-
-	    my $minfree;
-            if ($config_options->{minfree}) {
-		$minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space : 
-		    $config_options->{minfree}*1024*1024 ;
-            } else {
-		$minfree = $space;
-            }
-
-	    $rest = $rest - $minfree;
-
-            if ($config_options->{maxvz}) {
-		$rest = (($config_options->{maxvz}*1024*1024) <= $rest) ? 
-		    $config_options->{maxvz}*1024*1024 : $rest;
-	    }
-
-	    syscmd ("/sbin/lvcreate -L${swapsize}K -nswap pve") == 0 ||
-		die "unable to create swap volume";
-
-	    syscmd ("/sbin/lvcreate -L${rootsize}K -nroot pve") == 0 ||
-		die "unable to create root volume";
-
-	    syscmd ("/sbin/lvcreate -L${rest}K -ndata pve") == 0 ||
-		die "unable to create data volume";
-
-	    syscmd ("/sbin/vgchange -a y pve") == 0 ||
-		die "unable to activate volume group";
-
 	} else {
-	    $rootdev = $target_hd;
+	    $rootdev = abs_path($target_hd);
 	    syscmd ("umount $rootdev");
+
+	    if ($use_zfs) {
+
+		syscmd ("zpool destroy $zfspoolname") if $opt_testmode;
+
+		zfs_create_rpool($zfspoolname, $rootdev);
+	    }
 	}
 
 	update_progress (0.03, 0, $maxper, "create swap space");
@@ -778,10 +824,15 @@ sub extract_data {
 		syscmd ("mkfs.vfat -F32 $efibootdev");
 	    }
 	    create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1, '-m 0');
-	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
-	    create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
+
+	    if (!$use_zfs) {
+		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
+		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
+	    }
 	} else {
-	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1, '-m 0');
+	    if (!$use_zfs) {
+		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1, '-m 0');
+	    }
 	}
 
 	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
@@ -792,8 +843,10 @@ sub extract_data {
 	    syscmd ("udevadm trigger --subsystem-match block");
 	    syscmd ("udevadm settle --timeout 10");
 
-	    syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
-		die "unable to mount $rootdev\n";
+	    if (!$use_zfs) {
+		syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
+		    die "unable to mount $rootdev\n";
+	    }
 
 	    mkdir "$targetdir/boot";
 	    syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
@@ -805,15 +858,18 @@ sub extract_data {
 		    die "unable to mount $efibootdev\n";
 	    }
 
-	    mkdir "$targetdir/var";
-	    mkdir "$targetdir/var/lib";
-	    mkdir "$targetdir/var/lib/vz";
-	    syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
-		die "unable to mount $datadev\n";
-
+	    if (!$use_zfs) {
+		mkdir "$targetdir/var";
+		mkdir "$targetdir/var/lib";
+		mkdir "$targetdir/var/lib/vz";
+		syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
+		    die "unable to mount $datadev\n";
+	    }
 	} else {
-	    syscmd ("mount $rootdev $targetdir -o loop,noatime,barrier=0") == 0 ||
-		die "unable to mount $rootdev\n";
+	    if (!$use_zfs) {
+		syscmd ("mount $rootdev $targetdir -o loop,noatime,barrier=0") == 0 ||
+		    die "unable to mount $rootdev\n";
+	    }
 	}
 
 	display_html ("extract2-rulesystem.htm");
@@ -891,19 +947,20 @@ sub extract_data {
 	my $resolfconf = "search $domain\nnameserver $dnsserver\n";
 	write_config ($resolfconf, "$targetdir/etc/resolv.conf");
 
+	# configure fstab
+
+	my $fstab = "# <file system> <mount point> <type> <options> <dump> <pass>\n";
+
+	if (!$use_zfs) {
+	    $fstab .= "$rootdev / $filesys errors=remount-ro 0 1\n";
+	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
+	}
+	 
 	# try to use UUID=XXX for boot device
 	my $boot_uuid = $bootdev;
 	if (my $uuid = find_dev_by_uuid ($bootdev)) {
 	    $boot_uuid = "UUID=$uuid";
 	}
-
-	# configure fstab
-
-	my $fstab =
-	    "# <file system> <mount point> <type> <options> <dump> <pass>\n" .
-	    "$rootdev / $filesys errors=remount-ro 0 1\n";
-
-	$fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
 
 	$fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
 
@@ -1026,7 +1083,14 @@ _EOD
 	update_progress (0.8, 0.95, 1, "make system bootable");
 
 	# update default grub settings
-	syscmd ("sed -i -e 's/^GRUB_DISTRIBUTOR.*/GRUB_DISTRIBUTOR=\"Proxmox Virtual Environment\"/' -e 's/#GRUB_DISABLE_RECOVERY=.*/GRUB_DISABLE_RECOVERY=\"true\"/' $targetdir/etc/default/grub");
+	syscmd ("sed -i -e 's/^GRUB_DISTRIBUTOR.*/GRUB_DISTRIBUTOR=\"Proxmox Virtual Environment\"/' -e 's/#GRUB_DISABLE_RECOVERY=.*/GRUB_DISABLE_RECOVERY=\"true\"/' $targetdir/etc/default/grub") == 0 ||
+	    die "unable to update /etc/default/grub\n";
+	    
+	if ($use_zfs) {
+	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX_DEFAULT.*/GRUB_CMDLINE_LINUX_DEFAULT=\"root=ZFS=$zfspoolname\\/ROOT\\/pve-1 boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
+		die "unable to update /etc/default/grub\n";
+   
+	}
 
 	diversion_remove ($targetdir, "/usr/sbin/update-grub");
 	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
@@ -1100,6 +1164,14 @@ _EOD
     syscmd ("umount $targetdir/proc");
     syscmd ("umount $targetdir/sys");
     syscmd ("umount -d $targetdir");
+
+    if (!$err && $use_zfs) {
+	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/pve-1") == 0 ||
+	    die "zfs set mountpoint failed\n";
+	    
+	syscmd ("zpool set bootfs=$zfspoolname/ROOT/pve-1 $zfspoolname")  == 0 ||
+	    die "zfs set bootfs failed\n";
+    }
 
     die $err if $err;
 }
@@ -1816,8 +1888,11 @@ sub create_hdoption_view {
 
     $fstypecb->append_text ('ext3');
     $fstypecb->append_text ('ext4');
+    $fstypecb->append_text ('zfs');
 
-    if ($config_options->{filesys} eq 'ext4') {
+    if ($config_options->{filesys} eq 'zfs') {
+	$fstypecb->set_active (2);
+    } elsif ($config_options->{filesys} eq 'ext4') {
 	$fstypecb->set_active (1);
     } else {
 	$fstypecb->set_active (0);
