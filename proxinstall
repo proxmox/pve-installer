@@ -616,7 +616,11 @@ sub diversion_remove {
 sub zfs_create_rpool {
     my ($zfspoolname, $targetdev) = @_;
 
-    my $full_path =find_stable_path ("/dev/disk/by-id", $targetdev) || $targetdev;
+    # Note: using /dev/disk/by-id/ does not work for unknown reason, we get
+    # cannot create 'rpool': no such pool or dataset
+    # my $full_path = find_stable_path ("/dev/disk/by-id", $targetdev) || $targetdev;
+
+    my $full_path = $targetdev;
    
     syscmd ("zpool create -f -o ashift=12 $zfspoolname ${full_path}") == 0 ||
 	die "unable to create zfs root pool\n";
