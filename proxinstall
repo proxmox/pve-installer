@@ -1944,9 +1944,6 @@ sub create_hdoption_view {
 	$fstypecb->set_active (0);
     }
 
-    $fstypecb->signal_connect (changed => sub {
-	$config_options->{filesys} = $fstypecb->get_active_text();
-    });
     $grid->attach($fstypecb, 1, 0, 1, 1);
 
     my $label_hdsize = Gtk3::Label->new ("hdsize");
@@ -2005,6 +2002,23 @@ sub create_hdoption_view {
     $entry_maxvz->signal_connect (key_press_event => \&check_float);
     $entry_maxvz->set_text($config_options->{maxvz}) if $config_options->{maxvz};
     $grid->attach($entry_maxvz, 1, 5, 1, 1);
+
+    my $set_sensitive_flag = sub {
+	my $sensitive = $config_options->{filesys} ne 'zfs';
+	$spinbutton_hdsize->set_sensitive($sensitive);
+	$entry_swapsize->set_sensitive($sensitive);
+	$entry_maxroot->set_sensitive($sensitive);
+	$entry_minfree->set_sensitive($sensitive);
+	$label_maxvz->set_sensitive($sensitive);
+	$entry_maxvz->set_sensitive($sensitive);
+    };
+
+    &$set_sensitive_flag();
+
+    $fstypecb->signal_connect (changed => sub {
+	$config_options->{filesys} = $fstypecb->get_active_text();
+	&$set_sensitive_flag();
+    });
 
     $dialog->show_all;
 
