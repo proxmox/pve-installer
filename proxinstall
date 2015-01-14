@@ -620,16 +620,32 @@ sub zfs_create_rpool {
 	die "unable to create zfs root pool\n";
 
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
-	die "unable to create zfs root pool\n";
+	die "unable to create zfs $zfspoolname/ROOT volume\n";
     
     syscmd ("zfs create $zfspoolname/ROOT/pve-1")  == 0 ||
-	die "unable to create zfs root pool\n";
+	die "unable to create zfs $zfspoolname/ROOT/pve-1 volume\n";
 
     # disable atime during insatll
     syscmd ("zfs set atime=off $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
     syscmd ("zfs set compression=on $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
+}
+
+sub zfs_create_swap {
+    my ($zfspoolname, $swapsize) = @_;
+
+    syscmd ("zfs create -V ${swapsize}K -b 4K $zfspoolname/swap")  == 0 ||
+	die "unable to create zfs swap device\n";
+
+    syscmd ("zfs set com.sun:auto-snapshot=false $zfspoolname/swap") == 0 ||
+	die "unable to set zfs properties\n";
+
+    # reduces memory pressure
+    syscmd ("zfs set sync=always $zfspoolname/swap") == 0 ||
+	die "unable to set zfs properties\n";
+
+    return "/dev/zvol/$zfspoolname/swap";
 }
 
 sub extract_data {
@@ -675,11 +691,17 @@ sub extract_data {
 	    if ($grub_plattform =~ m/^efi/) {
 		$efibootdev = get_partition_dev($target_hd, 1);
 	    }
-	    $bootdev = get_partition_dev ($target_hd, 2);
-	    my $lvmdev = get_partition_dev ($target_hd, 3);
 
+	    my $lvmdev;
+
+	    if ($use_zfs) {
+		$lvmdev = get_partition_dev ($target_hd, 2);
+	    } else {
+		$bootdev = get_partition_dev ($target_hd, 2);
+		$lvmdev = get_partition_dev ($target_hd, 3);
+	    }
 	    my $efibootsize_mb = 512;
-	    my $bootsize_mb = 512;
+	    my $bootsize_mb = $use_zfs ? 0 : 512;
 
 	    my $hdsize_mb = $hdsize/1024;
 
@@ -700,25 +722,32 @@ sub extract_data {
 	    }
 	    $pnum++;
 
-	    if ($efibootdev) {
-		push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb, $efibootsize_mb + $bootsize_mb;
-	    } else {
-		push @$pcmd, 'mkpart', 'primary', 'ext2', 2, $bootsize_mb;
-		push @$pcmd, 'set', $pnum, 'boot', 'on';
-	    }
-	    push @$pcmd, 'name', $pnum, 'PVE-Boot-Partition';
-	    $pnum++;
-	    
-	    my $ptype = $use_zfs ? 'zfs' : 'ext2';
-	    if ($efibootdev) {
-		push @$pcmd, 'mkpart', 'primary', $ptype, $efibootsize_mb + $bootsize_mb, $hdsize_mb;
-	    } else {
-		push @$pcmd, 'mkpart', 'primary', $ptype, $bootsize_mb, $hdsize_mb;
-	    }
-
 	    if ($use_zfs) {
+
+		if ($efibootdev) {
+		    push @$pcmd, 'mkpart', 'primary', 'zfs', $efibootsize_mb, $hdsize_mb;
+		} else {
+		    push @$pcmd, 'mkpart', 'primary', 'zfs', 2, $hdsize_mb;
+		}
 		push @$pcmd, 'name', $pnum, 'zfs';
+
 	    } else {
+
+		if ($efibootdev) {
+		    push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb, $efibootsize_mb + $bootsize_mb;
+		} else {
+		    push @$pcmd, 'mkpart', 'primary', 'ext2', 2, $bootsize_mb;
+		    push @$pcmd, 'set', $pnum, 'boot', 'on';
+		}
+		push @$pcmd, 'name', $pnum, 'PVE-Boot-Partition';
+		$pnum++;
+	    
+		if ($efibootdev) {
+		    push @$pcmd, 'mkpart', 'primary', 'ext2', $efibootsize_mb + $bootsize_mb, $hdsize_mb;
+		} else {
+		    push @$pcmd, 'mkpart', 'primary', 'ext2', $bootsize_mb, $hdsize_mb;
+		}
+
 		push @$pcmd, 'set', $pnum, 'lvm', 'on';
 		push @$pcmd, 'name', $pnum, 'PVE-LVM2-Partition';
 	    }
@@ -728,9 +757,26 @@ sub extract_data {
 
 	    sleep(1); # give kernel time to reread part table
 
+	    # trigger udev to create /dev/disk/by-uuid
+	    syscmd ("udevadm trigger --subsystem-match block");
+	    syscmd ("udevadm settle --timeout 10");
+
+	    my $hdgb = int($hdsize/(1024*1024));
+	    die "hardisk too small (${hdgb}GB)" if $hdgb < 4;
+
+	    my $swapsize;
+	    if ($config_options->{swapsize}) {
+		$swapsize = $config_options->{swapsize}*1024*1024;
+	    } else {
+		my $ss = int ($total_memory / 1024);
+		$ss = 4 if $ss < 4;
+		$ss = ($hdgb/8) if $ss > ($hdgb/8);
+		$swapsize = $ss*1024*1024;
+	    }
 
 	    if ($use_zfs) {
 		zfs_create_rpool($zfspoolname, $lvmdev);
+		$swapfile = zfs_create_swap($zfspoolname, $swapsize);
 	    } else {
 		$rootdev = '/dev/pve/root';
 		$datadev = '/dev/pve/data';
@@ -743,18 +789,6 @@ sub extract_data {
 		syscmd ("/sbin/vgcreate pve $lvmdev") == 0 ||
 		    die "unable to create volume group";
 
-		my $hdgb = int($hdsize/(1024*1024));
-		die "hardisk too small (${hdgb}GB)" if $hdgb < 4;
-
-		my $swapsize;
-		if ($config_options->{swapsize}) {
-		    $swapsize = $config_options->{swapsize}*1024*1024;
-		} else {
-		    my $ss = int ($total_memory / 1024);
-		    $ss = 4 if $ss < 4;
-		    $ss = ($hdgb/8) if $ss > ($hdgb/8);
-		    $swapsize = $ss*1024*1024;
-		}
 
 		my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
 
@@ -813,7 +847,7 @@ sub extract_data {
 
 	update_progress (0.03, 0, $maxper, "create swap space");
 	if ($swapfile) {
-	    syscmd ("mkswap $swapfile") == 0 ||
+	    syscmd ("mkswap -f $swapfile") == 0 ||
 		die "unable to create swap space\n";
 	}
 
@@ -823,9 +857,8 @@ sub extract_data {
 	    if ($efibootdev) {
 		syscmd ("mkfs.vfat -F32 $efibootdev");
 	    }
-	    create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1, '-m 0');
-
 	    if (!$use_zfs) {
+		create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1, '-m 0');
 		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
 		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
 	    }
@@ -849,8 +882,10 @@ sub extract_data {
 	    }
 
 	    mkdir "$targetdir/boot";
-	    syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
-		die "unable to mount $bootdev\n";
+	    if (!$use_zfs) {
+		syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
+		    die "unable to mount $bootdev\n";
+	    }
 
 	    if ($efibootdev) {
 		mkdir "$targetdir/boot/efi";
@@ -954,16 +989,16 @@ sub extract_data {
 	if (!$use_zfs) {
 	    $fstab .= "$rootdev / $filesys errors=remount-ro 0 1\n";
 	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
+
+	    # try to use UUID=XXX for boot device
+	    my $boot_uuid = $bootdev;
+	    if (my $uuid = find_dev_by_uuid ($bootdev)) {
+		$boot_uuid = "UUID=$uuid";
+	    }
+
+	    $fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
 	}
 	 
-	# try to use UUID=XXX for boot device
-	my $boot_uuid = $bootdev;
-	if (my $uuid = find_dev_by_uuid ($bootdev)) {
-	    $boot_uuid = "UUID=$uuid";
-	}
-
-	$fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
-
 	if ($efibootdev) {
 	    my $efi_boot_uuid = $efibootdev;
 	    if (my $uuid = find_dev_by_uuid ($efibootdev)) {
@@ -1158,7 +1193,7 @@ _EOD
     }
 
     syscmd ("umount $targetdir/boot/efi") if $efibootdev;
-    syscmd ("umount $targetdir/boot");
+    syscmd ("umount $targetdir/boot") if !$use_zfs;
     syscmd ("umount $targetdir/var/lib/vz");
     syscmd ("umount $targetdir/tmp");
     syscmd ("umount $targetdir/proc");
