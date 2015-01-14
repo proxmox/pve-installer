@@ -616,7 +616,9 @@ sub diversion_remove {
 sub zfs_create_rpool {
     my ($zfspoolname, $targetdev) = @_;
 
-    syscmd ("zpool create -f -o ashift=12 $zfspoolname $targetdev") == 0 ||
+    my $full_path =find_stable_path ("/dev/disk/by-id", $targetdev) || $targetdev;
+   
+    syscmd ("zpool create -f -o ashift=12 $zfspoolname ${full_path}") == 0 ||
 	die "unable to create zfs root pool\n";
 
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
@@ -843,6 +845,12 @@ sub extract_data {
 
 		zfs_create_rpool($zfspoolname, $rootdev);
 	    }
+	}
+
+	if ($use_zfs) {
+	    # to be fast during installation
+	    syscmd ("zfs set sync=disabled $zfspoolname") == 0 ||
+		die "unable to set zfs properties\n";
 	}
 
 	update_progress (0.03, 0, $maxper, "create swap space");
@@ -1201,6 +1209,9 @@ _EOD
     syscmd ("umount -d $targetdir");
 
     if (!$err && $use_zfs) {
+	syscmd ("zfs set sync=standard $zfspoolname") == 0 ||
+	    die "unable to set zfs properties\n";
+
 	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/pve-1") == 0 ||
 	    die "zfs set mountpoint failed\n";
 	    
