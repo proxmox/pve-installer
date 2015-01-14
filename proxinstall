@@ -675,6 +675,18 @@ sub extract_data {
 
     eval {
 
+	if ($use_zfs) {
+	    my $i;
+	    for ($i = 5; $i > 0; $i--) {
+		syscmd("modprobe zfs");
+		last if -c "/dev/zfs";
+		sleep(1);
+	    }
+
+	    die "unable to load zfs kernel module\n" if !$i;
+	}
+
+
 	my $maxper = 0.25;
 
 	update_progress (0, 0, $maxper, "create partitions");
