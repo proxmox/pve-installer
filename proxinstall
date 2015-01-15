@@ -1222,7 +1222,13 @@ _EOD
     syscmd ("umount $targetdir/tmp");
     syscmd ("umount $targetdir/proc");
     syscmd ("umount $targetdir/sys");
-    syscmd ("umount -d $targetdir");
+
+    if ($use_zfs) {
+	syscmd ("zfs umount -a") == 0 ||
+	    die "unable to unmount zfs\n";
+    } else {
+	syscmd ("umount -d $targetdir");
+    }
 
     if (!$err && $use_zfs) {
 	syscmd ("zfs set sync=standard $zfspoolname") == 0 ||
