@@ -1146,7 +1146,7 @@ _EOD
 	    die "unable to update /etc/default/grub\n";
 	    
 	if ($use_zfs) {
-	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX_DEFAULT.*/GRUB_CMDLINE_LINUX_DEFAULT=\"root=ZFS=$zfspoolname\\/ROOT\\/pve-1 boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
+	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/pve-1 boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
    
 	}
