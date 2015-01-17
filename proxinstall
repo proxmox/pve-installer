@@ -1077,9 +1077,10 @@ sub extract_data {
 
 	syscmd ("touch  $targetdir/proxmox_install_mode");
 
-	my $grub_install_devices_txt;
+	my $grub_install_devices_txt = '';
 	foreach my $di (@$bootdevinfo) {
-	    $grub_install_devices_txt .= " $di->{by_id}" if $di->{by_id};
+	    $grub_install_devices_txt .= ', ' if $grub_install_devices_txt;
+	    $grub_install_devices_txt .= $di->{by_id} if $di->{by_id};
 	}
 
 	debconfig_set ($targetdir, <<_EOD);
