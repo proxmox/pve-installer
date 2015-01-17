@@ -636,22 +636,12 @@ sub partition_bootable_disk {
     die "hardisk '$target_dev' too small (${hdsize}GB)" if $hdgb < 8;
 
     # 1 - GRUB boot partition: 1M 
-    # 2 - EFI ESP: 100M 
-    # 3 - Linux boot fixme: remove
-    # 4 - OS/Data partition
+    # 2 - EFI ESP: 128M 
+    # 3 - OS/Data partition
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
     my $efibootdev = get_partition_dev($target_dev, 2);
-
-    my $osdev;
-    my $bootdev;
-
-    if ($use_zfs) {
-	$osdev = get_partition_dev ($target_dev, 3);
-    } else {
-	$bootdev = get_partition_dev ($target_dev, 3);
-	$osdev = get_partition_dev ($target_dev, 4);
-    }
+    my $osdev = get_partition_dev ($target_dev, 3);
 
     my $bootsize_mb = 512;
     my $efibootsize_mb = 128;
@@ -697,9 +687,6 @@ sub partition_bootable_disk {
 
     } else {
 	
-	&$mkpart('ext2', $bootsize_mb);
-	push @$pcmd, 'name', $pnum, 'PVE-Boot-Partition';
-
 	my $data_start = $cpos;
 	&$mkpart('ext2');
 	push @$pcmd, 'set', $pnum, 'lvm', 'on';
@@ -710,7 +697,7 @@ sub partition_bootable_disk {
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
 
-    return ($os_size, $osdev, $bootdev, $efibootdev);
+    return ($os_size, $osdev, $efibootdev);
 }
 
 sub create_lvm_volumes {
@@ -794,7 +781,6 @@ sub extract_data {
 
     my $bootdevinfo = [];
 
-    my $bootdev;
     my $datadev;
     my $swapfile;
     my $rootdev;
@@ -856,7 +842,7 @@ sub extract_data {
 	    my $disksize;
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
-		my ($size, $osdev, undef, $efidev) =
+		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, undef, 1);
 		die "unable to mirror disks with different sizes!\n" 
 		    if $disksize && ($size != $disksize);
@@ -887,7 +873,7 @@ sub extract_data {
 	    }
 
 	    my ($os_size, $osdev, $efidev); 
-	    ($os_size, $osdev, $bootdev, $efidev) = 
+	    ($os_size, $osdev, $efidev) = 
 		partition_bootable_disk($target_hd, $maxhdsize, $use_zfs);
 	    
 	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd };
@@ -937,8 +923,7 @@ sub extract_data {
 
 	    if ( -b $target_hd) {
 
-		create_filesystem ($bootdev, 'boot', $filesys, 0.05, $maxper, 0, 0.1, '-m 0');
-		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0.1, 0.5);
+		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 0.5);
 		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
 
 	    } else {
@@ -961,10 +946,6 @@ sub extract_data {
 	    }
 
 	    mkdir "$targetdir/boot";
-	    if (!$use_zfs) {
-		syscmd ("mount -n $bootdev -o noatime,barrier=0 $targetdir/boot") == 0 ||
-		    die "unable to mount $bootdev\n";
-	    }
 
 	    if (scalar(@$bootdevinfo)) {
 		mkdir "$targetdir/boot/efi";
@@ -1070,14 +1051,6 @@ sub extract_data {
 	if (!$use_zfs) {
 	    $fstab .= "$rootdev / $filesys errors=remount-ro 0 1\n";
 	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
-
-	    # try to use UUID=XXX for boot device
-	    my $boot_uuid = $bootdev;
-	    if (my $uuid = find_dev_by_uuid ($bootdev)) {
-		$boot_uuid = "UUID=$uuid";
-	    }
-
-	    $fstab .= "${boot_uuid} /boot $filesys defaults 0 1\n" if $boot_uuid;
 	}
 	 
 	if (scalar(@$bootdevinfo)) {
@@ -1277,7 +1250,6 @@ _EOD
     }
 
     syscmd ("umount $targetdir/boot/efi") if scalar(@$bootdevinfo);
-    syscmd ("umount $targetdir/boot") if !$use_zfs;
     syscmd ("umount $targetdir/var/lib/vz");
     syscmd ("umount $targetdir/tmp");
     syscmd ("umount $targetdir/proc");
