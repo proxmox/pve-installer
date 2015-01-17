@@ -846,7 +846,8 @@ sub extract_data {
 		    partition_bootable_disk($devname, undef, 1);
 		die "unable to mirror disks with different sizes!\n" 
 		    if $disksize && ($size != $disksize);
-		push @$bootdevinfo, { esp => $efidev, devname => $devname };
+		my $by_id = find_stable_path ("/dev/disk/by-id", $devname);
+		push @$bootdevinfo, { esp => $efidev, devname => $devname, by_id => $by_id };
 		$disksize = $size;
 		$vdev =~ s/ $devname/ $osdev/;
 	    }
@@ -876,7 +877,8 @@ sub extract_data {
 	    ($os_size, $osdev, $efidev) = 
 		partition_bootable_disk($target_hd, $maxhdsize, $use_zfs);
 	    
-	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd };
+	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
+	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd, by_id => $by_id };
 
 	    sleep(1); # give kernel time to reread part table
 
@@ -1083,6 +1085,11 @@ sub extract_data {
 
 	syscmd ("touch  $targetdir/proxmox_install_mode");
 
+	my $grub_install_devices_txt;
+	foreach my $di (@$bootdevinfo) {
+	    $grub_install_devices_txt .= " $di->{by_id}" if $di->{by_id};
+	}
+
 	debconfig_set ($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
@@ -1090,6 +1097,7 @@ samba-common samba-common/dhcp boolean false
 samba-common samba-common/workgroup string WORKGROUP
 postfix postfix/main_mailer_type select Local only
 console-data console-data/keymap/policy select Don\'t touch keymap
+grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
 
 	my $pkgdir = $opt_testmode ? "packages" : "/proxmox/packages";
