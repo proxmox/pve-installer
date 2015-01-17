@@ -8,7 +8,6 @@ use Getopt::Long;
 use IPC::Open2;
 use IPC::Open3;
 use IO::File;
-use IO::Dir;
 use IO::Select;
 use Cwd 'abs_path';
 use Gtk3 '-init';
@@ -16,6 +15,7 @@ use Gtk3::WebKit;
 use Encode;
 use String::ShellQuote;
 use Data::Dumper;
+use File::Basename;
 
 my $release = '3.3';
 
@@ -324,19 +324,11 @@ sub link_points_to {
 sub find_stable_path {
     my ($stabledir, $bdev) = @_;
 
-    my $dh = IO::Dir->new ($stabledir);
-    if ($dh) {
-	while (defined(my $tmp = $dh->read)) {
-	    my $path = "$stabledir/$tmp";
-	    if (link_points_to ($path, $bdev)) {
-		return wantarray ? ($path, $tmp) : $path;
-	    }
+    foreach my $path (<$stabledir/*>) {
+	if (link_points_to ($path, $bdev)) {
+	    return wantarray ? ($path, basename($path)) : $path;
 	}
-
-	$dh->close;
     }
-
-    return wantarray ? () : undef;
 }
 
 sub find_dev_by_uuid {
