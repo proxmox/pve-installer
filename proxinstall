@@ -937,13 +937,6 @@ sub extract_data {
 	mkdir "$targetdir/boot";
 	mkdir "$targetdir/boot/efi";
 
-	if (scalar(@$bootdevinfo)) {
-	    mkdir "$targetdir/boot/efi";
-	    my $di = @$bootdevinfo[0]; # simply use first disk 
-	    syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
-		die "unable to mount $di->{esp}\n";
-	}
-
 	if ($datadev) {
 
 	    mkdir "$targetdir/var";
@@ -1092,10 +1085,10 @@ _EOD
 	    chomp;
 	    my $path = $_;
 	    my ($deb) = $path =~ m/$pkgdir\/(.*\.deb)/;
-	    if ($deb =~ m/^grub-efi-/ && $deb !~ m/^grub-${grub_plattform}/) {
-		$count++;
-		next;
-	    }
+#	    if ($deb =~ m/^grub-efi-/ && $deb !~ m/^grub-${grub_plattform}/) {
+#		$count++;
+#		next;
+#	    }
 	    update_progress ($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print "extracting: $deb\n";
 	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
@@ -1186,9 +1179,18 @@ _EOD
 		die "unable to install initramfs\n";
 
 	    foreach my $di (@$bootdevinfo) {
+		my $esp = $di->{esp};
+		syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
+		    die "unable to mount $di->{esp}\n";
+
 		my $dev = $di->{devname};
-		syscmd ("chroot $targetdir /usr/sbin/grub-install --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-		    die "unable to install the boot loader\n";
+		foreach my $target (('i386-pc', 'x86_64-efi')) {
+		    syscmd ("chroot $targetdir /usr/sbin/grub-install --target $target --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+			die "unable to install the boot loader for target '$target'\n";
+		}
+
+		syscmd ("umount $targetdir/boot/efi") == 0 ||
+		    die "unable to umount $targetdir/boot/efi\n";
 	    }
 
 	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
@@ -1240,7 +1242,6 @@ _EOD
 	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
     }
 
-    syscmd ("umount $targetdir/boot/efi") if scalar(@$bootdevinfo);
     syscmd ("umount $targetdir/var/lib/vz");
     syscmd ("umount $targetdir/tmp");
     syscmd ("umount $targetdir/proc");
