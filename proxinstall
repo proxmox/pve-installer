@@ -825,10 +825,6 @@ sub extract_data {
 
 	} elsif ($use_zfs) {
 
-	    # Note: using /dev/disk/by-id/ does not work for unknown reason, we get
-	    # cannot create 'rpool': no such pool or dataset
-	    # my $full_path = find_stable_path ("/dev/disk/by-id", $targetdev);
-
 	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
 
 	    my $disksize;
@@ -838,8 +834,7 @@ sub extract_data {
 		    partition_bootable_disk($devname, undef, 1);
 		die "unable to mirror disks with different sizes!\n" 
 		    if $disksize && ($size != $disksize);
-		my $by_id = find_stable_path ("/dev/disk/by-id", $devname);
-		push @$bootdevinfo, { esp => $efidev, devname => $devname, by_id => $by_id };
+		push @$bootdevinfo, { esp => $efidev, devname => $devname, osdev => $osdev};
 		$disksize = $size;
 		$vdev =~ s/ $devname/ $osdev/;
 	    }
@@ -850,8 +845,20 @@ sub extract_data {
 	    syscmd ("udevadm trigger --subsystem-match block");
 	    syscmd ("udevadm settle --timeout 10");
 
-	    zfs_create_rpool($zfspoolname, $vdev);
+	    foreach my $di (@$bootdevinfo) {
+		my $devname = $di->{devname};
+		$di->{by_id} = find_stable_path ("/dev/disk/by-id", $devname);
+	    
+		# Note: using /dev/disk/by-id/ does not work for unknown reason, we get
+		# cannot create 'rpool': no such pool or dataset
+		#my $osdev = find_stable_path ("/dev/disk/by-id", $di->{osdev}) || $di->{osdev};
 
+		my $osdev = $di->{osdev};
+		$vdev =~ s/ $devname/ $osdev/;
+	    }
+
+	    zfs_create_rpool($zfspoolname, $vdev);
+	    
 	    my $swap_size = compute_swapsize($disksize);
 	    $swapfile = zfs_create_swap($zfspoolname, $swap_size);
 
@@ -869,28 +876,23 @@ sub extract_data {
 	    ($os_size, $osdev, $efidev) = 
 		partition_bootable_disk($target_hd, $maxhdsize, $use_zfs);
 	    
-	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
-	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd, by_id => $by_id };
-
 	    sleep(1); # give kernel time to reread part table
 
 	    # trigger udev to create /dev/disk/by-uuid
 	    syscmd ("udevadm trigger --subsystem-match block");
 	    syscmd ("udevadm settle --timeout 10");
 
+	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
+	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd, 
+				  osdev => $osdev, by_id => $by_id };
+
 	    my $swap_size = compute_swapsize($os_size);
+	    ($rootdev, $datadev, $swapfile) = 
+		create_lvm_volumes($osdev, $os_size, $swap_size);
 
-	    if ($use_zfs) {
-
-		zfs_create_rpool($zfspoolname, $osdev);
-		$swapfile = zfs_create_swap($zfspoolname, $swap_size);
-
-	    } else {
-
-		($rootdev, $datadev, $swapfile) = 
-		    create_lvm_volumes($osdev, $os_size, $swap_size);
-	    }
-
+	    # trigger udev to create /dev/disk/by-uuid
+	    syscmd ("udevadm trigger --subsystem-match block");
+	    syscmd ("udevadm settle --timeout 10");
 	}
 
 	if ($use_zfs) {
@@ -912,7 +914,6 @@ sub extract_data {
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
 
-
 	if (!$use_zfs) {
 
 	    if ( -b $target_hd) {
@@ -928,40 +929,29 @@ sub extract_data {
 
 	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
 
-	if ( -b $target_hd) {
-
-	    # trigger udev to create /dev/disk/by-uuid
-	    syscmd ("udevadm trigger --subsystem-match block");
-	    syscmd ("udevadm settle --timeout 10");
-
-	    if (!$use_zfs) {
-		syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
-		    die "unable to mount $rootdev\n";
-	    }
-
-	    mkdir "$targetdir/boot";
-
-	    if (scalar(@$bootdevinfo)) {
-		mkdir "$targetdir/boot/efi";
-		my $di = @$bootdevinfo[0]; # simply use first disk 
-		syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
-		    die "unable to mount $di->{esp}\n";
-	    }
-
-	    if (!$use_zfs) {
-		mkdir "$targetdir/var";
-		mkdir "$targetdir/var/lib";
-		mkdir "$targetdir/var/lib/vz";
-		syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
-		    die "unable to mount $datadev\n";
-	    }
-	} else {
-	    if (!$use_zfs) {
-		syscmd ("mount $rootdev $targetdir -o loop,noatime,barrier=0") == 0 ||
-		    die "unable to mount $rootdev\n";
-	    }
+	if (!$use_zfs) {
+	    syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
+		die "unable to mount $rootdev\n";
 	}
 
+	mkdir "$targetdir/boot";
+	mkdir "$targetdir/boot/efi";
+
+	if (scalar(@$bootdevinfo)) {
+	    mkdir "$targetdir/boot/efi";
+	    my $di = @$bootdevinfo[0]; # simply use first disk 
+	    syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
+		die "unable to mount $di->{esp}\n";
+	}
+
+	if ($datadev) {
+
+	    mkdir "$targetdir/var";
+	    mkdir "$targetdir/var/lib";
+	    mkdir "$targetdir/var/lib/vz";
+	    syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
+		die "unable to mount $datadev\n";
+	}
 
 	display_html ("extract2-rulesystem.htm");
 	update_progress (1, 0.05, $maxper, "extracting base system");
