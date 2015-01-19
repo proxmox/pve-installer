@@ -836,7 +836,6 @@ sub extract_data {
 		    if $disksize && ($size != $disksize);
 		push @$bootdevinfo, { esp => $efidev, devname => $devname, osdev => $osdev};
 		$disksize = $size;
-		$vdev =~ s/ $devname/ $osdev/;
 	    }
 
 	    sleep(1); # give kernel time to reread part table
