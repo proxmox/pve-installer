@@ -1028,16 +1028,23 @@ sub extract_data {
 	    $fstab .= "$rootdev / $filesys errors=remount-ro 0 1\n";
 	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
 	}
-	 
-	if (scalar(@$bootdevinfo)) {
-	    my $di = @$bootdevinfo[0]; # simply use first disk 
-	    my $efi_boot_uuid = $di->{esp};
-	    if (my $uuid = find_dev_by_uuid ($di->{esp})) {
-		$efi_boot_uuid = "UUID=$uuid";
-	    }
+
+	# mount /boot/efi
+	# Note: this is required by current grub, but really dangerous, because
+	# vfat does not have journaling, so it triggers manual fsck after each crash
+	# so we only mount /boot/efi if really required (efi systems).
+	if ($grub_plattform =~ m/^efi-/) {
+	    if (scalar(@$bootdevinfo)) {
+		my $di = @$bootdevinfo[0]; # simply use first disk 
+		my $efi_boot_uuid = $di->{esp};
+		if (my $uuid = find_dev_by_uuid ($di->{esp})) {
+		    $efi_boot_uuid = "UUID=$uuid";
+		}
 	    
-	    $fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
+		$fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
+	    }
 	}
+
 
 	$fstab .= "$swapfile none swap sw 0 0\n" if $swapfile;
 
