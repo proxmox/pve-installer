@@ -1063,7 +1063,7 @@ sub extract_data {
 	my $grub_install_devices_txt = '';
 	foreach my $di (@$bootdevinfo) {
 	    $grub_install_devices_txt .= ', ' if $grub_install_devices_txt;
-	    $grub_install_devices_txt .= $di->{by_id} if $di->{by_id};
+	    $grub_install_devices_txt .= $di->{by_id} || $di->{devname};
 	}
 
 	debconfig_set ($targetdir, <<_EOD);
