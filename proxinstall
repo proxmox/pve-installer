@@ -1696,7 +1696,7 @@ sub update_zonelist {
 	$sel = $timezone; # used once to select default
     }
 
-    my $cb = $lastzonecb = Gtk3::ComboBoxText->new_with_entry();
+    my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
     $cb->set_size_request (200, -1);
 
     $cb->signal_connect ('changed' => sub {
@@ -1840,7 +1840,7 @@ sub create_country_view {
     $label->set_alignment (1, 0.5);
     $hbox3->pack_start ($label, 0, 0, 10);
 
-    my $kmapcb = Gtk3::ComboBoxText->new_with_entry ();
+    my $kmapcb = Gtk3::ComboBoxText->new();
     $kmapcb->set_size_request (200, -1);
     foreach my $layout (sort keys %{$cmap->{kmaphash}}) {
 	$kmapcb->append_text ($layout);
@@ -1993,7 +1993,7 @@ sub create_hdoption_view {
     $label0->set_alignment (1, 0.5);
     $grid->attach($label0, 0, $row, 1, 1);
    
-    my $fstypecb = Gtk3::ComboBoxText->new_with_entry ();
+    my $fstypecb = Gtk3::ComboBoxText->new();
 
     my $fstype = ['ext3', 'ext4', 'zfs (RAID0)', 'zfs (RAID1)', 
 		  'zfs (RAID10)', 'zfs (RAIDZ-1)', 
@@ -2019,10 +2019,8 @@ sub create_hdoption_view {
 	$disk_label[$i] = Gtk3::Label->new ("Hardisk $i");
 	$disk_label[$i]->set_alignment (1, 0.5);
 	$grid->attach($disk_label[$i], 0, $row, 1, 1);
-	$disk_selector[$i] = Gtk3::ComboBoxText->new_with_entry();
-	my $e = $disk_selector[$i]->get_child();
-	$e->set_width_chars(40);
-	foreach my $hd (@$hds) {
+	$disk_selector[$i] = Gtk3::ComboBoxText->new();
+ 	foreach my $hd (@$hds) {
 	    my ($disk, $devname, $size, $model) = @$hd;
 	    $disk_selector[$i]->append_text (get_device_desc ($devname, $size, $model));
 	    $disk_selector[$i]->{pve_disk_id} = $i;
@@ -2283,9 +2281,7 @@ sub create_hdsel_view {
     $target_hd_label = Gtk3::Label->new ("Target Harddisk: ");
     $hbox->pack_start ($target_hd_label, 0, 0, 0);
 
-    $target_hd_combo = Gtk3::ComboBoxText->new_with_entry();
-    my $e = $target_hd_combo->get_child();
-    $e->set_width_chars(40);
+    $target_hd_combo = Gtk3::ComboBoxText->new();
 
     foreach my $hd (@$hds) {
 	($disk, $devname, $size, $model) = @$hd;
