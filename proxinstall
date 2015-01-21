@@ -2020,26 +2020,28 @@ sub create_hdoption_view {
 	$disk_label[$i]->set_alignment (1, 0.5);
 	$grid->attach($disk_label[$i], 0, $row, 1, 1);
 	$disk_selector[$i] = Gtk3::ComboBoxText->new();
+	$disk_selector[$i]->append_text("-- do not use --");
+	$disk_selector[$i]->set_active(0);
  	foreach my $hd (@$hds) {
 	    my ($disk, $devname, $size, $model) = @$hd;
-	    $disk_selector[$i]->append_text (get_device_desc ($devname, $size, $model));
+	    $disk_selector[$i]->append_text(get_device_desc ($devname, $size, $model));
 	    $disk_selector[$i]->{pve_disk_id} = $i;
 	    $disk_selector[$i]->signal_connect (changed => sub {
 		my $w = shift;
 		my $diskid = $w->{pve_disk_id};
-		my $a = $w->get_active;
+		my $a = $w->get_active - 1;
 		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
 	    });
 	}
 
 	if ($hdopion_first_setup) {
-	    $disk_selector[$i]->set_active ($i) if $hds->[$i];
+	    $disk_selector[$i]->set_active ($i+1) if $hds->[$i];
 	} else {
 	    my $hdind = 0;
 	    if (my $cur_hd = $config_options->{"disksel$i"}) {
 		foreach my $hd (@$hds) {
 		    if (@$hd[1] eq @$cur_hd[1]) {
-			$disk_selector[$i]->set_active($hdind);
+			$disk_selector[$i]->set_active($hdind+1);
 			last;
 		    }
 		    $hdind++;
