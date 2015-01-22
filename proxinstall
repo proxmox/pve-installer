@@ -2233,6 +2233,7 @@ sub get_zfs_raid_setup {
 	    $cmd .= " @$hd[1]";
 	}
     } elsif ($filesys eq 'zfs (RAID1)') {
+	die "zfs (RAID1) need at least 2 device\n" if $count < 2;
 	$cmd .= ' mirror ';
 	foreach my $hd (@$devlist) {
 	    $cmd .= " @$hd[1]";
@@ -2241,7 +2242,7 @@ sub get_zfs_raid_setup {
     } elsif ($filesys eq 'zfs (RAID10)') {
 	my $count = scalar(@$devlist);
 	my $half = int($count/2);
-	die "zfs (RAID10) need at least 2 device\n" if $count < 2;
+	die "zfs (RAID10) need at least 4 device\n" if $count < 4;
 	die "zfs (RAID10) need at an even numver of devices\n" if $half*2 != $count;
 	
 	push @$bootdevlist, @$devlist[0], @$devlist[1];
