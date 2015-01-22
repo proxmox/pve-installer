@@ -1131,9 +1131,6 @@ _EOD
 
 	unlink  "$targetdir/proxmox_install_mode";
 
-	# disable bacula-fd
-	syscmd ("touch '$targetdir/etc/bacula/do_not_run'");
-
 	# set timezone
 	unlink ("$targetdir/etc/localtime");
 	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
