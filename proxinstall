@@ -2254,7 +2254,7 @@ sub get_zfs_raid_setup {
 	my $level = $1;
 	my $mindisks = 2 + $level;
 	die "zfs (RAIDZ-$level) need at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
-	$cmd .= ' raidz$level';
+	$cmd .= " raidz$level";
 	foreach my $hd (@$devlist) {
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
