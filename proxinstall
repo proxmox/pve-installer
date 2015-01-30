@@ -2233,7 +2233,10 @@ sub get_zfs_raid_setup {
     } elsif ($filesys eq 'zfs (RAID1)') {
 	die "zfs (RAID1) need at least 2 device\n" if $diskcount < 2;
 	$cmd .= ' mirror ';
-	foreach my $hd (@$devlist) {
+	my $hd = @$devlist[0];
+	my $expected_size = @$hd[2]; # all disks needs same size
+	foreach $hd (@$devlist) {
+	    die "mirrored disks must have same size\n" if @$hd[2] != $expected_size;
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
@@ -2247,6 +2250,7 @@ sub get_zfs_raid_setup {
 	for (my $i = 0; $i < $diskcount; $i+=2) {
 	    my $hd1 = @$devlist[$i];
 	    my $hd2 = @$devlist[$i+1];
+	    die "mirrored disks must have same size\n" if @$hd1[2] != @$hd2[2];
 	    $cmd .= ' mirror ' . @$hd1[1] . ' ' . @$hd2[1];
 	}
 
@@ -2254,8 +2258,11 @@ sub get_zfs_raid_setup {
 	my $level = $1;
 	my $mindisks = 2 + $level;
 	die "zfs (RAIDZ-$level) need at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
+	my $hd = @$devlist[0];
+	my $expected_size = @$hd[2]; # all disks needs same size
 	$cmd .= " raidz$level";
-	foreach my $hd (@$devlist) {
+	foreach $hd (@$devlist) {
+	    die "mirrored disks must have same size\n" if @$hd[2] != $expected_size;
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
@@ -2312,7 +2319,7 @@ sub create_hdsel_view {
 	    eval { get_zfs_raid_setup(); };
 	    if (my $err = $@) {
 		display_message ("Warning: $err\n" .
-			     "Please fix ZFS setup first.");
+				 "Please fix ZFS setup first.");
 	    } else {
 		create_country_view();
 	    }
