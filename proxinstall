@@ -651,7 +651,7 @@ sub partition_bootable_disk {
     my $mkpart = sub {
 	my ($fstype, $size) = @_;
 	$pnum++;
-	my $end = defined($size) ? $cpos + $size : $hdsize_mb;
+	my $end = defined($size) ? $cpos + $size : ($hdsize_mb - 1);
 	if ($fstype)  {
 	    push @$pcmd, 'mkpart', 'primary', $fstype, $cpos, $end;
 	} else {
