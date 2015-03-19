@@ -592,7 +592,7 @@ sub zfs_create_rpool {
     # disable atime during insatll
     syscmd ("zfs set atime=off $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
-    syscmd ("zfs set compression=on $zfspoolname") == 0 ||
+    syscmd ("zfs set compression=lz4 $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
 }
 
