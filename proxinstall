@@ -33,6 +33,17 @@ if (!GetOptions ('testmode=s' => \$opt_testmode)) {
     exit (-1);
 }
 
+sub file_read_firstline {
+    my ($filename) = @_;
+
+    my $fh = IO::File->new ($filename, "r");
+    return undef if !$fh;
+    my $res = <$fh>;
+    chomp $res if $res;
+    $fh->close;
+    return $res;
+}
+
 my $logfd = IO::File->new (">/tmp/install.log");
 
 my $proxmox_dir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
@@ -41,16 +52,51 @@ my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
 
 $grub_plattform = "efi-amd64" if -d "/sys/firmware/efi"; 
 
+my $IPV4OCTET = "(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])";
+my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
+my $ipv4_mask_hash = {
+    '128.0.0.0' => 1,
+    '192.0.0.0' => 2,
+    '224.0.0.0' => 3,
+    '240.0.0.0' => 4,
+    '248.0.0.0' => 5,
+    '252.0.0.0' => 6,
+    '254.0.0.0' => 7,
+    '255.0.0.0' => 8,
+    '255.128.0.0' => 9,
+    '255.192.0.0' => 10,
+    '255.224.0.0' => 11,
+    '255.240.0.0' => 12,
+    '255.248.0.0' => 13,
+    '255.252.0.0' => 14,
+    '255.254.0.0' => 15,
+    '255.255.0.0' => 16,
+    '255.255.128.0' => 17,
+    '255.255.192.0' => 18,
+    '255.255.224.0' => 19,
+    '255.255.240.0' => 20,
+    '255.255.248.0' => 21,
+    '255.255.252.0' => 22,
+    '255.255.254.0' => 23,
+    '255.255.255.0' => 24,
+    '255.255.255.128' => 25,
+    '255.255.255.192' => 26,
+    '255.255.255.224' => 27,
+    '255.255.255.240' => 28,
+    '255.255.255.248' => 29,
+    '255.255.255.252' => 30
+};
+
 my ($window, $cmdbox, $inbox, $htmlview);
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
-my ($ipaddress, $ip_1, $ip_2, $ip_3, $ip_4);
-my ($netmask, $mask_1, $mask_2, $mask_3, $mask_4);
-my ($gateway, $gw_1, $gw_2, $gw_3, $gw_4);
-my ($dnsserver, $dns_1, $dns_2, $dns_3, $dns_4);
+my ($ipaddress, $ipconf_entry_addr);
+my ($netmask, $ipconf_entry_mask);
+my ($gateway, $ipconf_entry_gw);
+my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
-my $cmdline = `cat /proc/cmdline` || '';
+my $cmdline = file_read_firstline("/proc/cmdline");
 my $ipconf;
 my $country;
 my $timezone = 'Europe/Vienna';
@@ -203,7 +249,7 @@ sub run_command {
     while ($select->count) {
 	my @handles = $select->can_read (0.2);
 
-	Gtk3->main_iteration while Gtk3->events_pending;
+	Gtk3::main_iteration() while Gtk3::events_pending();
 
 	next if !scalar (@handles); # timeout
 
@@ -357,7 +403,7 @@ sub hd_list {
 	next if $bd =~ m|^/sys/block/fd\d+$|;
 	next if $bd =~ m|^/sys/block/sr\d+$|;
 
-	my $dev = `cat '$bd/dev'`;
+	my $dev = file_read_firstline("$bd/dev");
 	chomp $dev;
 
 	next if !$dev;
@@ -374,11 +420,11 @@ sub hd_list {
 	if ($name) {
 	    my $real_name = "/dev/$name";
 
-	    my $size = `cat '$bd/size'`;
+	    my $size = file_read_firstline("$bd/size");
 	    chomp $size;
 	    $size = undef if !($size && $size =~ m/^\d+$/);
 
-	    my $model = `cat '$bd/device/model'`;
+	    my $model = file_read_firstline("$bd/device/model") || '';
 	    $model =~ s/^\s+//;
 	    $model =~ s/\s+$//;
 	    if (length ($model) > 30) {
@@ -517,7 +563,7 @@ sub update_progress {
     $progress->set_text (sprintf ("%d%%", int ($res*100)));
     $progress_status->set_text ($text) if defined ($text);
 
-    Gtk3->main_iteration while Gtk3->events_pending;
+    Gtk3::main_iteration() while Gtk3::events_pending();
 }
 
 sub create_filesystem {
@@ -953,9 +999,9 @@ sub extract_data {
 
 	my $files;
 	if ($opt_testmode) {
-	    $files = `cat /pve/$release/install/pve-base.cnt`;
+	    $files = file_read_firstline("/pve/$release/install/pve-base.cnt");
 	} else {
-	    $files = `cat /proxmox/pve-base.cnt`;
+	    $files = file_read_firstline("/proxmox/pve-base.cnt");
 	}
 
 	my $per = 0;
@@ -1316,7 +1362,7 @@ sub url_requested {
 	my $buf;
 	while (my $i = read (HTMLTMP, $buf, 4096)) {
 	    $stream->write ($buf);
-	    Gtk3->main_iteration while Gtk3->events_pending;
+	    Gtk3::main_iteration() while Gtk3::events_pending();
 	}
 	close (HTMLTMP);
     }
@@ -1384,12 +1430,11 @@ sub create_main_window {
     $window->realize ();
 }
 
-sub cleanup_view {
-    my $list = $inbox->get_children;
-    foreach my $c (@$list) {
-	next if !defined ($c);
-	$inbox->remove ($c);
-    }
+sub cleanup_view { 
+    $inbox->foreach(sub {
+	my $child = shift;
+	$inbox->remove ($child);	
+    });
 }
 
 # fixme: newer GTK3 has special properties to handle numbers with Entry
@@ -1417,45 +1462,7 @@ sub check_float {
     return 1;
 }
 
-# used by the IP input entry
-sub check_num {
-    my ($entry, $event) = @_;
-
-
-    my $val = $event->get_keyval;
-
-    if ($val == ord '.') {
-	$entry->get_parent->child_focus ('right');
-	return 1;
-    }
-
-    if ($val == Gtk3::Gdk::KEY_ISO_Left_Tab ||
-	$val == Gtk3::Gdk::KEY_Shift_L ||
-	$val == Gtk3::Gdk::KEY_Tab ||
-	$val == Gtk3::Gdk::KEY_BackSpace ||
-	$val == Gtk3::Gdk::KEY_Delete ||
-	($val >= ord '0' && $val <= ord '9') ||
-	($val >= Gtk3::Gdk::KEY_KP_0 &&
-	 $val <= Gtk3::Gdk::KEY_KP_9)) {
-	return undef;
-    }
-
-    return 1;
-}
-
-sub check_range {
-    my ($entry, $event) = @_;
-
-    my $text = $entry->get_text;
-    if (!defined($text) || ($text !~ m/^(\d+)$/) || ($1 > 255)) {
-	$entry->set_text ($entry->{default});
-    }
-
-    return undef;
-}
-
-
-sub creat_text_input {
+sub create_text_input {
     my ($default, $text) = @_;
 
     my $hbox = Gtk3::HBox->new (0, 0);
@@ -1470,67 +1477,6 @@ sub creat_text_input {
     $e1->set_text ($default);
 
     return ($hbox, $e1);
-}
-
-sub creat_ip_input {
-    my ($init, $default, $text) = @_;
-
-    my (@ips) = split /\./, $init;
-    my (@defs) = split /\./, $default;
-
-    my $hbox = Gtk3::HBox->new (0, 0);
-
-    my $label = Gtk3::Label->new ($text);
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox->pack_start ($label, 0, 0, 10);
-
-    my $e1 = Gtk3::Entry->new();
-    $e1->set_max_length(3);
-    $e1->{default} = $defs[0];
-    $hbox->pack_start ($e1, 0, 0, 0);
-    $e1->set_width_chars (3);
-    $e1->set_text ($ips[0]);
-    $e1->signal_connect (key_press_event => \&check_num);
-    $e1->signal_connect (focus_out_event => \&check_range);
-
-    my $l1 = Gtk3::Label->new (".");
-    $hbox->pack_start ($l1, 0, 0, 2);
-
-    my $e2 = Gtk3::Entry->new();
-    $e2->set_max_length(3);
-    $e2->{default} = $defs[1];
-    $hbox->pack_start ($e2, 0, 0, 0);
-    $e2->set_width_chars (3);
-    $e2->set_text ($ips[1]);
-    $e2->signal_connect (key_press_event => \&check_num);
-    $e2->signal_connect (focus_out_event => \&check_range);
-
-    my $l2 = Gtk3::Label->new (".");
-    $hbox->pack_start ($l2, 0, 0, 2);
-
-    my $e3 = Gtk3::Entry->new();
-    $e3->set_max_length(3);
-    $e3->{default} = $defs[2];
-    $hbox->pack_start ($e3, 0, 0, 0);
-    $e3->set_width_chars (3);
-    $e3->set_text ($ips[2]);
-    $e3->signal_connect (key_press_event => \&check_num);
-    $e3->signal_connect (focus_out_event => \&check_range);
-
-    my $l3 = Gtk3::Label->new (".");
-    $hbox->pack_start ($l3, 0, 0, 2);
-
-    my $e4 = Gtk3::Entry->new();
-    $e4->set_max_length(3);
-    $e4->{default} = $defs[3];
-    $hbox->pack_start ($e4, 0, 0, 0);
-    $e4->set_width_chars (3);
-    $e4->set_text ($ips[3]);
-    $e4->signal_connect (key_press_event => \&check_num);
-    $e4->signal_connect (focus_out_event => \&check_range);
-
-    return ($hbox, $e1, $e2, $e3, $e4);
 }
 
 sub get_ip_config {
@@ -1592,37 +1538,40 @@ sub create_ipconf_view {
     my $hn = $ipconf->{domain} ? "pve.$ipconf->{domain}" : 'pve.domain.tld';
    
     my ($hostbox, $hostentry) =
-	creat_text_input ($hn, 'Hostname (FQDN):');
+	create_text_input ($hn, 'Hostname (FQDN):');
     $vbox2->pack_start ($hostbox, 0, 0, 2);
 
     my $ipbox;
-    ($ipbox, $ip_1, $ip_2, $ip_3, $ip_4) =
-	creat_ip_input ($addr, '0.0.0.0', 'IP Address:');
+    ($ipbox, $ipconf_entry_addr) =
+	create_text_input ($addr, 'IP Address:');
     $vbox2->pack_start ($ipbox, 0, 0, 2);
 
     my $maskbox;
-    ($maskbox, $mask_1, $mask_2, $mask_3, $mask_4) =
-	creat_ip_input ($mask, '255.255.255.0', 'Netmask:');
+    ($maskbox, $ipconf_entry_mask) =
+	create_text_input ($mask, 'Netmask:');
     $vbox2->pack_start ($maskbox, 0, 0, 2);
 
     $gateway = $ipconf->{gateway} || '192.168.100.1';
 
     my $gwbox;
-    ($gwbox, $gw_1, $gw_2, $gw_3, $gw_4) =
-	creat_ip_input ($gateway, '0.0.0.0', 'Gateway:');
+    ($gwbox, $ipconf_entry_gw) =
+	create_text_input ($gateway, 'Gateway:');
 
     $vbox2->pack_start ($gwbox, 0, 0, 2);
 
     $dnsserver = $ipconf->{dnsserver} || $gateway;
 
     my $dnsbox;
-    ($dnsbox, $dns_1, $dns_2, $dns_3, $dns_4) =
-	creat_ip_input ($dnsserver, '0.0.0.0', 'DNS Server:');
+    ($dnsbox, $ipconf_entry_dns) =
+	create_text_input ($dnsserver, 'DNS Server:');
 
     $vbox2->pack_start ($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
     set_next (undef, sub {
+
+	# verify hostname
+	
 	my $text = $hostentry->get_text();
 
 	$text =~ s/^\s+//;
@@ -1634,11 +1583,61 @@ sub create_ipconf_view {
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
 	    $hostname = $1;
 	    $domain = $2;
-	    create_extract_view ();
+	} else {
+	    display_message ("Hostname does not look like a fully qualified domain name.");
+	    $hostentry->grab_focus();
 	    return;
 	}
-	display_message ("Hostname does not look like a fully qualified domain name.");
-	$hostentry->grab_focus();
+
+	# verify ip address
+
+	$text = $ipconf_entry_addr->get_text();
+	$text =~ s/^\s+//;
+	$text =~ s/\s+$//;
+	if ($text =~ m!^($IPV4RE)$!) {
+	    $ipaddress = $text;
+	} else {
+	    display_message ("IP address is not valid.");
+	    $ipconf_entry_addr->grab_focus();
+	    return;
+	}
+
+	$text = $ipconf_entry_mask->get_text();
+	$text =~ s/^\s+//;
+	$text =~ s/\s+$//;
+	if (defined($ipv4_mask_hash->{$text})) {
+	    $netmask = $text;
+	} else {
+	    display_message ("Netmask is not valid.");
+	    $ipconf_entry_mask->grab_focus();
+	    return;
+	}
+
+	$text = $ipconf_entry_gw->get_text();
+	$text =~ s/^\s+//;
+	$text =~ s/\s+$//;
+	if ($text =~ m!^($IPV4RE)$!) {
+	    $gateway = $text;
+	} else {
+	    display_message ("Gateway is not valid.");
+	    $ipconf_entry_gw->grab_focus();
+	    return;
+	}
+	
+	$text = $ipconf_entry_dns->get_text();
+	$text =~ s/^\s+//;
+	$text =~ s/\s+$//;
+	if ($text =~ m!^($IPV4RE)$!) {
+	    $dnsserver = $text;
+	} else {
+	    display_message ("DNS server is not valid.");
+	    $ipconf_entry_dns->grab_focus();
+	    return;
+	}
+	
+	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
+	
+	create_extract_view ();
     });
 
     $hostentry->grab_focus();
@@ -1647,15 +1646,19 @@ sub create_ipconf_view {
 sub get_device_desc {
     my ($devname, $size, $model) = @_;
 
-    if ($size && ($size > 0) && $model) {
+    if ($size && ($size > 0)) {
 	$size = int($size/2048); # size in MB
 
+	my $text = "$devname (";
 	if ($size >= 1024) {
 	    $size = int($size/1024); # size in GB
-	    return "$devname (${size}GB, $model)";
+	    $text .= "${size}GB";
 	} else {
-	    return "$devname (${size}MB, $model)";
+	    $text .= "${size}MB";
 	}
+
+	$text .= ", $model" if $model;
+	$text .= ")";
 
     } else {
 	return $devname;
@@ -2331,19 +2334,6 @@ sub create_hdsel_view {
 
 sub create_extract_view {
 
-    $ipaddress = $ip_1->get_text . "." . $ip_2->get_text . "." .
-	$ip_3->get_text . "." . $ip_4->get_text;
-
-    $netmask = $mask_1->get_text . "." . $mask_2->get_text . "." .
-	$mask_3->get_text . "." . $mask_4->get_text;
-
-    $gateway = $gw_1->get_text . "." . $gw_2->get_text . "." .
-	$gw_3->get_text . "." . $gw_4->get_text;
-
-    $dnsserver = $dns_1->get_text . "." . $dns_2->get_text . "." .
-	$dns_3->get_text . "." . $dns_4->get_text;
-
-    # print "TEST $ipaddress $netmask $gateway $dnsserver\n";
     cleanup_view ();
 
     display_html ("extract1-license.htm");
