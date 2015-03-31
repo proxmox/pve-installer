@@ -1118,13 +1118,16 @@ sub extract_data {
 	    $grub_install_devices_txt .= $di->{by_id} || $di->{devname};
 	}
 
+	# Note: debian-installer/locale is used by console-setup
+	
 	debconfig_set ($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
 samba-common samba-common/dhcp boolean false
 samba-common samba-common/workgroup string WORKGROUP
 postfix postfix/main_mailer_type select Local only
-console-data console-data/keymap/policy select Don\'t touch keymap
+keyboard-configuration keyboard-configuration/xkb-keymap select $keymap
+d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
 
@@ -1181,11 +1184,6 @@ _EOD
 	unlink ("$targetdir/etc/localtime");
 	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
 	write_config ("$timezone\n", "$targetdir/etc/timezone");
-
-	# set console keymap
-	if (my $kmapfile = $cmap->{kmap}->{$keymap}->{console}) {
-	    syscmd ("chroot $targetdir /usr/sbin/install-keymap '/usr/share/keymaps/i386/$kmapfile'");
-	}
 
 	# set apt mirror
 	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
