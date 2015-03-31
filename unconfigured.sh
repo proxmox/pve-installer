@@ -48,8 +48,8 @@ real_reboot() {
     umount -l -n /var/run
     umount -l -n /var/lib/xkb
 
-    umount -l -n /proc
     umount -l -n /sys
+    umount -l -n /proc
 
     exit 0
 }
