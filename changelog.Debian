@@ -1,3 +1,9 @@
+pve-installer (3.4-1) unstable; urgency=low
+
+  * do not install ESP on zfs disks (use sgdisk)
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 22 May 2015 13:09:39 +0200
+
 pve-installer (3.3-3) unstable; urgency=low
 
   * support ZFS
