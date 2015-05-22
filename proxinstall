@@ -681,61 +681,77 @@ sub partition_bootable_disk {
     my $efibootdev = get_partition_dev($target_dev, 2);
     my $osdev = get_partition_dev ($target_dev, 3);
 
-    my $bootsize_mb = 512;
-    my $efibootsize_mb = 128;
-    my $grubbootsize_mb = 1;
-
     my $hdsize_mb = $hdsize/1024;
 
-    my $pcmd = ['parted', '--script', '--align', 'optimal', $target_dev];
-    push @$pcmd, 'unit', 'MiB';
-    push @$pcmd, 'mklabel', 'gpt';
+    my $pcmd = ['sgdisk', '-a1'];
 
-    my $pnum = 0;
-    my $cpos = 1;
+    my $pnum = 1;
+    push @$pcmd, "-n$pnum:34:2047", "-t$pnum:EF02";
 
-    my $mkpart = sub {
-	my ($fstype, $size) = @_;
-	$pnum++;
-	my $end = defined($size) ? $cpos + $size : ($hdsize_mb - 1);
-	if ($fstype)  {
-	    push @$pcmd, 'mkpart', 'primary', $fstype, $cpos, $end;
-	} else {
-	    push @$pcmd, 'mkpart', 'primary', $cpos, $end;
-	}
-	$cpos = $end;
-    };
+    $pnum = 3;
+    # Note: from 128M to end
+    push @$pcmd, "-n$pnum:128M:0", "-t$pnum:8E00";
 
-    &$mkpart(undef, $grubbootsize_mb);
-    push @$pcmd, 'set', $pnum, 'bios_grub', 'on';
-    push @$pcmd, 'name', $pnum, 'Grub-Boot-Partition';
+    
+    $pnum = 2;
+    # Note: from sector 2048 to 128M (0 mean till next partition)
+    push @$pcmd, "-n$pnum:2048:0", "-t$pnum:EF00";
+    
+    push @$pcmd, $target_dev;
 
-    &$mkpart('fat32', $efibootsize_mb);
-    push @$pcmd, 'set', $pnum, 'boot', 'on';
-    push @$pcmd, 'name', $pnum, 'EFI-System-Partition';
-
-    my $os_size;
-
-    if ($use_zfs) {
-
-	my $data_start = $cpos;
-	&$mkpart('zfs');
-	push @$pcmd, 'name', $pnum, 'PVE-ZFS-Partition';
-	$os_size = ($cpos - $data_start)*1024;
-
-    } else {
-	
-	my $data_start = $cpos;
-	&$mkpart('ext2');
-	push @$pcmd, 'set', $pnum, 'lvm', 'on';
-	push @$pcmd, 'name', $pnum, 'PVE-LVM2-Partition';
-	$os_size = ($cpos - $data_start)*1024;
-    }
+    my $os_size = $hdsize - 128*1024;
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
 
     return ($os_size, $osdev, $efibootdev);
+}
+
+# ZFS has this use_whole_disk concept, so we try to partition the same
+# way as zfs does by default. There is room at start of disk to insert
+# a grub boot partition. But adding a EFI ESP is not possible.  
+#
+# Note: zfs people think this is just a waste of space an not
+# required.  Instead, you should put the ESP on another disk (log,
+# ..).
+
+sub partition_bootable_zfs_disk {
+    my ($target_dev) = @_;
+
+    die "too dangerous" if $opt_testmode;
+
+    syscmd("dd if=/dev/zero of=${target_dev} bs=512 count=256");
+    my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
+
+    my $hdgb = int($hdsize/(1024*1024));
+    die "hardisk '$target_dev' too small (${hdsize}GB)" if $hdgb < 8;
+
+    # 1 - GRUB boot partition: 1M 
+    # 2 - OS/Data partition
+    # 9 - ZFS reserved partition
+
+    my $grubbootdev = get_partition_dev($target_dev, 1);
+    my $osdev = get_partition_dev ($target_dev, 2);
+
+    my $pcmd = ['sgdisk', '-a1'];
+
+    my $pnum = 1;
+    push @$pcmd, "-n$pnum:34:2047", "-t$pnum:EF02";
+
+    $pnum = 9;
+    push @$pcmd, "-n$pnum:-8M:0", "-t$pnum:BF07";
+
+    $pnum = 2;
+    push @$pcmd, "-n$pnum:2048:0", "-t$pnum:BF01", '-c', "$pnum:zfs";
+   
+    push @$pcmd, $target_dev;
+	
+    my $os_size = $hdsize - 1024 - 1024*8;
+
+    syscmd($pcmd) == 0 ||
+	die "unable to partition harddisk '${target_dev}'\n";
+
+    return ($os_size, $osdev);
 }
 
 sub create_lvm_volumes {
@@ -876,11 +892,11 @@ sub extract_data {
 	    my $disksize;
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
-		my ($size, $osdev, $efidev) =
-		    partition_bootable_disk($devname, undef, 1);
+		my ($size, $osdev) =
+		    partition_bootable_zfs_disk($devname);
 		die "unable to mirror disks with different sizes!\n" 
 		    if $disksize && ($size != $disksize);
-		push @$bootdevinfo, { esp => $efidev, devname => $devname, osdev => $osdev};
+		push @$bootdevinfo, { devname => $devname, osdev => $osdev};
 		$disksize = $size;
 	    }
 
@@ -919,7 +935,7 @@ sub extract_data {
 
 	    my ($os_size, $osdev, $efidev); 
 	    ($os_size, $osdev, $efidev) = 
-		partition_bootable_disk($target_hd, $maxhdsize, $use_zfs);
+		partition_bootable_disk($target_hd, $maxhdsize);
 	    
 	    sleep(1); # give kernel time to reread part table
 
@@ -955,6 +971,7 @@ sub extract_data {
 	update_progress (0.05, 0, $maxper, "creating filesystems");
 
 	foreach my $di (@$bootdevinfo) {
+	    next if !$di->{esp};
 	    syscmd ("mkfs.vfat -F32 $di->{esp}") == 0 || 
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
@@ -1081,13 +1098,15 @@ sub extract_data {
 	# so we only mount /boot/efi if really required (efi systems).
 	if ($grub_plattform =~ m/^efi-/) {
 	    if (scalar(@$bootdevinfo)) {
-		my $di = @$bootdevinfo[0]; # simply use first disk 
-		my $efi_boot_uuid = $di->{esp};
-		if (my $uuid = find_dev_by_uuid ($di->{esp})) {
-		    $efi_boot_uuid = "UUID=$uuid";
-		}
+		my $di = @$bootdevinfo[0]; # simply use first disk
+		if ($di->{esp}) {
+		    my $efi_boot_uuid = $di->{esp};
+		    if (my $uuid = find_dev_by_uuid ($di->{esp})) {
+			$efi_boot_uuid = "UUID=$uuid";
+		    }
 	    
-		$fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
+		    $fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
+		}
 	    }
 	}
 
@@ -1226,18 +1245,18 @@ _EOD
 		die "unable to install initramfs\n";
 
 	    foreach my $di (@$bootdevinfo) {
-		my $esp = $di->{esp};
-		syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
-		    die "unable to mount $di->{esp}\n";
-
 		my $dev = $di->{devname};
-		foreach my $target (('i386-pc', 'x86_64-efi')) {
-		    syscmd ("chroot $targetdir /usr/sbin/grub-install --target $target --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-			die "unable to install the boot loader for target '$target'\n";
-		}
+		syscmd ("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+			die "unable to install the i386-pc boot loader on '$dev'\n";
 
-		syscmd ("umount $targetdir/boot/efi") == 0 ||
-		    die "unable to umount $targetdir/boot/efi\n";
+		if ($di->{esp}) {
+		    syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
+			die "unable to mount $di->{esp}\n";
+		    syscmd ("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+			die "unable to install the EFI boot loader on '$dev'\n";
+		    syscmd ("umount $targetdir/boot/efi") == 0 ||
+			die "unable to umount $targetdir/boot/efi\n";
+		}
 	    }
 
 	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
