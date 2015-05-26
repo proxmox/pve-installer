@@ -663,7 +663,7 @@ sub partition_bootable_disk {
 
     die "too dangerous" if $opt_testmode;
 
-    syscmd("dd if=/dev/zero of=${target_dev} bs=512 count=256");
+    syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
 
     if ($maxhdsize && ($maxhdsize < $hdsize)) {
