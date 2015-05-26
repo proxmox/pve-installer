@@ -674,7 +674,7 @@ sub partition_bootable_zfs_disk {
 
     die "too dangerous" if $opt_testmode;
 
-    syscmd("dd if=/dev/zero of=${target_dev} bs=512 count=256");
+    syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
 
     my $hdgb = int($hdsize/(1024*1024));
