@@ -112,7 +112,7 @@ my $config_options = {};
 if ($cmdline =~ m/\s(ext3|ext4|zfs)(\s.*)?$/) {
     $config_options->{filesys} = $1;
 } else {
-    $config_options->{filesys} = 'ext3';
+    $config_options->{filesys} = 'ext4';
 }
 
 if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
