@@ -1214,6 +1214,9 @@ _EOD
 	# file does not exist)
 	write_config ('', "$targetdir/var/lib/apt/extended_states");
 
+	# allow ssh root login
+	syscmd ("sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' '$targetdir/etc/ssh/sshd_config'");
+	
 	# save installer settings
 	my $ucc = uc ($country);
 	debconfig_set ($targetdir, <<_EOD);

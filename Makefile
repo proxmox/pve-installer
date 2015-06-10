@@ -61,7 +61,7 @@ packages: /pve/${RELEASE}/install/pve.files
 	mv packages.tmp packages
 
 test.img:
-	dd if=/dev/zero of=test.img bs=1024 count=1M
+	dd if=/dev/zero of=test.img bs=2048 count=1M
 
 check: packages test.img
 	G_SLICE=always-malloc ./proxinstall -t test.img
