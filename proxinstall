@@ -109,7 +109,7 @@ my $cmap;
 
 my $config_options = {};
 
-if ($cmdline =~ m/\s(ext3|ext4|zfs)(\s.*)?$/) {
+if ($cmdline =~ m/\s(ext3|ext4|xfs|zfs)(\s.*)?$/) {
     $config_options->{filesys} = $1;
 } else {
     $config_options->{filesys} = 'ext4';
@@ -566,6 +566,21 @@ sub update_progress {
     Gtk3::main_iteration() while Gtk3::events_pending();
 }
 
+my $fssetup = {
+    ext3 => {
+	mkfs => 'mkfs.ext3 -F',
+	root_mountopt => 'errors=remount-ro',
+    },
+    ext4 => {
+	mkfs => 'mkfs.ext4 -F',
+	root_mountopt => 'errors=remount-ro',
+    },
+    xfs => {
+	mkfs => 'mkfs.xfs -f',
+	root_mountopt => '',
+    },
+};
+
 sub create_filesystem {
     my ($dev, $name, $type, $start, $end, $fs, $fe, $opts) = @_;
 
@@ -576,9 +591,11 @@ sub create_filesystem {
     my $re = $start + $range*$fe;
     my $max = 0;
 
+    my $fsdata = $fssetup->{$type} || die "internal error - unknown file system '$type'";
+    
     update_progress (0, $rs, $re, "creating $name filesystem");
 
-    run_command ("mkfs.$type $opts -F $dev", sub {
+    run_command ("$fsdata->{mkfs} $opts $dev", sub {
 	my $line = shift;
 
 	if ($line =~ m/Writing inode tables:\s+(\d+)\/(\d+)/) {
@@ -1088,7 +1105,8 @@ sub extract_data {
 	my $fstab = "# <file system> <mount point> <type> <options> <dump> <pass>\n";
 
 	if (!$use_zfs) {
-	    $fstab .= "$rootdev / $filesys errors=remount-ro 0 1\n";
+	    my $root_mountopt = $fssetup->{$filesys}->{root_mountopt} || 'defaults';
+	    $fstab .= "$rootdev / $filesys ${root_mountopt} 0 1\n";
 	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
 	}
 
@@ -2011,7 +2029,7 @@ sub create_hdoption_view {
    
     my $fstypecb = Gtk3::ComboBoxText->new();
 
-    my $fstype = ['ext3', 'ext4', 'zfs (RAID0)', 'zfs (RAID1)', 
+    my $fstype = ['ext3', 'ext4', 'xfs', 'zfs (RAID0)', 'zfs (RAID1)', 
 		  'zfs (RAID10)', 'zfs (RAIDZ-1)', 
 		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)'];
 
