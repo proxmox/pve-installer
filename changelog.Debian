@@ -1,3 +1,15 @@
+pve-installer (4.0-2) unstable; urgency=medium
+
+  * add xfs support
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 16 Jun 2015 11:57:06 +0200
+
+pve-installer (4.0-1) unstable; urgency=medium
+
+  * updates for debian jessie
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 16 Jun 2015 11:56:54 +0200
+
 pve-installer (3.3-3) unstable; urgency=low
 
   * support ZFS
