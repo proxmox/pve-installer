@@ -569,22 +569,26 @@ sub update_progress {
 my $fssetup = {
     ext3 => {
 	mkfs => 'mkfs.ext3 -F',
+	mkfs_root_opt => '',
+	mkfs_data_opt => '-m 0',
 	root_mountopt => 'errors=remount-ro',
     },
     ext4 => {
 	mkfs => 'mkfs.ext4 -F',
+	mkfs_root_opt => '',
+	mkfs_data_opt => '-m 0',
 	root_mountopt => 'errors=remount-ro',
     },
     xfs => {
 	mkfs => 'mkfs.xfs -f',
+	mkfs_root_opt => '',
+	mkfs_data_opt => '',
 	root_mountopt => '',
     },
 };
 
 sub create_filesystem {
-    my ($dev, $name, $type, $start, $end, $fs, $fe, $opts) = @_;
-
-    $opts = '' if !$opts;
+    my ($dev, $name, $type, $start, $end, $fs, $fe) = @_;
 
     my $range = $end - $start;
     my $rs = $start + $range*$fs;
@@ -592,6 +596,7 @@ sub create_filesystem {
     my $max = 0;
 
     my $fsdata = $fssetup->{$type} || die "internal error - unknown file system '$type'";
+    my $opts = $name eq 'root' ? $fsdata->{mkfs_root_opt} : $fsdata->{mkfs_data_opt};
     
     update_progress (0, $rs, $re, "creating $name filesystem");
 
@@ -998,11 +1003,11 @@ sub extract_data {
 	    if ( -b $target_hd) {
 
 		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 0.5);
-		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1, '-m 0');
+		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1);
 
 	    } else {
 
-		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1, '-m 0');
+		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
 	    }
 	}
 
