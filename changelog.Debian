@@ -1,3 +1,11 @@
+pve-installer (4.0-3) unstable; urgency=medium
+
+  * zpool create: use cachefile=none
+
+  * do not mention LVM snapshots
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 29 Sep 2015 12:17:57 +0200
+
 pve-installer (4.0-2) unstable; urgency=medium
 
   * add xfs support
