@@ -648,7 +648,7 @@ sub diversion_remove {
 sub zfs_create_rpool {
     my ($zfspoolname, $vdev) = @_;
 
-   syscmd ("zpool create -f -o ashift=12 $zfspoolname $vdev") == 0 ||
+   syscmd ("zpool create -f -o ashift=12 cachefile=none $zfspoolname $vdev") == 0 ||
 	die "unable to create zfs root pool\n";
 
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
