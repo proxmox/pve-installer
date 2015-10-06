@@ -54,6 +54,23 @@ $grub_plattform = "efi-amd64" if -d "/sys/firmware/efi";
 
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
 my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
+my $IPV6H16 = "(?:[0-9a-fA-F]{1,4})";
+my $IPV6LS32 = "(?:(?:$IPV4RE|$IPV6H16:$IPV6H16))";
+
+my $IPV6RE = "(?:" .
+    "(?:(?:" .                             "(?:$IPV6H16:){6})$IPV6LS32)|" .
+    "(?:(?:" .                           "::(?:$IPV6H16:){5})$IPV6LS32)|" .
+    "(?:(?:(?:" .              "$IPV6H16)?::(?:$IPV6H16:){4})$IPV6LS32)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,1}$IPV6H16)?::(?:$IPV6H16:){3})$IPV6LS32)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,2}$IPV6H16)?::(?:$IPV6H16:){2})$IPV6LS32)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,3}$IPV6H16)?::(?:$IPV6H16:){1})$IPV6LS32)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,4}$IPV6H16)?::" .           ")$IPV6LS32)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,5}$IPV6H16)?::" .            ")$IPV6H16)|" .
+    "(?:(?:(?:(?:$IPV6H16:){0,6}$IPV6H16)?::" .                    ")))";
+
+my $IPRE = "(?:$IPV4RE|$IPV6RE)";
+
+
 my $ipv4_mask_hash = {
     '128.0.0.0' => 1,
     '192.0.0.0' => 2,
@@ -90,7 +107,7 @@ my $ipv4_mask_hash = {
 my ($window, $cmdbox, $inbox, $htmlview);
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
-my ($ipaddress, $ipconf_entry_addr);
+my ($ipversion, $ipaddress, $ipconf_entry_addr);
 my ($netmask, $ipconf_entry_mask);
 my ($gateway, $ipconf_entry_gw);
 my ($dnsserver, $ipconf_entry_dns);
@@ -1088,15 +1105,18 @@ sub extract_data {
 
 	# configure interfaces
 
-	my $ifaces =
-	    "auto lo\niface lo inet loopback\n\n" .
-	    "auto vmbr0\niface vmbr0 inet static\n" .
-	    "\taddress $ipaddress\n" .
-	    "\tnetmask $netmask\n" .
-	    "\tgateway $gateway\n" .
-	    "\tbridge_ports eth0\n" .
-	    "\tbridge_stp off\n" .
-	    "\tbridge_fd 0\n";
+	my $ifaces = "auto lo\niface lo inet loopback\n\n";
+
+	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
+
+	 $ifaces .=
+	     "auto vmbr0\niface vmbr0 $ntype static\n" .
+	     "\taddress $ipaddress\n" .
+	     "\tnetmask $netmask\n" .
+	     "\tgateway $gateway\n" .
+	     "\tbridge_ports eth0\n" .
+	     "\tbridge_stp off\n" .
+	     "\tbridge_fd 0\n";
 
 	write_config ($ifaces, "$targetdir/etc/network/interfaces");
 
@@ -1635,6 +1655,10 @@ sub create_ipconf_view {
 	$text =~ s/\s+$//;
 	if ($text =~ m!^($IPV4RE)$!) {
 	    $ipaddress = $text;
+	    $ipversion = 4;
+	} elsif ($text =~ m!^($IPV6RE)$!) {
+	    $ipaddress = $text; 
+	    $ipversion = 6;
 	} else {
 	    display_message ("IP address is not valid.");
 	    $ipconf_entry_addr->grab_focus();
@@ -1644,7 +1668,9 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_mask->get_text();
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
-	if (defined($ipv4_mask_hash->{$text})) {
+	if (($ipversion == 6) && ($text =~ m/^(\d+)$/) && ($1 >= 8) && ($1 <= 126)) {
+	    $netmask = $text;
+	} elsif (($ipversion == 4) && defined($ipv4_mask_hash->{$text})) {
 	    $netmask = $text;
 	} else {
 	    display_message ("Netmask is not valid.");
@@ -1655,7 +1681,9 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_gw->get_text();
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
-	if ($text =~ m!^($IPV4RE)$!) {
+	if (($ipversion == 4) && ($text =~ m!^($IPV4RE)$!)) {
+	    $gateway = $text;
+	} elsif (($ipversion == 6) && ($text =~ m!^($IPV6RE)$!)) {
 	    $gateway = $text;
 	} else {
 	    display_message ("Gateway is not valid.");
@@ -1666,7 +1694,9 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_dns->get_text();
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
-	if ($text =~ m!^($IPV4RE)$!) {
+	if (($ipversion == 4) && ($text =~ m!^($IPV4RE)$!)) {
+	    $dnsserver = $text;
+	} elsif (($ipversion == 6) && ($text =~ m!^($IPV6RE)$!)) {
 	    $dnsserver = $text;
 	} else {
 	    display_message ("DNS server is not valid.");
