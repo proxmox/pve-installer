@@ -1,3 +1,9 @@
+pve-installer (4.0-5) unstable; urgency=medium
+
+  * enable systemd-timesyncd.service by default
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 20 Nov 2015 09:07:20 +0100
+
 pve-installer (4.0-4) unstable; urgency=medium
 
   * add ipv6 support
