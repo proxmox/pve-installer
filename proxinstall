@@ -17,7 +17,7 @@ use String::ShellQuote;
 use Data::Dumper;
 use File::Basename;
 
-my $release = '4.0';
+my $release = '4.1';
 
 my $kapi = `uname -r`;
 chomp $kapi;
@@ -2087,7 +2087,7 @@ sub create_hdoption_view {
 
     my @disk_label;
     my @disk_selector;
-    for (my $i = 0; $i < 6; $i++) {
+    for (my $i = 0; $i < 8; $i++) {
 	$disk_label[$i] = Gtk3::Label->new ("Hardisk $i");
 	$disk_label[$i]->set_alignment (1, 0.5);
 	$grid->attach($disk_label[$i], 0, $row, 1, 1);
@@ -2286,7 +2286,7 @@ sub get_zfs_raid_setup {
 
     my $devlist = [];
     my $bootdevlist = [];
-    for (my $i = 0; $i < 6; $i++) {
+    for (my $i = 0; $i < 8; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
 	    my ($disk, $devname, $size, $model) = @$hd;
 	    die "device '$devname' is used more than once\n" 

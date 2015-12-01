@@ -1,5 +1,7 @@
 pve-installer (4.0-5) unstable; urgency=medium
 
+  * allow up to 8 zfs disks
+
   * enable systemd-timesyncd.service by default
 
  -- Proxmox Support Team <support@proxmox.com>  Fri, 20 Nov 2015 09:07:20 +0100
