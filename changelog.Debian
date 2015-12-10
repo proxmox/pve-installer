@@ -1,3 +1,9 @@
+pve-installer (4.0-6) unstable; urgency=medium
+
+  * install EFI fallback boot file (OVMF does not boot without)
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 10 Dec 2015 10:39:46 +0100
+
 pve-installer (4.0-5) unstable; urgency=medium
 
   * allow up to 8 zfs disks
