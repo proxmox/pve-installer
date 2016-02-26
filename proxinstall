@@ -865,6 +865,7 @@ sub compute_swapsize {
 	my $ss = int ($total_memory / 1024);
 	$ss = 4 if $ss < 4;
 	$ss = ($hdgb/8) if $ss > ($hdgb/8);
+	$ss = 8 if $ss > 8;
 	$swapsize = $ss*1024*1024;
     }
 }
