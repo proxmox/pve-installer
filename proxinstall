@@ -33,6 +33,31 @@ if (!GetOptions ('testmode=s' => \$opt_testmode)) {
     exit (-1);
 }
 
+my $zfspoolname = $opt_testmode ? "test_rpool" : 'rpool';
+
+my $storage_cfg_zfs = <<__EOD__;
+dir: local
+	path /var/lib/vz
+	content iso,vztmpl,backup
+
+zfspool: localzfs
+	pool $zfspoolname/data
+	sparse
+	content images,rootdir
+__EOD__
+
+my $storage_cfg_lvmthin = <<__EOD__;
+dir: local
+	path /var/lib/vz
+	content iso,vztmpl,backup
+
+lvmthin: locallvm
+	thinpool data
+	vgname pve
+	content rootdir,images
+__EOD__
+
+
 sub file_read_firstline {
     my ($filename) = @_;
 
@@ -665,7 +690,7 @@ sub diversion_remove {
 }
 
 sub zfs_create_rpool {
-    my ($zfspoolname, $vdev) = @_;
+    my ($vdev) = @_;
 
    syscmd ("zpool create -f -o ashift=12 -o cachefile=none $zfspoolname $vdev") == 0 ||
 	die "unable to create zfs root pool\n";
@@ -673,6 +698,9 @@ sub zfs_create_rpool {
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT volume\n";
     
+    syscmd ("zfs create $zfspoolname/data")  == 0 ||
+	die "unable to create zfs $zfspoolname/data volume\n";
+
     syscmd ("zfs create $zfspoolname/ROOT/pve-1")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT/pve-1 volume\n";
 
@@ -684,7 +712,7 @@ sub zfs_create_rpool {
 }
 
 sub zfs_create_swap {
-    my ($zfspoolname, $swapsize) = @_;
+    my ($swapsize) = @_;
 
     syscmd ("zfs create -V ${swapsize}K -b 4K $zfspoolname/swap")  == 0 ||
 	die "unable to create zfs swap device\n";
@@ -847,6 +875,9 @@ sub create_lvm_volumes {
     syscmd ("/sbin/lvcreate -L${rest}K -ndata pve") == 0 ||
 	die "unable to create data volume";
 
+    syscmd ("/sbin/lvconvert --yes --type thin-pool pve/data") == 0 ||
+	die "unable to create data thin-pool";
+
     syscmd ("/sbin/vgchange -a y pve") == 0 ||
 	die "unable to activate volume group";
 
@@ -882,7 +913,6 @@ sub extract_data {
     my $rootdev;
 
     my $use_zfs;
-    my $zfspoolname = $opt_testmode ? "test_rpool" : 'rpool';
 
     my $filesys = $config_options->{filesys};
 
@@ -924,7 +954,7 @@ sub extract_data {
 
 		syscmd ("zpool destroy $zfspoolname") if $opt_testmode;
 
-		zfs_create_rpool($zfspoolname, $rootdev);
+		zfs_create_rpool($rootdev);
 	    }
 
 	} elsif ($use_zfs) {
@@ -960,10 +990,10 @@ sub extract_data {
 		$vdev =~ s/ $devname/ $osdev/;
 	    }
 
-	    zfs_create_rpool($zfspoolname, $vdev);
+	    zfs_create_rpool($vdev);
 	    
 	    my $swap_size = compute_swapsize($disksize);
-	    $swapfile = zfs_create_swap($zfspoolname, $swap_size);
+	    $swapfile = zfs_create_swap($swap_size);
 
 	} else {
 
@@ -1022,8 +1052,7 @@ sub extract_data {
 
 	    if ( -b $target_hd) {
 
-		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 0.5);
-		create_filesystem ($datadev, 'data', $filesys, 0.05, $maxper, 0.5, 1);
+		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
 
 	    } else {
 
@@ -1041,14 +1070,9 @@ sub extract_data {
 	mkdir "$targetdir/boot";
 	mkdir "$targetdir/boot/efi";
 
-	if ($datadev) {
-
-	    mkdir "$targetdir/var";
-	    mkdir "$targetdir/var/lib";
-	    mkdir "$targetdir/var/lib/vz";
-	    syscmd ("mount -n $datadev $targetdir/var/lib/vz") == 0 ||
-		die "unable to mount $datadev\n";
-	}
+	mkdir "$targetdir/var";
+	mkdir "$targetdir/var/lib";
+	mkdir "$targetdir/var/lib/vz";
 
 	display_html ("extract2-rulesystem.htm");
 	update_progress (1, 0.05, $maxper, "extracting base system");
@@ -1135,7 +1159,6 @@ sub extract_data {
 	if (!$use_zfs) {
 	    my $root_mountopt = $fssetup->{$filesys}->{root_mountopt} || 'defaults';
 	    $fstab .= "$rootdev / $filesys ${root_mountopt} 0 1\n";
-	    $fstab .= "$datadev /var/lib/vz $filesys defaults 0 1\n" if $datadev;
 	}
 
 	# mount /boot/efi
@@ -1345,6 +1368,14 @@ _EOD
 	# save admin email
 	write_config ("user:root\@pam:1:0:::${mailto}::\n",
 		      "$tmpdir/user.cfg");
+
+	# write storage.cfg
+	my $strorage_cfg_fn = "$tmpdir/storage.cfg";
+	if ($use_zfs) {
+	    write_config ($storage_cfg_zfs, $strorage_cfg_fn);
+	} else {
+	    write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
+	}
 
 	run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 

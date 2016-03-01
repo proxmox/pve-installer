@@ -1,3 +1,13 @@
+pve-installer (4.0-7) unstable; urgency=medium
+
+  * use lvmthin for data volume
+
+  * create zfs subpool (rpool/data) as VM/CT storage
+
+  * create better default storage configiguration
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 01 Mar 2016 07:16:16 +0100
+
 pve-installer (4.0-6) unstable; urgency=medium
 
   * install EFI fallback boot file (OVMF does not boot without)
