@@ -40,7 +40,7 @@ dir: local
 	path /var/lib/vz
 	content iso,vztmpl,backup
 
-zfspool: localzfs
+zfspool: local-zfs
 	pool $zfspoolname/data
 	sparse
 	content images,rootdir
@@ -51,7 +51,7 @@ dir: local
 	path /var/lib/vz
 	content iso,vztmpl,backup
 
-lvmthin: locallvm
+lvmthin: local-lvm
 	thinpool data
 	vgname pve
 	content rootdir,images
