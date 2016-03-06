@@ -1,3 +1,9 @@
+pve-installer (4.0-8) unstable; urgency=medium
+
+  * restrict hdsize if requested
+
+ -- Proxmox Support Team <support@proxmox.com>  Sun, 06 Mar 2016 09:04:44 +0100
+
 pve-installer (4.0-7) unstable; urgency=medium
 
   * use lvmthin for data volume
