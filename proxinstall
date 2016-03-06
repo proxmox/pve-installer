@@ -757,14 +757,15 @@ sub partition_bootable_disk {
     my $pnum = 1;
     push @$pcmd, "-n$pnum:34:2047", "-t$pnum:EF02";
 
+    $pnum = 2;
+    # Note: from sector 2048 to 128M
+    my $endsec = 128*1024*2 - 1;
+    push @$pcmd, "-n$pnum:2048:$endsec", "-t$pnum:EF00";
+
     $pnum = 3;
     # Note: from 128M to end
     push @$pcmd, "-n$pnum:128M:${restricted_hdsize_mb}", "-t$pnum:8E00";
-    
-    $pnum = 2;
-    # Note: from sector 2048 to 128M (0 mean till next partition)
-    push @$pcmd, "-n$pnum:2048:0", "-t$pnum:EF00";
-    
+
     push @$pcmd, $target_dev;
 
     my $os_size = $hdsize - 128*1024;
