@@ -735,8 +735,10 @@ sub partition_bootable_disk {
     syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
 
+    my $restricted_hdsize_mb = 0; # 0 ==> end of partition
     if ($maxhdsize && ($maxhdsize < $hdsize)) {
 	$hdsize = $maxhdsize;
+	$restricted_hdsize_mb = $hdsize/1024;
     }
 
     my $hdgb = int($hdsize/(1024*1024));
@@ -750,8 +752,6 @@ sub partition_bootable_disk {
     my $efibootdev = get_partition_dev($target_dev, 2);
     my $osdev = get_partition_dev ($target_dev, 3);
 
-    my $hdsize_mb = $hdsize/1024;
-
     my $pcmd = ['sgdisk', '-a1'];
 
     my $pnum = 1;
@@ -759,8 +759,7 @@ sub partition_bootable_disk {
 
     $pnum = 3;
     # Note: from 128M to end
-    push @$pcmd, "-n$pnum:128M:0", "-t$pnum:8E00";
-
+    push @$pcmd, "-n$pnum:128M:${restricted_hdsize_mb}", "-t$pnum:8E00";
     
     $pnum = 2;
     # Note: from sector 2048 to 128M (0 mean till next partition)
