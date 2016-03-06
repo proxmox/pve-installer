@@ -738,7 +738,7 @@ sub partition_bootable_disk {
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
     if ($maxhdsize && ($maxhdsize < $hdsize)) {
 	$hdsize = $maxhdsize;
-	$restricted_hdsize_mb = $hdsize/1024;
+	$restricted_hdsize_mb = int($hdsize/1024) . 'M';
     }
 
     my $hdgb = int($hdsize/(1024*1024));
