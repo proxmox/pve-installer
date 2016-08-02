@@ -1680,6 +1680,13 @@ sub create_ipconf_view {
 
 	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
 
+	# Debian does not support purely numeric hostnames
+	if ($text && $text =~ /^[0-9]+(?:\.|$)/) {
+	    display_message("Purely numeric hostnames are not allowed.");
+	    $hostentry->grab_focus();
+	    return;
+	}
+
  	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.domain.tld$/ &&
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
 	    $hostname = $1;
