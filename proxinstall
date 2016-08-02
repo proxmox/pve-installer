@@ -17,7 +17,7 @@ use String::ShellQuote;
 use Data::Dumper;
 use File::Basename;
 
-my $release = '4.1';
+my $release = '4.2';
 
 my $kapi = `uname -r`;
 chomp $kapi;
