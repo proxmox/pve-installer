@@ -47,13 +47,7 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 
 .phony: upload
 upload: ${DEB}
-	umount /pve/${RELEASE}; mount -o rw /pve/${RELEASE}
-	mkdir -p /pve/${RELEASE}/extra
-	rm -rf /pve/${RELEASE}/extra/pve-installer_*.deb
-	rm -f /pve/${RELEASE}/extra/Packages*
-	cp ${DEB} /pve/${RELEASE}/extra
-	cd /pve/${RELEASE}/extra; dpkg-scanpackages . /dev/null  > Packages; gzip -9c Packages > Packages.gz
-	umount /pve/${RELEASE}; mount -o ro /pve/${RELEASE}
+	tar cf - ${DEB} | ssh repoman@repo.proxmox.com upload
 
 packages: /pve/${RELEASE}/install/pve.files
 	rm -rf packages packages.tmp; mkdir packages.tmp
