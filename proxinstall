@@ -1480,7 +1480,7 @@ sub create_main_window {
 
     my $vbox = Gtk3::VBox->new (0, 0);
 
-    my $image = Gtk3::Image->new_from_file  ("${proxmox_dir}/proxlogo.xpm");
+    my $image = Gtk3::Image->new_from_file  ("${proxmox_dir}/proxlogo.png");
     $vbox->pack_start ($image, 0, 0, 0);
 
     my $hbox = Gtk3::HBox->new (0, 0);
