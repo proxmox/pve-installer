@@ -1,3 +1,11 @@
+pve-installer (4.0-10) unstable; urgency=medium
+
+  * Fix #1054: error on purely numeric hostnames
+
+  * update layout, use new logo
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 09 Aug 2016 09:46:31 +0200
+
 pve-installer (4.0-8) unstable; urgency=medium
 
   * restrict hdsize if requested
