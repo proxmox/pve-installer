@@ -16,6 +16,7 @@ use Encode;
 use String::ShellQuote;
 use Data::Dumper;
 use File::Basename;
+use Time::HiRes;
 
 my $release = '4.2';
 
@@ -44,6 +45,17 @@ zfspool: local-zfs
 	pool $zfspoolname/data
 	sparse
 	content images,rootdir
+__EOD__
+
+my $storage_cfg_btrfs = <<__EOD__;
+dir: local
+	path /var/lib/vz
+	content iso,vztmpl,backup
+	disabled
+
+btrfs: local-btrfs
+	path /var/lib/pve/local-btrfs
+	content iso,vztmpl,backup,images,rootdir
 __EOD__
 
 my $storage_cfg_lvmthin = <<__EOD__;
@@ -151,7 +163,7 @@ my $cmap;
 
 my $config_options = {};
 
-if ($cmdline =~ m/\s(ext3|ext4|xfs|zfs)(\s.*)?$/) {
+if ($cmdline =~ m/\s(ext3|ext4|xfs)(\s.*)?$/) {
     $config_options->{filesys} = $1;
 } else {
     $config_options->{filesys} = 'ext4';
@@ -433,6 +445,7 @@ sub hd_list {
 
     if ($opt_testmode) {
 	push @$res, [-1, $opt_testmode, int((-s $opt_testmode)/512), "TESTDISK"];
+	return $res;
     }
 
     my $count = 0;
@@ -689,6 +702,22 @@ sub diversion_remove {
 	die "unable to remove $cmd diversion\n";
 }
 
+sub btrfs_create {
+    my ($partitions, $mode) = @_;
+
+    die "unknown btrfs mode '$mode'"
+	if !($mode eq 'single' || $mode eq 'raid0' ||
+	     $mode eq 'raid1' || $mode eq 'raid10');
+
+    my $cmd = ['mkfs.btrfs', '-f'];
+
+    push @$cmd, '-d', $mode, '-m', $mode;
+
+    push @$cmd, @$partitions;
+
+    syscmd($cmd);
+}
+
 sub zfs_create_rpool {
     my ($vdev) = @_;
 
@@ -728,9 +757,12 @@ sub zfs_create_swap {
 }
 
 sub partition_bootable_disk {
-    my ($target_dev, $maxhdsize, $use_zfs) = @_;
+    my ($target_dev, $maxhdsize, $ptype) = @_;
 
     die "too dangerous" if $opt_testmode;
+
+    die "unknown partition type '$ptype'"
+	if !($ptype eq '8E00' || $ptype eq '8300');
 
     syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
@@ -764,7 +796,7 @@ sub partition_bootable_disk {
 
     $pnum = 3;
     # Note: from 128M to end
-    push @$pcmd, "-n$pnum:128M:${restricted_hdsize_mb}", "-t$pnum:8E00";
+    push @$pcmd, "-n$pnum:128M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
@@ -901,10 +933,22 @@ sub compute_swapsize {
     }
 }
 
+my $udevadm_trigger_block = sub {
+    my ($nowait) = @_;
+
+    sleep(1) if !$nowait; # give kernel time to reread part table
+
+    # trigger udev to create /dev/disk/by-uuid
+    syscmd ("udevadm trigger --subsystem-match block");
+    syscmd ("udevadm settle --timeout 10");
+};
+
 sub extract_data {
     my ($tgzfile, $targetdir) = @_;
 
     die "target '$targetdir' does not exist\n" if ! -d  $targetdir;
+
+    my $starttime = [Time::HiRes::gettimeofday];
 
     my $bootdevinfo = [];
 
@@ -912,7 +956,8 @@ sub extract_data {
     my $swapfile;
     my $rootdev;
 
-    my $use_zfs;
+    my $use_zfs = 0;
+    my $use_btrfs = 0;
 
     my $filesys = $config_options->{filesys};
 
@@ -920,8 +965,9 @@ sub extract_data {
 	$target_hd = undef; # do not use this config
 	$use_zfs = 1;
 	$targetdir = "/$zfspoolname/ROOT/pve-1";
-    } else {
- 	$use_zfs = 0;
+    } elsif ($filesys =~ m/btrfs/) {
+	$target_hd = undef; # do not use this config
+	$use_btrfs = 1;
     }
     
     if ($use_zfs) {
@@ -944,18 +990,53 @@ sub extract_data {
 
 	if ($opt_testmode) {
 
-	    $rootdev = abs_path($target_hd);
-	    syscmd ("umount $rootdev");
+	    if ($use_btrfs) {
 
-	    if ($use_zfs) {
+		$rootdev = abs_path($opt_testmode);
+		syscmd("umount $rootdev");
 
-		die "unsupported zfs mode (for testing environment)\n" 
+		die "unsupported btrfs mode (for testing environment)\n" 
+		    if $filesys ne 'btrfs (RAID0)';
+
+		btrfs_create([$rootdev], 'single');
+
+	    } elsif ($use_zfs) {
+
+		die "fixme";
+
+		die "unsupported zfs mode (for testing environment)\n"
 		    if $filesys ne 'zfs (RAID0)';
 
-		syscmd ("zpool destroy $zfspoolname") if $opt_testmode;
+		syscmd ("zpool destroy $zfspoolname");
 
 		zfs_create_rpool($rootdev);
+	    
+	    } else {
+
+		$rootdev = abs_path($target_hd);
+		syscmd("umount $rootdev");
 	    }
+
+	} elsif ($use_btrfs) {
+
+	    my ($devlist, $btrfs_mode) = get_btrfs_raid_setup();
+	    my $btrfs_partitions = [];
+	    my $disksize;
+	    foreach my $hd (@$devlist) {
+		my $devname = @$hd[1];
+		my ($size, $osdev, $efidev) =
+		    partition_bootable_disk($devname, undef, '8300');
+		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
+		my $by_id = find_stable_path("/dev/disk/by-id", $devname);
+		push @$bootdevinfo, { esp => $efidev, devname => $devname,
+				      osdev => $osdev, by_id => $by_id };
+		push @$btrfs_partitions, $osdev;
+		$disksize = $size;
+	    }
+
+	    &$udevadm_trigger_block();
+
+	    btrfs_create($btrfs_partitions, $btrfs_mode);
 
 	} elsif ($use_zfs) {
 
@@ -972,11 +1053,7 @@ sub extract_data {
 		$disksize = $size;
 	    }
 
-	    sleep(1); # give kernel time to reread part table
-
-	    # trigger udev to create /dev/disk/by-uuid
-	    syscmd ("udevadm trigger --subsystem-match block");
-	    syscmd ("udevadm settle --timeout 10");
+	    &$udevadm_trigger_block();
 
 	    foreach my $di (@$bootdevinfo) {
 		my $devname = $di->{devname};
@@ -1007,13 +1084,9 @@ sub extract_data {
 
 	    my ($os_size, $osdev, $efidev); 
 	    ($os_size, $osdev, $efidev) = 
-		partition_bootable_disk($target_hd, $maxhdsize);
-	    
-	    sleep(1); # give kernel time to reread part table
+		partition_bootable_disk($target_hd, $maxhdsize, '8E00');
 
-	    # trigger udev to create /dev/disk/by-uuid
-	    syscmd ("udevadm trigger --subsystem-match block");
-	    syscmd ("udevadm settle --timeout 10");
+	    &$udevadm_trigger_block();
 
 	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
 	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd, 
@@ -1024,8 +1097,7 @@ sub extract_data {
 		create_lvm_volumes($osdev, $os_size, $swap_size);
 
 	    # trigger udev to create /dev/disk/by-uuid
-	    syscmd ("udevadm trigger --subsystem-match block");
-	    syscmd ("udevadm settle --timeout 10");
+	    &$udevadm_trigger_block(1);
 	}
 
 	if ($use_zfs) {
@@ -1048,21 +1120,22 @@ sub extract_data {
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
 
-	if (!$use_zfs) {
-
-	    if ( -b $target_hd) {
-
-		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
-
-	    } else {
-
-		create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
-	    }
+	if ($use_zfs) {
+	    # do nothing
+	} elsif ($use_btrfs) {
+	    # do nothing
+	} else {
+	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
 	}
 
 	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
 
-	if (!$use_zfs) {
+	if ($use_zfs) {
+	    # do nothing
+	} elsif ($use_btrfs) {
+	    syscmd("mount -n $rootdev -o noatime,nobarrier $targetdir") == 0 ||
+		die "unable to mount $rootdev\n";
+	} else {
 	    syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
 		die "unable to mount $rootdev\n";
 	}
@@ -1073,6 +1146,12 @@ sub extract_data {
 	mkdir "$targetdir/var";
 	mkdir "$targetdir/var/lib";
 	mkdir "$targetdir/var/lib/vz";
+	mkdir "$targetdir/var/lib/pve";
+
+	if ($use_btrfs) {
+	    syscmd("btrfs subvolume create $targetdir/var/lib/pve/local-btrfs") == 0 ||
+		die "unable to create btrfs subvolume\n";
+	}
 
 	display_html ("extract2-rulesystem.htm");
 	update_progress (1, 0.05, $maxper, "extracting base system");
@@ -1156,7 +1235,23 @@ sub extract_data {
 
 	my $fstab = "# <file system> <mount point> <type> <options> <dump> <pass>\n";
 
-	if (!$use_zfs) {
+	if ($use_zfs) {
+	    # do nothing
+	} elsif ($use_btrfs) {
+	    my $fsuuid;
+	    my $cmd = "blkid -u filesystem -t TYPE=btrfs -o export $rootdev";
+	    run_command($cmd, sub {
+		my $line = shift;
+
+		if ($line =~ m/^UUID=([A-Fa-f0-9\-]+)$/) {
+		    $fsuuid = $1;
+		}
+	    });
+
+	    die "unable to detect FS UUID" if !defined($fsuuid);
+
+	    $fstab .= "UUID=$fsuuid / btrfs defaults 0 1\n";
+	} else {
 	    my $root_mountopt = $fssetup->{$filesys}->{root_mountopt} || 'defaults';
 	    $fstab .= "$rootdev / $filesys ${root_mountopt} 0 1\n";
 	}
@@ -1223,6 +1318,9 @@ _EOD
 	my $pkg_count = 0;
 	while (<$pkgdir/*.deb>) { $pkg_count++ };
 
+	# btrfs/dpkg is extremely slow without --force-unsafe-io
+	my $dpkg_opts = $use_btrfs ? "--force-unsafe-io" : "";
+
 	$count = 0;
 	while (<$pkgdir/*.deb>) {
 	    chomp;
@@ -1236,14 +1334,14 @@ _EOD
 	    print "extracting: $deb\n";
 	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
 		die "installation of package $deb failed\n";
-	    syscmd ("chroot $targetdir dpkg --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
+	    syscmd ("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
 		die "installation of package $deb failed\n";
 	    update_progress ((++$count)/$pkg_count, 0.5, 0.75);
 	}
 
 	display_html ("extract4-virus.htm");
 
-	my $cmd = "chroot $targetdir dpkg --force-confold --configure -a";
+	my $cmd = "chroot $targetdir dpkg $dpkg_opts --force-confold --configure -a";
 	$count = 0;
 	run_command ($cmd, sub {
 	    my $line = shift;
@@ -1373,6 +1471,8 @@ _EOD
 	my $strorage_cfg_fn = "$tmpdir/storage.cfg";
 	if ($use_zfs) {
 	    write_config ($storage_cfg_zfs, $strorage_cfg_fn);
+	} elsif ($use_btrfs) {
+	    write_config ($storage_cfg_btrfs, $strorage_cfg_fn);
 	} else {
 	    write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
 	}
@@ -1389,6 +1489,9 @@ _EOD
     print $err if $err;
 
     if ($opt_testmode) {
+	my $elapsed = Time::HiRes::tv_interval($starttime);
+	print "Elapsed extract time: $elapsed\n";
+
 	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
     }
 
@@ -2113,9 +2216,11 @@ sub create_hdoption_view {
    
     my $fstypecb = Gtk3::ComboBoxText->new();
 
-    my $fstype = ['ext3', 'ext4', 'xfs', 'zfs (RAID0)', 'zfs (RAID1)', 
-		  'zfs (RAID10)', 'zfs (RAIDZ-1)', 
-		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)'];
+    my $fstype = ['ext3', 'ext4', 'xfs',
+		  'zfs (RAID0)', 'zfs (RAID1)',
+		  'zfs (RAID10)', 'zfs (RAIDZ-1)',
+		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)',
+		  'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'];
 
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
@@ -2238,9 +2343,9 @@ sub create_hdoption_view {
     $row++;
 
     my $set_sensitive_flag = sub {
-	my $enable_size_hints = $config_options->{filesys} !~ m/zfs/;
+	my $enable_size_hints = $config_options->{filesys} !~ m/zfs|btrfs/;
 
-	if ($config_options->{filesys} =~ m/zfs/) {
+	if ($config_options->{filesys} =~ m/zfs|btrfs/) {
 	    $target_hd_combo->set_visible(0);
 	    $target_hd_label->set_text("Target: $config_options->{filesys} ");
 	    foreach my $w (@disk_selector) { $w->set_visible(1); }
@@ -2324,14 +2429,11 @@ sub create_hdoption_view {
     $dialog->destroy();
 }
 
-sub get_zfs_raid_setup {
-
-    my $filesys = $config_options->{filesys};
+my $get_raid_devlist = sub {
 
     my $dev_name_hash = {};
 
     my $devlist = [];
-    my $bootdevlist = [];
     for (my $i = 0; $i < 8; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
 	    my ($disk, $devname, $size, $model) = @$hd;
@@ -2342,8 +2444,19 @@ sub get_zfs_raid_setup {
 	}
     }
 
+    return $devlist;
+};
+
+sub get_zfs_raid_setup {
+
+    my $filesys = $config_options->{filesys};
+
+    my $devlist = &$get_raid_devlist();
+
     my $diskcount = scalar(@$devlist);
     die "$filesys need at least one device\n" if $diskcount < 1;
+
+    my $bootdevlist = [];
 
     my $cmd= '';
     if ($filesys eq 'zfs (RAID0)') {
@@ -2394,6 +2507,36 @@ sub get_zfs_raid_setup {
     return ($devlist, $bootdevlist, $cmd);
 }
 
+sub get_btrfs_raid_setup {
+
+    my $filesys = $config_options->{filesys};
+
+    my $devlist = &$get_raid_devlist();
+
+    my $diskcount = scalar(@$devlist);
+    die "$filesys need at least one device\n" if $diskcount < 1;
+
+    my $mode;
+
+    if ($diskcount == 1) {
+	$mode = 'single';
+    } else {
+	if ($filesys eq 'btrfs (RAID0)') {
+	    $mode = 'raid0';
+	} elsif ($filesys eq 'btrfs (RAID1)') {
+	    die "btrfs (RAID1) need at least 2 device\n" if $diskcount < 2;
+	    $mode = 'raid1';
+	} elsif ($filesys eq 'btrfs (RAID10)') {
+	    die "btrfs (RAID10) need at least 4 device\n" if $diskcount < 4;
+	    $mode = 'raid10';
+	} else {
+	    die "unknown zfs mode '$filesys'\n";
+	}
+    }
+
+    return ($devlist, $mode);
+}
+
 sub create_hdsel_view {
 
     cleanup_view ();
@@ -2441,6 +2584,14 @@ sub create_hdsel_view {
 	    if (my $err = $@) {
 		display_message ("Warning: $err\n" .
 				 "Please fix ZFS setup first.");
+	    } else {
+		create_country_view();
+	    }
+	} elsif ($config_options->{filesys} =~ m/btrfs/) {
+	    eval { get_btrfs_raid_setup(); };
+	    if (my $err = $@) {
+		display_message ("Warning: $err\n" .
+				 "Please fix BTRFS setup first.");
 	    } else {
 		create_country_view();
 	    }
