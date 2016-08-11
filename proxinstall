@@ -34,7 +34,8 @@ if (!GetOptions ('testmode=s' => \$opt_testmode)) {
     exit (-1);
 }
 
-my $zfspoolname = $opt_testmode ? "test_rpool" : 'rpool';
+my $zfstestpool = "test_rpool";
+my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
 
 my $storage_cfg_zfs = <<__EOD__;
 dir: local
@@ -990,10 +991,10 @@ sub extract_data {
 
 	if ($opt_testmode) {
 
-	    if ($use_btrfs) {
+	    $rootdev = abs_path($opt_testmode);
+	    syscmd("umount $rootdev");
 
-		$rootdev = abs_path($opt_testmode);
-		syscmd("umount $rootdev");
+	    if ($use_btrfs) {
 
 		die "unsupported btrfs mode (for testing environment)\n" 
 		    if $filesys ne 'btrfs (RAID0)';
@@ -1002,19 +1003,16 @@ sub extract_data {
 
 	    } elsif ($use_zfs) {
 
-		die "fixme";
-
 		die "unsupported zfs mode (for testing environment)\n"
 		    if $filesys ne 'zfs (RAID0)';
 
-		syscmd ("zpool destroy $zfspoolname");
+		syscmd ("zpool destroy $zfstestpool");
 
 		zfs_create_rpool($rootdev);
 	    
 	    } else {
 
-		$rootdev = abs_path($target_hd);
-		syscmd("umount $rootdev");
+		# nothing to do
 	    }
 
 	} elsif ($use_btrfs) {
