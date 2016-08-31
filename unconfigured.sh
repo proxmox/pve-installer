@@ -38,16 +38,8 @@ real_reboot() {
     fi
     echo "done."
 
-    umount -l -n /dev/.static/dev
-    umount -l -n /dev
-
     umount -l -n /target >/dev/null 2>&1
-    umount -l -n /tmp
-    umount -l -n /var/tmp
-    umount -l -n /var/log
-    umount -l -n /var/run
-    umount -l -n /var/lib/xkb
-
+    umount -l -n /dev
     umount -l -n /sys
     umount -l -n /proc
 
@@ -66,11 +58,6 @@ echo "Starting Proxmox installation"
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
 
 mount -n -t proc proc /proc
-mount -n -t tmpfs tmpfs /tmp
-mount -n -t tmpfs tmpfs /var/tmp
-mount -n -t tmpfs tmpfs /var/log
-mount -n -t tmpfs tmpfs /var/run
-mount -n -t tmpfs tmpfs /var/lib/xkb
 mount -n -t sysfs sysfs /sys
 
 parse_cmdline
