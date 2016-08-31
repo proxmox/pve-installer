@@ -1174,7 +1174,7 @@ sub extract_data {
 	    my $nper = int (($count *100)/$files);
 	    if ($nper != $per) {
 		$per = $nper;
-		my $frac = $per > 100 ? 100 : $per/100;
+		my $frac = $per > 100 ? 1 : $per/100;
 		update_progress ($frac, $maxper, 0.5);
 	    }
 	});
