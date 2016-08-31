@@ -497,7 +497,7 @@ sub hd_list {
 
 sub read_cmap {
     my $countryfn = $opt_testmode ? "/usr/share/pve-manager/country.dat" :
-	"/proxmox/country.dat";
+	"/cdrom/proxmox/country.dat";
     open (TMP, "<$countryfn") || die "unable to open '$countryfn' - $!\n";
     my $line;
     my $country = {};
@@ -945,7 +945,7 @@ my $udevadm_trigger_block = sub {
 };
 
 sub extract_data {
-    my ($tgzfile, $targetdir) = @_;
+    my ($basefile, $targetdir) = @_;
 
     die "target '$targetdir' does not exist\n" if ! -d  $targetdir;
 
@@ -1154,21 +1154,22 @@ sub extract_data {
 	display_html ("extract2-rulesystem.htm");
 	update_progress (1, 0.05, $maxper, "extracting base system");
 
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($tgzfile);
-	$ino || die "unable to open file '$tgzfile' - $!\n";
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
+	$ino || die "unable to open file '$basefile' - $!\n";
 
 	my $files;
 	if ($opt_testmode) {
 	    $files = file_read_firstline("/pve/$release/install/pve-base.cnt");
 	} else {
-	    $files = file_read_firstline("/proxmox/pve-base.cnt");
+	    $files = file_read_firstline("/cdrom/proxmox/pve-base.cnt");
 	}
 
 	my $per = 0;
 	my $count = 0;
 
-	run_command ("tar xvf $tgzfile -C $targetdir", sub {
+	run_command ("unsquashfs -f -dest $targetdir -i $basefile", sub {
 	    my $line = shift;
+	    return if $line !~ m/^$targetdir/;
 	    $count++;
 	    my $nper = int (($count *100)/$files);
 	    if ($nper != $per) {
@@ -1312,7 +1313,7 @@ d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
 
-	my $pkgdir = $opt_testmode ? "packages" : "/proxmox/packages";
+	my $pkgdir = $opt_testmode ? "packages" : "/cdrom/proxmox/packages";
 	my $pkg_count = 0;
 	while (<$pkgdir/*.deb>) { $pkg_count++ };
 
@@ -2627,7 +2628,7 @@ sub create_extract_view {
 
     my $tdir = $opt_testmode ? "target" : "/target";
     mkdir $tdir;
-    my $base = $opt_testmode ? "/pve/$release/install/pve-base.tar" : "/proxmox/pve-base.tar";
+    my $base = $opt_testmode ? "/pve/$release/install/pve-base.squashfs" : "/cdrom/pve-base.squashfs";
 
     eval  { extract_data ($base, $tdir); };
     my $err = $@;
