@@ -98,6 +98,9 @@ echo "done"
 
 xinit -- -dpi 96 >/dev/tty2 2>&1
 
+# just to be sure everything is on disk
+sync
+
 if [ $proxdebug -ne 0 ]; then 
     echo "Debugging mode (type exit or CTRL-D to reboot)"
     debugsh 
