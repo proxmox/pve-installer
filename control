@@ -1,9 +1,9 @@
 Package: pve-installer
-Version: 4.0-10
+Version: 4.0-11
 Section: utils
 Priority: optional
 Architecture: amd64
-Depends: geoip-bin, libgtk3-webkit-perl
+Depends: geoip-bin, libgtk3-webkit-perl, squashfs-tools
 Maintainer: Proxmox Support Team <support@proxmox.com>
 Description: The Proxmox Installer
  This package contains Proxmox graphical installer
