@@ -1,5 +1,5 @@
 Package: pve-installer
-Version: 4.0-11
+Version: 4.0-12
 Section: utils
 Priority: optional
 Architecture: amd64

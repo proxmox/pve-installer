@@ -1,3 +1,11 @@
+pve-installer (4.0-12) unstable; urgency=medium
+
+  * fix update_progress while extracting files
+
+  * assume root file system is writable (overlayfs)
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 21 Sep 2016 13:12:33 +0200
+
 pve-installer (4.0-11) unstable; urgency=medium
 
   * use unsquashfs instead of tar
