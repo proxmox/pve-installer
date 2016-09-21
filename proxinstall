@@ -2529,7 +2529,7 @@ sub get_btrfs_raid_setup {
 	    die "btrfs (RAID10) need at least 4 device\n" if $diskcount < 4;
 	    $mode = 'raid10';
 	} else {
-	    die "unknown zfs mode '$filesys'\n";
+	    die "unknown btrfs mode '$filesys'\n";
 	}
     }
 
