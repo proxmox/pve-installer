@@ -23,6 +23,8 @@ my $release = '4.2';
 my $kapi = `uname -r`;
 chomp $kapi;
 
+my $enable_btrfs = 0;
+
 my $opt_testmode;
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
@@ -2218,8 +2220,10 @@ sub create_hdoption_view {
     my $fstype = ['ext3', 'ext4', 'xfs',
 		  'zfs (RAID0)', 'zfs (RAID1)',
 		  'zfs (RAID10)', 'zfs (RAIDZ-1)',
-		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)',
-		  'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'];
+		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)'];
+
+    push @$fstype, 'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'
+	if $enable_btrfs;
 
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
