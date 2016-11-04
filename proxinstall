@@ -1047,8 +1047,7 @@ sub extract_data {
 		my $devname = @$hd[1];
 		my ($size, $osdev) =
 		    partition_bootable_zfs_disk($devname);
-		die "unable to mirror disks with different sizes!\n" 
-		    if $disksize && ($size != $disksize);
+		zfs_mirror_size_check($disksize, $size) if $disksize;
 		push @$bootdevinfo, { devname => $devname, osdev => $osdev};
 		$disksize = $size;
 	    }
@@ -2450,6 +2449,13 @@ my $get_raid_devlist = sub {
     return $devlist;
 };
 
+sub zfs_mirror_size_check {
+    my ($expected, $actual) = @_;
+
+    die "mirrored disks must have same size\n"
+	if abs($expected - $actual) > $expected / 10;
+}
+
 sub get_zfs_raid_setup {
 
     my $filesys = $config_options->{filesys};
@@ -2471,9 +2477,9 @@ sub get_zfs_raid_setup {
 	die "zfs (RAID1) need at least 2 device\n" if $diskcount < 2;
 	$cmd .= ' mirror ';
 	my $hd = @$devlist[0];
-	my $expected_size = @$hd[2]; # all disks needs same size
+	my $expected_size = @$hd[2]; # all disks need approximately same size
 	foreach $hd (@$devlist) {
-	    die "mirrored disks must have same size\n" if @$hd[2] != $expected_size;
+	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
@@ -2487,7 +2493,7 @@ sub get_zfs_raid_setup {
 	for (my $i = 0; $i < $diskcount; $i+=2) {
 	    my $hd1 = @$devlist[$i];
 	    my $hd2 = @$devlist[$i+1];
-	    die "mirrored disks must have same size\n" if @$hd1[2] != @$hd2[2];
+	    zfs_mirror_size_check(@$hd1[2], @$hd2[2]); # pairs need approximately same size
 	    $cmd .= ' mirror ' . @$hd1[1] . ' ' . @$hd2[1];
 	}
 
@@ -2496,10 +2502,10 @@ sub get_zfs_raid_setup {
 	my $mindisks = 2 + $level;
 	die "zfs (RAIDZ-$level) need at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
 	my $hd = @$devlist[0];
-	my $expected_size = @$hd[2]; # all disks needs same size
+	my $expected_size = @$hd[2]; # all disks need approximately same size
 	$cmd .= " raidz$level";
 	foreach $hd (@$devlist) {
-	    die "mirrored disks must have same size\n" if @$hd[2] != $expected_size;
+	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
