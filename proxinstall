@@ -2463,7 +2463,7 @@ sub get_zfs_raid_setup {
     my $devlist = &$get_raid_devlist();
 
     my $diskcount = scalar(@$devlist);
-    die "$filesys need at least one device\n" if $diskcount < 1;
+    die "$filesys needs at least one device\n" if $diskcount < 1;
 
     my $bootdevlist = [];
 
@@ -2474,7 +2474,7 @@ sub get_zfs_raid_setup {
 	    $cmd .= " @$hd[1]";
 	}
     } elsif ($filesys eq 'zfs (RAID1)') {
-	die "zfs (RAID1) need at least 2 device\n" if $diskcount < 2;
+	die "zfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
 	$cmd .= ' mirror ';
 	my $hd = @$devlist[0];
 	my $expected_size = @$hd[2]; # all disks need approximately same size
@@ -2485,8 +2485,8 @@ sub get_zfs_raid_setup {
 	}
     } elsif ($filesys eq 'zfs (RAID10)') {
 	my $half = int($diskcount/2);
-	die "zfs (RAID10) need at least 4 device\n" if $diskcount < 4;
-	die "zfs (RAID10) need at an even numver of devices\n" if $half*2 != $diskcount;
+	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
+	die "zfs (RAID10) needs an even number of devices\n" if $half*2 != $diskcount;
 	
 	push @$bootdevlist, @$devlist[0], @$devlist[1];
 
@@ -2500,7 +2500,7 @@ sub get_zfs_raid_setup {
     } elsif ($filesys =~ m/^zfs \(RAIDZ-([123])\)$/) {
 	my $level = $1;
 	my $mindisks = 2 + $level;
-	die "zfs (RAIDZ-$level) need at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
+	die "zfs (RAIDZ-$level) needs at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
 	my $hd = @$devlist[0];
 	my $expected_size = @$hd[2]; # all disks need approximately same size
 	$cmd .= " raidz$level";
@@ -2523,7 +2523,7 @@ sub get_btrfs_raid_setup {
     my $devlist = &$get_raid_devlist();
 
     my $diskcount = scalar(@$devlist);
-    die "$filesys need at least one device\n" if $diskcount < 1;
+    die "$filesys needs at least one device\n" if $diskcount < 1;
 
     my $mode;
 
@@ -2533,10 +2533,10 @@ sub get_btrfs_raid_setup {
 	if ($filesys eq 'btrfs (RAID0)') {
 	    $mode = 'raid0';
 	} elsif ($filesys eq 'btrfs (RAID1)') {
-	    die "btrfs (RAID1) need at least 2 device\n" if $diskcount < 2;
+	    die "btrfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
 	    $mode = 'raid1';
 	} elsif ($filesys eq 'btrfs (RAID10)') {
-	    die "btrfs (RAID10) need at least 4 device\n" if $diskcount < 4;
+	    die "btrfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
 	    $mode = 'raid10';
 	} else {
 	    die "unknown btrfs mode '$filesys'\n";
