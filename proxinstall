@@ -2484,9 +2484,8 @@ sub get_zfs_raid_setup {
 	    push @$bootdevlist, $hd;
 	}
     } elsif ($filesys eq 'zfs (RAID10)') {
-	my $half = int($diskcount/2);
 	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
-	die "zfs (RAID10) needs an even number of devices\n" if $half*2 != $diskcount;
+	die "zfs (RAID10) needs an even number of devices\n" if $diskcount & 1;
 	
 	push @$bootdevlist, @$devlist[0], @$devlist[1];
 
