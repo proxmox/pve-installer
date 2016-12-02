@@ -1643,13 +1643,25 @@ sub cleanup_view {
 
 # fixme: newer GTK3 has special properties to handle numbers with Entry
 # only allow floating point numbers with Gtk3::Entry
+
 sub check_float {
     my ($entry, $event) = @_;
 
+    return check_number($entry, $event, 1);
+}
+
+sub check_int {
+    my ($entry, $event) = @_;
+
+    return check_number($entry, $event, 0);
+}
+
+sub check_number {
+    my ($entry, $event, $float) = @_;
 
     my $val = $event->get_keyval;
 
-    if ($val == ord '.' ||
+    if (($float && $val == ord '.') ||
 	$val == Gtk3::Gdk::KEY_ISO_Left_Tab ||
 	$val == Gtk3::Gdk::KEY_Shift_L ||
 	$val == Gtk3::Gdk::KEY_Tab ||
