@@ -799,31 +799,28 @@ sub partition_bootable_disk {
     my $hdgb = int($hdsize/(1024*1024));
     die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
 
-    # 1 - BIOS boot partition (Grub Stage2): 1M
-    # 2 - EFI ESP: 128M
-    # 3 - OS/Data partition
+    # 1 - BIOS boot partition (Grub Stage2): first free 1M
+    # 2 - EFI ESP: next free 128M
+    # 3 - OS/Data partition: rest, up to $maxhdsize in MB
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
     my $efibootdev = get_partition_dev($target_dev, 2);
     my $osdev = get_partition_dev ($target_dev, 3);
 
-    my $pcmd = ['sgdisk', '-a1'];
+    my $pcmd = ['sgdisk'];
 
     my $pnum = 1;
-    push @$pcmd, "-n$pnum:34:2047", "-t$pnum:EF02";
+    push @$pcmd, "-n${pnum}::+1M", "-t$pnum:EF02";
 
     $pnum = 2;
-    # Note: from sector 2048 to 128M
-    my $endsec = 128*1024*2 - 1;
-    push @$pcmd, "-n$pnum:2048:$endsec", "-t$pnum:EF00";
+    push @$pcmd, "-n${pnum}::+128M", "-t$pnum:EF00";
 
     $pnum = 3;
-    # Note: from 128M to end
-    push @$pcmd, "-n$pnum:128M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
+    push @$pcmd, "-n${pnum}::${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
-    my $os_size = $hdsize - 128*1024;
+    my $os_size = $hdsize - 130*1024; # 128M + 1M + up to 1M alignment
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
