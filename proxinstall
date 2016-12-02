@@ -2040,7 +2040,7 @@ sub create_password_view {
 
 	my $t3 = $eme->get_text;
 	if ($t3 !~ m/^\S+\@\S+\.\S+$/) {
-	    display_message ("E-Mail does not look like a vaild address" .
+	    display_message ("E-Mail does not look like a valid address" .
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
@@ -2451,7 +2451,7 @@ sub create_hdoption_view {
     push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
 
     my $entry_minfree = Gtk3::Entry->new();
-    $entry_minfree->set_tooltip_text("minumum free LVM space (GB, required for LVM snapshots)");
+    $entry_minfree->set_tooltip_text("minimum free LVM space (GB, required for LVM snapshots)");
     $entry_minfree->signal_connect (key_press_event => \&check_float);
     $entry_minfree->set_text($config_options->{minfree}) if $config_options->{minfree};
     push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
