@@ -1768,7 +1768,7 @@ sub create_ipconf_view {
     my $addr = $ipconf->{addr} || '192.168.100.2';
     my $mask = $ipconf->{mask} || '255.255.255.0';
 
-    my $hn = $ipconf->{domain} ? "pve.$ipconf->{domain}" : 'pve.domain.tld';
+    my $hn = $ipconf->{domain} ? "pve.$ipconf->{domain}" : 'pve.example.invalid';
    
     my ($hostbox, $hostentry) =
 	create_text_input ($hn, 'Hostname (FQDN):');
@@ -1819,7 +1819,7 @@ sub create_ipconf_view {
 	    return;
 	}
 
- 	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.domain.tld$/ &&
+	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.example.invalid$/ &&
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
 	    $hostname = $1;
 	    $domain = $2;
@@ -2009,6 +2009,7 @@ sub create_password_view {
     $hbox3->pack_start ($label, 0, 0, 10);
     my $eme = Gtk3::Entry->new ();
     $eme->set_size_request (200, -1);
+    $eme->set_text('mail@example.invalid');
     $hbox3->pack_start ($eme, 0, 0, 0);
 
 
@@ -2043,7 +2044,12 @@ sub create_password_view {
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
+	}
 
+	if ($t3 eq 'mail@example.invalid') {
+	    display_message ("Please enter a valid E-Mail address");
+	    $eme->grab_focus();
+	    return;
 	}
 
 	$password = $t1;
