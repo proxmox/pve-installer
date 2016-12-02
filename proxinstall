@@ -564,6 +564,7 @@ sub hd_size {
 
     foreach my $hd (@$hds) {
 	my ($disk, $devname, $size, $model) = @$hd;
+	# size is always in 512B "sectors"! convert to KB
 	return int($size/2) if $devname eq $dev;
     }
 
@@ -787,7 +788,7 @@ sub partition_bootable_disk {
 	if !($ptype eq '8E00' || $ptype eq '8300');
 
     syscmd("sgdisk -Z ${target_dev}");
-    my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
+    my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
 
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
     if ($maxhdsize && ($maxhdsize < $hdsize)) {
@@ -798,8 +799,8 @@ sub partition_bootable_disk {
     my $hdgb = int($hdsize/(1024*1024));
     die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
 
-    # 1 - GRUB boot partition: 1M 
-    # 2 - EFI ESP: 128M 
+    # 1 - BIOS boot partition (Grub Stage2): 1M
+    # 2 - EFI ESP: 128M
     # 3 - OS/Data partition
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
@@ -1899,7 +1900,7 @@ sub get_device_desc {
     my ($devname, $size, $model) = @_;
 
     if ($size && ($size > 0)) {
-	$size = int($size/2048); # size in MB
+	$size = int($size/2048); # size in MB, from 512B "sectors"
 
 	my $text = "$devname (";
 	if ($size >= 1024) {
