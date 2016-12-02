@@ -724,7 +724,12 @@ sub btrfs_create {
 sub zfs_create_rpool {
     my ($vdev) = @_;
 
-   syscmd ("zpool create -f -o ashift=12 -o cachefile=none $zfspoolname $vdev") == 0 ||
+    my $cmd = "zpool create -f -o cachefile=none";
+
+    $cmd .= " -o ashift=$config_options->{ashift}"
+        if defined($config_options->{ashift});
+
+    syscmd ("$cmd $zfspoolname $vdev") == 0 ||
 	die "unable to create zfs root pool\n";
 
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
@@ -739,8 +744,18 @@ sub zfs_create_rpool {
     # disable atime during insatll
     syscmd ("zfs set atime=off $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
-    syscmd ("zfs set compression=lz4 $zfspoolname") == 0 ||
-	die "unable to set zfs properties\n";
+
+    my $value = $config_options->{compress};
+    syscmd ("zfs set compression=$value $zfspoolname")
+        if defined($value) && $value ne 'off';
+
+    $value = $config_options->{checksum};
+    syscmd ("zfs set checksum=$value $zfspoolname")
+        if defined($value) && $value ne 'on';
+
+    $value = $config_options->{copies};
+    syscmd ("zfs set copies=$value $zfspoolname")
+        if defined($value) && $value != 1;
 }
 
 sub zfs_create_swap {
@@ -754,6 +769,10 @@ sub zfs_create_swap {
 
     # reduces memory pressure
     syscmd ("zfs set sync=always $zfspoolname/swap") == 0 ||
+	die "unable to set zfs properties\n";
+
+    # copies for swap does not make sense
+    syscmd ("zfs set copies=1 $zfspoolname/swap") == 0 ||
 	die "unable to set zfs properties\n";
 
     return "/dev/zvol/$zfspoolname/swap";
@@ -2199,6 +2218,151 @@ my $target_hd_label;
 
 my $hdopion_first_setup = 1;
 
+my $create_basic_grid = sub {
+    my $grid =  Gtk3::Grid->new();
+    $grid->set_visible(1);
+    $grid->set_column_spacing(10);
+    $grid->set_row_spacing(10);
+    $grid->set_hexpand(1);
+
+    $grid->set_margin_start(5);
+    $grid->set_margin_end(5);
+    $grid->set_margin_top(5);
+    $grid->set_margin_bottom(5);
+
+    return $grid;
+};
+
+my $create_label_widget_grid = sub {
+    my ($labeled_widgets) = @_;
+
+    my $grid = &$create_basic_grid();
+    my $row = 0;
+
+    for (my $i = 0; $i < @$labeled_widgets; $i += 2) {
+	my $widget = @$labeled_widgets[$i+1];
+	my $label = Gtk3::Label->new(@$labeled_widgets[$i]);
+	$label->set_visible(1);
+	$label->set_alignment (1, 0.5);
+	$grid->attach($label, 0, $row, 1, 1);
+	$widget->set_visible(1);
+	$grid->attach($widget, 1, $row, 1, 1);
+	$row++;
+    }
+
+    return $grid;
+};
+
+my $create_raid_disk_grid = sub {
+    my $disk_labeled_widgets = [];
+    for (my $i = 0; $i < @$hds; $i++) {
+	my $disk_selector = Gtk3::ComboBoxText->new();
+	$disk_selector->append_text("-- do not use --");
+	$disk_selector->set_active(0);
+	$disk_selector->set_visible(1);
+	foreach my $hd (@$hds) {
+	    my ($disk, $devname, $size, $model) = @$hd;
+	    $disk_selector->append_text(get_device_desc ($devname, $size, $model));
+	    $disk_selector->{pve_disk_id} = $i;
+	    $disk_selector->signal_connect (changed => sub {
+		my $w = shift;
+		my $diskid = $w->{pve_disk_id};
+		my $a = $w->get_active - 1;
+		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
+	    });
+	}
+
+	if ($hdopion_first_setup) {
+	    $disk_selector->set_active ($i+1) if $hds->[$i];
+	} else {
+	    my $hdind = 0;
+	    if (my $cur_hd = $config_options->{"disksel$i"}) {
+		foreach my $hd (@$hds) {
+		    if (@$hd[1] eq @$cur_hd[1]) {
+			$disk_selector->set_active($hdind+1);
+			last;
+		    }
+		    $hdind++;
+		}
+	    }
+	}
+
+	push @$disk_labeled_widgets, "Harddisk $i", $disk_selector;
+    }
+
+    my $scrolled_window = Gtk3::ScrolledWindow->new();
+    $scrolled_window->set_hexpand(1);
+    $scrolled_window->add(&$create_label_widget_grid($disk_labeled_widgets));
+    $scrolled_window->set_policy('never', 'automatic');
+
+    return $scrolled_window;
+#    &$create_label_widget_grid($disk_labeled_widgets)
+};
+
+my $create_raid_advanced_grid = sub {
+    my $labeled_widgets = [];
+    my $entry_ashift = Gtk3::Entry->new();
+    $entry_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
+    $entry_ashift->signal_connect (key_press_event => \&check_int);
+    $entry_ashift->signal_connect (changed => sub {
+	my ($entry) = @_;
+
+	my $text = $entry->get_text();
+	delete $config_options->{ashift} if !defined($text);
+
+	$text =~ m/^\s*(\d+)\s*$/;
+	$config_options->{ashift} = $1;
+    });
+    $config_options->{ashift} = 12 if ! defined($config_options->{ashift});
+    $entry_ashift->set_text($config_options->{ashift});
+    push @$labeled_widgets, "ashift";
+    push @$labeled_widgets, $entry_ashift;
+
+    my $combo_compress = Gtk3::ComboBoxText->new();
+    $combo_compress->set_tooltip_text("zfs compression algorithm for rpool dataset");
+    # note: gzip / lze not allowed for bootfs vdevs
+    my $comp_opts = ["on","off","lzjb","lz4"];
+    foreach my $opt (@$comp_opts) {
+	$combo_compress->append($opt, $opt);
+    }
+    $config_options->{compress} = "on" if !defined($config_options->{compress});
+    $combo_compress->set_active_id($config_options->{compress});
+    $combo_compress->signal_connect (changed => sub {
+	my $w = shift;
+	$config_options->{compress} = $w->get_active_text();
+    });
+    push @$labeled_widgets, "compress";
+    push @$labeled_widgets, $combo_compress;
+
+    my $combo_checksum = Gtk3::ComboBoxText->new();
+    $combo_checksum->set_tooltip_text("zfs checksum algorithm for rpool dataset");
+    my $csum_opts = ["on", "off","fletcher2", "fletcher4", "sha256"];
+    foreach my $opt (@$csum_opts) {
+	$combo_checksum->append($opt, $opt);
+    }
+    $config_options->{checksum} = "on" if !($config_options->{checksum});
+    $combo_checksum->set_active_id($config_options->{checksum});
+    $combo_checksum->signal_connect (changed => sub {
+	my $w = shift;
+	$config_options->{checksum} = $w->get_active_text();
+    });
+    push @$labeled_widgets, "checksum";
+    push @$labeled_widgets, $combo_checksum;
+
+    my $spinbutton_copies = Gtk3::SpinButton->new_with_range(1,3,1);
+    $spinbutton_copies->set_tooltip_text("zfs copies property for rpool dataset (in addition to RAID redundancy!)");
+    $spinbutton_copies->signal_connect ("value-changed" => sub {
+	my $w = shift;
+	$config_options->{copies} = $w->get_value_as_int();
+	warn "changed: '$config_options->{copies}'\n";
+    });
+    $config_options->{copies} = 1 if !defined($config_options->{copies});
+    $spinbutton_copies->set_value($config_options->{copies});
+    push @$labeled_widgets, "copies", $spinbutton_copies;
+
+    return &$create_label_widget_grid($labeled_widgets);;
+};
+
 sub create_hdoption_view {
 
     my $dialog = Gtk3::Dialog->new();
@@ -2250,55 +2414,14 @@ sub create_hdoption_view {
 
     $row++;
 
-    my @disk_label;
-    my @disk_selector;
-    for (my $i = 0; $i < 8; $i++) {
-	$disk_label[$i] = Gtk3::Label->new ("Hardisk $i");
-	$disk_label[$i]->set_alignment (1, 0.5);
-	$grid->attach($disk_label[$i], 0, $row, 1, 1);
-	$disk_selector[$i] = Gtk3::ComboBoxText->new();
-	$disk_selector[$i]->append_text("-- do not use --");
-	$disk_selector[$i]->set_active(0);
- 	foreach my $hd (@$hds) {
-	    my ($disk, $devname, $size, $model) = @$hd;
-	    $disk_selector[$i]->append_text(get_device_desc ($devname, $size, $model));
-	    $disk_selector[$i]->{pve_disk_id} = $i;
-	    $disk_selector[$i]->signal_connect (changed => sub {
-		my $w = shift;
-		my $diskid = $w->{pve_disk_id};
-		my $a = $w->get_active - 1;
-		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
-	    });
-	}
+    my $sep = Gtk3::HSeparator->new();
+    $sep->set_visible(1);
+    $grid->attach($sep, 0, $row, 2, 1);
+    $row++;
 
-	if ($hdopion_first_setup) {
-	    $disk_selector[$i]->set_active ($i+1) if $hds->[$i];
-	} else {
-	    my $hdind = 0;
-	    if (my $cur_hd = $config_options->{"disksel$i"}) {
-		foreach my $hd (@$hds) {
-		    if (@$hd[1] eq @$cur_hd[1]) {
-			$disk_selector[$i]->set_active($hdind+1);
-			last;
-		    }
-		    $hdind++;
-		}
+    my $hdsize_labeled_widgets = [];
 
-	    }
-	}
-
-	$grid->attach($disk_selector[$i], 1, $row, 1, 1);
-
-	$row++;
-    }
-
-    $hdopion_first_setup = 0;
-
-    my $label_hdsize = Gtk3::Label->new ("hdsize");
-    $label_hdsize->set_alignment (1, 0.5);
-    $grid->attach($label_hdsize, 0, $row, 1, 1);
-
-    # size compute 
+    # size compute
     my $hdsize = 0;
     if ( -b $target_hd) {
 	$hdsize = int(hd_size ($target_hd) / (1024*1024.0)); # size in GB
@@ -2309,85 +2432,75 @@ sub create_hdoption_view {
     my $hdsize_size_adj = Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
     $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
-    $grid->attach($spinbutton_hdsize, 1, $row, 1, 1);
-    $row++;
-
-    my $label_swapsize = Gtk3::Label->new ("swapsize");
-    $label_swapsize->set_alignment (1, 0.5);
-    $grid->attach($label_swapsize, 0, $row, 1, 1);
+    push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize;
 
     my $entry_swapsize = Gtk3::Entry->new();
     $entry_swapsize->set_tooltip_text("maximum SWAP size (GB)");
     $entry_swapsize->signal_connect (key_press_event => \&check_float);
     $entry_swapsize->set_text($config_options->{swapsize}) if $config_options->{swapsize};
-    $grid->attach($entry_swapsize, 1, $row, 1, 1);
-    $row++;
-
-    my $label_maxroot = Gtk3::Label->new ("maxroot");
-    $label_maxroot->set_alignment (1, 0.5);
-    $grid->attach($label_maxroot, 0, $row, 1, 1);
+    push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
 
     my $entry_maxroot = Gtk3::Entry->new();
     $entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
     $entry_maxroot->signal_connect (key_press_event => \&check_float);
     $entry_maxroot->set_text($config_options->{maxroot}) if $config_options->{maxroot};
-    $grid->attach($entry_maxroot, 1, $row, 1, 1);
-    $row++;
-
-    my $label_minfree = Gtk3::Label->new ("minfree");
-    $label_minfree->set_alignment (1, 0.5);
-    $grid->attach($label_minfree, 0, $row, 1, 1);
+    push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
 
     my $entry_minfree = Gtk3::Entry->new();
     $entry_minfree->set_tooltip_text("minumum free LVM space (GB, required for LVM snapshots)");
     $entry_minfree->signal_connect (key_press_event => \&check_float);
     $entry_minfree->set_text($config_options->{minfree}) if $config_options->{minfree};
-    $grid->attach($entry_minfree, 1, $row, 1, 1);
-    $row++;
-
-    my $label_maxvz = Gtk3::Label->new ("maxvz");
-    $label_maxvz->set_alignment (1, 0.5);
-    $grid->attach($label_maxvz, 0, $row, 1, 1);
+    push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
 
     my $entry_maxvz = Gtk3::Entry->new();
     $entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
     $entry_maxvz->signal_connect (key_press_event => \&check_float);
     $entry_maxvz->set_text($config_options->{maxvz}) if $config_options->{maxvz};
-    $grid->attach($entry_maxvz, 1, $row, 1, 1);
+    push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
+
+    my $options_stack = Gtk3::Stack->new();
+    $options_stack->set_visible(1);
+    $options_stack->set_hexpand(1);
+    $options_stack->set_vexpand(1);
+    $options_stack->add_titled(&$create_raid_disk_grid(), "raiddisk", "Disk Setup");
+    $options_stack->add_titled(&$create_label_widget_grid($hdsize_labeled_widgets), "hdsize", "Size Options");
+    $options_stack->add_titled(&$create_raid_advanced_grid("zfs"), "raidzfsadvanced", "Advanced Options");
+    $options_stack->set_visible_child_name("raiddisk");
+    my $options_stack_switcher = Gtk3::StackSwitcher->new();
+    $options_stack_switcher->set_halign('center');
+    $options_stack_switcher->set_stack($options_stack);
+    $grid->attach($options_stack_switcher, 0, $row, 2, 1);
+    $row++;
+    $grid->attach($options_stack, 0, $row, 2, 1);
     $row++;
 
-    my $set_sensitive_flag = sub {
-	my $enable_size_hints = $config_options->{filesys} !~ m/zfs|btrfs/;
+    $hdopion_first_setup = 0;
 
-	if ($config_options->{filesys} =~ m/zfs|btrfs/) {
-	    $target_hd_combo->set_visible(0);
+    my $switch_view = sub {
+	my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
+	my $enable_zfs_opts = $config_options->{filesys} =~ m/zfs/;
+
+	$target_hd_combo->set_visible(!$raid);
+	$options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
+	$options_stack->get_child_by_name("raiddisk")->set_visible($raid);
+	$options_stack_switcher->set_visible($enable_zfs_opts);
+	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($enable_zfs_opts);
+	if ($raid) {
 	    $target_hd_label->set_text("Target: $config_options->{filesys} ");
-	    foreach my $w (@disk_selector) { $w->set_visible(1); }
-	    foreach my $w (@disk_label) { $w->set_visible(1); }
+	    $options_stack->set_visible_child_name("raiddisk");
 	} else {
-	    $target_hd_combo->set_visible(1);
-	    foreach my $w (@disk_selector) { $w->set_visible(0); }
-	    foreach my $w (@disk_label) { $w->set_visible(0); }
 	    $target_hd_label->set_text("Target Harddisk: ");
 	}
-
-	$spinbutton_hdsize->set_visible($enable_size_hints);
-	$label_hdsize->set_visible($enable_size_hints);
-	$entry_swapsize->set_visible($enable_size_hints);
-	$label_swapsize->set_visible($enable_size_hints);
-	$entry_maxroot->set_visible($enable_size_hints);
-	$label_maxroot->set_visible($enable_size_hints);
-	$entry_minfree->set_visible($enable_size_hints);
-	$label_minfree->set_visible($enable_size_hints);
-	$entry_maxvz->set_visible($enable_size_hints);
-	$label_maxvz->set_visible($enable_size_hints);
+	my (undef, $pref_width) = $dialog->get_preferred_width();
+	my (undef, $pref_height) = $dialog->get_preferred_height();
+	$dialog->resize($pref_width, $pref_height);
     };
 
-    &$set_sensitive_flag();
+    &$switch_view();
 
     $fstypecb->signal_connect (changed => sub {
 	$config_options->{filesys} = $fstypecb->get_active_text();
-	&$set_sensitive_flag();
+	&$switch_view();
     });
 
     $dialog->show();
