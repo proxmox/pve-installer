@@ -2305,22 +2305,16 @@ my $create_raid_disk_grid = sub {
 
 my $create_raid_advanced_grid = sub {
     my $labeled_widgets = [];
-    my $entry_ashift = Gtk3::Entry->new();
-    $entry_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
-    $entry_ashift->signal_connect (key_press_event => \&check_int);
-    $entry_ashift->signal_connect (changed => sub {
-	my ($entry) = @_;
-
-	my $text = $entry->get_text();
-	delete $config_options->{ashift} if !defined($text);
-
-	$text =~ m/^\s*(\d+)\s*$/;
-	$config_options->{ashift} = $1;
+    my $spinbutton_ashift = Gtk3::SpinButton->new_with_range(9,13,1);
+    $spinbutton_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
+    $spinbutton_ashift->signal_connect ("value-changed" => sub {
+	my $w = shift;
+	$config_options->{ashift} = $w->get_value_as_int();
     });
     $config_options->{ashift} = 12 if ! defined($config_options->{ashift});
-    $entry_ashift->set_text($config_options->{ashift});
+    $spinbutton_ashift->set_value($config_options->{ashift});
     push @$labeled_widgets, "ashift";
-    push @$labeled_widgets, $entry_ashift;
+    push @$labeled_widgets, $spinbutton_ashift;
 
     my $combo_compress = Gtk3::ComboBoxText->new();
     $combo_compress->set_tooltip_text("zfs compression algorithm for rpool dataset");
