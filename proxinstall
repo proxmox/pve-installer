@@ -2352,7 +2352,6 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_copies->signal_connect ("value-changed" => sub {
 	my $w = shift;
 	$config_options->{copies} = $w->get_value_as_int();
-	warn "changed: '$config_options->{copies}'\n";
     });
     $config_options->{copies} = 1 if !defined($config_options->{copies});
     $spinbutton_copies->set_value($config_options->{copies});
