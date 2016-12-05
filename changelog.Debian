@@ -1,3 +1,15 @@
+pve-installer (4.0-13) unstable; urgency=medium
+
+  * add default invalid mail address
+
+  * refactor disk setup
+
+  * add advanced ZFS options
+
+  * fix #1190: allow ZFS mirrors with slightly different sizes
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 05 Dec 2016 10:48:19 +0100
+
 pve-installer (4.0-12) unstable; urgency=medium
 
   * fix update_progress while extracting files
