@@ -18,7 +18,7 @@ use Data::Dumper;
 use File::Basename;
 use Time::HiRes;
 
-my $release = '4.3';
+my $release = '4.4';
 
 my $kapi = `uname -r`;
 chomp $kapi;

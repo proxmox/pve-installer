@@ -1,3 +1,9 @@
+pve-installer (4.0-14) unstable; urgency=medium
+
+  * bump version for new RELEASE=4.4
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 09 Dec 2016 12:03:00 +0100
+
 pve-installer (4.0-13) unstable; urgency=medium
 
   * add default invalid mail address
