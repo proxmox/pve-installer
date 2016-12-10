@@ -951,6 +951,8 @@ sub compute_swapsize {
 	$ss = 8 if $ss > 8;
 	$swapsize = $ss*1024*1024;
     }
+
+    return $swapsize;
 }
 
 my $udevadm_trigger_block = sub {
