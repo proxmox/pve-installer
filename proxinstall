@@ -800,7 +800,7 @@ sub partition_bootable_disk {
     die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1M
-    # 2 - EFI ESP: next free 128M
+    # 2 - EFI ESP: next free 256M
     # 3 - OS/Data partition: rest, up to $maxhdsize in MB
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
@@ -813,14 +813,14 @@ sub partition_bootable_disk {
     push @$pcmd, "-n${pnum}::+1M", "-t$pnum:EF02";
 
     $pnum = 2;
-    push @$pcmd, "-n${pnum}::+128M", "-t$pnum:EF00";
+    push @$pcmd, "-n${pnum}::+256M", "-t$pnum:EF00";
 
     $pnum = 3;
     push @$pcmd, "-n${pnum}::${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
-    my $os_size = $hdsize - 130*1024; # 128M + 1M + up to 1M alignment
+    my $os_size = $hdsize - 258*1024; # 256M + 1M + up to 1M alignment
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
