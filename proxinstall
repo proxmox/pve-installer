@@ -810,17 +810,17 @@ sub partition_bootable_disk {
     my $pcmd = ['sgdisk'];
 
     my $pnum = 1;
-    push @$pcmd, "-n${pnum}::+1M", "-t$pnum:EF02";
+    push @$pcmd, "-n${pnum}:1M:+1M", "-t$pnum:EF02";
 
     $pnum = 2;
-    push @$pcmd, "-n${pnum}::+256M", "-t$pnum:EF00";
+    push @$pcmd, "-n${pnum}:2M:+256M", "-t$pnum:EF00";
 
     $pnum = 3;
-    push @$pcmd, "-n${pnum}::${restricted_hdsize_mb}", "-t$pnum:$ptype";
+    push @$pcmd, "-n${pnum}:258M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
-    my $os_size = $hdsize - 258*1024; # 256M + 1M + up to 1M alignment
+    my $os_size = $hdsize - 258*1024; # 256M + 1M + 1M alignment
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
