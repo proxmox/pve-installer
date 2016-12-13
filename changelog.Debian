@@ -1,3 +1,13 @@
+pve-installer (4.0-15) unstable; urgency=medium
+
+  * use explicit partition starts
+
+  * bump EFI partition size to 256M
+
+  * compute_swapsize: add return statement
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 13 Dec 2016 09:12:20 +0100
+
 pve-installer (4.0-14) unstable; urgency=medium
 
   * bump version for new RELEASE=4.4
