@@ -2560,7 +2560,7 @@ my $get_raid_devlist = sub {
     my $dev_name_hash = {};
 
     my $devlist = [];
-    for (my $i = 0; $i < 8; $i++) {
+    for (my $i = 0; $i < @$hds; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
 	    my ($disk, $devname, $size, $model) = @$hd;
 	    die "device '$devname' is used more than once\n" 
