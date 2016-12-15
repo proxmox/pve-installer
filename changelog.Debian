@@ -1,3 +1,9 @@
+pve-installer (4.0-16) unstable; urgency=medium
+
+  * actually use more than 8 disks if selected
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 15 Dec 2016 10:05:54 +0100
+
 pve-installer (4.0-15) unstable; urgency=medium
 
   * use explicit partition starts
