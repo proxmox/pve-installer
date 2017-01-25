@@ -798,19 +798,29 @@ sub zfs_create_rpool {
 sub zfs_create_swap {
     my ($swapsize) = @_;
 
-    syscmd ("zfs create -V ${swapsize}K -b 4K $zfspoolname/swap")  == 0 ||
-	die "unable to create zfs swap device\n";
+    my $cmd = "zfs create -V ${swapsize}K -b 4K";
 
-    syscmd ("zfs set com.sun:auto-snapshot=false $zfspoolname/swap") == 0 ||
-	die "unable to set zfs properties\n";
-
-    # reduces memory pressure
-    syscmd ("zfs set sync=always $zfspoolname/swap") == 0 ||
-	die "unable to set zfs properties\n";
+    $cmd .= " -o com.sun:auto-snapshot=false";
 
     # copies for swap does not make sense
-    syscmd ("zfs set copies=1 $zfspoolname/swap") == 0 ||
-	die "unable to set zfs properties\n";
+    $cmd .= " -o copies=1";
+
+    # reduces memory pressure
+    $cmd .= " -o sync=always";
+
+    # cheapest compression to drop zero pages
+    $cmd .= " -o compression=zle";
+
+    # skip log devices
+    $cmd .= " -o logbias=throughput";
+    # only cache metadata in RAM (caching swap content does not make sense)
+    $cmd .= " -o primarycache=metadata";
+    # don't cache anything in L2ARC
+    $cmd .= " -o secondarycache=none";
+
+    $cmd .= " $zfspoolname/swap";
+    syscmd ($cmd)  == 0 ||
+	die "unable to create zfs swap device\n";
 
     return "/dev/zvol/$zfspoolname/swap";
 }
