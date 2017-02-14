@@ -21,7 +21,7 @@ ${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
 	mkdir debian/DEBIAN
 	install -m 0644 control debian/DEBIAN
 	install -m 0644 conffiles debian/DEBIAN
-	dpkg-deb --build debian ${DEB}
+	fakeroot dpkg-deb --build debian ${DEB}
 	rm -rf debian
 	lintian -X man ${DEB}
 
