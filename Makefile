@@ -42,7 +42,7 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
 	install -D -m 644 copyright ${DESTDIR}/usr/share/doc/pve-installer/copyright
 	install -D -m 644 changelog.Debian  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
-	gzip --best  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
+	gzip -n --best  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
 
 .phony: upload
 upload: ${DEB}
