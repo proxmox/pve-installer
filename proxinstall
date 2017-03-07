@@ -1294,8 +1294,8 @@ sub extract_data {
 
 	# configure dns
 
-	my $resolfconf = "search $domain\nnameserver $dnsserver\n";
-	write_config ($resolfconf, "$targetdir/etc/resolv.conf");
+	my $resolvconf = "search $domain\nnameserver $dnsserver\n";
+	write_config ($resolvconf, "$targetdir/etc/resolv.conf");
 
 	# configure fstab
 
