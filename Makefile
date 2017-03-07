@@ -30,7 +30,6 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 	make DESTDIR=`pwd`/debian -C html install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	mkdir -p ${DESTDIR}/var/lib/dhcp3/
-	ln -s /tmp/dhclient.eth0.leases ${DESTDIR}/var/lib/dhcp3
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf.dhclient-new
 	install -D -m 755 fake-start-stop-daemon ${DESTDIR}/var/lib/pve-installer/fake-start-stop-daemon
