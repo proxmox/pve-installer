@@ -1440,8 +1440,14 @@ _EOD
 		if ($di->{esp}) {
 		    syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
 			die "unable to mount $di->{esp}\n";
-		    syscmd ("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-			die "unable to install the EFI boot loader on '$dev'\n";
+		    my $rc = syscmd ("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
+		    if ($rc != 0) {
+			if (-d '/sys/firmware/efi') {
+			    die "unable to install the EFI boot loader on '$dev'\n";
+			} else {
+			    warn "unable to install the EFI boot loader on '$dev', ignoring (not booted using UEFI)\n";
+			}
+		    }
 		    # also install fallback boot file (OVMF does not boot without)
 		    mkdir("$targetdir/boot/efi/EFI/BOOT");
 		    syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
