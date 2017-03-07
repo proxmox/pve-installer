@@ -79,8 +79,8 @@ export PREVLEVEL=N
 hostname proxmox
 
 # try to get ip config with dhcp
-echo -n "Detecting network settings... "
-/etc/init.d/networking start >/dev/tty2 2>&1
+echo -n "Attempting to get DHCP leases... "
+dhclient -v
 echo "done"
 
 xinit -- -dpi 96 >/dev/tty2 2>&1
