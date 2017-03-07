@@ -144,6 +144,42 @@ my $ipv4_mask_hash = {
     '255.255.255.252' => 30
 };
 
+my $ipv4_reverse_mask = [
+    '0.0.0.0',
+    '128.0.0.0',
+    '192.0.0.0',
+    '224.0.0.0',
+    '240.0.0.0',
+    '248.0.0.0',
+    '252.0.0.0',
+    '254.0.0.0',
+    '255.0.0.0',
+    '255.128.0.0',
+    '255.192.0.0',
+    '255.224.0.0',
+    '255.240.0.0',
+    '255.248.0.0',
+    '255.252.0.0',
+    '255.254.0.0',
+    '255.255.0.0',
+    '255.255.128.0',
+    '255.255.192.0',
+    '255.255.224.0',
+    '255.255.240.0',
+    '255.255.248.0',
+    '255.255.252.0',
+    '255.255.254.0',
+    '255.255.255.0',
+    '255.255.255.128',
+    '255.255.255.192',
+    '255.255.255.224',
+    '255.255.255.240',
+    '255.255.255.248',
+    '255.255.255.252',
+    '255.255.255.254',
+    '255.255.255.255',
+];
+
 my ($window, $cmdbox, $inbox, $htmlview);
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
@@ -1234,14 +1270,25 @@ sub extract_data {
 
 	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
 
+	my $bridge_port = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
+
+	$ifaces .= "iface $bridge_port $ntype manual\n";
+
 	 $ifaces .=
-	     "auto vmbr0\niface vmbr0 $ntype static\n" .
+	     "\nauto vmbr0\niface vmbr0 $ntype static\n" .
 	     "\taddress $ipaddress\n" .
 	     "\tnetmask $netmask\n" .
 	     "\tgateway $gateway\n" .
-	     "\tbridge_ports eth0\n" .
+	     "\tbridge_ports $bridge_port\n" .
 	     "\tbridge_stp off\n" .
 	     "\tbridge_fd 0\n";
+
+	foreach my $iface (sort keys %{$ipconf->{ifaces}}) {
+	    my $name = $ipconf->{ifaces}->{$iface}->{name};
+	    next if $name eq $bridge_port;
+
+	    $ifaces .= "\niface $name $ntype manual\n";
+	}
 
 	write_config ($ifaces, "$targetdir/etc/network/interfaces");
 
@@ -1722,21 +1769,60 @@ sub create_text_input {
 
 sub get_ip_config {
 
-    my $ifconfig = `ifconfig eth0`;
+    my $ifaces = {};
+    my $default;
 
-    my ($addr) = $ifconfig =~ m/inet addr:(\S*)/m;
-    my ($mask) = $ifconfig =~ m/Mask:(\S*)/m;
+    my $links = `ip -o l`;
+    foreach my $l (split /\n/,$links) {
+	my ($index, $name, $flags, $state, $mac) = $l =~ m/^(\d+):\s+(\S+):\s+<(\S+)>.*\s+state\s+(\S+)\s+.*\s+link\/ether\s+(\S+)\s+/;
+	next if !$name || $name eq 'lo';
 
-    my $route = `route -n`;
-    my ($gateway) = $route =~ m/^0\.0\.0\.0\s+(\d+\.\d+\.\d+\.\d+)\s+/m;
+	my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
+	$driver =~ s!^.*/!!;
+
+	$ifaces->{"$index"} = {
+	    name => $name,
+	    driver => $driver,
+	    flags => $flags,
+	    state => $state,
+	    mac => $mac,
+	};
+
+	my $addresses = `ip -o a s $name`;
+	foreach my $a (split /\n/,$addresses) {
+	    my ($family, $ip, $prefix) = $a =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
+	    next if !$ip;
+
+	    my $mask = $prefix;
+
+	    if ($family eq 'inet') {
+		next if !$ip =~ /$IPV4RE/;
+		next if $prefix < 8 || $prefix > 32;
+		$mask = @$ipv4_reverse_mask[$prefix];
+	    } else {
+		next if !$ip =~ /$IPV6RE/;
+	    }
+
+	    $default = $index if !$default;
+
+	    $ifaces->{"$index"}->{"$family"} = {
+		mask => $mask,
+		addr => $ip,
+	    };
+	}
+    }
+
+
+    my $route = `ip route`;
+    my ($gateway) = $route =~ m/^default\s+via\s+(\S+)\s+/m;
 
     my $resolvconf = `cat /etc/resolv.conf`;
     my ($dnsserver) = $resolvconf =~ m/^nameserver\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/m;
     my ($domain) = $resolvconf =~ m/^domain\s+(\S+)$/m;
 
     return {
-	addr => $addr,
-	mask => $mask,
+	default => $default,
+	ifaces => $ifaces,
 	gateway => $gateway,
 	dnsserver => $dnsserver,
 	domain => $domain,
@@ -1761,6 +1847,8 @@ sub display_error {
     $dialog->destroy();
 }
 
+my $ipconf_first_view = 1;
+
 sub create_ipconf_view {
 
     cleanup_view ();
@@ -1773,8 +1861,52 @@ sub create_ipconf_view {
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->add ($vbox2);
 
-    my $addr = $ipconf->{addr} || '192.168.100.2';
-    my $mask = $ipconf->{mask} || '255.255.255.0';
+    my $ipbox;
+    ($ipbox, $ipconf_entry_addr) =
+	create_text_input ("192.168.100.2", 'IP Address:');
+
+    my $maskbox;
+    ($maskbox, $ipconf_entry_mask) =
+	create_text_input ("255.255.255.0", 'Netmask:');
+
+    my $device_cb = Gtk3::ComboBoxText->new();
+    $device_cb->set_active(0);
+    $device_cb->set_visible(1);
+
+    my $get_device_desc = sub {
+	my $iface = shift;
+	return "$iface->{name} - $iface->{mac} ($iface->{driver})";
+    };
+
+    my $device_active_map = {};
+    my $i = 0;
+    foreach my $index (sort keys %{$ipconf->{ifaces}}) {
+	$device_cb->append_text(&$get_device_desc($ipconf->{ifaces}->{$index}));
+        $device_active_map->{$i} = $index;
+	if ($ipconf_first_view && $index == $ipconf->{default}) {
+	    $device_cb->set_active($i);
+	    $ipconf_first_view = 0;
+	}
+	$device_cb->signal_connect ('changed' => sub {
+	    my $current = shift;
+	    $ipconf->{selected} = $device_active_map->{$current->get_active};
+	    my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
+	    $ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
+		if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+	    $ipconf_entry_mask->set_text($iface->{inet}->{mask} || $iface->{inet6}->{mask})
+		if $iface->{inet}->{mask} || $iface->{inet6}->{mask};
+	});
+	$i++;
+    }
+
+    my $devicebox = Gtk3::HBox->new (0, 0);
+    my $label = Gtk3::Label->new ("Management Interface:");
+    $label->set_size_request (150, -1);
+    $label->set_alignment (1, 0.5);
+    $devicebox->pack_start ($label, 0, 0, 10);
+    $devicebox->pack_start ($device_cb, 0, 0, 0);
+
+    $vbox2->pack_start ($devicebox, 0, 0, 2);
 
     my $hn = $ipconf->{domain} ? "pve.$ipconf->{domain}" : 'pve.example.invalid';
    
@@ -1782,14 +1914,8 @@ sub create_ipconf_view {
 	create_text_input ($hn, 'Hostname (FQDN):');
     $vbox2->pack_start ($hostbox, 0, 0, 2);
 
-    my $ipbox;
-    ($ipbox, $ipconf_entry_addr) =
-	create_text_input ($addr, 'IP Address:');
     $vbox2->pack_start ($ipbox, 0, 0, 2);
 
-    my $maskbox;
-    ($maskbox, $ipconf_entry_mask) =
-	create_text_input ($mask, 'Netmask:');
     $vbox2->pack_start ($maskbox, 0, 0, 2);
 
     $gateway = $ipconf->{gateway} || '192.168.100.1';
@@ -2796,7 +2922,7 @@ sub create_intro_view {
 
 $ipconf = get_ip_config ();
 
-$country = detect_country() if $ipconf->{addr} || $opt_testmode;;
+$country = detect_country() if $ipconf->{default} || $opt_testmode;;
 
 # read country, kmap and timezone infos
 $cmap = read_cmap ();
