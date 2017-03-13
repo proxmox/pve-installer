@@ -1,3 +1,17 @@
+pve-installer (5.0-1) unstable; urgency=medium
+
+  * rebuild for PVE 5.0
+
+  * fix #1239: enhance swap on ZFS setup
+
+  * use iproute2, support interface selection
+
+  * get DHCP leases on all interfaces
+
+  * only require grub-efi to succeed if booted using UEFI
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 13 Mar 2017 13:03:43 +0100
+
 pve-installer (4.0-16) unstable; urgency=medium
 
   * actually use more than 8 disks if selected
