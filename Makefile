@@ -46,7 +46,7 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 
 .phony: upload
 upload: ${DEB}
-	tar cf - ${DEB} | ssh repoman@repo.proxmox.com upload
+	tar cf - ${DEB} | ssh repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
 packages: /pve/${RELEASE}/install/pve.files
 	rm -rf packages packages.tmp; mkdir packages.tmp
