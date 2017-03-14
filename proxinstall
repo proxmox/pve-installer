@@ -1889,25 +1889,32 @@ sub create_ipconf_view {
     };
 
     my $device_active_map = {};
+
+    my $device_change_handler = sub {
+	my $current = shift;
+	$ipconf->{selected} = $device_active_map->{$current->get_active()};
+	my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
+	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
+	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+	$ipconf_entry_mask->set_text($iface->{inet}->{mask} || $iface->{inet6}->{mask})
+	    if $iface->{inet}->{mask} || $iface->{inet6}->{mask};
+    };
+
     my $i = 0;
     foreach my $index (sort keys %{$ipconf->{ifaces}}) {
 	$device_cb->append_text(&$get_device_desc($ipconf->{ifaces}->{$index}));
         $device_active_map->{$i} = $index;
 	if ($ipconf_first_view && $index == $ipconf->{default}) {
 	    $device_cb->set_active($i);
+	    &$device_change_handler($device_cb);
 	    $ipconf_first_view = 0;
 	}
-	$device_cb->signal_connect ('changed' => sub {
-	    my $current = shift;
-	    $ipconf->{selected} = $device_active_map->{$current->get_active};
-	    my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
-	    $ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
-		if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-	    $ipconf_entry_mask->set_text($iface->{inet}->{mask} || $iface->{inet6}->{mask})
-		if $iface->{inet}->{mask} || $iface->{inet6}->{mask};
-	});
+	$device_cb->signal_connect ('changed' => $device_change_handler);
 	$i++;
     }
+
+    $device_cb->set_active(0)
+	if !($ipconf->{selected});
 
     my $devicebox = Gtk3::HBox->new (0, 0);
     my $label = Gtk3::Label->new ("Management Interface:");
