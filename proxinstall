@@ -1196,11 +1196,12 @@ sub extract_data {
 
 	if ($use_zfs) {
 	    # do nothing
-	} elsif ($use_btrfs) {
-	    syscmd("mount -n $rootdev -o noatime,nobarrier $targetdir") == 0 ||
-		die "unable to mount $rootdev\n";
 	} else {
-	    syscmd ("mount -n $rootdev -o noatime,barrier=0 $targetdir") == 0 ||
+	    my $mount_opts = 'noatime';
+	    $mount_opts .= ',nobarrier'
+		if $use_btrfs || $filesys =~ /^ext\d$/;
+
+	    syscmd("mount -n $rootdev -o $mount_opts $targetdir") == 0 ||
 		die "unable to mount $rootdev\n";
 	}
 
