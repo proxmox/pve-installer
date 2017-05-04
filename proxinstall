@@ -835,6 +835,18 @@ my $udevadm_trigger_block = sub {
     syscmd ("udevadm settle --timeout 10");
 };
 
+my $clean_disk = sub {
+    my ($disk) = @_;
+
+    my $partitions = `lsblk --output kname --noheadings --path --list $disk`;
+    foreach my $part (split "\n", $partitions) {
+	next if $part eq $disk;
+	next if $part !~ /^\Q$disk\E/;
+	eval { syscmd("pvremove -ff -y $part"); };
+	eval { syscmd("dd if=/dev/zero of=$part bs=1M count=16"); };
+    }
+};
+
 sub partition_bootable_disk {
     my ($target_dev, $maxhdsize, $ptype) = @_;
 
@@ -1067,6 +1079,8 @@ sub extract_data {
 
 	update_progress (0, 0, $maxper, "create partitions");
 
+	syscmd("vgchange -an") if !$opt_testmode; # deactivate all detected VGs
+
 	if ($opt_testmode) {
 
 	    $rootdev = abs_path($opt_testmode);
@@ -1100,6 +1114,7 @@ sub extract_data {
 	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		my $devname = @$hd[1];
+		&$clean_disk($devname);
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, undef, '8300');
 		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
@@ -1119,6 +1134,9 @@ sub extract_data {
 	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
 
 	    my $disksize;
+	    foreach my $hd (@$devlist) {
+		&$clean_disk(@$hd[1]);
+	    }
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
 		my ($size, $osdev) =
@@ -1156,6 +1174,8 @@ sub extract_data {
 		# max hdsize passed on cmdline (GB)
 		$maxhdsize = $config_options->{hdsize}*1024*1024;
 	    }
+
+	    &$clean_disk($target_hd);
 
 	    my ($os_size, $osdev, $efidev); 
 	    ($os_size, $osdev, $efidev) = 
