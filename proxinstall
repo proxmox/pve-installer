@@ -2979,20 +2979,22 @@ $cmap = read_cmap ();
 
 create_main_window ();
 
+my $initial_error = 0;
+
 if (!defined ($hds) || (scalar (@$hds) <= 0)) {
     print "no hardisks found\n";
+    $initial_error = 1;
     display_html ("nohds.htm");
     set_next ("Reboot", sub { exit (0); } );
 } else {
-
     foreach my $hd (@$hds) {
 	my ($disk, $devname) = @$hd;
 	next if $devname =~ m|^/dev/md\d+$|;
 	print "found Disk$disk N:$devname\n";
     }
-
-    create_intro_view ();
 }
+
+create_intro_view () if !$initial_error;
 
 Gtk3->main;
 
