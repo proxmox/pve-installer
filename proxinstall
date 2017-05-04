@@ -1507,7 +1507,7 @@ _EOD
 			die "unable to install the i386-pc boot loader on '$dev'\n";
 
 		if ($di->{esp}) {
-		    syscmd ("mount -n $di->{esp} $targetdir/boot/efi") == 0 ||
+		    syscmd ("mount -n $di->{esp} -t vfat $targetdir/boot/efi") == 0 ||
 			die "unable to mount $di->{esp}\n";
 		    my $rc = syscmd ("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
 		    if ($rc != 0) {
