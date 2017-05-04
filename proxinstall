@@ -825,6 +825,16 @@ sub zfs_create_swap {
     return "/dev/zvol/$zfspoolname/swap";
 }
 
+my $udevadm_trigger_block = sub {
+    my ($nowait) = @_;
+
+    sleep(1) if !$nowait; # give kernel time to reread part table
+
+    # trigger udev to create /dev/disk/by-uuid
+    syscmd ("udevadm trigger --subsystem-match block");
+    syscmd ("udevadm settle --timeout 10");
+};
+
 sub partition_bootable_disk {
     my ($target_dev, $maxhdsize, $ptype) = @_;
 
@@ -870,6 +880,12 @@ sub partition_bootable_disk {
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
+
+    &$udevadm_trigger_block();
+
+    foreach my $part ($efibootdev, $osdev) {
+	syscmd("dd if=/dev/zero of=$part bs=1M count=256") if -b $part;
+    }
 
     return ($os_size, $osdev, $efibootdev);
 }
@@ -917,6 +933,10 @@ sub partition_bootable_zfs_disk {
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
+
+    &$udevadm_trigger_block();
+
+    syscmd("dd if=/dev/zero of=$osdev bs=1M count=16") if -b $osdev;
 
     return ($os_size, $osdev);
 }
@@ -1001,15 +1021,6 @@ sub compute_swapsize {
     return $swapsize;
 }
 
-my $udevadm_trigger_block = sub {
-    my ($nowait) = @_;
-
-    sleep(1) if !$nowait; # give kernel time to reread part table
-
-    # trigger udev to create /dev/disk/by-uuid
-    syscmd ("udevadm trigger --subsystem-match block");
-    syscmd ("udevadm settle --timeout 10");
-};
 
 sub extract_data {
     my ($basefile, $targetdir) = @_;
