@@ -15,6 +15,7 @@ install:
 	install -D -m 644 fail.htm ${DESTDIR}/var/lib/pve-installer/html/fail.htm
 	install -D -m 644 ipconf.htm ${DESTDIR}/var/lib/pve-installer/html/ipconf.htm
 	install -D -m 644 nohds.htm ${DESTDIR}/var/lib/pve-installer/html/nohds.htm
+	install -D -m 644 nonics.htm ${DESTDIR}/var/lib/pve-installer/html/nonics.htm
 	install -D -m 644 success.htm ${DESTDIR}/var/lib/pve-installer/html/success.htm
 	install -D -m 644 plus.png ${DESTDIR}/var/lib/pve-installer/html/plus.png
 	install -D -m 644 installer_logo_installation.png ${DESTDIR}/var/lib/pve-installer/html/installer_logo_installation.png

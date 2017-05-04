@@ -2994,6 +2994,13 @@ if (!defined ($hds) || (scalar (@$hds) <= 0)) {
     }
 }
 
+if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
+    print "no network interfaces found\n";
+    $initial_error = 1;
+    display_html ("nonics.htm");
+    set_next ("Reboot", sub { exit (0); } );
+}
+
 create_intro_view () if !$initial_error;
 
 Gtk3->main;
