@@ -2480,6 +2480,7 @@ my $create_raid_disk_grid = sub {
 
     my $scrolled_window = Gtk3::ScrolledWindow->new();
     $scrolled_window->set_hexpand(1);
+    $scrolled_window->set_propagate_natural_height(1) if @$hds > 4;
     $scrolled_window->add(&$create_label_widget_grid($disk_labeled_widgets));
     $scrolled_window->set_policy('never', 'automatic');
 
@@ -2674,6 +2675,7 @@ sub create_hdoption_view {
 	}
 	my (undef, $pref_width) = $dialog->get_preferred_width();
 	my (undef, $pref_height) = $dialog->get_preferred_height();
+	$pref_height = 750 if $pref_height > 750;
 	$dialog->resize($pref_width, $pref_height);
     };
 
