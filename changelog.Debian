@@ -1,3 +1,9 @@
+pve-installer (5.0-4) unstable; urgency=medium
+
+  * rework password and email text
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 23 Jun 2017 09:49:38 +0200
+
 pve-installer (5.0-3) unstable; urgency=medium
 
   * let raid dialogue grow if > 4 disks
