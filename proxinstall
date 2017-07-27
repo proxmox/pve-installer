@@ -1449,6 +1449,9 @@ _EOD
 
 	display_html ("extract4-virus.htm");
 
+	# needed for postfix postinst in case no other NIC is active
+	syscmd("chroot $targetdir ifup lo");
+
 	my $cmd = "chroot $targetdir dpkg $dpkg_opts --force-confold --configure -a";
 	$count = 0;
 	run_command ($cmd, sub {
