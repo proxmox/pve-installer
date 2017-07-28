@@ -2380,7 +2380,7 @@ sub create_country_view {
     $vbox->pack_start ($hbox2, 0, 0, 5);
     $vbox->pack_start ($hbox3, 0, 0, 5);
 
-    if ($country) {
+    if ($country && $ctr->{$country}) {
 	$w->set_text ($ctr->{$country}->{name});
     }
 
@@ -2977,10 +2977,15 @@ sub create_intro_view {
 
 $ipconf = get_ip_config ();
 
-$country = detect_country() if $ipconf->{default} || $opt_testmode;;
+$country = detect_country() if $ipconf->{default} || $opt_testmode;
 
 # read country, kmap and timezone infos
 $cmap = read_cmap ();
+
+if (!defined($cmap->{country}->{$country})) {
+    print $logfd "ignoring detected country '$country', invalid or unknown\n";
+    $country = undef;
+}
 
 create_main_window ();
 
