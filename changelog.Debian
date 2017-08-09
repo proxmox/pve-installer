@@ -1,3 +1,11 @@
+pve-installer (5.0-5) unstable; urgency=medium
+
+  * allow installing without active network devices
+
+  * fix bug in handling of invalid GeoIP results
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 9 Aug 2017 09:41:36 +0200
+
 pve-installer (5.0-4) unstable; urgency=medium
 
   * rework password and email text
