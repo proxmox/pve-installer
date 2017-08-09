@@ -14,6 +14,7 @@ INSTALLER_SOURCES=		\
 
 HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png)
 
+deb: ${DEB}
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
 	rm -rf debian
 	mkdir debian
