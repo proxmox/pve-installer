@@ -1,3 +1,9 @@
+pve-installer (5.0-6) unstable; urgency=medium
+
+  * fix console-setup
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 10 Aug 2017 13:58:22 +0200
+
 pve-installer (5.0-5) unstable; urgency=medium
 
   * allow installing without active network devices
