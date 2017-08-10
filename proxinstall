@@ -1409,7 +1409,8 @@ sub extract_data {
 	    $grub_install_devices_txt .= $di->{by_id} || $di->{devname};
 	}
 
-	# Note: debian-installer/locale is used by console-setup
+	# Note: keyboard-configuration/xbkb-keymap is used by console-setup
+	my $xkmap = $cmap->{kmap}->{$keymap}->{x11} // 'us';
 	
 	debconfig_set ($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
@@ -1417,7 +1418,7 @@ locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
 samba-common samba-common/dhcp boolean false
 samba-common samba-common/workgroup string WORKGROUP
 postfix postfix/main_mailer_type select Local only
-keyboard-configuration keyboard-configuration/xkb-keymap select $keymap
+keyboard-configuration keyboard-configuration/xkb-keymap select $xkmap
 d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
