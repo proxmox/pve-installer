@@ -778,7 +778,7 @@ sub zfs_create_rpool {
     syscmd ("zfs create $zfspoolname/ROOT/pve-1")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT/pve-1 volume\n";
 
-    # disable atime during insatll
+    # disable atime during install
     syscmd ("zfs set atime=off $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
 
@@ -960,7 +960,7 @@ sub create_lvm_volumes {
     my $datadev = '/dev/pve/data';
     my $swapfile = '/dev/pve/swap';
 
-    # we use --metadatasize 250k, which reseults in "pe_start = 512"
+    # we use --metadatasize 250k, which results in "pe_start = 512"
     # so pe_start is aligned on a 128k boundary (advantage for SSDs)
     syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
 	die "unable to initialize physical volume $lvmdev\n";
