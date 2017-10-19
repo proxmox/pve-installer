@@ -1634,6 +1634,7 @@ _EOD
 	    
 	syscmd ("zpool set bootfs=$zfspoolname/ROOT/pve-1 $zfspoolname")  == 0 ||
 	    die "zfs set bootfs failed\n";
+	syscmd ("zpool export $zfspoolname");
     }
 
     die $err if $err;
