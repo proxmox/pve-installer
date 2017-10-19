@@ -1,3 +1,13 @@
+pve-installer (5.0-7) unstable; urgency=medium
+
+  * kill dhclient before rebooting
+
+  * ZFS: explicitly export rpool after installation
+
+  * fix #1479: detect missing KVM support
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 19 Oct 2017 10:56:30 +0200
+
 pve-installer (5.0-6) unstable; urgency=medium
 
   * fix console-setup
