@@ -95,6 +95,7 @@ fi
 
 echo "Installation done, rebooting... "
 #mdadm -S /dev/md0 >/dev/tty2 2>&1
+kill $(pidof dhclient) 2>&1 > /dev/null
 real_reboot
 
 # never reached
