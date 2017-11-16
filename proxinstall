@@ -1423,7 +1423,7 @@ locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
 samba-common samba-common/dhcp boolean false
 samba-common samba-common/workgroup string WORKGROUP
-postfix postfix/main_mailer_type select Local only
+postfix postfix/main_mailer_type select No configuration
 keyboard-configuration keyboard-configuration/xkb-keymap select $xkmap
 d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
@@ -1467,10 +1467,6 @@ _EOD
 				 "configuring $1");
 	    }
 	});
-
-	debconfig_set ($targetdir, <<_EOD);
-postfix postfix/main_mailer_type select No configuration
-_EOD
 
 	unlink "$targetdir/etc/mailname";
 	$postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
