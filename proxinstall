@@ -379,10 +379,12 @@ sub run_command {
 
     return $? if $noout; # behave like standard system();
 
-    my $ec = ($? >> 8);
-
-    if ($ec) {
-	die "command '$cmdstr' failed with exit code $ec";
+    if ($? == -1) {
+	die "command '$cmdstr' failed to execute\n";
+    } elsif (my $sig = ($? & 127)) {
+	die "command '$cmdstr' failed - got signal $sig\n";
+    } elsif (my $exitcode = ($? >> 8)) {
+	die "command '$cmdstr' failed with exit code $exitcode";
     }
 
     return $ostream;
