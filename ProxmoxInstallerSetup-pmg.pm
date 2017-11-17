@@ -7,6 +7,7 @@ sub setup {
     return {
 	product => 'pmg',
 	enable_btrfs => 0,
+	bridged_network => 0,
     };
 }
 

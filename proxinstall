@@ -1315,22 +1315,30 @@ sub extract_data {
 
 	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
 
-	my $bridge_port = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
+	my $ethdev = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
 
-	$ifaces .= "iface $bridge_port $ntype manual\n";
+	if ($setup->{bridged_network}) {
+	    $ifaces .= "iface $ethdev $ntype manual\n";
 
-	 $ifaces .=
-	     "\nauto vmbr0\niface vmbr0 $ntype static\n" .
-	     "\taddress $ipaddress\n" .
-	     "\tnetmask $netmask\n" .
-	     "\tgateway $gateway\n" .
-	     "\tbridge_ports $bridge_port\n" .
-	     "\tbridge_stp off\n" .
-	     "\tbridge_fd 0\n";
+	    $ifaces .=
+		"\nauto vmbr0\niface vmbr0 $ntype static\n" .
+		"\taddress $ipaddress\n" .
+		"\tnetmask $netmask\n" .
+		"\tgateway $gateway\n" .
+		"\tbridge_ports $ethdev\n" .
+		"\tbridge_stp off\n" .
+		"\tbridge_fd 0\n";
+	} else {
+	    $ifaces .= "auto $ethdev\n" .
+		"iface $ethdev $ntype static\n" .
+		"\taddress $ipaddress\n" .
+		"\tnetmask $netmask\n" .
+		"\tgateway $gateway\n";
+	}
 
 	foreach my $iface (sort keys %{$ipconf->{ifaces}}) {
 	    my $name = $ipconf->{ifaces}->{$iface}->{name};
-	    next if $name eq $bridge_port;
+	    next if $name eq $ethdev;
 
 	    $ifaces .= "\niface $name $ntype manual\n";
 	}
