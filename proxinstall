@@ -542,8 +542,7 @@ sub hd_list {
 }
 
 sub read_cmap {
-    my $countryfn = $opt_testmode ? "country.dat" :
-	"/var/lib/pve-installer/country.dat";
+    my $countryfn = "${proxmox_libdir}/country.dat";
     open (TMP, "<$countryfn") || die "unable to open '$countryfn' - $!\n";
     my $line;
     my $country = {};
