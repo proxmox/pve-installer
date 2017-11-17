@@ -964,16 +964,18 @@ sub partition_bootable_zfs_disk {
 sub create_lvm_volumes {
     my ($lvmdev, $os_size, $swap_size) = @_;
 
-    my $rootdev = '/dev/pve/root';
-    my $datadev = '/dev/pve/data';
-    my $swapfile = '/dev/pve/swap';
+    my $vgname = $setup->{product};
+
+    my $rootdev = "/dev/$vgname/root";
+    my $datadev = "/dev/$vgname/data";
+    my $swapfile = "/dev/$vgname/swap";
 
     # we use --metadatasize 250k, which results in "pe_start = 512"
     # so pe_start is aligned on a 128k boundary (advantage for SSDs)
     syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
 	die "unable to initialize physical volume $lvmdev\n";
-    syscmd ("/sbin/vgcreate pve $lvmdev") == 0 ||
-	die "unable to create volume group 'pve'\n";
+    syscmd ("/sbin/vgcreate $vgname $lvmdev") == 0 ||
+	die "unable to create volume group '$vgname'\n";
 
     my $hdgb = int($os_size/(1024*1024));
     my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
@@ -1004,19 +1006,19 @@ sub create_lvm_volumes {
 	    $config_options->{maxvz}*1024*1024 : $rest;
     }
 
-    syscmd ("/sbin/lvcreate -L${swap_size}K -nswap pve") == 0 ||
+    syscmd ("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
 	die "unable to create swap volume\n";
 
-    syscmd ("/sbin/lvcreate -L${rootsize}K -nroot pve") == 0 ||
+    syscmd ("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
 	die "unable to create root volume\n";
 
-    syscmd ("/sbin/lvcreate -L${rest}K -ndata pve") == 0 ||
+    syscmd ("/sbin/lvcreate -L${rest}K -ndata $vgname") == 0 ||
 	die "unable to create data volume\n";
 
-    syscmd ("/sbin/lvconvert --yes --type thin-pool pve/data") == 0 ||
+    syscmd ("/sbin/lvconvert --yes --type thin-pool $vgname/data") == 0 ||
 	die "unable to create data thin-pool\n";
 
-    syscmd ("/sbin/vgchange -a y pve") == 0 ||
+    syscmd ("/sbin/vgchange -a y $vgname") == 0 ||
 	die "unable to activate volume group\n";
 
     return ($rootdev, $datadev, $swapfile);
@@ -1249,12 +1251,15 @@ sub extract_data {
 
 	mkdir "$targetdir/var";
 	mkdir "$targetdir/var/lib";
-	mkdir "$targetdir/var/lib/vz";
-	mkdir "$targetdir/var/lib/pve";
 
-	if ($use_btrfs) {
-	    syscmd("btrfs subvolume create $targetdir/var/lib/pve/local-btrfs") == 0 ||
-		die "unable to create btrfs subvolume\n";
+	if ($setup->{product} eq 'pve') {
+	    mkdir "$targetdir/var/lib/vz";
+	    mkdir "$targetdir/var/lib/pve";
+
+	    if ($use_btrfs) {
+		syscmd("btrfs subvolume create $targetdir/var/lib/pve/local-btrfs") == 0 ||
+		    die "unable to create btrfs subvolume\n";
+	    }
 	}
 
 	display_html ("extract2-rulesystem.htm");
