@@ -92,7 +92,7 @@ sub file_read_firstline {
 
 my $logfd = IO::File->new (">/tmp/install.log");
 
-my $proxmox_dir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
+my $proxmox_libdir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
 
 my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
 
@@ -1398,10 +1398,10 @@ sub extract_data {
 	write_config ($fstab, "$targetdir/etc/fstab");
 	write_config ("", "$targetdir/etc/mtab");
 
-	syscmd ("cp ${proxmox_dir}/policy-disable-rc.d " .
+	syscmd ("cp ${proxmox_libdir}/policy-disable-rc.d " .
 		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
 		die "unable to copy policy-rc.d\n";
-	syscmd ("cp ${proxmox_dir}/fake-start-stop-daemon " .
+	syscmd ("cp ${proxmox_libdir}/fake-start-stop-daemon " .
 		"$targetdir/sbin/") == 0 ||
 		die "unable to copy start-stop-daemon\n";
 
@@ -1651,7 +1651,7 @@ _EOD
 sub display_html {
     my ($filename) = @_;
 
-    my $path = "${proxmox_dir}/html/$filename";
+    my $path = "${proxmox_libdir}/html/$filename";
     my $url = "file://$path";
 
     my $data = file_get_contents($path);
@@ -1685,7 +1685,7 @@ sub url_requested {
 
     $stream->set_cancel_func (sub {}); # hack: avoid warning
 
-    my $path = "${proxmox_dir}/html/$url";
+    my $path = "${proxmox_libdir}/html/$url";
 
     if (-f $path) {
 	open (HTMLTMP, $path) ||
@@ -1710,7 +1710,7 @@ sub create_main_window {
 
     my $vbox = Gtk3::VBox->new (0, 0);
 
-    my $image = Gtk3::Image->new_from_file  ("${proxmox_dir}/proxlogo.png");
+    my $image = Gtk3::Image->new_from_file  ("${proxmox_libdir}/proxlogo.png");
     $vbox->pack_start ($image, 0, 0, 0);
 
     my $hbox = Gtk3::HBox->new (0, 0);
