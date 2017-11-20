@@ -54,4 +54,5 @@ check: packages test.img
 .phony: clean
 clean:
 	make -C html clean
-	rm -rf *~ ${DEB} target build packages packages.tmp test.img pve-final.pkglist
+	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes
+	find . -name '*~' -exec rm {} ';'
