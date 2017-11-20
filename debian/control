@@ -9,6 +9,11 @@ Homepage: http://www.proxmox.com
 Package: pve-installer
 Architecture: all
 Depends: geoip-bin, libgtk3-webkit-perl, squashfs-tools
-Maintainer: Proxmox Support Team <support@proxmox.com>
-Description: The Proxmox Installer
- This package contains Proxmox graphical installer
+Description: Proxmox VE Installer
+ This package contains the graphical installer for Proxmox VE.
+
+Package: pmg-installer
+Architecture: all
+Depends: geoip-bin, libgtk3-webkit-perl, squashfs-tools
+Description: Proxmox Mail Gateway Installer
+ This package contains the graphical installer for Proxmox Mail Gateway.
