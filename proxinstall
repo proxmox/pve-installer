@@ -1652,12 +1652,8 @@ sub display_html {
     my $data = file_get_contents($path);
 
     if ($filename eq 'license.htm') {
-	my $licensefn = -f "/EULA" ? "/EULA" : 
-	    $opt_testmode ? "./copyright" : 
-	    "/usr/share/doc/pve-installer/copyright";
-	my $license = decode('utf8', file_get_contents($licensefn));
-	$license =~ m/^\s+(.+\n)/;
-	my $title = $licensefn eq '/EULA' ? "END USER LICENSE AGREEMENT (EULA)": $1;
+	my $license = decode('utf8', file_get_contents("${proxmox_cddir}/EULA"));
+	my $title = "END USER LICENSE AGREEMENT (EULA)";
 	$data =~ s/__LICENSE__/$license/;
 	$data =~ s/__LICENSE_TITLE__/$title/;
     }
