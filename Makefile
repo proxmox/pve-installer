@@ -16,19 +16,13 @@ HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png
 
 deb: ${DEB}
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
-	rm -rf debian
-	mkdir debian
-	make DESTDIR=`pwd`/debian install
-	mkdir debian/DEBIAN
-	install -m 0644 control debian/DEBIAN
-	install -m 0644 conffiles debian/DEBIAN
-	fakeroot dpkg-deb --build debian ${DEB}
-	rm -rf debian
+	rsync -a * build
+	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${DEB}
 
 .phony: install
 install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
-	make DESTDIR=`pwd`/debian -C html install
+	make -C html install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	mkdir -p ${DESTDIR}/var/lib/dhcp3/
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf
@@ -41,9 +35,6 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
-	install -D -m 644 copyright ${DESTDIR}/usr/share/doc/pve-installer/copyright
-	install -D -m 644 changelog.Debian  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
-	gzip -n --best  ${DESTDIR}/usr/share/doc/pve-installer/changelog.Debian
 
 .phony: upload
 upload: ${DEB}
@@ -63,4 +54,4 @@ check: packages test.img
 .phony: clean
 clean:
 	make -C html clean
-	rm -rf *~ ${DEB} target debian packages packages.tmp test.img pve-final.pkglist
+	rm -rf *~ ${DEB} target build packages packages.tmp test.img pve-final.pkglist

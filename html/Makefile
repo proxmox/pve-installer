@@ -1,3 +1,4 @@
+DESTDIR=
 
 all:
 
