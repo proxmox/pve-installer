@@ -1,4 +1,4 @@
-proxlogo.png /var/lib/pve-installer/html
+proxlogo.png /var/lib/pve-installer
 html-pve/page1.htm /var/lib/pve-installer/html
 html-pve/passwd.htm /var/lib/pve-installer/html
 html-pve/extract1-license.htm /var/lib/pve-installer/html
