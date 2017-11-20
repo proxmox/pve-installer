@@ -1,9 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 $ENV{DEBIAN_FRONTEND} = 'noninteractive';
 $ENV{LC_ALL} = 'C';
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 use IPC::Open2;
 use IPC::Open3;
