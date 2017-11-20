@@ -14,18 +14,20 @@ INSTALLER_SOURCES=		\
 	Xdefaults		\
 	proxinstall
 
-HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png)
+HTML_SOURCES=$(wildcard html/*.htm)
+HTML_COMMON_SOURCES=$(wildcard html-common/*.htm) $(wildcard html-common/*.css) $(wildcard html-common/*.png)
 
 all:
 
 deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
+${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
 	rsync -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${DEB}
 
 .phony: install
-install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
+install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+	make -C html-common install
 	make -C html install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	mkdir -p ${DESTDIR}/var/lib/dhcp3/
@@ -33,7 +35,6 @@ install: ${INSTALLER_SOURCES} ${HTML_SOURCES}
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf.dhclient-new
 	install -D -m 755 fake-start-stop-daemon ${DESTDIR}/var/lib/pve-installer/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d ${DESTDIR}/var/lib/pve-installer/policy-disable-rc.d
-	install -D -m 644 proxlogo.png  ${DESTDIR}/var/lib/pve-installer/proxlogo.png
 	install -D -m 755 unconfigured.sh ${DESTDIR}/sbin/unconfigured.sh
 	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
@@ -57,6 +58,7 @@ check: packages test.img
 
 .phony: clean
 clean:
+	make -C html-common clean
 	make -C html clean
 	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes
 	find . -name '*~' -exec rm {} ';'
