@@ -1264,7 +1264,8 @@ sub extract_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
 	$ino || die "unable to open file '$basefile' - $!\n";
 
-	my $files = "${proxmox_pkgdir}/$setup->{product}-base.cnt";
+	my $files = file_read_firstline("${proxmox_cddir}/proxmox/$setup->{product}-base.cnt") ||
+	    die "unable to read base file count\n";
 
 	my $per = 0;
 	my $count = 0;
@@ -1647,6 +1648,7 @@ sub display_html {
     my ($filename) = @_;
 
     my $path = "${proxmox_libdir}/html/$filename";
+
     my $url = "file://$path";
 
     my $data = file_get_contents($path);
