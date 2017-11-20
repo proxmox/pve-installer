@@ -24,7 +24,7 @@ country.dat: country.pl
 	./country.pl > country.dat
 
 deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
+${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	rsync -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${DEB}
