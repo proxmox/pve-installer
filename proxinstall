@@ -93,6 +93,8 @@ sub file_read_firstline {
 my $logfd = IO::File->new (">/tmp/install.log");
 
 my $proxmox_libdir = $opt_testmode ? Cwd::cwd() : "/var/lib/pve-installer";
+my $proxmox_cddir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
+my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
 my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
 
@@ -1262,12 +1264,7 @@ sub extract_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
 	$ino || die "unable to open file '$basefile' - $!\n";
 
-	my $files;
-	if ($opt_testmode) {
-	    $files = file_read_firstline("../pve-cd-builder/base.cnt");
-	} else {
-	    $files = file_read_firstline("/cdrom/proxmox/$setup->{product}-base.cnt");
-	}
+	my $files = "${proxmox_pkgdir}/$setup->{product}-base.cnt";
 
 	my $per = 0;
 	my $count = 0;
@@ -1430,18 +1427,17 @@ d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
 
-        my $pkgdir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/proxmox/packages/" : "/cdrom/proxmox/packages";
 	my $pkg_count = 0;
-	while (<$pkgdir/*.deb>) { $pkg_count++ };
+	while (<${proxmox_pkgdir}/*.deb>) { $pkg_count++ };
 
 	# btrfs/dpkg is extremely slow without --force-unsafe-io
 	my $dpkg_opts = $use_btrfs ? "--force-unsafe-io" : "";
 
 	$count = 0;
-	while (<$pkgdir/*.deb>) {
+	while (<${proxmox_pkgdir}/*.deb>) {
 	    chomp;
 	    my $path = $_;
-	    my ($deb) = $path =~ m/$pkgdir\/(.*\.deb)/;
+	    my ($deb) = $path =~ m/${proxmox_pkgdir}\/(.*\.deb)/;
 #	    if ($deb =~ m/^grub-efi-/ && $deb !~ m/^grub-${grub_plattform}/) {
 #		$count++;
 #		next;
@@ -2957,7 +2953,7 @@ sub create_extract_view {
 
     my $tdir = $opt_testmode ? "target" : "/target";
     mkdir $tdir;
-    my $base = $opt_testmode ? "../pve-cd-builder/base.squashfs" : "/cdrom/$setup->{product}-base.squashfs";
+    my $base = "${proxmox_cddir}/$setup->{product}-base.squashfs";
 
     eval  { extract_data ($base, $tdir); };
     my $err = $@;
