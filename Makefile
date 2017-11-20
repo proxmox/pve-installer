@@ -47,7 +47,7 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 
 .phony: upload
 upload: ${DEB}
-	tar cf - ${DEB} | ssh repoman@repo.proxmox.com -- upload --product pve --dist stretch
+	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
 test.img:
 	dd if=/dev/zero of=test.img bs=2048 count=1M
