@@ -1674,27 +1674,6 @@ sub set_next {
     $next->grab_focus ();
 }
 
-sub url_requested {
-    my ($doc, $url, $stream) = @_;
-
-    $stream->set_cancel_func (sub {}); # hack: avoid warning
-
-    my $path = "${proxmox_libdir}/html/$url";
-
-    if (-f $path) {
-	open (HTMLTMP, $path) ||
-	    die "unable to open file '$path' - $!\n";
-	my $buf;
-	while (my $i = read (HTMLTMP, $buf, 4096)) {
-	    $stream->write ($buf);
-	    Gtk3::main_iteration() while Gtk3::events_pending();
-	}
-	close (HTMLTMP);
-    }
-
-    #$stream->close(); # hack: dont close - avoid crash
-}
-
 sub create_main_window {
 
     $window = Gtk3::Window->new ();
