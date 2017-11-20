@@ -14,6 +14,8 @@ INSTALLER_SOURCES=		\
 
 HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png)
 
+all:
+
 deb: ${DEB}
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
 	rsync -a * build
