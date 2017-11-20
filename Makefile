@@ -1,7 +1,10 @@
 # achtung: also set release in proxinstall!
 RELEASE=5.0
 
-DEB=pve-installer_5.0-7_all.deb
+PKGVER=5.0
+PKGREL=8
+
+PVE_DEB=pve-installer_${PKGVER}-${PKGREL}_all.deb
 
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\
@@ -23,11 +26,11 @@ all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 country.dat: country.pl
 	./country.pl > country.dat
 
-deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+deb: ${PVE_DEB}
+${PVE_DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	rsync -a * build
 	cd build; dpkg-buildpackage -b -us -uc
-	lintian -X man ${DEB}
+	lintian -X man ${PVE_DEB}
 
 .phony: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
@@ -46,15 +49,15 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
 
 .phony: upload
-upload: ${DEB}
-	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
+upload: ${PVE_DEB}
+	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
 test.img:
 	dd if=/dev/zero of=test.img bs=2048 count=1M
 
-check: ${DEB} test.img
+check-pve: ${PVE_DEB} test.img
 	rm -rf testdir
-	dpkg -X ${DEB} testdir
+	dpkg -X ${PVE_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 .phony: clean
