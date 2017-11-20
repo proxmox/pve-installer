@@ -19,11 +19,6 @@ install:
 	install -D -m 644 nonics.htm ${DESTDIR}/var/lib/pve-installer/html/nonics.htm
 	install -D -m 644 success.htm ${DESTDIR}/var/lib/pve-installer/html/success.htm
 	install -D -m 644 plus.png ${DESTDIR}/var/lib/pve-installer/html/plus.png
-	install -D -m 644 installer_logo_installation.png ${DESTDIR}/var/lib/pve-installer/html/installer_logo_installation.png
-	install -D -m 644 installer_logo_rulesystem.png ${DESTDIR}/var/lib/pve-installer/html/installer_logo_rulesystem.png
-	install -D -m 644 installer_logo_spamfilter.png ${DESTDIR}/var/lib/pve-installer/html/installer_logo_spamfilter.png
-	install -D -m 644 installer_logo_license.png ${DESTDIR}/var/lib/pve-installer/html/installer_logo_license.png
-
 
 .phony: clean
 clean:
