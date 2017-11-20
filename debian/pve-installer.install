@@ -1,9 +1,9 @@
 proxlogo.png /var/lib/pve-installer/html
-html/page1.htm /var/lib/pve-installer/html
-html/passwd.htm /var/lib/pve-installer/html
-html/extract1-license.htm /var/lib/pve-installer/html
-html/extract2-rulesystem.htm /var/lib/pve-installer/html
-html/extract3-spam.htm /var/lib/pve-installer/html
-html/extract4-virus.htm /var/lib/pve-installer/html
-html/fail.htm /var/lib/pve-installer/html
-html/success.htm /var/lib/pve-installer/html
+html-pve/page1.htm /var/lib/pve-installer/html
+html-pve/passwd.htm /var/lib/pve-installer/html
+html-pve/extract1-license.htm /var/lib/pve-installer/html
+html-pve/extract2-rulesystem.htm /var/lib/pve-installer/html
+html-pve/extract3-spam.htm /var/lib/pve-installer/html
+html-pve/extract4-virus.htm /var/lib/pve-installer/html
+html-pve/fail.htm /var/lib/pve-installer/html
+html-pve/success.htm /var/lib/pve-installer/html
