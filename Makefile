@@ -28,7 +28,6 @@ ${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} Makefile htm
 .phony: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	make -C html-common install
-	make -C html install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	mkdir -p ${DESTDIR}/var/lib/dhcp3/
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf
@@ -59,6 +58,5 @@ check: packages test.img
 .phony: clean
 clean:
 	make -C html-common clean
-	make -C html clean
 	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes
 	find . -name '*~' -exec rm {} ';'
