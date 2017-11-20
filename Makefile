@@ -12,12 +12,16 @@ INSTALLER_SOURCES=		\
 	checktime		\
 	xinitrc			\
 	Xdefaults		\
+	country.dat		\
 	proxinstall
 
 HTML_SOURCES=$(wildcard html/*.htm)
 HTML_COMMON_SOURCES=$(wildcard html-common/*.htm) $(wildcard html-common/*.css) $(wildcard html-common/*.png)
 
-all:
+all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+
+country.dat: country.pl
+	./country.pl > country.dat
 
 deb: ${DEB}
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} Makefile html/Makefile
@@ -34,6 +38,7 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf.dhclient-new
 	install -D -m 755 fake-start-stop-daemon ${DESTDIR}/var/lib/pve-installer/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d ${DESTDIR}/var/lib/pve-installer/policy-disable-rc.d
+	install -D -m 755 country.dat ${DESTDIR}/var/lib/pve-installer/country.dat
 	install -D -m 755 unconfigured.sh ${DESTDIR}/sbin/unconfigured.sh
 	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
@@ -58,5 +63,5 @@ check: packages test.img
 .phony: clean
 clean:
 	make -C html-common clean
-	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes
+	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes country.dat
 	find . -name '*~' -exec rm {} ';'
