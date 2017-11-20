@@ -10,6 +10,8 @@ INSTALLER_SOURCES=		\
 	interfaces		\
 	proxlogo.png		\
 	checktime		\
+	xinitrc			\
+	Xdefaults		\
 	proxinstall
 
 HTML_SOURCES=$(wildcard html/*.htm) $(wildcard html/*.css) $(wildcard html/*.png)
