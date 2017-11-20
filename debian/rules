@@ -3,24 +3,17 @@
 # output every command that modifies files on the build system.
 #DH_VERBOSE = 1
 
-PACKAGE = $(shell dh_listpackages)
 
-SETUPFN = "unknown"
-
-ifeq (${PACKAGE},pve-installer)
-SETUPFN = "ProxmoxInstallerSetup-pve.pm"
-endif
-
-ifeq (${PACKAGE},pmg-installer)
-SETUPFN = "ProxmoxInstallerSetup-pmg.pm"
-endif
+SETUPFN = "/usr/share/perl5/ProxmoxInstallerSetup.pm"
 
 %:
 	dh $@
 
 override_dh_auto_install:
-	install -D -m 0644 ${SETUPFN} $(CURDIR)/debian/${PACKAGE}/usr/share/perl5/ProxmoxInstallerSetup.pm
-	dh_auto_install $@
+	install -D -m 0644 ProxmoxInstallerSetup-pve.pm $(CURDIR)/debian/pve-installer/${SETUPFN}
+	install -D -m 0644 ProxmoxInstallerSetup-pmg.pm $(CURDIR)/debian/pmg-installer/${SETUPFN}
+	dh_auto_install --destdir debian/pve-installer
+	dh_auto_install --destdir debian/pmg-installer
 
 override_dh_auto_test:
 	# do nothing here

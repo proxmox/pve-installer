@@ -5,6 +5,9 @@ PKGVER=5.0
 PKGREL=8
 
 PVE_DEB=pve-installer_${PKGVER}-${PKGREL}_all.deb
+PMG_DEB=pmg-installer_${PKGVER}-${PKGREL}_all.deb
+
+DEBS = ${PVE_DEB} ${PMG_DEB}
 
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\
@@ -26,11 +29,12 @@ all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 country.dat: country.pl
 	./country.pl > country.dat
 
-deb: ${PVE_DEB}
-${PVE_DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+deb: ${DEBS} 
+${DEBS}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	rsync -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${PVE_DEB}
+	lintian -X man ${PMG_DEB}
 
 .phony: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
@@ -60,8 +64,13 @@ check-pve: ${PVE_DEB} test.img
 	dpkg -X ${PVE_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
+check-pmg: ${PMG_DEB} test.img
+	rm -rf testdir
+	dpkg -X ${PMG_DEB} testdir
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
 .phony: clean
 clean:
 	make -C html-common clean
-	rm -rf *~ *.deb target build packages packages.tmp test.img pve-final.pkglist *.buildinfo *.changes country.dat
+	rm -rf *~ *.deb target build packages packages.tmp testdir test.img pve-final.pkglist *.buildinfo *.changes country.dat
 	find . -name '*~' -exec rm {} ';'

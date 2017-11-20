@@ -1,0 +1,9 @@
+proxlogo.png /var/lib/pve-installer
+html-pmg/page1.htm /var/lib/pve-installer/html
+html-pmg/passwd.htm /var/lib/pve-installer/html
+html-pmg/extract1-license.htm /var/lib/pve-installer/html
+html-pmg/extract2-rulesystem.htm /var/lib/pve-installer/html
+html-pmg/extract3-spam.htm /var/lib/pve-installer/html
+html-pmg/extract4-virus.htm /var/lib/pve-installer/html
+html-pmg/fail.htm /var/lib/pve-installer/html
+html-pmg/success.htm /var/lib/pve-installer/html
