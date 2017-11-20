@@ -49,16 +49,13 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 upload: ${DEB}
 	tar cf - ${DEB} | ssh repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
-packages: /pve/${RELEASE}/install/pve.files
-	rm -rf packages packages.tmp; mkdir packages.tmp
-	for i in `cat $<`; do install -m 644 $$i  packages.tmp/; done
-	mv packages.tmp packages
-
 test.img:
 	dd if=/dev/zero of=test.img bs=2048 count=1M
 
-check: packages test.img
-	G_SLICE=always-malloc ./proxinstall -t test.img
+check: ${DEB} test.img
+	rm -rf testdir
+	dpkg -X ${DEB} testdir
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 .phony: clean
 clean:

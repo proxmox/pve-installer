@@ -1265,9 +1265,9 @@ sub extract_data {
 
 	my $files;
 	if ($opt_testmode) {
-	    $files = file_read_firstline("/pve/$release/install/pve-base.cnt");
+	    $files = file_read_firstline("../pve-cd-builder/base.cnt");
 	} else {
-	    $files = file_read_firstline("/cdrom/proxmox/pve-base.cnt");
+	    $files = file_read_firstline("/cdrom/proxmox/$setup->{product}-base.cnt");
 	}
 
 	my $per = 0;
@@ -1431,7 +1431,7 @@ d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
 _EOD
 
-	my $pkgdir = $opt_testmode ? "packages" : "/cdrom/proxmox/packages";
+        my $pkgdir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/proxmox/packages/" : "/cdrom/proxmox/packages";
 	my $pkg_count = 0;
 	while (<$pkgdir/*.deb>) { $pkg_count++ };
 
@@ -2958,7 +2958,7 @@ sub create_extract_view {
 
     my $tdir = $opt_testmode ? "target" : "/target";
     mkdir $tdir;
-    my $base = $opt_testmode ? "/pve/$release/install/pve-base.squashfs" : "/cdrom/pve-base.squashfs";
+    my $base = $opt_testmode ? "../pve-cd-builder/base.squashfs" : "/cdrom/$setup->{product}-base.squashfs";
 
     eval  { extract_data ($base, $tdir); };
     my $err = $@;
