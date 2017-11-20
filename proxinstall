@@ -20,12 +20,16 @@ use Data::Dumper;
 use File::Basename;
 use Time::HiRes;
 
-my $release = '5.0';
+use ProxmoxInstallerSetup;
+
+my $setup = ProxmoxInstallerSetup::setup();
+
+my $release = $setup->{release};
 
 my $kapi = `uname -r`;
 chomp $kapi;
 
-my $enable_btrfs = 0;
+my $enable_btrfs = $setup->{enable_btrfs};
 
 my $opt_testmode;
 
