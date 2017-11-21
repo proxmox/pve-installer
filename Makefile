@@ -1,5 +1,5 @@
 PKGVER=5.0
-PKGREL=8
+PKGREL=10
 
 PVE_DEB=pve-installer_${PKGVER}-${PKGREL}_all.deb
 PMG_DEB=pmg-installer_${PKGVER}-${PKGREL}_all.deb
@@ -51,7 +51,7 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 
 .phony: upload
 upload: ${PVE_DEB}
-	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
+	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg --dist stretch
 
 test.img:
 	dd if=/dev/zero of=test.img bs=2048 count=1M
