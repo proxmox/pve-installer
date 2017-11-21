@@ -1,3 +1,9 @@
+pve-installer (5.0-13) unstable; urgency=medium
+
+  * change clamav daily database name to daily.cld
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 21 Nov 2017 12:31:13 +0100
+
 pve-installer (5.0-12) unstable; urgency=medium
 
   * pmg: write admin email to /etc/pmg/pmg.conf
