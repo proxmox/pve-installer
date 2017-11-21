@@ -24,10 +24,6 @@ use ProxmoxInstallerSetup;
 
 my $setup = ProxmoxInstallerSetup::setup();
 
-
-my $kapi = `uname -r`;
-chomp $kapi;
-
 my $opt_testmode;
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
@@ -1538,6 +1534,15 @@ _EOD
 
 	diversion_remove ($targetdir, "/usr/sbin/update-grub");
 	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
+
+	my $kapi;
+	foreach my $fn (<$targetdir/lib/modules/*>) {
+	    if ($fn =~ m!/(\d+\.\d+\.\d+-\d+-pve)$!) {
+		die "found multiple kernels\n" if defined($kapi);
+		$kapi = $1;
+	    }
+	}
+	die "unable to detect kernel version\n" if !defined($kapi);
 
 	if (!$opt_testmode) {
 
