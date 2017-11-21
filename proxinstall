@@ -1601,8 +1601,8 @@ _EOD
 
 	if ($setup->{product} eq 'pmg') {
 	    # save admin email
-	    write_config ("#Unix Superuser\nroot:1:0::root:${mailto}:::\n",
-			  "$targetdir/etc/pmg/user.conf");
+	    write_config ("section: admin\n\temail ${mailto}\n",
+			  "$targetdir/etc/pmg/pmg.conf");
 
 	} elsif ($setup->{product} eq 'pve') {
 
