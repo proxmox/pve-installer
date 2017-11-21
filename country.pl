@@ -1,6 +1,8 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
+
 use PVE::Tools;
 
 # see also: http://en.wikipedia.org/wiki/Keyboard_layout
