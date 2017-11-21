@@ -1625,7 +1625,7 @@ _EOD
 	my $elapsed = Time::HiRes::tv_interval($starttime);
 	print "Elapsed extract time: $elapsed\n";
 
-	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
+	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> final.pkglist");
     }
 
     syscmd ("umount $targetdir/tmp");
