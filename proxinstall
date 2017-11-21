@@ -1953,7 +1953,8 @@ sub create_ipconf_view {
 
     $vbox2->pack_start ($devicebox, 0, 0, 2);
 
-    my $hn = $ipconf->{domain} ? "pve.$ipconf->{domain}" : 'pve.example.invalid';
+    my $hn = $ipconf->{domain} ?
+	"$setup->{product}.$ipconf->{domain}" : "$setup->{product}.example.invalid";
    
     my ($hostbox, $hostentry) =
 	create_text_input ($hn, 'Hostname (FQDN):');
