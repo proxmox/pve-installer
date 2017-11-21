@@ -1510,7 +1510,18 @@ _EOD
 
 	# allow ssh root login
 	syscmd ("sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' '$targetdir/etc/ssh/sshd_config'");
-	
+
+	if ($setup->{product} eq 'pmg') {
+	    # install initial clamav DB
+	    my $srcdir = "${proxmox_cddir}/proxmox/clamav";
+	    foreach my $fn ("main.cvd", "bytecode.cvd", "daily.cvd", "safebrowsing.cvd") {
+		syscmd ("cp \"$srcdir/$fn\" \"$targetdir/var/lib/clamav\"") == 0 ||
+		    die "installation of clamav db file '$fn' failed\n";
+	    }
+	    syscmd("chroot $targetdir /bin/chown clamav:clamav -R /var/lib/clamav") == 0 ||
+		die "unable to set owner for clamav database files\n";
+	}
+
 	if ($setup->{product} eq 'pve') {
 	    # save installer settings
 	    my $ucc = uc ($country);
