@@ -6,7 +6,6 @@ use warnings;
 sub setup {
     return {
 	product => 'pve',
-	release => '5.1',
 	enable_btrfs => 0,
     };
 }

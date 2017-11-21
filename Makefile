@@ -1,6 +1,3 @@
-# achtung: also set release in proxinstall!
-RELEASE=5.0
-
 PKGVER=5.0
 PKGREL=8
 

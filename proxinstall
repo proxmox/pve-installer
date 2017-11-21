@@ -24,7 +24,6 @@ use ProxmoxInstallerSetup;
 
 my $setup = ProxmoxInstallerSetup::setup();
 
-my $release = $setup->{release};
 
 my $kapi = `uname -r`;
 chomp $kapi;
