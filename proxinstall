@@ -1505,11 +1505,11 @@ _EOD
 	# allow ssh root login
 	syscmd ("sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' '$targetdir/etc/ssh/sshd_config'");
 	
-	# save installer settings
-	my $ucc = uc ($country);
-	debconfig_set ($targetdir, <<_EOD);
-pve-manager pve-manager/country string $ucc
-_EOD
+	if ($setup->{product} eq 'pve') {
+	    # save installer settings
+	    my $ucc = uc ($country);
+	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
+	}
 
 	update_progress (0.8, 0.95, 1, "make system bootable");
 
