@@ -1628,7 +1628,6 @@ _EOD
 	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> pve-final.pkglist");
     }
 
-    syscmd ("umount $targetdir/var/lib/vz");
     syscmd ("umount $targetdir/tmp");
     syscmd ("umount $targetdir/proc");
     syscmd ("umount $targetdir/sys");
