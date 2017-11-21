@@ -1576,7 +1576,13 @@ _EOD
 	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
 		     "root:$octets\n");
 
-	if ($setup->{product} eq 'pve') {
+	if ($setup->{product} eq 'pmg') {
+	    mkdir "/etc/pmg";
+	    # save admin email
+	    write_config ("#Unix Superuser\nroot:1:0::root:${mailto}:::\n",
+			  "/etc/pmg/user.conf");
+
+	} elsif ($setup->{product} eq 'pve') {
 
 	    # create pmxcfs DB
 
