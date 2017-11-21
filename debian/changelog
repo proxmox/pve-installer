@@ -1,3 +1,9 @@
+pve-installer (5.0-12) unstable; urgency=medium
+
+  * pmg: write admin email to /etc/pmg/pmg.conf
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 21 Nov 2017 10:26:59 +0100
+
 pve-installer (5.0-11) unstable; urgency=medium
 
   * pmg: write user.conf to correct location
