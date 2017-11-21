@@ -1510,7 +1510,7 @@ _EOD
 	if ($setup->{product} eq 'pmg') {
 	    # install initial clamav DB
 	    my $srcdir = "${proxmox_cddir}/proxmox/clamav";
-	    foreach my $fn ("main.cvd", "bytecode.cvd", "daily.cvd", "safebrowsing.cvd") {
+	    foreach my $fn ("main.cvd", "bytecode.cvd", "daily.cld", "safebrowsing.cvd") {
 		syscmd ("cp \"$srcdir/$fn\" \"$targetdir/var/lib/clamav\"") == 0 ||
 		    die "installation of clamav db file '$fn' failed\n";
 	    }
