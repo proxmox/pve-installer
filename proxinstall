@@ -1576,33 +1576,36 @@ _EOD
 	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
 		     "root:$octets\n");
 
-	# create pmxcfs DB
+	if ($setup->{product} eq 'pve') {
 
-	my $tmpdir = "$targetdir/tmp/pve";
-	mkdir $tmpdir;
+	    # create pmxcfs DB
 
-	# write vnc keymap to datacenter.cfg
-	my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
-	write_config ("keyboard: $vnckmap\n",
-		      "$tmpdir/datacenter.cfg");
+	    my $tmpdir = "$targetdir/tmp/pve";
+	    mkdir $tmpdir;
 
-	# save admin email
-	write_config ("user:root\@pam:1:0:::${mailto}::\n",
-		      "$tmpdir/user.cfg");
+	    # write vnc keymap to datacenter.cfg
+	    my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
+	    write_config ("keyboard: $vnckmap\n",
+			  "$tmpdir/datacenter.cfg");
 
-	# write storage.cfg
-	my $strorage_cfg_fn = "$tmpdir/storage.cfg";
-	if ($use_zfs) {
-	    write_config ($storage_cfg_zfs, $strorage_cfg_fn);
-	} elsif ($use_btrfs) {
-	    write_config ($storage_cfg_btrfs, $strorage_cfg_fn);
-	} else {
-	    write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
+	    # save admin email
+	    write_config ("user:root\@pam:1:0:::${mailto}::\n",
+			  "$tmpdir/user.cfg");
+
+	    # write storage.cfg
+	    my $strorage_cfg_fn = "$tmpdir/storage.cfg";
+	    if ($use_zfs) {
+		write_config ($storage_cfg_zfs, $strorage_cfg_fn);
+	    } elsif ($use_btrfs) {
+		write_config ($storage_cfg_btrfs, $strorage_cfg_fn);
+	    } else {
+		write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
+	    }
+
+	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
+
+	    syscmd ("rm -rf $tmpdir");
 	}
-
-	run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
-
-	syscmd ("rm -rf $tmpdir");
     };
 
     my $err = $@;
