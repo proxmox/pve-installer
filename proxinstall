@@ -41,6 +41,7 @@ if (!GetOptions ('testmode=s' => \$opt_testmode)) {
 
 my $zfstestpool = "test_rpool";
 my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
+my $zfsrootvolname = "$setup->{product}-1";
 
 my $storage_cfg_zfs = <<__EOD__;
 dir: local
@@ -782,8 +783,8 @@ sub zfs_create_rpool {
     syscmd ("zfs create $zfspoolname/data")  == 0 ||
 	die "unable to create zfs $zfspoolname/data volume\n";
 
-    syscmd ("zfs create $zfspoolname/ROOT/pve-1")  == 0 ||
-	die "unable to create zfs $zfspoolname/ROOT/pve-1 volume\n";
+    syscmd ("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
+	die "unable to create zfs $zfspoolname/ROOT/$zfsrootvolname volume\n";
 
     # disable atime during install
     syscmd ("zfs set atime=off $zfspoolname") == 0 ||
@@ -1062,7 +1063,7 @@ sub extract_data {
     if ($filesys =~ m/zfs/) {
 	$target_hd = undef; # do not use this config
 	$use_zfs = 1;
-	$targetdir = "/$zfspoolname/ROOT/pve-1";
+	$targetdir = "/$zfspoolname/ROOT/$zfsrootvolname";
     } elsif ($filesys =~ m/btrfs/) {
 	$target_hd = undef; # do not use this config
 	$use_btrfs = 1;
@@ -1514,7 +1515,7 @@ _EOD
 	update_progress (0.8, 0.95, 1, "make system bootable");
 
 	if ($use_zfs) {
-	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/pve-1 boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
+	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
    
 	}
@@ -1643,10 +1644,10 @@ _EOD
 	syscmd ("zfs set sync=standard $zfspoolname") == 0 ||
 	    die "unable to set zfs properties\n";
 
-	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/pve-1") == 0 ||
+	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/$zfsrootvolname") == 0 ||
 	    die "zfs set mountpoint failed\n";
 	    
-	syscmd ("zpool set bootfs=$zfspoolname/ROOT/pve-1 $zfspoolname")  == 0 ||
+	syscmd ("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname")  == 0 ||
 	    die "zfs set bootfs failed\n";
 	syscmd ("zpool export $zfspoolname");
     }
