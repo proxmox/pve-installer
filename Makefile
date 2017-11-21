@@ -49,9 +49,13 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
 
-.phony: upload
-upload: ${PVE_DEB}
-	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg --dist stretch
+.phony: upload-pmg
+upload-pmg: ${PMG_DEB}
+	tar cf - ${PMG_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pmg --dist stretch
+
+.phony: upload-pve
+upload-pve: ${PVE_DEB}
+	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
 test.img:
 	dd if=/dev/zero of=test.img bs=2048 count=1M
