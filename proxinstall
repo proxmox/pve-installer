@@ -1756,7 +1756,8 @@ sub create_main_window {
 
     my $vbox = Gtk3::VBox->new (0, 0);
 
-    my $image = Gtk3::Image->new_from_file  ("${proxmox_libdir}/proxlogo.png");
+    my $logofn = "$setup->{product}-banner.png";
+    my $image = Gtk3::Image->new_from_file("${proxmox_libdir}/$logofn");
     $vbox->pack_start ($image, 0, 0, 0);
 
     my $hbox = Gtk3::HBox->new (0, 0);

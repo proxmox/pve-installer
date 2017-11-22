@@ -11,7 +11,8 @@ INSTALLER_SOURCES=		\
 	fake-start-stop-daemon	\
 	policy-disable-rc.d	\
 	interfaces		\
-	proxlogo.png		\
+	pmg-banner.png		\
+	pve-banner.png		\
 	checktime		\
 	xinitrc			\
 	Xdefaults		\
@@ -48,6 +49,12 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
+
+pmg-banner.png: pmg-banner.svg
+	inkscape $< --export-png=$@
+
+pve-banner.png: pve-banner.svg
+	inkscape $< --export-png=$@
 
 .phony: upload-pmg
 upload-pmg: ${PMG_DEB}
