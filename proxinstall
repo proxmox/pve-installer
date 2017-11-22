@@ -664,6 +664,8 @@ sub update_progress {
     $progress->set_text (sprintf ("%d%%", int ($res*100)));
     $progress_status->set_text ($text) if defined ($text);
 
+    display_info() if $res < 0.9;
+
     Gtk3::main_iteration() while Gtk3::events_pending();
 }
 
@@ -1258,7 +1260,6 @@ sub extract_data {
 	    }
 	}
 
-	display_html ("extract2-rulesystem.htm");
 	update_progress (1, 0.05, $maxper, "extracting base system");
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
@@ -1289,7 +1290,6 @@ sub extract_data {
 	syscmd ("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
 	    die "unable to mount sysfs on $targetdir/sys\n";
 
-	display_html ("extract3-spam.htm");
 	update_progress (1, $maxper, 0.5, "configuring base system");
 
 	# configure hosts
@@ -1459,8 +1459,6 @@ _EOD
 		die "installation of package $deb failed\n";
 	    update_progress ((++$count)/$pkg_count, 0.5, 0.75);
 	}
-
-	display_html ("extract4-virus.htm");
 
 	# needed for postfix postinst in case no other NIC is active
 	syscmd("chroot $targetdir ifup lo");
@@ -1675,6 +1673,32 @@ _EOD
     die $err if $err;
 }
 
+my $last_display_change = 0;
+
+my $display_info_counter = 0;
+
+my $display_info_items = [
+    "extract1-license.htm",
+    "extract2-rulesystem.htm",
+    "extract3-spam.htm",
+    "extract4-virus.htm",
+    ];
+
+sub display_info {
+
+    my $min_display_time = 15;
+
+    my $ctime = time();
+
+    return if ($ctime - $last_display_change) < $min_display_time;
+
+    my $page = $display_info_items->[$display_info_counter % scalar(@$display_info_items)];
+
+    $display_info_counter++;
+
+    display_html($page);
+}
+
 sub display_html {
     my ($filename) = @_;
 
@@ -1692,6 +1716,8 @@ sub display_html {
     }
 
     $htmlview->load_html_string($data, $url);
+
+    $last_display_change = time();
 }
 
 sub set_next {
@@ -1730,7 +1756,7 @@ sub create_main_window {
     $vbox->pack_start ($cmdbox, 0, 0, 10);
 
     $next = Gtk3::Button->new ('_Next');
-    $next->signal_connect (clicked => sub { &$next_fctn (); });
+    $next->signal_connect (clicked => sub { $last_display_change = 0; &$next_fctn (); });
     $cmdbox->pack_end ($next, 0, 0, 10);
     my $abort = Gtk3::Button->new ('_Abort');
     $abort->set_can_focus (0);
@@ -2938,7 +2964,8 @@ sub create_extract_view {
 
     cleanup_view ();
 
-    display_html ("extract1-license.htm");
+    display_info();
+
     $next->set_sensitive (0);
 
     my $vbox =  Gtk3::VBox->new (0, 0);
