@@ -80,5 +80,5 @@ check-pmg: ${PMG_DEB} test.img
 .phony: clean
 clean:
 	make -C html-common clean
-	rm -rf *~ *.deb target build packages packages.tmp testdir test.img pve-final.pkglist *.buildinfo *.changes country.dat
+	rm -rf *~ *.deb target build packages packages.tmp testdir test.img pve-final.pkglist *.buildinfo *.changes country.dat final.pkglist
 	find . -name '*~' -exec rm {} ';'
