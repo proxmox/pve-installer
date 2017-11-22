@@ -226,9 +226,11 @@ if ($cmdline =~ m/maxroot=(\d+(\.\d+)?)[\s\n]/i) {
 if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
     $config_options->{minfree} = $1;
 }
- 
-if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
-    $config_options->{maxvz} = $1;
+
+if ($setup->{product} eq 'pve') {
+    if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
+	$config_options->{maxvz} = $1;
+    }
 }
 
 my $postfix_main_cf = <<_EOD;
@@ -978,30 +980,42 @@ sub create_lvm_volumes {
     my $hdgb = int($os_size/(1024*1024));
     my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
 
-    my $maxroot;
-    if ($config_options->{maxroot}) {
-	$maxroot = $config_options->{maxroot};
+    my $rootsize;
+    my $datasize;
+
+    if ($setup->{product} eq 'pve') {
+
+	my $maxroot;
+	if ($config_options->{maxroot}) {
+	    $maxroot = $config_options->{maxroot};
+	} else {
+	    $maxroot = 96;
+	}
+
+	$rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
+
+	my $rest = $os_size - $swap_size - $rootsize; # in KB
+
+	my $minfree;
+	if ($config_options->{minfree}) {
+	    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space : 
+		$config_options->{minfree}*1024*1024 ;
+	} else {
+	    $minfree = $space;
+	}
+
+	$rest = $rest - $minfree;
+
+	if ($config_options->{maxvz}) {
+	    $rest = (($config_options->{maxvz}*1024*1024) <= $rest) ?
+		$config_options->{maxvz}*1024*1024 : $rest;
+	}
+
+	$datasize = $rest;
+
     } else {
-	$maxroot = 96;
-    }
-
-    my $rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
-
-    my $rest = $os_size - $swap_size - $rootsize; # in KB
-
-    my $minfree;
-    if ($config_options->{minfree}) {
-	$minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space : 
-	    $config_options->{minfree}*1024*1024 ;
-    } else {
-	$minfree = $space;
-    }
-
-    $rest = $rest - $minfree;
-
-    if ($config_options->{maxvz}) {
-	$rest = (($config_options->{maxvz}*1024*1024) <= $rest) ? 
-	    $config_options->{maxvz}*1024*1024 : $rest;
+	my $minfree = $config_options->{minfree} ? $config_options->{minfree}*1024*1024 : $space;
+	$rootsize = $os_size - $minfree - $swap_size; # in KB
     }
 
     syscmd ("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
@@ -1010,16 +1024,20 @@ sub create_lvm_volumes {
     syscmd ("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
 	die "unable to create root volume\n";
 
-    syscmd ("/sbin/lvcreate -L${rest}K -ndata $vgname") == 0 ||
-	die "unable to create data volume\n";
+    if ($datasize) {
+	syscmd ("/sbin/lvcreate -L${datasize}K -ndata $vgname") == 0 ||
+	    die "unable to create data volume\n";
 
-    syscmd ("/sbin/lvconvert --yes --type thin-pool $vgname/data") == 0 ||
-	die "unable to create data thin-pool\n";
+	syscmd ("/sbin/lvconvert --yes --type thin-pool $vgname/data") == 0 ||
+	    die "unable to create data thin-pool\n";
+    } else {
+	$datadev = undef;
+    }
 
     syscmd ("/sbin/vgchange -a y $vgname") == 0 ||
 	die "unable to activate volume group\n";
 
-    return ($rootdev, $datadev, $swapfile);
+    return ($rootdev, $swapfile, $datadev);
 }
 
 sub compute_swapsize {
@@ -1051,7 +1069,6 @@ sub extract_data {
 
     my $bootdevinfo = [];
 
-    my $datadev;
     my $swapfile;
     my $rootdev;
 
@@ -1196,7 +1213,7 @@ sub extract_data {
 				  osdev => $osdev, by_id => $by_id };
 
 	    my $swap_size = compute_swapsize($os_size);
-	    ($rootdev, $datadev, $swapfile) = 
+	    ($rootdev, $swapfile) =
 		create_lvm_volumes($osdev, $os_size, $swap_size);
 
 	    # trigger udev to create /dev/disk/by-uuid
@@ -2677,11 +2694,14 @@ sub create_hdoption_view {
     $entry_minfree->set_text($config_options->{minfree}) if $config_options->{minfree};
     push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
 
-    my $entry_maxvz = Gtk3::Entry->new();
-    $entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
-    $entry_maxvz->signal_connect (key_press_event => \&check_float);
-    $entry_maxvz->set_text($config_options->{maxvz}) if $config_options->{maxvz};
-    push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
+    my $entry_maxvz;
+    if ($setup->{product} eq 'pve') {
+	$entry_maxvz = Gtk3::Entry->new();
+	$entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
+	$entry_maxvz->signal_connect (key_press_event => \&check_float);
+	$entry_maxvz->set_text($config_options->{maxvz}) if $config_options->{maxvz};
+	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
+    }
 
     my $options_stack = Gtk3::Stack->new();
     $options_stack->set_visible(1);
@@ -2773,7 +2793,7 @@ sub create_hdoption_view {
 	delete $config_options->{minfree};
     }
 
-    if (defined($tmp = &$get_float($entry_maxvz))) {
+    if ($entry_maxvz && defined($tmp = &$get_float($entry_maxvz))) {
 	$config_options->{maxvz} = $tmp;
     } else {
 	delete $config_options->{maxvz};
