@@ -779,9 +779,11 @@ sub zfs_create_rpool {
 
     syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT volume\n";
-    
-    syscmd ("zfs create $zfspoolname/data")  == 0 ||
-	die "unable to create zfs $zfspoolname/data volume\n";
+
+    if ($setup->{product} eq 'pve') {
+	syscmd ("zfs create $zfspoolname/data")  == 0 ||
+	    die "unable to create zfs $zfspoolname/data volume\n";
+    }
 
     syscmd ("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT/$zfsrootvolname volume\n";
