@@ -1,3 +1,9 @@
+pve-installer (5.0-18) unstable; urgency=medium
+
+  * proxinstall - only creat ezfs data pool for product pve
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 23 Nov 2017 09:53:18 +0100
+
 pve-installer (5.0-17) unstable; urgency=medium
 
   * include svg files for installer banner
