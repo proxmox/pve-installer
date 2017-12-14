@@ -1,3 +1,11 @@
+pve-installer (5.0-19) unstable; urgency=medium
+
+  * allow all valid netmasks
+
+  * html-pmg/extract1-license.htm: fix typo
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 14 Dec 2017 11:19:10 +0100
+
 pve-installer (5.0-18) unstable; urgency=medium
 
   * proxinstall - only creat ezfs data pool for product pve
