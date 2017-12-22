@@ -93,7 +93,7 @@ my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
 my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
 
-$grub_plattform = "efi-amd64" if -d "/sys/firmware/efi"; 
+$grub_plattform = "efi-amd64" if -d "/sys/firmware/efi";
 
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
 my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
@@ -704,7 +704,7 @@ sub create_filesystem {
 
     my $fsdata = $fssetup->{$type} || die "internal error - unknown file system '$type'";
     my $opts = $name eq 'root' ? $fsdata->{mkfs_root_opt} : $fsdata->{mkfs_data_opt};
-    
+
     update_progress (0, $rs, $re, "creating $name filesystem");
 
     run_command ("$fsdata->{mkfs} $opts $dev", sub {
@@ -916,7 +916,7 @@ sub partition_bootable_disk {
 
 # ZFS has this use_whole_disk concept, so we try to partition the same
 # way as zfs does by default. There is room at start of disk to insert
-# a grub boot partition. But adding a EFI ESP is not possible.  
+# a grub boot partition. But adding a EFI ESP is not possible.
 #
 # Note: zfs people think this is just a waste of space an not
 # required.  Instead, you should put the ESP on another disk (log,
@@ -933,7 +933,7 @@ sub partition_bootable_zfs_disk {
     my $hdgb = int($hdsize/(1024*1024));
     die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
 
-    # 1 - GRUB boot partition: 1M 
+    # 1 - GRUB boot partition: 1M
     # 2 - OS/Data partition
     # 9 - ZFS reserved partition
 
@@ -950,9 +950,9 @@ sub partition_bootable_zfs_disk {
 
     $pnum = 2;
     push @$pcmd, "-n$pnum:2048:0", "-t$pnum:BF01", '-c', "$pnum:zfs";
-   
+
     push @$pcmd, $target_dev;
-	
+
     my $os_size = $hdsize - 1024 - 1024*8;
 
     syscmd($pcmd) == 0 ||
@@ -1002,7 +1002,7 @@ sub create_lvm_volumes {
 
 	my $minfree;
 	if ($config_options->{minfree}) {
-	    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space : 
+	    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space :
 		$config_options->{minfree}*1024*1024 ;
 	} else {
 	    $minfree = $space;
@@ -1089,7 +1089,7 @@ sub extract_data {
 	$target_hd = undef; # do not use this config
 	$use_btrfs = 1;
     }
-    
+
     if ($use_zfs) {
 	my $i;
 	for ($i = 5; $i > 0; $i--) {
@@ -1117,7 +1117,7 @@ sub extract_data {
 
 	    if ($use_btrfs) {
 
-		die "unsupported btrfs mode (for testing environment)\n" 
+		die "unsupported btrfs mode (for testing environment)\n"
 		    if $filesys ne 'btrfs (RAID0)';
 
 		btrfs_create([$rootdev], 'single');
@@ -1130,7 +1130,7 @@ sub extract_data {
 		syscmd ("zpool destroy $zfstestpool");
 
 		zfs_create_rpool($rootdev);
-	    
+
 	    } else {
 
 		# nothing to do
@@ -1180,7 +1180,7 @@ sub extract_data {
 	    foreach my $di (@$bootdevinfo) {
 		my $devname = $di->{devname};
 		$di->{by_id} = find_stable_path ("/dev/disk/by-id", $devname);
-	    
+
 		# Note: using /dev/disk/by-id/ does not work for unknown reason, we get
 		# cannot create 'rpool': no such pool or dataset
 		#my $osdev = find_stable_path ("/dev/disk/by-id", $di->{osdev}) || $di->{osdev};
@@ -1190,7 +1190,7 @@ sub extract_data {
 	    }
 
 	    zfs_create_rpool($vdev);
-	    
+
 	    my $swap_size = compute_swapsize($disksize);
 	    $swapfile = zfs_create_swap($swap_size);
 
@@ -1206,14 +1206,14 @@ sub extract_data {
 
 	    &$clean_disk($target_hd);
 
-	    my ($os_size, $osdev, $efidev); 
-	    ($os_size, $osdev, $efidev) = 
+	    my ($os_size, $osdev, $efidev);
+	    ($os_size, $osdev, $efidev) =
 		partition_bootable_disk($target_hd, $maxhdsize, '8E00');
 
 	    &$udevadm_trigger_block();
 
 	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
-	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd, 
+	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd,
 				  osdev => $osdev, by_id => $by_id };
 
 	    my $swap_size = compute_swapsize($os_size);
@@ -1240,7 +1240,7 @@ sub extract_data {
 
 	foreach my $di (@$bootdevinfo) {
 	    next if !$di->{esp};
-	    syscmd ("mkfs.vfat -F32 $di->{esp}") == 0 || 
+	    syscmd ("mkfs.vfat -F32 $di->{esp}") == 0 ||
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
 
@@ -1410,7 +1410,7 @@ sub extract_data {
 		    if (my $uuid = find_dev_by_uuid ($di->{esp})) {
 			$efi_boot_uuid = "UUID=$uuid";
 		    }
-	    
+
 		    $fstab .= "${efi_boot_uuid} /boot/efi vfat defaults 0 1\n";
 		}
 	    }
@@ -1445,7 +1445,7 @@ sub extract_data {
 
 	# Note: keyboard-configuration/xbkb-keymap is used by console-setup
 	my $xkmap = $cmap->{kmap}->{$keymap}->{x11} // 'us';
-	
+
 	debconfig_set ($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
@@ -1548,7 +1548,7 @@ _EOD
 	if ($use_zfs) {
 	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
-   
+
 	}
 
 	diversion_remove ($targetdir, "/usr/sbin/update-grub");
@@ -1685,7 +1685,7 @@ _EOD
 
 	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/$zfsrootvolname") == 0 ||
 	    die "zfs set mountpoint failed\n";
-	    
+
 	syscmd ("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname")  == 0 ||
 	    die "zfs set bootfs failed\n";
 	syscmd ("zpool export $zfspoolname");
@@ -1791,7 +1791,7 @@ sub create_main_window {
     $htmlview = Gtk3::WebKit::WebView->new();
     my $scrolls = Gtk3::ScrolledWindow->new();
     $scrolls->add($htmlview);
-   
+
     my $hbox2 = Gtk3::HBox->new (0, 0);
     $hbox2->pack_start ($scrolls, 1, 1, 0);
 
@@ -1812,10 +1812,10 @@ sub create_main_window {
     $window->realize ();
 }
 
-sub cleanup_view { 
+sub cleanup_view {
     $inbox->foreach(sub {
 	my $child = shift;
-	$inbox->remove ($child);	
+	$inbox->remove ($child);
     });
 }
 
@@ -2024,7 +2024,7 @@ sub create_ipconf_view {
 
     my $hn = $ipconf->{domain} ?
 	"$setup->{product}.$ipconf->{domain}" : "$setup->{product}.example.invalid";
-   
+
     my ($hostbox, $hostentry) =
 	create_text_input ($hn, 'Hostname (FQDN):');
     $vbox2->pack_start ($hostbox, 0, 0, 2);
@@ -2053,7 +2053,7 @@ sub create_ipconf_view {
     set_next (undef, sub {
 
 	# verify hostname
-	
+
 	my $text = $hostentry->get_text();
 
 	$text =~ s/^\s+//;
@@ -2087,7 +2087,7 @@ sub create_ipconf_view {
 	    $ipaddress = $text;
 	    $ipversion = 4;
 	} elsif ($text =~ m!^($IPV6RE)$!) {
-	    $ipaddress = $text; 
+	    $ipaddress = $text;
 	    $ipversion = 6;
 	} else {
 	    display_message ("IP address is not valid.");
@@ -2120,7 +2120,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_gw->grab_focus();
 	    return;
 	}
-	
+
 	$text = $ipconf_entry_dns->get_text();
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
@@ -2133,9 +2133,9 @@ sub create_ipconf_view {
 	    $ipconf_entry_dns->grab_focus();
 	    return;
 	}
-	
+
 	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
-	
+
 	create_extract_view ();
     });
 
@@ -2383,7 +2383,7 @@ sub create_country_view {
 
 	if ($val == Gtk3::Gdk::KEY_Tab) {
 	    my $cc = $countryhash->{lc($text)};
-	    
+
 	    my $found = 0;
 	    my $compl;
 
@@ -2420,7 +2420,7 @@ sub create_country_view {
 
 	return undef;
     });
- 
+
     my $ls = Gtk3::ListStore->new('Glib::String');
     foreach my $cc (sort {$ctr->{$a}->{name} cmp $ctr->{$b}->{name} } keys %$ctr) {
 	my $iter = $ls->append();
@@ -2626,7 +2626,7 @@ sub create_hdoption_view {
     my $grid =  Gtk3::Grid->new();
     $grid->set_column_spacing(10);
     $grid->set_row_spacing(10);
-    
+
     $hbox2->pack_start($grid, 1, 0, 10);
 
     my $row = 0;
@@ -2636,7 +2636,7 @@ sub create_hdoption_view {
     my $label0 = Gtk3::Label->new ("Filesystem");
     $label0->set_alignment (1, 0.5);
     $grid->attach($label0, 0, $row, 1, 1);
-   
+
     my $fstypecb = Gtk3::ComboBoxText->new();
 
     my $fstype = ['ext3', 'ext4', 'xfs',
@@ -2817,7 +2817,7 @@ my $get_raid_devlist = sub {
     for (my $i = 0; $i < @$hds; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
 	    my ($disk, $devname, $size, $model) = @$hd;
-	    die "device '$devname' is used more than once\n" 
+	    die "device '$devname' is used more than once\n"
 		if $dev_name_hash->{$devname};
 	    $dev_name_hash->{$devname} = $hd;
 	    push @$devlist, $hd;
@@ -2864,7 +2864,7 @@ sub get_zfs_raid_setup {
     } elsif ($filesys eq 'zfs (RAID10)') {
 	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
 	die "zfs (RAID10) needs an even number of devices\n" if $diskcount & 1;
-	
+
 	push @$bootdevlist, @$devlist[0], @$devlist[1];
 
 	for (my $i = 0; $i < $diskcount; $i+=2) {
@@ -2951,7 +2951,7 @@ sub create_hdsel_view {
 	my ($disk, $devname) = @{@$hds[$a]};
 	$target_hd = $devname;
     });
-    
+
     $hbox->pack_start ($target_hd_combo, 0, 0, 10);
 
     my $options = Gtk3::Button->new ('_Options');
