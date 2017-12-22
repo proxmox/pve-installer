@@ -2688,10 +2688,12 @@ sub create_hdoption_view {
     push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
 
     my $entry_maxroot = Gtk3::Entry->new();
-    $entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
-    $entry_maxroot->signal_connect (key_press_event => \&check_float);
-    $entry_maxroot->set_text($config_options->{maxroot}) if $config_options->{maxroot};
-    push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
+    if ($setup->{product} eq 'pve') {
+	$entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
+	$entry_maxroot->signal_connect (key_press_event => \&check_float);
+	$entry_maxroot->set_text($config_options->{maxroot}) if $config_options->{maxroot};
+	push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
+    }
 
     my $entry_minfree = Gtk3::Entry->new();
     $entry_minfree->set_tooltip_text("minimum free LVM space (GB, required for LVM snapshots)");
