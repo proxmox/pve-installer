@@ -72,6 +72,11 @@ lvmthin: local-lvm
 	content rootdir,images
 __EOD__
 
+my $storage_cfg_local = <<__EOD__;
+dir: local
+	path /var/lib/vz
+	content iso,vztmpl,backup,rootdir,images
+__EOD__
 
 sub file_read_firstline {
     my ($filename) = @_;
@@ -1089,6 +1094,7 @@ sub extract_data {
 
     my $swapfile;
     my $rootdev;
+    my $datadev;
 
     my $use_zfs = 0;
     my $use_btrfs = 0;
@@ -1231,7 +1237,7 @@ sub extract_data {
 				  osdev => $osdev, by_id => $by_id };
 
 	    my $swap_size = compute_swapsize($os_size);
-	    ($rootdev, $swapfile) =
+	    ($rootdev, $swapfile, $datadev) =
 		create_lvm_volumes($osdev, $os_size, $swap_size);
 
 	    # trigger udev to create /dev/disk/by-uuid
@@ -1659,8 +1665,10 @@ _EOD
 		write_config ($storage_cfg_zfs, $strorage_cfg_fn);
 	    } elsif ($use_btrfs) {
 		write_config ($storage_cfg_btrfs, $strorage_cfg_fn);
-	    } else {
+	    } elsif ($datadev) {
 		write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
+	    } else {
+		write_config ($storage_cfg_local, $strorage_cfg_fn);
 	    }
 
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
