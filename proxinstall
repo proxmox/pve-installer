@@ -1660,15 +1660,15 @@ _EOD
 			  "$tmpdir/user.cfg");
 
 	    # write storage.cfg
-	    my $strorage_cfg_fn = "$tmpdir/storage.cfg";
+	    my $storage_cfg_fn = "$tmpdir/storage.cfg";
 	    if ($use_zfs) {
-		write_config ($storage_cfg_zfs, $strorage_cfg_fn);
+		write_config ($storage_cfg_zfs, $storage_cfg_fn);
 	    } elsif ($use_btrfs) {
-		write_config ($storage_cfg_btrfs, $strorage_cfg_fn);
+		write_config ($storage_cfg_btrfs, $storage_cfg_fn);
 	    } elsif ($datadev) {
-		write_config ($storage_cfg_lvmthin, $strorage_cfg_fn);
+		write_config ($storage_cfg_lvmthin, $storage_cfg_fn);
 	    } else {
-		write_config ($storage_cfg_local, $strorage_cfg_fn);
+		write_config ($storage_cfg_local, $storage_cfg_fn);
 	    }
 
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
