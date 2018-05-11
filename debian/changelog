@@ -1,3 +1,17 @@
+pve-installer (5.0-22) unstable; urgency=medium
+
+  * fix #1241: ensure at least 1G of thinpool metadata
+
+  * handle swapsize=0 correctly
+
+  * handle maxvz=0 correctly
+
+  * handle minfree=0 correctly
+
+  * handle local-only LVM setup
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 11 May 2018 13:17:42 +0200
+
 pve-installer (5.0-21) unstable; urgency=medium
 
   * ipconf.htm: remove pve product name
