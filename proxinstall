@@ -1001,7 +1001,7 @@ sub create_lvm_volumes {
 	my $rest = $os_size - $swap_size - $rootsize; # in KB
 
 	my $minfree;
-	if ($config_options->{minfree}) {
+	if (defined($config_options->{minfree})) {
 	    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space :
 		$config_options->{minfree}*1024*1024 ;
 	} else {
@@ -1018,7 +1018,7 @@ sub create_lvm_volumes {
 	$datasize = $rest;
 
     } else {
-	my $minfree = $config_options->{minfree} ? $config_options->{minfree}*1024*1024 : $space;
+	my $minfree = defined($config_options->{minfree}) ? $config_options->{minfree}*1024*1024 : $space;
 	$rootsize = $os_size - $minfree - $swap_size; # in KB
     }
 
@@ -2712,7 +2712,7 @@ sub create_hdoption_view {
     my $entry_minfree = Gtk3::Entry->new();
     $entry_minfree->set_tooltip_text("minimum free LVM space (GB, required for LVM snapshots)");
     $entry_minfree->signal_connect (key_press_event => \&check_float);
-    $entry_minfree->set_text($config_options->{minfree}) if $config_options->{minfree};
+    $entry_minfree->set_text($config_options->{minfree}) if defined($config_options->{minfree});
     push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
 
     my $entry_maxvz;
