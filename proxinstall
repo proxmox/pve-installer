@@ -1028,11 +1028,21 @@ sub create_lvm_volumes {
     syscmd ("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
 	die "unable to create root volume\n";
 
-    if ($datasize) {
+    if ($datasize > 4*1024*1024) {
+	my $metadatasize = $datasize/100; # default 1% of data
+	$metadatasize = 1024*1024 if $metadatasize < 1024*1024; # but at least 1G
+	$metadatasize = 16*1024*1024 if $metadatasize > 16*1024*1024; # but at most 16G
+
+	# otherwise the metadata is taken out of $minfree
+	$datasize -= 2*$metadatasize;
+
+	# 1 4MB PE to allow for rounding
+	$datasize -= 4*1024;
+
 	syscmd ("/sbin/lvcreate -L${datasize}K -ndata $vgname") == 0 ||
 	    die "unable to create data volume\n";
 
-	syscmd ("/sbin/lvconvert --yes --type thin-pool $vgname/data") == 0 ||
+	syscmd ("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
 	    die "unable to create data thin-pool\n";
     } else {
 	$datadev = undef;
