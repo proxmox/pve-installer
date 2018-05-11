@@ -1010,7 +1010,7 @@ sub create_lvm_volumes {
 
 	$rest = $rest - $minfree;
 
-	if ($config_options->{maxvz}) {
+	if (defined($config_options->{maxvz})) {
 	    $rest = (($config_options->{maxvz}*1024*1024) <= $rest) ?
 		$config_options->{maxvz}*1024*1024 : $rest;
 	}
@@ -2720,7 +2720,7 @@ sub create_hdoption_view {
 	$entry_maxvz = Gtk3::Entry->new();
 	$entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
 	$entry_maxvz->signal_connect (key_press_event => \&check_float);
-	$entry_maxvz->set_text($config_options->{maxvz}) if $config_options->{maxvz};
+	$entry_maxvz->set_text($config_options->{maxvz}) if defined($config_options->{maxvz});
 	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
     }
 
