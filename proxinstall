@@ -972,7 +972,7 @@ sub create_lvm_volumes {
 
     my $rootdev = "/dev/$vgname/root";
     my $datadev = "/dev/$vgname/data";
-    my $swapfile = "/dev/$vgname/swap";
+    my $swapfile;
 
     # we use --metadatasize 250k, which results in "pe_start = 512"
     # so pe_start is aligned on a 128k boundary (advantage for SSDs)
@@ -1022,8 +1022,12 @@ sub create_lvm_volumes {
 	$rootsize = $os_size - $minfree - $swap_size; # in KB
     }
 
-    syscmd ("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
-	die "unable to create swap volume\n";
+    if ($swap_size) {
+	syscmd ("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
+	    die "unable to create swap volume\n";
+
+	$swapfile = "/dev/$vgname/swap";
+    }
 
     syscmd ("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
 	die "unable to create root volume\n";
@@ -1060,7 +1064,7 @@ sub compute_swapsize {
     my $hdgb = int($hdsize/(1024*1024));
 
     my $swapsize;
-    if ($config_options->{swapsize}) {
+    if (defined($config_options->{swapsize})) {
 	$swapsize = $config_options->{swapsize}*1024*1024;
     } else {
 	my $ss = int ($total_memory / 1024);
@@ -1202,7 +1206,7 @@ sub extract_data {
 	    zfs_create_rpool($vdev);
 
 	    my $swap_size = compute_swapsize($disksize);
-	    $swapfile = zfs_create_swap($swap_size);
+	    $swapfile = zfs_create_swap($swap_size) if $swap_size;
 
 	} else {
 
@@ -2694,7 +2698,7 @@ sub create_hdoption_view {
     my $entry_swapsize = Gtk3::Entry->new();
     $entry_swapsize->set_tooltip_text("maximum SWAP size (GB)");
     $entry_swapsize->signal_connect (key_press_event => \&check_float);
-    $entry_swapsize->set_text($config_options->{swapsize}) if $config_options->{swapsize};
+    $entry_swapsize->set_text($config_options->{swapsize}) if defined($config_options->{swapsize});
     push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
 
     my $entry_maxroot = Gtk3::Entry->new();
