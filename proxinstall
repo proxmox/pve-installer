@@ -623,7 +623,9 @@ sub hd_size {
 sub get_partition_dev {
     my ($dev, $partnum) = @_;
 
-    if ($dev =~ m|^/dev/[hxsev]d[a-z]$|) {
+    if ($dev =~ m|^/dev/sd([a-h]?[a-z]\|i[a-v])$|) {
+	return "${dev}$partnum";
+    } elsif ($dev =~ m|^/dev/[hxev]d[a-z]$|) {
 	return "${dev}$partnum";
     } elsif ($dev =~ m|^/dev/[^/]+/c\d+d\d+$|) {
 	return "${dev}p$partnum";
