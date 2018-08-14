@@ -1339,7 +1339,7 @@ sub extract_data {
 
 	my $hosts =
 	    "127.0.0.1 localhost.localdomain localhost\n" .
-	    "$ipaddress $hostname.$domain $hostname pvelocalhost\n\n" .
+	    "$ipaddress $hostname.$domain $hostname\n\n" .
 	    "# The following lines are desirable for IPv6 capable hosts\n\n" .
 	    "::1     ip6-localhost ip6-loopback\n" .
 	    "fe00::0 ip6-localnet\n" .
