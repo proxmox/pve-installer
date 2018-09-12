@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 9),
                librsvg2-bin,
                perl (>= 5.10.0-19),
 Standards-Version: 3.9.5
-Homepage: http://www.proxmox.com
+Homepage: https://www.proxmox.com
 
 Package: pve-installer
 Architecture: all
