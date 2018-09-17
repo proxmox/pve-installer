@@ -3,6 +3,7 @@ Section: perl
 Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
 Build-Depends: debhelper (>= 9),
+               iso-codes,
                libpve-common-perl,
                librsvg2-bin,
                perl (>= 5.10.0-19),

@@ -4,24 +4,14 @@ use strict;
 use warnings;
 
 use PVE::Tools;
+use JSON;
 
-# see also: http://en.wikipedia.org/wiki/Keyboard_layout
-#
-# country codes from: /usr/share/zoneinfo/iso3166.tab
-# timezones from: /usr/share/zoneinfo/zone.tab
-# keymaps: find /usr/share/keymaps/i386/ -type f -name '*.kmap.gz'
-# x11 layouts: /usr/share/X11/xkb/rules/xorg.lst
+# country codes from:
+my $country_codes_file = "/usr/share/iso-codes/json/iso_3166-1.json";
 
-my $country = {};
+my $iso_3166_codes = from_json(PVE::Tools::file_get_contents($country_codes_file, 64 * 1024));
 
-my $line;
-open (TMP, "</usr/share/zoneinfo/iso3166.tab");
-while (defined ($line = <TMP>)) {
-    if ($line =~ m/^([A-Z][A-Z])\s+(.*\S)\s*$/) {
-	$country->{lc($1)} = $2;
-    }
-}
-close (TMP);
+my $country = { map { lc($_->{'alpha_2'}) => $_->{'common_name'} // $_->{'name'} } @{$iso_3166_codes->{'3166-1'}} };
 
 # we need mappings for X11, console, and kvm vnc
 
