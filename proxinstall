@@ -924,57 +924,6 @@ sub partition_bootable_disk {
     return ($os_size, $osdev, $efibootdev);
 }
 
-# ZFS has this use_whole_disk concept, so we try to partition the same
-# way as zfs does by default. There is room at start of disk to insert
-# a grub boot partition. But adding a EFI ESP is not possible.
-#
-# Note: zfs people think this is just a waste of space an not
-# required.  Instead, you should put the ESP on another disk (log,
-# ..).
-
-sub partition_bootable_zfs_disk {
-    my ($target_dev) = @_;
-
-    die "too dangerous" if $opt_testmode;
-
-    syscmd("sgdisk -Z ${target_dev}");
-    my $hdsize = hd_size($target_dev); # size in blocks (1024 bytes)
-
-    my $hdgb = int($hdsize/(1024*1024));
-    die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
-
-    # 1 - GRUB boot partition: 1M
-    # 2 - OS/Data partition
-    # 9 - ZFS reserved partition
-
-    my $grubbootdev = get_partition_dev($target_dev, 1);
-    my $osdev = get_partition_dev ($target_dev, 2);
-
-    my $pcmd = ['sgdisk', '-a1'];
-
-    my $pnum = 1;
-    push @$pcmd, "-n$pnum:34:2047", "-t$pnum:EF02";
-
-    $pnum = 9;
-    push @$pcmd, "-n$pnum:-8M:0", "-t$pnum:BF07";
-
-    $pnum = 2;
-    push @$pcmd, "-n$pnum:2048:0", "-t$pnum:BF01", '-c', "$pnum:zfs";
-
-    push @$pcmd, $target_dev;
-
-    my $os_size = $hdsize - 1024 - 1024*8;
-
-    syscmd($pcmd) == 0 ||
-	die "unable to partition harddisk '${target_dev}'\n";
-
-    &$udevadm_trigger_block();
-
-    syscmd("dd if=/dev/zero of=$osdev bs=1M count=16") if -b $osdev;
-
-    return ($os_size, $osdev);
-}
-
 sub create_lvm_volumes {
     my ($lvmdev, $os_size, $swap_size) = @_;
 
