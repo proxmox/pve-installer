@@ -872,7 +872,7 @@ sub partition_bootable_disk {
     die "too dangerous" if $opt_testmode;
 
     die "unknown partition type '$ptype'"
-	if !($ptype eq '8E00' || $ptype eq '8300');
+	if !($ptype eq '8E00' || $ptype eq '8300' || $ptype eq 'BF01');
 
     syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
@@ -887,7 +887,7 @@ sub partition_bootable_disk {
     die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1M
-    # 2 - EFI ESP: next free 256M
+    # 2 - EFI ESP: next free 512M
     # 3 - OS/Data partition: rest, up to $maxhdsize in MB
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
@@ -896,21 +896,24 @@ sub partition_bootable_disk {
 
     my $pcmd = ['sgdisk'];
 
-    my $pnum = 1;
-    push @$pcmd, "-n${pnum}:1M:+1M", "-t$pnum:EF02";
-
-    $pnum = 2;
-    push @$pcmd, "-n${pnum}:2M:+256M", "-t$pnum:EF00";
+    my $pnum = 2;
+    push @$pcmd, "-n${pnum}:1M:+512M", "-t$pnum:EF00";
 
     $pnum = 3;
-    push @$pcmd, "-n${pnum}:258M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
+    push @$pcmd, "-n${pnum}:513M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
-    my $os_size = $hdsize - 258*1024; # 256M + 1M + 1M alignment
+    my $os_size = $hdsize - 513*1024; # 512M efi + 1M bios_boot + 1M alignment
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
+
+    $pnum = 1;
+    $pcmd = ['sgdisk', '-a1', "-n$pnum:34:2047", "-t$pnum:EF02" , $target_dev];
+
+    syscmd($pcmd) == 0 ||
+	die "unable to create bios_boot partition '${target_dev}'\n";
 
     &$udevadm_trigger_block();
 
@@ -1184,14 +1187,22 @@ sub extract_data {
 
 	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
 
+	    my $maxhdsize;
+	    if ($config_options->{hdsize}) {
+		# max hdsize passed on cmdline (GB)
+		$maxhdsize = $config_options->{hdsize}*1024*1024;
+	    }
+
+
 	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		&$clean_disk(@$hd[1]);
 	    }
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
+
 		my ($size, $osdev) =
-		    partition_bootable_zfs_disk($devname);
+		    partition_bootable_disk($devname, $maxhdsize, 'BF01');
 		zfs_mirror_size_check($disksize, $size) if $disksize;
 		push @$bootdevinfo, { devname => $devname, osdev => $osdev};
 		$disksize = $size;
