@@ -887,7 +887,7 @@ sub partition_bootable_disk {
     }
 
     my $hdgb = int($hdsize/(1024*1024));
-    die "hardisk '$target_dev' too small (${hdsize}GB)\n" if $hdgb < 8;
+    die "hardisk '$target_dev' too small (${hdgb}GB)\n" if $hdgb < 8;
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1M
     # 2 - EFI ESP: next free 512M
