@@ -2581,6 +2581,12 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_copies->set_value($config_options->{copies});
     push @$labeled_widgets, "copies", $spinbutton_copies;
 
+    our $hdsize_size_adj;
+    our $hdsize_entry_buffer;
+    my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
+    $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
+    $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
+    push @$labeled_widgets, "hdsize", $spinbutton_hdsize;
     return &$create_label_widget_grid($labeled_widgets);;
 };
 
@@ -2650,8 +2656,10 @@ sub create_hdoption_view {
 	$hdsize = int((-s $target_hd) / (1024*1024*1024.0));
     }
 
-    my $hdsize_size_adj = Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+    our $hdsize_size_adj = Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+    our $hdsize_entry_buffer = Gtk3::EntryBuffer->new(undef, 1);
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
+    $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
     $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
     push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize;
 
