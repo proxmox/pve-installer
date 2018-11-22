@@ -65,7 +65,7 @@ upload-pve: ${PVE_DEB}
 	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
 test.img:
-	dd if=/dev/zero of=test.img bs=2048 count=1M
+	truncate -s 2G test.img
 
 check-pve: ${PVE_DEB} test.img
 	rm -rf testdir
