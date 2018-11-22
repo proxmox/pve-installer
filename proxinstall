@@ -867,7 +867,7 @@ my $clean_disk = sub {
 };
 
 sub partition_bootable_disk {
-    my ($target_dev, $maxhdsize, $ptype) = @_;
+    my ($target_dev, $maxhdsizegb, $ptype) = @_;
 
     die "too dangerous" if $opt_testmode;
 
@@ -878,9 +878,12 @@ sub partition_bootable_disk {
     my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
 
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
-    if ($maxhdsize && ($maxhdsize < $hdsize)) {
-	$hdsize = $maxhdsize;
-	$restricted_hdsize_mb = int($hdsize/1024) . 'M';
+    if ($maxhdsizegb) {
+	my $maxhdsize = $maxhdsizegb * 1024 * 1024;
+	if ($maxhdsize < $hdsize) {
+	    $hdsize = $maxhdsize;
+	    $restricted_hdsize_mb = int($hdsize/1024) . 'M';
+	}
     }
 
     my $hdgb = int($hdsize/(1024*1024));
@@ -1136,13 +1139,6 @@ sub extract_data {
 
 	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
 
-	    my $maxhdsize;
-	    if ($config_options->{hdsize}) {
-		# max hdsize passed on cmdline (GB)
-		$maxhdsize = $config_options->{hdsize}*1024*1024;
-	    }
-
-
 	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		&$clean_disk(@$hd[1]);
@@ -1151,7 +1147,7 @@ sub extract_data {
 		my $devname = @$hd[1];
 
 		my ($size, $osdev) =
-		    partition_bootable_disk($devname, $maxhdsize, 'BF01');
+		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
 		zfs_mirror_size_check($disksize, $size) if $disksize;
 		push @$bootdevinfo, { devname => $devname, osdev => $osdev};
 		$disksize = $size;
@@ -1180,17 +1176,11 @@ sub extract_data {
 
 	    die "target '$target_hd' is not a valid block device\n" if ! -b $target_hd;
 
-	    my $maxhdsize;
-	    if ($config_options->{hdsize}) {
-		# max hdsize passed on cmdline (GB)
-		$maxhdsize = $config_options->{hdsize}*1024*1024;
-	    }
-
 	    &$clean_disk($target_hd);
 
 	    my ($os_size, $osdev, $efidev);
 	    ($os_size, $osdev, $efidev) =
-		partition_bootable_disk($target_hd, $maxhdsize, '8E00');
+		partition_bootable_disk($target_hd, $config_options->{hdsize}, '8E00');
 
 	    &$udevadm_trigger_block();
 
