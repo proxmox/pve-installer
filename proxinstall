@@ -2500,6 +2500,7 @@ my $hdsize_entry_buffer;
 
 my $get_hdsize_spinbtn = sub {
     my $hdsize = shift;
+
     if (!defined($hdsize_size_adj)) {
 	die "called get_hdsize_spinbtn with \$hdsize_size_adj not defined but did not pass hdsize!\n"
 	    if !defined($hdsize);
