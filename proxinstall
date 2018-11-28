@@ -1991,7 +1991,7 @@ sub create_ipconf_view {
     $vbox2->pack_start ($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
-    set_next (undef, sub {
+    set_next ('_Install', sub {
 
 	# verify hostname
 
