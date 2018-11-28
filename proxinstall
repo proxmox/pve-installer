@@ -2509,6 +2509,7 @@ my $get_hdsize_spinbtn = sub {
 
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
     $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
+    $spinbutton_hdsize->set_adjustment($hdsize_size_adj);
     $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
     return $spinbutton_hdsize;
 };
