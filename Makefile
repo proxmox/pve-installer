@@ -1,5 +1,5 @@
 PKGVER=5.0
-PKGREL=23
+PKGREL=24
 
 PVE_DEB=pve-installer_${PKGVER}-${PKGREL}_all.deb
 PMG_DEB=pmg-installer_${PKGVER}-${PKGREL}_all.deb

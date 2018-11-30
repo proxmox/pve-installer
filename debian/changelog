@@ -1,3 +1,11 @@
+pve-installer (5.0-24) unstable; urgency=medium
+
+  * change last button to 'Install'
+
+  * Reset adjustment for spinbutton_hdsize
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 30 Nov 2018 16:09:14 +0100
+
 pve-installer (5.0-23) unstable; urgency=medium
 
   * do not create a swap zvol
