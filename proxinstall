@@ -2501,11 +2501,13 @@ my $hdsize_entry_buffer;
 my $get_hdsize_spinbtn = sub {
     my $hdsize = shift;
 
-    if (!defined($hdsize_size_adj)) {
-	die "called get_hdsize_spinbtn with \$hdsize_size_adj not defined but did not pass hdsize!\n"
-	    if !defined($hdsize);
+    $hdsize_entry_buffer //= Gtk3::EntryBuffer->new(undef, 1);
+
+    if (defined($hdsize)) {
 	$hdsize_size_adj = Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
-	$hdsize_entry_buffer = Gtk3::EntryBuffer->new(undef, 1);
+    } else {
+	die "called get_hdsize_spinbtn with \$hdsize_size_adj not defined but did not pass hdsize!\n"
+	    if !defined($hdsize_size_adj);
     }
 
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
