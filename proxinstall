@@ -190,9 +190,49 @@ my $ipv4_reverse_mask = [
     '255.255.255.255',
 ];
 
+my $step_number = 0; # Init number for global function list
+
+my @steps = (
+    {
+	step => 'intro',
+	html => 'license.htm',
+	next_button => 'I a_gree',
+	function => \&create_intro_view,
+    },
+    {
+	step => 'intro',
+	html => 'page1.htm',
+	function => \&create_hdsel_view,
+    },
+    {
+	step => 'country',
+	html => 'country.htm',
+	function => \&create_country_view,
+    },
+    {
+	step => 'password',
+	html => 'passwd.htm',
+	function => \&create_password_view,
+    },
+    {
+	step => 'ipconf',
+	next_button => '_Install',
+	html => 'ipconf.htm',
+	function => \&create_ipconf_view,
+    },
+    {
+	step => 'extract',
+	next_button => '_Reboot',
+	function => \&create_extract_view,
+    },
+);
+
+# GUI global variables
 my ($window, $cmdbox, $inbox, $htmlview);
+my $prev;
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
+
 my ($ipversion, $ipaddress, $ipconf_entry_addr);
 my ($netmask, $ipconf_entry_mask);
 my ($gateway, $ipconf_entry_gw);
@@ -203,10 +243,32 @@ my $cmdline = file_read_firstline("/proc/cmdline");
 my $ipconf;
 my $country;
 my $timezone = 'Europe/Vienna';
-my $password;
-my $mailto;
 my $keymap = 'en-us';
+my $password;
+my $mailto = 'mail@example.invalid';
 my $cmap;
+
+# Format: screen/function name => settings for that screen
+my $global_configuration = {
+
+    # TODO: add all the user-provided options during the install
+    # to be able to call them back if necessary
+
+    hdsel => {},
+    country => {
+	country => $country,
+	timezone => $timezone,
+	keymap => $keymap,
+    },
+    password => {
+	password => $password,
+	mailto => $mailto,
+    },
+    ipconf => {
+	hostname => $hostname,
+	domain => $domain,
+    },
+};
 
 # parse command line args
 
@@ -1664,6 +1726,8 @@ sub display_info {
 sub display_html {
     my ($filename) = @_;
 
+    $filename = $steps[$step_number]->{html} if !$filename;
+
     my $path = "${proxmox_libdir}/html/$filename";
 
     my $url = "file://$path";
@@ -1682,11 +1746,26 @@ sub display_html {
     $last_display_change = time();
 }
 
+sub prev_function {
+
+    my ($text, $fctn) = @_;
+
+    $fctn = $step_number if !$fctn;
+    $text = "_Previous" if !$text;
+    $prev->set_label ($text);
+
+    $step_number--;
+    $steps[$step_number]->{function}();
+
+    $prev->grab_focus ();
+}
+
 sub set_next {
     my ($text, $fctn) = @_;
 
     $next_fctn = $fctn;
-    $text = "_Next" if !$text;
+    my $step = $steps[$step_number];
+    $text //= $steps[$step_number]->{next_button} // '_Next';
     $next->set_label ($text);
 
     $next->grab_focus ();
@@ -1721,6 +1800,13 @@ sub create_main_window {
     $next = Gtk3::Button->new ('_Next');
     $next->signal_connect (clicked => sub { $last_display_change = 0; &$next_fctn (); });
     $cmdbox->pack_end ($next, 0, 0, 10);
+
+
+    $prev = Gtk3::Button->new ('_Previous');
+    $prev->signal_connect (clicked => sub { $last_display_change = 0; &prev_function (); });
+    $cmdbox->pack_end ($prev, 0, 0, 10);
+
+
     my $abort = Gtk3::Button->new ('_Abort');
     $abort->set_can_focus (0);
     $cmdbox->pack_start ($abort, 0, 0, 10);
@@ -1899,8 +1985,8 @@ my $ipconf_first_view = 1;
 
 sub create_ipconf_view {
 
-    cleanup_view ();
-    display_html ("ipconf.htm");
+    cleanup_view();
+    display_html();
 
     my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
@@ -1991,7 +2077,7 @@ sub create_ipconf_view {
     $vbox2->pack_start ($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
-    set_next ('_Install', sub {
+    set_next (undef, sub {
 
 	# verify hostname
 
@@ -2077,7 +2163,8 @@ sub create_ipconf_view {
 
 	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
 
-	create_extract_view ();
+	$step_number++;
+	create_extract_view();
     });
 
     $hostentry->grab_focus();
@@ -2179,6 +2266,7 @@ sub create_password_view {
     $hbox1->pack_start ($label, 0, 0, 10);
     my $pwe1 = Gtk3::Entry->new ();
     $pwe1->set_visibility (0);
+    $pwe1->set_text($password) if $password;
     $pwe1->set_size_request (200, -1);
     $hbox1->pack_start ($pwe1, 0, 0, 0);
 
@@ -2189,6 +2277,7 @@ sub create_password_view {
     $hbox2->pack_start ($label, 0, 0, 10);
     my $pwe2 = Gtk3::Entry->new ();
     $pwe2->set_visibility (0);
+    $pwe2->set_text($password) if $password;
     $pwe2->set_size_request (200, -1);
     $hbox2->pack_start ($pwe2, 0, 0, 0);
 
@@ -2199,7 +2288,7 @@ sub create_password_view {
     $hbox3->pack_start ($label, 0, 0, 10);
     my $eme = Gtk3::Entry->new ();
     $eme->set_size_request (200, -1);
-    $eme->set_text('mail@example.invalid');
+    $eme->set_text($mailto);
     $hbox3->pack_start ($eme, 0, 0, 0);
 
 
@@ -2209,7 +2298,7 @@ sub create_password_view {
 
     $inbox->show_all;
 
-    display_html ("passwd.htm");
+    display_html();
 
     set_next (undef,  sub {
 
@@ -2245,6 +2334,7 @@ sub create_password_view {
 	$password = $t1;
 	$mailto = $t3;
 
+	$step_number++;
 	create_ipconf_view();
     });
 
@@ -2389,13 +2479,14 @@ sub create_country_view {
 
     $inbox->show_all;
 
-    display_html ("country.htm");
+    display_html();
     set_next (undef,  sub {
 
 	my $text = $w->get_text;
 
 	if (my $cc = $countryhash->{lc($text)}) {
 	    $country = $cc;
+	    $step_number++;
 	    create_password_view();
 	    return;
 	} else {
@@ -2888,6 +2979,8 @@ sub get_btrfs_raid_setup {
 
 sub create_hdsel_view {
 
+    $prev->set_sensitive(1); # enable previous button at this point
+
     cleanup_view ();
 
     my $vbox =  Gtk3::VBox->new (0, 0);
@@ -2924,7 +3017,7 @@ sub create_hdsel_view {
 
     $inbox->show_all;
 
-    display_html ("page1.htm");
+    display_html();
 
     set_next (undef, sub {
 
@@ -2934,6 +3027,7 @@ sub create_hdsel_view {
 		display_message ("Warning: $err\n" .
 				 "Please fix ZFS setup first.");
 	    } else {
+		$step_number++;
 		create_country_view();
 	    }
 	} elsif ($config_options->{filesys} =~ m/btrfs/) {
@@ -2942,9 +3036,11 @@ sub create_hdsel_view {
 		display_message ("Warning: $err\n" .
 				 "Please fix BTRFS setup first.");
 	    } else {
+		$step_number++;
 		create_country_view();
 	    }
 	} else {
+	    $step_number++;
 	    create_country_view();
 	}
     });
@@ -2956,7 +3052,7 @@ sub create_extract_view {
 
     display_info();
 
-    $next->set_sensitive (0);
+    $next->set_sensitive(0);
 
     my $vbox =  Gtk3::VBox->new (0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
@@ -2975,7 +3071,7 @@ sub create_extract_view {
 
     $vbox2->pack_start ($progress, 0, 0, 0);
 
-    $inbox->show_all;
+    $inbox->show_all();
 
     my $tdir = $opt_testmode ? "target" : "/target";
     mkdir $tdir;
@@ -2984,22 +3080,24 @@ sub create_extract_view {
     eval  { extract_data ($base, $tdir); };
     my $err = $@;
 
-    $next->set_sensitive (1);
+    $next->set_sensitive(1);
 
     set_next ("_Reboot", sub { exit (0); } );
 
     if ($err) {
-	display_html ("fail.htm");
-	display_error ($err);
+	display_html("fail.htm");
+	display_error($err);
     } else {
-	cleanup_view ();
-	display_html ("success.htm");
+	cleanup_view();
+	display_html("success.htm");
     }
 }
 
 sub create_intro_view {
 
-    cleanup_view ();
+    $prev->set_sensitive(0);
+
+    cleanup_view();
 
     if ($setup->{product} eq 'pve') {
 	eval {
@@ -3011,8 +3109,9 @@ sub create_intro_view {
 	};
     }
 
-    display_html ("license.htm");
+    display_html();
 
+    $step_number++;
     set_next ("I a_gree", \&create_hdsel_view);
 }
 
@@ -3035,7 +3134,7 @@ my $initial_error = 0;
 if (!defined ($hds) || (scalar (@$hds) <= 0)) {
     print "no hardisks found\n";
     $initial_error = 1;
-    display_html ("nohds.htm");
+    display_html("nohds.htm");
     set_next ("Reboot", sub { exit (0); } );
 } else {
     foreach my $hd (@$hds) {
@@ -3048,7 +3147,7 @@ if (!defined ($hds) || (scalar (@$hds) <= 0)) {
 if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
     print "no network interfaces found\n";
     $initial_error = 1;
-    display_html ("nonics.htm");
+    display_html("nonics.htm");
     set_next ("Reboot", sub { exit (0); } );
 }
 
