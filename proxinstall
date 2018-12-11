@@ -1995,13 +1995,15 @@ sub create_ipconf_view {
     my $vbox2 =  Gtk3::VBox->new (0, 0);
     $hbox->add ($vbox2);
 
+    my $ipaddr_text = $config->{ipaddress} // "192.168.100.2";
     my $ipbox;
     ($ipbox, $ipconf_entry_addr) =
-	create_text_input ("192.168.100.2", 'IP Address:');
+	create_text_input ($ipaddr_text, 'IP Address:');
 
+    my $netmask_text = $config->{netmask} // "255.255.255.0";
     my $maskbox;
     ($maskbox, $ipconf_entry_mask) =
-	create_text_input ("255.255.255.0", 'Netmask:');
+	create_text_input ($netmask_text, 'Netmask:');
 
     my $device_cb = Gtk3::ComboBoxText->new();
     $device_cb->set_active(0);
@@ -2013,11 +2015,13 @@ sub create_ipconf_view {
     };
 
     my $device_active_map = {};
+    my $device_active_reverse_map = {};
 
     my $device_change_handler = sub {
 	my $current = shift;
 	$ipconf->{selected} = $device_active_map->{$current->get_active()};
 	my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
+	$config->{mngmt_nic} = $iface->{name};
 	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
 	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
 	$ipconf_entry_mask->set_text($iface->{inet}->{mask} || $iface->{inet6}->{mask})
@@ -2027,7 +2031,8 @@ sub create_ipconf_view {
     my $i = 0;
     foreach my $index (sort keys %{$ipconf->{ifaces}}) {
 	$device_cb->append_text(&$get_device_desc($ipconf->{ifaces}->{$index}));
-        $device_active_map->{$i} = $index;
+	$device_active_map->{$i} = $index;
+	$device_active_reverse_map->{$ipconf->{ifaces}->{$index}->{name}} = $i;
 	if ($ipconf_first_view && $index == $ipconf->{default}) {
 	    $device_cb->set_active($i);
 	    &$device_change_handler($device_cb);
@@ -2037,8 +2042,11 @@ sub create_ipconf_view {
 	$i++;
     }
 
-    $device_cb->set_active(0)
-	if !($ipconf->{selected});
+    if (my $nic = $config->{mngmt_nic}) {
+	$device_cb->set_active($device_active_reverse_map->{$nic} // 0);
+    } else {
+	$device_cb->set_active(0);
+    }
 
     my $devicebox = Gtk3::HBox->new (0, 0);
     my $label = Gtk3::Label->new ("Management Interface:");
@@ -2049,8 +2057,7 @@ sub create_ipconf_view {
 
     $vbox2->pack_start ($devicebox, 0, 0, 2);
 
-    my $hn = $ipconf->{domain} ?
-	"$setup->{product}.$ipconf->{domain}" : "$setup->{product}.example.invalid";
+    my $hn = $config->{fqdn} //  "$setup->{product}." . ($ipconf->{domain} // "example.invalid");
 
     my ($hostbox, $hostentry) =
 	create_text_input ($hn, 'Hostname (FQDN):');
@@ -2060,7 +2067,7 @@ sub create_ipconf_view {
 
     $vbox2->pack_start ($maskbox, 0, 0, 2);
 
-    $gateway = $ipconf->{gateway} || '192.168.100.1';
+    $gateway = $config->{gateway} // $ipconf->{gateway} || '192.168.100.1';
 
     my $gwbox;
     ($gwbox, $ipconf_entry_gw) =
@@ -2068,7 +2075,7 @@ sub create_ipconf_view {
 
     $vbox2->pack_start ($gwbox, 0, 0, 2);
 
-    $dnsserver = $ipconf->{dnsserver} || $gateway;
+    $dnsserver = $config->{dnsserver} // $ipconf->{dnsserver} || $gateway;
 
     my $dnsbox;
     ($dnsbox, $ipconf_entry_dns) =
@@ -2085,6 +2092,8 @@ sub create_ipconf_view {
 
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
+
+	$config->{fqdn} = $text;
 
 	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
 
@@ -2121,6 +2130,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_addr->grab_focus();
 	    return;
 	}
+	$config->{ipaddress} = $ipaddress;
 
 	$text = $ipconf_entry_mask->get_text();
 	$text =~ s/^\s+//;
@@ -2134,6 +2144,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_mask->grab_focus();
 	    return;
 	}
+	$config->{netmask} = $netmask;
 
 	$text = $ipconf_entry_gw->get_text();
 	$text =~ s/^\s+//;
@@ -2147,6 +2158,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_gw->grab_focus();
 	    return;
 	}
+	$config->{gateway} = $gateway;
 
 	$text = $ipconf_entry_dns->get_text();
 	$text =~ s/^\s+//;
@@ -2160,6 +2172,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_dns->grab_focus();
 	    return;
 	}
+	$config->{dnsserver} = $dnsserver;
 
 	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
 
