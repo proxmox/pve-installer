@@ -253,26 +253,21 @@ my $password;
 my $mailto = 'mail@example.invalid';
 my $cmap;
 
-# Format: screen/function name => settings for that screen
-my $global_configuration = {
+my $config = {
+    # TODO: add all the user-provided options for previous button
+    country => $country,
+    timezone => $timezone,
+    keymap => $keymap,
 
-    # TODO: add all the user-provided options during the install
-    # to be able to call them back if necessary
+    password => $password,
+    mailto => $mailto,
 
-    hdsel => {},
-    country => {
-	country => $country,
-	timezone => $timezone,
-	keymap => $keymap,
-    },
-    password => {
-	password => $password,
-	mailto => $mailto,
-    },
-    ipconf => {
-	hostname => $hostname,
-	domain => $domain,
-    },
+    mngmt_nic => undef,
+    hostname => $hostname,
+    fqdn => undef,
+    ipaddress => undef,
+    netmask => undef,
+    gateway => undef,
 };
 
 # parse command line args
