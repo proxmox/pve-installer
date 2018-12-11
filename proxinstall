@@ -2180,6 +2180,7 @@ sub create_ack_view {
 
     my %config_values = (
 	__target_hd__ => $target_hd,
+	__target_fs__ => $config_options->{filesys},
 	__country__ => $country,
 	__timezone__ => $timezone,
 	__keymap__ => $keymap,
