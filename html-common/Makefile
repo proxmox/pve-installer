@@ -11,6 +11,7 @@ install:
 	install -D -m 644 ipconf.htm ${DESTDIR}/var/lib/pve-installer/html/ipconf.htm
 	install -D -m 644 nohds.htm ${DESTDIR}/var/lib/pve-installer/html/nohds.htm
 	install -D -m 644 nonics.htm ${DESTDIR}/var/lib/pve-installer/html/nonics.htm
+	install -D -m 644 ack_template.htm ${DESTDIR}/var/lib/pve-installer/html/ack_template.htm
 
 .phony: clean
 clean:

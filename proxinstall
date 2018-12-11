@@ -216,9 +216,14 @@ my @steps = (
     },
     {
 	step => 'ipconf',
-	next_button => '_Install',
 	html => 'ipconf.htm',
 	function => \&create_ipconf_view,
+    },
+    {
+	step => 'ack',
+	html => 'ack.htm',
+	next_button => '_Install',
+	function => \&create_ack_view,
     },
     {
 	step => 'extract',
@@ -2164,10 +2169,46 @@ sub create_ipconf_view {
 	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
 
 	$step_number++;
-	create_extract_view();
+	create_ack_view();
     });
 
     $hostentry->grab_focus();
+}
+
+sub create_ack_view {
+
+    cleanup_view();
+
+    my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
+    my $ack_html = "${proxmox_libdir}/html/$steps[$step_number]->{html}";
+    my $html_data = file_get_contents($ack_template);
+
+    my %config_values = (
+	__target_hd__ => $target_hd,
+	__country__ => $country,
+	__timezone__ => $timezone,
+	__keymap__ => $keymap,
+	__mailto__ => $mailto,
+	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
+	__hostname__ => $hostname,
+	__ip__ => $ipaddress,
+	__netmask__ => $netmask,
+	__gateway__ => $gateway,
+	__dnsserver__ => $dnsserver,
+    );
+
+    while ( my ($k, $v) = each %config_values) {
+	$html_data =~ s/$k/$v/g;
+    }
+
+    write_config($html_data, $ack_html);
+
+    display_html();
+
+    set_next(undef, sub {
+	$step_number++;
+	create_extract_view();
+    });
 }
 
 sub get_device_desc {
