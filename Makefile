@@ -29,7 +29,7 @@ country.dat: country.pl
 
 deb: ${DEBS} 
 ${DEBS}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
-	rsync -a * build
+	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${PVE_DEB}
 	lintian -X man ${PMG_DEB}
