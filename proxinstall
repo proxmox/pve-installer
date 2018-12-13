@@ -234,7 +234,7 @@ my @steps = (
 
 # GUI global variables
 my ($window, $cmdbox, $inbox, $htmlview);
-my $prev;
+my $prev_btn;
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
 
@@ -1756,12 +1756,12 @@ sub prev_function {
 
     $fctn = $step_number if !$fctn;
     $text = "_Previous" if !$text;
-    $prev->set_label ($text);
+    $prev_btn->set_label ($text);
 
     $step_number--;
     $steps[$step_number]->{function}();
 
-    $prev->grab_focus ();
+    $prev_btn->grab_focus ();
 }
 
 sub set_next {
@@ -1806,9 +1806,9 @@ sub create_main_window {
     $cmdbox->pack_end ($next, 0, 0, 10);
 
 
-    $prev = Gtk3::Button->new ('_Previous');
-    $prev->signal_connect (clicked => sub { $last_display_change = 0; &prev_function (); });
-    $cmdbox->pack_end ($prev, 0, 0, 10);
+    $prev_btn = Gtk3::Button->new ('_Previous');
+    $prev_btn->signal_connect (clicked => sub { $last_display_change = 0; &prev_function (); });
+    $cmdbox->pack_end ($prev_btn, 0, 0, 10);
 
 
     my $abort = Gtk3::Button->new ('_Abort');
@@ -3033,7 +3033,7 @@ sub get_btrfs_raid_setup {
 
 sub create_hdsel_view {
 
-    $prev->set_sensitive(1); # enable previous button at this point
+    $prev_btn->set_sensitive(1); # enable previous button at this point
 
     cleanup_view ();
 
@@ -3149,7 +3149,7 @@ sub create_extract_view {
 
 sub create_intro_view {
 
-    $prev->set_sensitive(0);
+    $prev_btn->set_sensitive(0);
 
     cleanup_view();
 
