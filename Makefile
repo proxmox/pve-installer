@@ -64,13 +64,18 @@ upload-pmg: ${PMG_DEB}
 upload-pve: ${PVE_DEB}
 	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
 
-test.img:
-	truncate -s 2G test.img
+%.img:
+	truncate -s 2G $@
 
 check-pve: ${PVE_DEB} test.img
 	rm -rf testdir
 	dpkg -X ${PVE_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
+check-pve-multidisks: ${PVE_DEB} test.img test2.img test3.img test4.img
+	rm -rf testdir
+	dpkg -X ${PVE_DEB} testdir
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img
 
 check-pmg: ${PMG_DEB} test.img
 	rm -rf testdir
@@ -80,5 +85,5 @@ check-pmg: ${PMG_DEB} test.img
 .phony: clean
 clean:
 	make -C html-common clean
-	rm -rf *~ *.deb target build packages packages.tmp testdir test.img pve-final.pkglist *.buildinfo *.changes country.dat final.pkglist
+	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist *.buildinfo *.changes country.dat final.pkglist
 	find . -name '*~' -exec rm {} ';'

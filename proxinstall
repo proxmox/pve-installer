@@ -559,7 +559,11 @@ sub hd_list {
     my $res = ();
 
     if ($opt_testmode) {
-	push @$res, [-1, $opt_testmode, int((-s $opt_testmode)/512), "TESTDISK"];
+	my @disks = split /,/, $opt_testmode;
+
+	for my $disk (@disks) {
+	    push @$res, [-1, $disk, int((-s $disk)/512), "TESTDISK"];
+	}
 	return $res;
     }
 
