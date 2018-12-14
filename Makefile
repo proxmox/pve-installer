@@ -38,9 +38,6 @@ ${DEBS}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	make -C html-common install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
-	mkdir -p ${DESTDIR}/var/lib/dhcp3/
-	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf
-	ln -s /tmp/resolv.conf.dhclient-new ${DESTDIR}/etc/resolv.conf.dhclient-new
 	install -D -m 755 fake-start-stop-daemon ${DESTDIR}/var/lib/pve-installer/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d ${DESTDIR}/var/lib/pve-installer/policy-disable-rc.d
 	install -D -m 644 country.dat ${DESTDIR}/var/lib/pve-installer/country.dat
