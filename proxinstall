@@ -30,7 +30,7 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
 
-if (!GetOptions ('testmode=s' => \$opt_testmode)) {
+if (!GetOptions('testmode=s' => \$opt_testmode)) {
     die "usage error\n";
     exit (-1);
 }
@@ -89,7 +89,7 @@ sub file_read_firstline {
     return $res;
 }
 
-my $logfd = IO::File->new (">/tmp/install.log");
+my $logfd = IO::File->new(">/tmp/install.log");
 
 my $proxmox_libdir = $opt_testmode ?
     Cwd::cwd() . "/testdir/var/lib/pve-installer" : "/var/lib/pve-installer";
@@ -348,7 +348,7 @@ sub cmd2string {
 sub syscmd {
     my ($cmd) = @_;
 
-    return run_command ($cmd, undef, undef, 1);
+    return run_command($cmd, undef, undef, 1);
 }
 
 sub run_command {
@@ -391,7 +391,7 @@ sub run_command {
 
     my $pid;
     eval {
-	$pid = open3 ($writer, $reader, $error, @$cmd) || die $!;
+	$pid = open3($writer, $reader, $error, @$cmd) || die $!;
     };
 
     my $err = $@;
@@ -408,8 +408,8 @@ sub run_command {
     close $writer;
 
     my $select = new IO::Select;
-    $select->add ($reader);
-    $select->add ($error);
+    $select->add($reader);
+    $select->add($error);
 
     my ($ostream, $logout) = ('', '', '');
 
@@ -429,7 +429,7 @@ sub run_command {
 		waitpid ($pid, 0);
 		die "command '$cmd' failed: $err";
 	    }
-	    $select->remove ($h) if !$count;
+	    $select->remove($h) if !$count;
 	    if ($h eq $reader) {
 		$ostream .= $buf if !($noout || $func);
 		$logout .= $buf;
@@ -540,7 +540,7 @@ sub find_stable_path {
     my ($stabledir, $bdev) = @_;
 
     foreach my $path (<$stabledir/*>) {
-	if (link_points_to ($path, $bdev)) {
+	if (link_points_to($path, $bdev)) {
 	    return wantarray ? ($path, basename($path)) : $path;
 	}
     }
@@ -549,7 +549,7 @@ sub find_stable_path {
 sub find_dev_by_uuid {
     my $bdev = shift;
 
-    my ($full_path, $name) = find_stable_path ("/dev/disk/by-uuid", $bdev);
+    my ($full_path, $name) = find_stable_path("/dev/disk/by-uuid", $bdev);
 
     return $name;
 }
@@ -672,7 +672,7 @@ sub read_cmap {
 }
 
 # search for Harddisks
-my $hds = hd_list ();
+my $hds = hd_list();
 
 sub hd_size {
     my ($dev) = @_;
@@ -725,7 +725,7 @@ sub file_get_contents {
 sub write_config {
     my ($text, $filename) = @_;
 
-    my $fd = IO::File->new (">$filename") ||
+    my $fd = IO::File->new(">$filename") ||
 	die "unable to open file '$filename' - $!\n";
     print $fd $text;
     $fd->close();
@@ -778,19 +778,19 @@ sub create_filesystem {
     my $fsdata = $fssetup->{$type} || die "internal error - unknown file system '$type'";
     my $opts = $name eq 'root' ? $fsdata->{mkfs_root_opt} : $fsdata->{mkfs_data_opt};
 
-    update_progress (0, $rs, $re, "creating $name filesystem");
+    update_progress(0, $rs, $re, "creating $name filesystem");
 
-    run_command ("$fsdata->{mkfs} $opts $dev", sub {
+    run_command("$fsdata->{mkfs} $opts $dev", sub {
 	my $line = shift;
 
 	if ($line =~ m/Writing inode tables:\s+(\d+)\/(\d+)/) {
 	    $max = $2;
 	} elsif ($max && $line =~ m/(\d+)\/$max/) {
-	    update_progress (($1/$max)*0.9, $rs, $re);
+	    update_progress(($1/$max)*0.9, $rs, $re);
 	} elsif ($line =~ m/Creating journal.*done/) {
-	    update_progress (0.95, $rs, $re);
+	    update_progress(0.95, $rs, $re);
 	} elsif ($line =~ m/Writing superblocks and filesystem.*done/) {
-	    update_progress (1, $rs, $re);
+	    update_progress(1, $rs, $re);
 	}
     });
 }
@@ -799,29 +799,29 @@ sub debconfig_set {
     my ($targetdir, $dcdata) = @_;
 
     my $cfgfile = "/tmp/debconf.txt";
-    write_config ($dcdata, "$targetdir/$cfgfile");
-    syscmd ("chroot $targetdir debconf-set-selections $cfgfile");
+    write_config($dcdata, "$targetdir/$cfgfile");
+    syscmd("chroot $targetdir debconf-set-selections $cfgfile");
     unlink "$targetdir/$cfgfile";
 }
 
 sub diversion_add {
     my ($targetdir, $cmd, $new_cmd) = @_;
 
-    syscmd ("chroot $targetdir dpkg-divert --package proxmox " .
-	    "--add --rename $cmd") == 0 ||
-	    die "unable to exec dpkg-divert\n";
+    syscmd("chroot $targetdir dpkg-divert --package proxmox " .
+	   "--add --rename $cmd") == 0 ||
+	   die "unable to exec dpkg-divert\n";
 
-    syscmd ("ln -sf ${new_cmd} $targetdir/$cmd") == 0 ||
+    syscmd("ln -sf ${new_cmd} $targetdir/$cmd") == 0 ||
 	die "unable to link diversion to ${new_cmd}\n";
 }
 
 sub diversion_remove {
     my  ($targetdir, $cmd) = @_;
 
-    syscmd ("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0 ||
+    syscmd("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0 ||
 	die "unable to remove $cmd diversion\n";
 
-    syscmd ("chroot $targetdir dpkg-divert --remove $cmd") == 0 ||
+    syscmd("chroot $targetdir dpkg-divert --remove $cmd") == 0 ||
 	die "unable to remove $cmd diversion\n";
 }
 
@@ -849,34 +849,34 @@ sub zfs_create_rpool {
     $cmd .= " -o ashift=$config_options->{ashift}"
         if defined($config_options->{ashift});
 
-    syscmd ("$cmd $zfspoolname $vdev") == 0 ||
+    syscmd("$cmd $zfspoolname $vdev") == 0 ||
 	die "unable to create zfs root pool\n";
 
-    syscmd ("zfs create $zfspoolname/ROOT")  == 0 ||
-	die "unable to create zfs $zfspoolname/ROOT volume\n";
+    syscmd("zfs create $zfspoolname/ROOT")  == 0 ||
+        die "unable to create zfs $zfspoolname/ROOT volume\n";
 
     if ($setup->{product} eq 'pve') {
-	syscmd ("zfs create $zfspoolname/data")  == 0 ||
+	syscmd("zfs create $zfspoolname/data")  == 0 ||
 	    die "unable to create zfs $zfspoolname/data volume\n";
     }
 
-    syscmd ("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
+    syscmd("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT/$zfsrootvolname volume\n";
 
     # disable atime during install
-    syscmd ("zfs set atime=off $zfspoolname") == 0 ||
+    syscmd("zfs set atime=off $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
 
     my $value = $config_options->{compress};
-    syscmd ("zfs set compression=$value $zfspoolname")
+    syscmd("zfs set compression=$value $zfspoolname")
         if defined($value) && $value ne 'off';
 
     $value = $config_options->{checksum};
-    syscmd ("zfs set checksum=$value $zfspoolname")
+    syscmd("zfs set checksum=$value $zfspoolname")
         if defined($value) && $value ne 'on';
 
     $value = $config_options->{copies};
-    syscmd ("zfs set copies=$value $zfspoolname")
+    syscmd("zfs set copies=$value $zfspoolname")
         if defined($value) && $value != 1;
 }
 
@@ -886,8 +886,8 @@ my $udevadm_trigger_block = sub {
     sleep(1) if !$nowait; # give kernel time to reread part table
 
     # trigger udev to create /dev/disk/by-uuid
-    syscmd ("udevadm trigger --subsystem-match block");
-    syscmd ("udevadm settle --timeout 10");
+    syscmd("udevadm trigger --subsystem-match block");
+    syscmd("udevadm settle --timeout 10");
 };
 
 my $clean_disk = sub {
@@ -974,9 +974,9 @@ sub create_lvm_volumes {
 
     # we use --metadatasize 250k, which results in "pe_start = 512"
     # so pe_start is aligned on a 128k boundary (advantage for SSDs)
-    syscmd ("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
+    syscmd("/sbin/pvcreate --metadatasize 250k -y -ff $lvmdev") == 0 ||
 	die "unable to initialize physical volume $lvmdev\n";
-    syscmd ("/sbin/vgcreate $vgname $lvmdev") == 0 ||
+    syscmd("/sbin/vgcreate $vgname $lvmdev") == 0 ||
 	die "unable to create volume group '$vgname'\n";
 
     my $hdgb = int($os_size/(1024*1024));
@@ -1021,13 +1021,13 @@ sub create_lvm_volumes {
     }
 
     if ($swap_size) {
-	syscmd ("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
+	syscmd("/sbin/lvcreate -L${swap_size}K -nswap $vgname") == 0 ||
 	    die "unable to create swap volume\n";
 
 	$swapfile = "/dev/$vgname/swap";
     }
 
-    syscmd ("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
+    syscmd("/sbin/lvcreate -L${rootsize}K -nroot $vgname") == 0 ||
 	die "unable to create root volume\n";
 
     if ($datasize > 4*1024*1024) {
@@ -1041,16 +1041,16 @@ sub create_lvm_volumes {
 	# 1 4MB PE to allow for rounding
 	$datasize -= 4*1024;
 
-	syscmd ("/sbin/lvcreate -L${datasize}K -ndata $vgname") == 0 ||
+	syscmd("/sbin/lvcreate -L${datasize}K -ndata $vgname") == 0 ||
 	    die "unable to create data volume\n";
 
-	syscmd ("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
+	syscmd("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
 	    die "unable to create data thin-pool\n";
     } else {
 	$datadev = undef;
     }
 
-    syscmd ("/sbin/vgchange -a y $vgname") == 0 ||
+    syscmd("/sbin/vgchange -a y $vgname") == 0 ||
 	die "unable to activate volume group\n";
 
     return ($rootdev, $swapfile, $datadev);
@@ -1119,7 +1119,7 @@ sub extract_data {
 
 	my $maxper = 0.25;
 
-	update_progress (0, 0, $maxper, "create partitions");
+	update_progress(0, 0, $maxper, "create partitions");
 
 	syscmd("vgchange -an") if !$opt_testmode; # deactivate all detected VGs
 
@@ -1140,7 +1140,7 @@ sub extract_data {
 		die "unsupported zfs mode (for testing environment)\n"
 		    if $filesys ne 'zfs (RAID0)';
 
-		syscmd ("zpool destroy $zfstestpool");
+		syscmd("zpool destroy $zfstestpool");
 
 		zfs_create_rpool($rootdev);
 
@@ -1231,21 +1231,21 @@ sub extract_data {
 
 	if ($use_zfs) {
 	    # to be fast during installation
-	    syscmd ("zfs set sync=disabled $zfspoolname") == 0 ||
+	    syscmd("zfs set sync=disabled $zfspoolname") == 0 ||
 		die "unable to set zfs properties\n";
 	}
 
-	update_progress (0.03, 0, $maxper, "create swap space");
+	update_progress(0.03, 0, $maxper, "create swap space");
 	if ($swapfile) {
-	    syscmd ("mkswap -f $swapfile") == 0 ||
+	    syscmd("mkswap -f $swapfile") == 0 ||
 		die "unable to create swap space\n";
 	}
 
-	update_progress (0.05, 0, $maxper, "creating filesystems");
+	update_progress(0.05, 0, $maxper, "creating filesystems");
 
 	foreach my $di (@$bootdevinfo) {
 	    next if !$di->{esp};
-	    syscmd ("mkfs.vfat -F32 $di->{esp}") == 0 ||
+	    syscmd("mkfs.vfat -F32 $di->{esp}") == 0 ||
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
 
@@ -1254,10 +1254,10 @@ sub extract_data {
 	} elsif ($use_btrfs) {
 	    # do nothing
 	} else {
-	    create_filesystem ($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
+	    create_filesystem($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
 	}
 
-	update_progress (1, 0.05, $maxper, "mounting target $rootdev");
+	update_progress(1, 0.05, $maxper, "mounting target $rootdev");
 
 	if ($use_zfs) {
 	    # do nothing
@@ -1286,7 +1286,7 @@ sub extract_data {
 	    }
 	}
 
-	update_progress (1, 0.05, $maxper, "extracting base system");
+	update_progress(1, 0.05, $maxper, "extracting base system");
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
 	$ino || die "unable to open file '$basefile' - $!\n";
@@ -1297,7 +1297,7 @@ sub extract_data {
 	my $per = 0;
 	my $count = 0;
 
-	run_command ("unsquashfs -f -dest $targetdir -i $basefile", sub {
+	run_command("unsquashfs -f -dest $targetdir -i $basefile", sub {
 	    my $line = shift;
 	    return if $line !~ m/^$targetdir/;
 	    $count++;
@@ -1305,18 +1305,18 @@ sub extract_data {
 	    if ($nper != $per) {
 		$per = $nper;
 		my $frac = $per > 100 ? 1 : $per/100;
-		update_progress ($frac, $maxper, 0.5);
+		update_progress($frac, $maxper, 0.5);
 	    }
 	});
 
-	syscmd ("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 ||
+	syscmd("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 ||
 	    die "unable to mount tmpfs on $targetdir/tmp\n";
-	syscmd ("mount -n -t proc proc $targetdir/proc") == 0 ||
+	syscmd("mount -n -t proc proc $targetdir/proc") == 0 ||
 	    die "unable to mount proc on $targetdir/proc\n";
-	syscmd ("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
+	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
 	    die "unable to mount sysfs on $targetdir/sys\n";
 
-	update_progress (1, $maxper, 0.5, "configuring base system");
+	update_progress(1, $maxper, 0.5, "configuring base system");
 
 	# configure hosts
 
@@ -1331,11 +1331,11 @@ sub extract_data {
 	    "ff02::2 ip6-allrouters\n" .
 	    "ff02::3 ip6-allhosts\n";
 
-	write_config ($hosts, "$targetdir/etc/hosts");
+	write_config($hosts, "$targetdir/etc/hosts");
 
-	write_config ("$hostname\n", "$targetdir/etc/hostname");
+	write_config("$hostname\n", "$targetdir/etc/hostname");
 
-	syscmd ("/bin/hostname $hostname") if !$opt_testmode;
+	syscmd("/bin/hostname $hostname") if !$opt_testmode;
 
 	# configure interfaces
 
@@ -1371,12 +1371,12 @@ sub extract_data {
 	    $ifaces .= "\niface $name $ntype manual\n";
 	}
 
-	write_config ($ifaces, "$targetdir/etc/network/interfaces");
+	write_config($ifaces, "$targetdir/etc/network/interfaces");
 
 	# configure dns
 
 	my $resolvconf = "search $domain\nnameserver $dnsserver\n";
-	write_config ($resolvconf, "$targetdir/etc/resolv.conf");
+	write_config($resolvconf, "$targetdir/etc/resolv.conf");
 
 	# configure fstab
 
@@ -1426,21 +1426,21 @@ sub extract_data {
 
 	$fstab .= "proc /proc proc defaults 0 0\n";
 
-	write_config ($fstab, "$targetdir/etc/fstab");
-	write_config ("", "$targetdir/etc/mtab");
+	write_config($fstab, "$targetdir/etc/fstab");
+	write_config("", "$targetdir/etc/mtab");
 
-	syscmd ("cp ${proxmox_libdir}/policy-disable-rc.d " .
+	syscmd("cp ${proxmox_libdir}/policy-disable-rc.d " .
 		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
 		die "unable to copy policy-rc.d\n";
-	syscmd ("cp ${proxmox_libdir}/fake-start-stop-daemon " .
+	syscmd("cp ${proxmox_libdir}/fake-start-stop-daemon " .
 		"$targetdir/sbin/") == 0 ||
 		die "unable to copy start-stop-daemon\n";
 
-	diversion_add ($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");
-	diversion_add ($targetdir, "/usr/sbin/update-grub", "/bin/true");
-	diversion_add ($targetdir, "/usr/sbin/update-initramfs", "/bin/true");
+	diversion_add($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");
+	diversion_add($targetdir, "/usr/sbin/update-grub", "/bin/true");
+	diversion_add($targetdir, "/usr/sbin/update-initramfs", "/bin/true");
 
-	syscmd ("touch  $targetdir/proxmox_install_mode");
+	syscmd("touch  $targetdir/proxmox_install_mode");
 
 	my $grub_install_devices_txt = '';
 	foreach my $di (@$bootdevinfo) {
@@ -1477,13 +1477,13 @@ _EOD
 #		$count++;
 #		next;
 #	    }
-	    update_progress ($count/$pkg_count, 0.5, 0.75, "extracting $deb");
+	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print "extracting: $deb\n";
-	    syscmd ("cp $path $targetdir/tmp/$deb") == 0 ||
+	    syscmd("cp $path $targetdir/tmp/$deb") == 0 ||
 		die "installation of package $deb failed\n";
-	    syscmd ("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
+	    syscmd("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/$deb") == 0 ||
 		die "installation of package $deb failed\n";
-	    update_progress ((++$count)/$pkg_count, 0.5, 0.75);
+	    update_progress((++$count)/$pkg_count, 0.5, 0.75);
 	}
 
 	# needed for postfix postinst in case no other NIC is active
@@ -1491,42 +1491,42 @@ _EOD
 
 	my $cmd = "chroot $targetdir dpkg $dpkg_opts --force-confold --configure -a";
 	$count = 0;
-	run_command ($cmd, sub {
+	run_command($cmd, sub {
 	    my $line = shift;
 	    if ($line =~ m/Setting up\s+(\S+)/) {
-		update_progress ((++$count)/$pkg_count, 0.75, 0.95,
-				 "configuring $1");
+		update_progress((++$count)/$pkg_count, 0.75, 0.95,
+				"configuring $1");
 	    }
 	});
 
 	unlink "$targetdir/etc/mailname";
 	$postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
-	write_config ($postfix_main_cf, "$targetdir/etc/postfix/main.cf");
+	write_config($postfix_main_cf, "$targetdir/etc/postfix/main.cf");
 
 	# make sure we have all postfix directories
-	syscmd ("chroot $targetdir /usr/sbin/postfix check");
+	syscmd("chroot $targetdir /usr/sbin/postfix check");
 	# cleanup mail queue
-	syscmd ("chroot $targetdir /usr/sbin/postsuper -d ALL");
+	syscmd("chroot $targetdir /usr/sbin/postsuper -d ALL");
 
 	# enable NTP (timedatectl set-ntp true  does not work without DBUS)
-	syscmd ("chroot $targetdir /bin/systemctl enable systemd-timesyncd.service");
+	syscmd("chroot $targetdir /bin/systemctl enable systemd-timesyncd.service");
 
 	unlink  "$targetdir/proxmox_install_mode";
 
 	# set timezone
 	unlink ("$targetdir/etc/localtime");
 	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
-	write_config ("$timezone\n", "$targetdir/etc/timezone");
+	write_config("$timezone\n", "$targetdir/etc/timezone");
 
 	# set apt mirror
 	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
 	    my $fn = "$targetdir/etc/apt/sources.list";
-	    syscmd ("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'");
+	    syscmd("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'");
 	}
 
 	# create extended_states for apt (avoid cron job warning if that
 	# file does not exist)
-	write_config ('', "$targetdir/var/lib/apt/extended_states");
+	write_config('', "$targetdir/var/lib/apt/extended_states");
 
 	# allow ssh root login
 	syscmd(['sed', '-i', 's/^#\?PermitRootLogin.*/PermitRootLogin yes/', "$targetdir/etc/ssh/sshd_config"]);
@@ -1535,7 +1535,7 @@ _EOD
 	    # install initial clamav DB
 	    my $srcdir = "${proxmox_cddir}/proxmox/clamav";
 	    foreach my $fn ("main.cvd", "bytecode.cvd", "daily.cvd", "safebrowsing.cvd") {
-		syscmd ("cp \"$srcdir/$fn\" \"$targetdir/var/lib/clamav\"") == 0 ||
+		syscmd("cp \"$srcdir/$fn\" \"$targetdir/var/lib/clamav\"") == 0 ||
 		    die "installation of clamav db file '$fn' failed\n";
 	    }
 	    syscmd("chroot $targetdir /bin/chown clamav:clamav -R /var/lib/clamav") == 0 ||
@@ -1548,16 +1548,16 @@ _EOD
 	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
 	}
 
-	update_progress (0.8, 0.95, 1, "make system bootable");
+	update_progress(0.8, 0.95, 1, "make system bootable");
 
 	if ($use_zfs) {
-	    syscmd ("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
+	    syscmd("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
 
 	}
 
-	diversion_remove ($targetdir, "/usr/sbin/update-grub");
-	diversion_remove ($targetdir, "/usr/sbin/update-initramfs");
+	diversion_remove($targetdir, "/usr/sbin/update-grub");
+	diversion_remove($targetdir, "/usr/sbin/update-initramfs");
 
 	my $kapi;
 	foreach my $fn (<$targetdir/lib/modules/*>) {
@@ -1572,20 +1572,20 @@ _EOD
 
 	    unlink ("$targetdir/etc/mtab");
 	    symlink ("/proc/mounts", "$targetdir/etc/mtab");
-	    syscmd ("mount -n --bind /dev $targetdir/dev");
+	    syscmd("mount -n --bind /dev $targetdir/dev");
 
-	    syscmd ("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
+	    syscmd("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
 		die "unable to install initramfs\n";
 
 	    foreach my $di (@$bootdevinfo) {
 		my $dev = $di->{devname};
-		syscmd ("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+		syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
 			die "unable to install the i386-pc boot loader on '$dev'\n";
 
 		if ($di->{esp}) {
-		    syscmd ("mount -n $di->{esp} -t vfat $targetdir/boot/efi") == 0 ||
+		    syscmd("mount -n $di->{esp} -t vfat $targetdir/boot/efi") == 0 ||
 			die "unable to mount $di->{esp}\n";
-		    my $rc = syscmd ("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
+		    my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
 		    if ($rc != 0) {
 			if (-d '/sys/firmware/efi') {
 			    die "unable to install the EFI boot loader on '$dev'\n";
@@ -1598,35 +1598,35 @@ _EOD
 		    syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
 			die "unable to copy efi boot loader\n";
 
-		    syscmd ("umount $targetdir/boot/efi") == 0 ||
+		    syscmd("umount $targetdir/boot/efi") == 0 ||
 			die "unable to umount $targetdir/boot/efi\n";
 		}
 	    }
 
-	    syscmd ("chroot $targetdir /usr/sbin/update-grub") == 0 ||
+	    syscmd("chroot $targetdir /usr/sbin/update-grub") == 0 ||
 		die "unable to update boot loader config\n";
 
-	    syscmd ("umount $targetdir/dev");
+	    syscmd("umount $targetdir/dev");
 	}
 
 	# cleanup
 
 	# hack: remove dead.letter from sshd installation
-	syscmd ("rm -rf $targetdir/dead.letter");
+	syscmd("rm -rf $targetdir/dead.letter");
 
 	unlink "$targetdir/usr/sbin/policy-rc.d";
 
-	diversion_remove ($targetdir, "/sbin/start-stop-daemon");
+	diversion_remove($targetdir, "/sbin/start-stop-daemon");
 
 	# set root password
 	my $octets = encode("utf-8", $password);
-	run_command ("chroot $targetdir /usr/sbin/chpasswd", undef,
-		     "root:$octets\n");
+	run_command("chroot $targetdir /usr/sbin/chpasswd", undef,
+		    "root:$octets\n");
 
 	if ($setup->{product} eq 'pmg') {
 	    # save admin email
-	    write_config ("section: admin\n\temail ${mailto}\n",
-			  "$targetdir/etc/pmg/pmg.conf");
+	    write_config("section: admin\n\temail ${mailto}\n",
+			 "$targetdir/etc/pmg/pmg.conf");
 
 	} elsif ($setup->{product} eq 'pve') {
 
@@ -1637,34 +1637,34 @@ _EOD
 
 	    # write vnc keymap to datacenter.cfg
 	    my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
-	    write_config ("keyboard: $vnckmap\n",
-			  "$tmpdir/datacenter.cfg");
+	    write_config("keyboard: $vnckmap\n",
+			 "$tmpdir/datacenter.cfg");
 
 	    # save admin email
-	    write_config ("user:root\@pam:1:0:::${mailto}::\n",
-			  "$tmpdir/user.cfg");
+	    write_config("user:root\@pam:1:0:::${mailto}::\n",
+			 "$tmpdir/user.cfg");
 
 	    # write storage.cfg
 	    my $storage_cfg_fn = "$tmpdir/storage.cfg";
 	    if ($use_zfs) {
-		write_config ($storage_cfg_zfs, $storage_cfg_fn);
+		write_config($storage_cfg_zfs, $storage_cfg_fn);
 	    } elsif ($use_btrfs) {
-		write_config ($storage_cfg_btrfs, $storage_cfg_fn);
+		write_config($storage_cfg_btrfs, $storage_cfg_fn);
 	    } elsif ($datadev) {
-		write_config ($storage_cfg_lvmthin, $storage_cfg_fn);
+		write_config($storage_cfg_lvmthin, $storage_cfg_fn);
 	    } else {
-		write_config ($storage_cfg_local, $storage_cfg_fn);
+		write_config($storage_cfg_local, $storage_cfg_fn);
 	    }
 
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 
-	    syscmd ("rm -rf $tmpdir");
+	    syscmd("rm -rf $tmpdir");
 	}
     };
 
     my $err = $@;
 
-    update_progress (1, 0, 1, "");
+    update_progress(1, 0, 1, "");
 
     print $err if $err;
 
@@ -1672,30 +1672,30 @@ _EOD
 	my $elapsed = Time::HiRes::tv_interval($starttime);
 	print "Elapsed extract time: $elapsed\n";
 
-	syscmd ("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> final.pkglist");
+	syscmd("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> final.pkglist");
     }
 
-    syscmd ("umount $targetdir/tmp");
-    syscmd ("umount $targetdir/proc");
-    syscmd ("umount $targetdir/sys");
+    syscmd("umount $targetdir/tmp");
+    syscmd("umount $targetdir/proc");
+    syscmd("umount $targetdir/sys");
 
     if ($use_zfs) {
-	syscmd ("zfs umount -a") == 0 ||
+	syscmd("zfs umount -a") == 0 ||
 	    die "unable to unmount zfs\n";
     } else {
-	syscmd ("umount -d $targetdir");
+	syscmd("umount -d $targetdir");
     }
 
     if (!$err && $use_zfs) {
-	syscmd ("zfs set sync=standard $zfspoolname") == 0 ||
+	syscmd("zfs set sync=standard $zfspoolname") == 0 ||
 	    die "unable to set zfs properties\n";
 
-	syscmd ("zfs set mountpoint=/ $zfspoolname/ROOT/$zfsrootvolname") == 0 ||
+	syscmd("zfs set mountpoint=/ $zfspoolname/ROOT/$zfsrootvolname") == 0 ||
 	    die "zfs set mountpoint failed\n";
 
-	syscmd ("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname")  == 0 ||
+	syscmd("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname")  == 0 ||
 	    die "zfs set bootfs failed\n";
-	syscmd ("zpool export $zfspoolname");
+	syscmd("zpool export $zfspoolname");
     }
 
     die $err if $err;
@@ -1761,7 +1761,7 @@ sub prev_function {
     $step_number--;
     $steps[$step_number]->{function}();
 
-    $prev_btn->grab_focus ();
+    $prev_btn->grab_focus();
 }
 
 sub set_next {
@@ -1770,77 +1770,77 @@ sub set_next {
     $next_fctn = $fctn;
     my $step = $steps[$step_number];
     $text //= $steps[$step_number]->{next_button} // '_Next';
-    $next->set_label ($text);
+    $next->set_label($text);
 
-    $next->grab_focus ();
+    $next->grab_focus();
 }
 
 sub create_main_window {
 
-    $window = Gtk3::Window->new ();
-    $window->set_default_size (1024, 768);
+    $window = Gtk3::Window->new();
+    $window->set_default_size(1024, 768);
     $window->set_has_resize_grip(0);
-    $window->set_decorated (0) if !$opt_testmode;
+    $window->set_decorated(0) if !$opt_testmode;
 
-    my $vbox = Gtk3::VBox->new (0, 0);
+    my $vbox = Gtk3::VBox->new(0, 0);
 
     my $logofn = "$setup->{product}-banner.png";
     my $image = Gtk3::Image->new_from_file("${proxmox_libdir}/$logofn");
-    $vbox->pack_start ($image, 0, 0, 0);
+    $vbox->pack_start($image, 0, 0, 0);
 
-    my $hbox = Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 1, 1, 0);
+    my $hbox = Gtk3::HBox->new(0, 0);
+    $vbox->pack_start($hbox, 1, 1, 0);
 
  #  my $f1 = Gtk3::Frame->new ('test');
  #  $f1->set_shadow_type ('none');
  #  $hbox->pack_start ($f1, 1, 1, 0);
 
-    my $sep1 = Gtk3::HSeparator->new;
-    $vbox->pack_start ($sep1, 0, 0, 0);
+    my $sep1 = Gtk3::HSeparator->new();
+    $vbox->pack_start($sep1, 0, 0, 0);
 
-    $cmdbox = Gtk3::HBox->new ();
-    $vbox->pack_start ($cmdbox, 0, 0, 10);
+    $cmdbox = Gtk3::HBox->new();
+    $vbox->pack_start($cmdbox, 0, 0, 10);
 
-    $next = Gtk3::Button->new ('_Next');
-    $next->signal_connect (clicked => sub { $last_display_change = 0; &$next_fctn (); });
-    $cmdbox->pack_end ($next, 0, 0, 10);
-
-
-    $prev_btn = Gtk3::Button->new ('_Previous');
-    $prev_btn->signal_connect (clicked => sub { $last_display_change = 0; &prev_function (); });
-    $cmdbox->pack_end ($prev_btn, 0, 0, 10);
+    $next = Gtk3::Button->new('_Next');
+    $next->signal_connect(clicked => sub { $last_display_change = 0; &$next_fctn (); });
+    $cmdbox->pack_end($next, 0, 0, 10);
 
 
-    my $abort = Gtk3::Button->new ('_Abort');
-    $abort->set_can_focus (0);
-    $cmdbox->pack_start ($abort, 0, 0, 10);
-    $abort->signal_connect (clicked => sub { exit (-1); });
+    $prev_btn = Gtk3::Button->new('_Previous');
+    $prev_btn->signal_connect(clicked => sub { $last_display_change = 0; &prev_function (); });
+    $cmdbox->pack_end($prev_btn, 0, 0, 10);
 
-    my $vbox2 = Gtk3::VBox->new (0, 0);
-    $hbox->add ($vbox2);
+
+    my $abort = Gtk3::Button->new('_Abort');
+    $abort->set_can_focus(0);
+    $cmdbox->pack_start($abort, 0, 0, 10);
+    $abort->signal_connect(clicked => sub { exit (-1); });
+
+    my $vbox2 = Gtk3::VBox->new(0, 0);
+    $hbox->add($vbox2);
 
     $htmlview = Gtk3::WebKit::WebView->new();
     my $scrolls = Gtk3::ScrolledWindow->new();
     $scrolls->add($htmlview);
 
-    my $hbox2 = Gtk3::HBox->new (0, 0);
-    $hbox2->pack_start ($scrolls, 1, 1, 0);
+    my $hbox2 = Gtk3::HBox->new(0, 0);
+    $hbox2->pack_start($scrolls, 1, 1, 0);
 
-    $vbox2->pack_start ($hbox2, 1, 1, 0);
+    $vbox2->pack_start($hbox2, 1, 1, 0);
 
-    my $vbox3 = Gtk3::VBox->new (0, 0);
-    $vbox2->pack_start ($vbox3, 0, 0, 0);
+    my $vbox3 = Gtk3::VBox->new(0, 0);
+    $vbox2->pack_start($vbox3, 0, 0, 0);
 
     my $sep2 = Gtk3::HSeparator->new;
-    $vbox3->pack_start ($sep2, 0, 0, 0);
+    $vbox3->pack_start($sep2, 0, 0, 0);
 
-    $inbox = Gtk3::HBox->new (0, 0);
-    $vbox3->pack_start ($inbox, 0, 0, 0);
+    $inbox = Gtk3::HBox->new(0, 0);
+    $vbox3->pack_start($inbox, 0, 0, 0);
 
-    $window->add ($vbox);
+    $window->add($vbox);
 
     $window->show_all;
-    $window->realize ();
+    $window->realize();
 }
 
 sub cleanup_view {
@@ -1890,16 +1890,16 @@ sub check_number {
 sub create_text_input {
     my ($default, $text) = @_;
 
-    my $hbox = Gtk3::HBox->new (0, 0);
+    my $hbox = Gtk3::HBox->new(0, 0);
 
-    my $label = Gtk3::Label->new ($text);
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox->pack_start ($label, 0, 0, 10);
-    my $e1 = Gtk3::Entry->new ();
-    $e1->set_width_chars (30);
-    $hbox->pack_start ($e1, 0, 0, 0);
-    $e1->set_text ($default);
+    my $label = Gtk3::Label->new($text);
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox->pack_start($label, 0, 0, 10);
+    my $e1 = Gtk3::Entry->new();
+    $e1->set_width_chars(30);
+    $hbox->pack_start($e1, 0, 0, 0);
+    $e1->set_text($default);
 
     return ($hbox, $e1);
 }
@@ -1970,8 +1970,8 @@ sub get_ip_config {
 sub display_message {
     my ($msg) = @_;
 
-    my $dialog = Gtk3::MessageDialog->new ($window, 'modal',
-					   'info', 'ok', $msg);
+    my $dialog = Gtk3::MessageDialog->new($window, 'modal',
+					  'info', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
 }
@@ -1979,8 +1979,8 @@ sub display_message {
 sub display_error {
     my ($msg) = @_;
 
-    my $dialog = Gtk3::MessageDialog->new ($window, 'modal',
-					   'error', 'ok', $msg);
+    my $dialog = Gtk3::MessageDialog->new($window, 'modal',
+					  'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
 }
@@ -1992,22 +1992,22 @@ sub create_ipconf_view {
     cleanup_view();
     display_html();
 
-    my $vbox =  Gtk3::VBox->new (0, 0);
-    $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 0, 0, 10);
-    my $vbox2 =  Gtk3::VBox->new (0, 0);
-    $hbox->add ($vbox2);
+    my $vbox =  Gtk3::VBox->new(0, 0);
+    $inbox->pack_start($vbox, 1, 0, 0);
+    my $hbox =  Gtk3::HBox->new(0, 0);
+    $vbox->pack_start($hbox, 0, 0, 10);
+    my $vbox2 =  Gtk3::VBox->new(0, 0);
+    $hbox->add($vbox2);
 
     my $ipaddr_text = $config->{ipaddress} // "192.168.100.2";
     my $ipbox;
     ($ipbox, $ipconf_entry_addr) =
-	create_text_input ($ipaddr_text, 'IP Address:');
+	create_text_input($ipaddr_text, 'IP Address:');
 
     my $netmask_text = $config->{netmask} // "255.255.255.0";
     my $maskbox;
     ($maskbox, $ipconf_entry_mask) =
-	create_text_input ($netmask_text, 'Netmask:');
+	create_text_input($netmask_text, 'Netmask:');
 
     my $device_cb = Gtk3::ComboBoxText->new();
     $device_cb->set_active(0);
@@ -2042,7 +2042,7 @@ sub create_ipconf_view {
 	    &$device_change_handler($device_cb);
 	    $ipconf_first_view = 0;
 	}
-	$device_cb->signal_connect ('changed' => $device_change_handler);
+	$device_cb->signal_connect('changed' => $device_change_handler);
 	$i++;
     }
 
@@ -2052,43 +2052,43 @@ sub create_ipconf_view {
 	$device_cb->set_active(0);
     }
 
-    my $devicebox = Gtk3::HBox->new (0, 0);
-    my $label = Gtk3::Label->new ("Management Interface:");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $devicebox->pack_start ($label, 0, 0, 10);
-    $devicebox->pack_start ($device_cb, 0, 0, 0);
+    my $devicebox = Gtk3::HBox->new(0, 0);
+    my $label = Gtk3::Label->new("Management Interface:");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $devicebox->pack_start($label, 0, 0, 10);
+    $devicebox->pack_start($device_cb, 0, 0, 0);
 
-    $vbox2->pack_start ($devicebox, 0, 0, 2);
+    $vbox2->pack_start($devicebox, 0, 0, 2);
 
     my $hn = $config->{fqdn} //  "$setup->{product}." . ($ipconf->{domain} // "example.invalid");
 
     my ($hostbox, $hostentry) =
-	create_text_input ($hn, 'Hostname (FQDN):');
-    $vbox2->pack_start ($hostbox, 0, 0, 2);
+	create_text_input($hn, 'Hostname (FQDN):');
+    $vbox2->pack_start($hostbox, 0, 0, 2);
 
-    $vbox2->pack_start ($ipbox, 0, 0, 2);
+    $vbox2->pack_start($ipbox, 0, 0, 2);
 
-    $vbox2->pack_start ($maskbox, 0, 0, 2);
+    $vbox2->pack_start($maskbox, 0, 0, 2);
 
     $gateway = $config->{gateway} // $ipconf->{gateway} || '192.168.100.1';
 
     my $gwbox;
     ($gwbox, $ipconf_entry_gw) =
-	create_text_input ($gateway, 'Gateway:');
+	create_text_input($gateway, 'Gateway:');
 
-    $vbox2->pack_start ($gwbox, 0, 0, 2);
+    $vbox2->pack_start($gwbox, 0, 0, 2);
 
     $dnsserver = $config->{dnsserver} // $ipconf->{dnsserver} || $gateway;
 
     my $dnsbox;
     ($dnsbox, $ipconf_entry_dns) =
-	create_text_input ($dnsserver, 'DNS Server:');
+	create_text_input($dnsserver, 'DNS Server:');
 
-    $vbox2->pack_start ($dnsbox, 0, 0, 0);
+    $vbox2->pack_start($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
-    set_next (undef, sub {
+    set_next(undef, sub {
 
 	# verify hostname
 
@@ -2113,7 +2113,7 @@ sub create_ipconf_view {
 	    $hostname = $1;
 	    $domain = $2;
 	} else {
-	    display_message ("Hostname does not look like a fully qualified domain name.");
+	    display_message("Hostname does not look like a fully qualified domain name.");
 	    $hostentry->grab_focus();
 	    return;
 	}
@@ -2130,7 +2130,7 @@ sub create_ipconf_view {
 	    $ipaddress = $text;
 	    $ipversion = 6;
 	} else {
-	    display_message ("IP address is not valid.");
+	    display_message("IP address is not valid.");
 	    $ipconf_entry_addr->grab_focus();
 	    return;
 	}
@@ -2144,7 +2144,7 @@ sub create_ipconf_view {
 	} elsif (($ipversion == 4) && defined($ipv4_mask_hash->{$text})) {
 	    $netmask = $text;
 	} else {
-	    display_message ("Netmask is not valid.");
+	    display_message("Netmask is not valid.");
 	    $ipconf_entry_mask->grab_focus();
 	    return;
 	}
@@ -2158,7 +2158,7 @@ sub create_ipconf_view {
 	} elsif (($ipversion == 6) && ($text =~ m!^($IPV6RE)$!)) {
 	    $gateway = $text;
 	} else {
-	    display_message ("Gateway is not valid.");
+	    display_message("Gateway is not valid.");
 	    $ipconf_entry_gw->grab_focus();
 	    return;
 	}
@@ -2172,7 +2172,7 @@ sub create_ipconf_view {
 	} elsif (($ipversion == 6) && ($text =~ m!^($IPV6RE)$!)) {
 	    $dnsserver = $text;
 	} else {
-	    display_message ("DNS server is not valid.");
+	    display_message("DNS server is not valid.");
 	    $ipconf_entry_dns->grab_focus();
 	    return;
 	}
@@ -2259,7 +2259,7 @@ sub update_layout {
 	$i++;
     }
 
-    $cb->set_active ($ind || $def || 0);
+    $cb->set_active($ind || $def || 0);
 }
 
 my $lastzonecb;
@@ -2278,9 +2278,9 @@ sub update_zonelist {
     }
 
     my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
-    $cb->set_size_request (200, -1);
+    $cb->set_size_request(200, -1);
 
-    $cb->signal_connect ('changed' => sub {
+    $cb->signal_connect('changed' => sub {
 	$timezone = $cb->get_active_text();
     });
 
@@ -2294,61 +2294,61 @@ sub update_zonelist {
     my $i = 0;
     foreach my $zone (sort @za) {
 	$ind = $i if $sel && $zone eq $sel;
-	$cb->append_text ($zone);
+	$cb->append_text($zone);
 	$i++;
     }
 
-    $cb->set_active ($ind || 0);
+    $cb->set_active($ind || 0);
 
     $cb->show;
-    $box->pack_start ($cb, 0, 0, 0);
+    $box->pack_start($cb, 0, 0, 0);
 }
 
 sub create_password_view {
 
-    cleanup_view ();
+    cleanup_view();
 
-    my $vbox2 =  Gtk3::VBox->new (0, 0);
-    $inbox->pack_start ($vbox2, 1, 0, 0);
-    my $vbox =  Gtk3::VBox->new (0, 0);
-    $vbox2->pack_start ($vbox, 0, 0, 10);
+    my $vbox2 =  Gtk3::VBox->new(0, 0);
+    $inbox->pack_start($vbox2, 1, 0, 0);
+    my $vbox =  Gtk3::VBox->new(0, 0);
+    $vbox2->pack_start($vbox, 0, 0, 10);
 
-    my $hbox1 = Gtk3::HBox->new (0, 0);
-    my $label = Gtk3::Label->new ("Password");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox1->pack_start ($label, 0, 0, 10);
-    my $pwe1 = Gtk3::Entry->new ();
-    $pwe1->set_visibility (0);
+    my $hbox1 = Gtk3::HBox->new(0, 0);
+    my $label = Gtk3::Label->new("Password");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox1->pack_start($label, 0, 0, 10);
+    my $pwe1 = Gtk3::Entry->new();
+    $pwe1->set_visibility(0);
     $pwe1->set_text($password) if $password;
-    $pwe1->set_size_request (200, -1);
-    $hbox1->pack_start ($pwe1, 0, 0, 0);
+    $pwe1->set_size_request(200, -1);
+    $hbox1->pack_start($pwe1, 0, 0, 0);
 
-    my $hbox2 = Gtk3::HBox->new (0, 0);
-    $label = Gtk3::Label->new ("Confirm");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox2->pack_start ($label, 0, 0, 10);
-    my $pwe2 = Gtk3::Entry->new ();
-    $pwe2->set_visibility (0);
+    my $hbox2 = Gtk3::HBox->new(0, 0);
+    $label = Gtk3::Label->new("Confirm");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox2->pack_start($label, 0, 0, 10);
+    my $pwe2 = Gtk3::Entry->new();
+    $pwe2->set_visibility(0);
     $pwe2->set_text($password) if $password;
-    $pwe2->set_size_request (200, -1);
-    $hbox2->pack_start ($pwe2, 0, 0, 0);
+    $pwe2->set_size_request(200, -1);
+    $hbox2->pack_start($pwe2, 0, 0, 0);
 
-    my $hbox3 = Gtk3::HBox->new (0, 0);
-    $label = Gtk3::Label->new ("E-Mail");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox3->pack_start ($label, 0, 0, 10);
-    my $eme = Gtk3::Entry->new ();
-    $eme->set_size_request (200, -1);
+    my $hbox3 = Gtk3::HBox->new(0, 0);
+    $label = Gtk3::Label->new("E-Mail");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox3->pack_start($label, 0, 0, 10);
+    my $eme = Gtk3::Entry->new();
+    $eme->set_size_request(200, -1);
     $eme->set_text($mailto);
-    $hbox3->pack_start ($eme, 0, 0, 0);
+    $hbox3->pack_start($eme, 0, 0, 0);
 
 
-    $vbox->pack_start ($hbox1, 0, 0, 5);
-    $vbox->pack_start ($hbox2, 0, 0, 5);
-    $vbox->pack_start ($hbox3, 0, 0, 15);
+    $vbox->pack_start($hbox1, 0, 0, 5);
+    $vbox->pack_start($hbox2, 0, 0, 5);
+    $vbox->pack_start($hbox3, 0, 0, 15);
 
     $inbox->show_all;
 
@@ -2360,27 +2360,27 @@ sub create_password_view {
 	my $t2 = $pwe2->get_text;
 
 	if (length ($t1) < 5) {
-	    display_message ("Password is too short.");
+	    display_message("Password is too short.");
 	    $pwe1->grab_focus();
 	    return;
 	}
 
 	if ($t1 ne $t2) {
-	    display_message ("Password does not match.");
+	    display_message("Password does not match.");
 	    $pwe1->grab_focus();
 	    return;
 	}
 
 	my $t3 = $eme->get_text;
 	if ($t3 !~ m/^\S+\@\S+\.\S+$/) {
-	    display_message ("E-Mail does not look like a valid address" .
+	    display_message("E-Mail does not look like a valid address" .
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
 	}
 
 	if ($t3 eq 'mail@example.invalid') {
-	    display_message ("Please enter a valid E-Mail address");
+	    display_message("Please enter a valid E-Mail address");
 	    $eme->grab_focus();
 	    return;
 	}
@@ -2398,37 +2398,37 @@ sub create_password_view {
 
 sub create_country_view {
 
-    cleanup_view ();
+    cleanup_view();
 
     my $countryhash = $cmap->{countryhash};
     my $ctr = $cmap->{country};
 
-    my $vbox2 =  Gtk3::VBox->new (0, 0);
-    $inbox->pack_start ($vbox2, 1, 0, 0);
-    my $vbox =  Gtk3::VBox->new (0, 0);
-    $vbox2->pack_start ($vbox, 0, 0, 10);
+    my $vbox2 =  Gtk3::VBox->new(0, 0);
+    $inbox->pack_start($vbox2, 1, 0, 0);
+    my $vbox =  Gtk3::VBox->new(0, 0);
+    $vbox2->pack_start($vbox, 0, 0, 10);
 
-    my $w = Gtk3::Entry->new ();
-    $w->set_size_request (200, -1);
+    my $w = Gtk3::Entry->new();
+    $w->set_size_request(200, -1);
 
-    my $c = Gtk3::EntryCompletion->new ();
-    $c->set_text_column (0);
+    my $c = Gtk3::EntryCompletion->new();
+    $c->set_text_column(0);
     $c->set_minimum_key_length(0);
-    $c->set_popup_set_width (1);
-    $c->set_inline_completion (1);
+    $c->set_popup_set_width(1);
+    $c->set_inline_completion(1);
 
-    my $hbox2 = Gtk3::HBox->new (0, 0);
-    my $label = Gtk3::Label->new ("Time zone");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox2->pack_start ($label, 0, 0, 10);
+    my $hbox2 = Gtk3::HBox->new(0, 0);
+    my $label = Gtk3::Label->new("Time zone");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox2->pack_start($label, 0, 0, 10);
     update_zonelist ($hbox2);
 
-    my $hbox3 = Gtk3::HBox->new (0, 0);
-    $label = Gtk3::Label->new ("Keyboard Layout");
-    $label->set_size_request (150, -1);
-    $label->set_alignment (1, 0.5);
-    $hbox3->pack_start ($label, 0, 0, 10);
+    my $hbox3 = Gtk3::HBox->new(0, 0);
+    $label = Gtk3::Label->new("Keyboard Layout");
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox3->pack_start($label, 0, 0, 10);
 
     my $kmapcb = Gtk3::ComboBoxText->new();
     $kmapcb->set_size_request (200, -1);
@@ -2436,7 +2436,7 @@ sub create_country_view {
 	$kmapcb->append_text ($layout);
     }
 
-    update_layout ($kmapcb);
+    update_layout($kmapcb);
     $hbox3->pack_start ($kmapcb, 0, 0, 0);
 
     $kmapcb->signal_connect ('changed' => sub {
@@ -2454,9 +2454,9 @@ sub create_country_view {
 	my $text = $entry->get_text;
 
 	if (my $cc = $countryhash->{lc($text)}) {
-	    update_zonelist ($hbox2, $cc);
+	    update_zonelist($hbox2, $cc);
 	    my $kmap = $ctr->{$cc}->{kmap} || 'en-us';
-	    update_layout ($kmapcb, $kmap);
+	    update_layout($kmapcb, $kmap);
 	}
     });
 
@@ -2515,17 +2515,17 @@ sub create_country_view {
 
     $w->set_completion ($c);
 
-    my $hbox =  Gtk3::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new(0, 0);
 
-    $label = Gtk3::Label->new ("Country");
-    $label->set_alignment (1, 0.5);
-    $label->set_size_request (150, -1);
-    $hbox->pack_start ($label, 0, 0, 10);
-    $hbox->pack_start ($w, 0, 0, 0);
+    $label = Gtk3::Label->new("Country");
+    $label->set_alignment(1, 0.5);
+    $label->set_size_request(150, -1);
+    $hbox->pack_start($label, 0, 0, 10);
+    $hbox->pack_start($w, 0, 0, 0);
 
-    $vbox->pack_start ($hbox, 0, 0, 5);
-    $vbox->pack_start ($hbox2, 0, 0, 5);
-    $vbox->pack_start ($hbox3, 0, 0, 5);
+    $vbox->pack_start($hbox, 0, 0, 5);
+    $vbox->pack_start($hbox2, 0, 0, 5);
+    $vbox->pack_start($hbox3, 0, 0, 5);
 
     if ($country && $ctr->{$country}) {
 	$w->set_text ($ctr->{$country}->{name});
@@ -2544,7 +2544,7 @@ sub create_country_view {
 	    create_password_view();
 	    return;
 	} else {
-	    display_message ("Please select a country first.");
+	    display_message("Please select a country first.");
 	    $w->grab_focus();
 	}
     });
@@ -2743,7 +2743,7 @@ sub create_hdoption_view {
 
     # Filesystem type
 
-    my $label0 = Gtk3::Label->new ("Filesystem");
+    my $label0 = Gtk3::Label->new("Filesystem");
     $label0->set_alignment (1, 0.5);
     $grid->attach($label0, 0, $row, 1, 1);
 
@@ -3035,36 +3035,36 @@ sub create_hdsel_view {
 
     $prev_btn->set_sensitive(1); # enable previous button at this point
 
-    cleanup_view ();
+    cleanup_view();
 
-    my $vbox =  Gtk3::VBox->new (0, 0);
-    $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::HBox->new (0, 0);
-    $vbox->pack_start ($hbox, 0, 0, 10);
+    my $vbox =  Gtk3::VBox->new(0, 0);
+    $inbox->pack_start($vbox, 1, 0, 0);
+    my $hbox =  Gtk3::HBox->new(0, 0);
+    $vbox->pack_start($hbox, 0, 0, 10);
 
     my ($disk, $devname, $size, $model) = @{@$hds[0]};
     $target_hd = $devname;
 
-    $target_hd_label = Gtk3::Label->new ("Target Harddisk: ");
-    $hbox->pack_start ($target_hd_label, 0, 0, 0);
+    $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
+    $hbox->pack_start($target_hd_label, 0, 0, 0);
 
     $target_hd_combo = Gtk3::ComboBoxText->new();
 
     foreach my $hd (@$hds) {
 	($disk, $devname, $size, $model) = @$hd;
-	$target_hd_combo->append_text (get_device_desc ($devname, $size, $model));
+	$target_hd_combo->append_text (get_device_desc($devname, $size, $model));
     }
 
-    $target_hd_combo->set_active (0);
-    $target_hd_combo->signal_connect (changed => sub {
+    $target_hd_combo->set_active(0);
+    $target_hd_combo->signal_connect(changed => sub {
 	$a = shift->get_active;
 	my ($disk, $devname) = @{@$hds[$a]};
 	$target_hd = $devname;
     });
 
-    $hbox->pack_start ($target_hd_combo, 0, 0, 10);
+    $hbox->pack_start($target_hd_combo, 0, 0, 10);
 
-    my $options = Gtk3::Button->new ('_Options');
+    my $options = Gtk3::Button->new('_Options');
     $options->signal_connect (clicked => \&create_hdoption_view);
     $hbox->pack_start ($options, 0, 0, 0);
 
@@ -3073,13 +3073,13 @@ sub create_hdsel_view {
 
     display_html();
 
-    set_next (undef, sub {
+    set_next(undef, sub {
 
 	if ($config_options->{filesys} =~ m/zfs/) {
 	    eval { get_zfs_raid_setup(); };
 	    if (my $err = $@) {
-		display_message ("Warning: $err\n" .
-				 "Please fix ZFS setup first.");
+		display_message("Warning: $err\n" .
+				"Please fix ZFS setup first.");
 	    } else {
 		$step_number++;
 		create_country_view();
@@ -3087,8 +3087,8 @@ sub create_hdsel_view {
 	} elsif ($config_options->{filesys} =~ m/btrfs/) {
 	    eval { get_btrfs_raid_setup(); };
 	    if (my $err = $@) {
-		display_message ("Warning: $err\n" .
-				 "Please fix BTRFS setup first.");
+		display_message("Warning: $err\n" .
+				"Please fix BTRFS setup first.");
 	    } else {
 		$step_number++;
 		create_country_view();
@@ -3102,7 +3102,7 @@ sub create_hdsel_view {
 
 sub create_extract_view {
 
-    cleanup_view ();
+    cleanup_view();
 
     display_info();
 
@@ -3110,22 +3110,22 @@ sub create_extract_view {
     $prev_btn->set_sensitive(0);
     $prev_btn->hide();
 
-    my $vbox =  Gtk3::VBox->new (0, 0);
+    my $vbox =  Gtk3::VBox->new(0, 0);
     $inbox->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::HBox->new (0, 0);
+    my $hbox =  Gtk3::HBox->new(0, 0);
     $vbox->pack_start ($hbox, 0, 0, 10);
 
-    my $vbox2 =  Gtk3::VBox->new (0, 0);
+    my $vbox2 =  Gtk3::VBox->new(0, 0);
     $hbox->pack_start ($vbox2, 0, 0, 0);
 
-    $progress_status = Gtk3::Label->new ('');
+    $progress_status = Gtk3::Label->new('');
     $vbox2->pack_start ($progress_status, 1, 1, 0);
 
     $progress = Gtk3::ProgressBar->new;
     $progress->set_show_text(1);
     $progress->set_size_request (600, -1);
 
-    $vbox2->pack_start ($progress, 0, 0, 0);
+    $vbox2->pack_start($progress, 0, 0, 0);
 
     $inbox->show_all();
 
@@ -3133,12 +3133,12 @@ sub create_extract_view {
     mkdir $tdir;
     my $base = "${proxmox_cddir}/$setup->{product}-base.squashfs";
 
-    eval  { extract_data ($base, $tdir); };
+    eval  { extract_data($base, $tdir); };
     my $err = $@;
 
     $next->set_sensitive(1);
 
-    set_next ("_Reboot", sub { exit (0); } );
+    set_next("_Reboot", sub { exit (0); } );
 
     if ($err) {
 	display_html("fail.htm");
@@ -3168,15 +3168,15 @@ sub create_intro_view {
     display_html();
 
     $step_number++;
-    set_next ("I a_gree", \&create_hdsel_view);
+    set_next("I a_gree", \&create_hdsel_view);
 }
 
-$ipconf = get_ip_config ();
+$ipconf = get_ip_config();
 
 $country = detect_country() if $ipconf->{default} || $opt_testmode;
 
 # read country, kmap and timezone infos
-$cmap = read_cmap ();
+$cmap = read_cmap();
 
 if (!defined($cmap->{country}->{$country})) {
     print $logfd "ignoring detected country '$country', invalid or unknown\n";
@@ -3191,7 +3191,7 @@ if (!defined ($hds) || (scalar (@$hds) <= 0)) {
     print "no hardisks found\n";
     $initial_error = 1;
     display_html("nohds.htm");
-    set_next ("Reboot", sub { exit (0); } );
+    set_next("Reboot", sub { exit(0); } );
 } else {
     foreach my $hd (@$hds) {
 	my ($disk, $devname) = @$hd;
@@ -3204,7 +3204,7 @@ if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
     print "no network interfaces found\n";
     $initial_error = 1;
     display_html("nonics.htm");
-    set_next ("Reboot", sub { exit (0); } );
+    set_next("Reboot", sub { exit(0); } );
 }
 
 create_intro_view () if !$initial_error;
