@@ -2196,7 +2196,7 @@ sub create_ack_view {
     my $html_data = file_get_contents($ack_template);
 
     my %config_values = (
-	__target_hd__ => $target_hd,
+	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
 	__target_fs__ => $config_options->{filesys},
 	__country__ => $cmap->{country}->{$country}->{name},
 	__timezone__ => $timezone,
@@ -3076,24 +3076,27 @@ sub create_hdsel_view {
     set_next(undef, sub {
 
 	if ($config_options->{filesys} =~ m/zfs/) {
-	    eval { get_zfs_raid_setup(); };
+	    my ($devlist) = eval { get_zfs_raid_setup() };
 	    if (my $err = $@) {
 		display_message("Warning: $err\n" .
 				"Please fix ZFS setup first.");
 	    } else {
+		$config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 		$step_number++;
 		create_country_view();
 	    }
 	} elsif ($config_options->{filesys} =~ m/btrfs/) {
-	    eval { get_btrfs_raid_setup(); };
+	    my ($devlist) = eval { get_btrfs_raid_setup() };
 	    if (my $err = $@) {
 		display_message("Warning: $err\n" .
 				"Please fix BTRFS setup first.");
 	    } else {
+		$config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 		$step_number++;
 		create_country_view();
 	    }
 	} else {
+	    $config_options->{target_hds} = [ $target_hd ];
 	    $step_number++;
 	    create_country_view();
 	}
