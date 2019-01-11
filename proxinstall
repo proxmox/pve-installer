@@ -3075,7 +3075,6 @@ sub create_hdsel_view {
 
     set_next(undef, sub {
 
-	my $devlist;
 	if ($config_options->{filesys} =~ m/zfs/) {
 	    my ($devlist) = eval { get_zfs_raid_setup() };
 	    if (my $err = $@) {
