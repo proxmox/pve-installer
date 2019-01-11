@@ -3075,31 +3075,27 @@ sub create_hdsel_view {
 
     set_next(undef, sub {
 
+	my $devlist;
 	if ($config_options->{filesys} =~ m/zfs/) {
 	    my ($devlist) = eval { get_zfs_raid_setup() };
 	    if (my $err = $@) {
-		display_message("Warning: $err\n" .
-				"Please fix ZFS setup first.");
-	    } else {
-		$config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
-		$step_number++;
-		create_country_view();
+		display_message("Warning: $err\nPlease fix ZFS setup first.");
+		return;
 	    }
+	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 	} elsif ($config_options->{filesys} =~ m/btrfs/) {
 	    my ($devlist) = eval { get_btrfs_raid_setup() };
 	    if (my $err = $@) {
-		display_message("Warning: $err\n" .
-				"Please fix BTRFS setup first.");
-	    } else {
-		$config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
-		$step_number++;
-		create_country_view();
+		display_message("Warning: $err\nPlease fix BTRFS setup first.");
+		return;
 	    }
+	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 	} else {
 	    $config_options->{target_hds} = [ $target_hd ];
-	    $step_number++;
-	    create_country_view();
 	}
+
+	$step_number++;
+	create_country_view();
     });
 }
 
