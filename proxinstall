@@ -3031,6 +3031,7 @@ sub get_btrfs_raid_setup {
     return ($devlist, $mode);
 }
 
+my $last_hd_selected = 0;
 sub create_hdsel_view {
 
     $prev_btn->set_sensitive(1); # enable previous button at this point
@@ -3061,10 +3062,11 @@ sub create_hdsel_view {
 	$target_hd_combo->set_visible(0);
 	$target_hd_combo->set_no_show_all(1);
     }
-    $target_hd_combo->set_active($config_options->{chosen_hd} // 0);
+    $target_hd_combo->set_active($last_hd_selected);
     $target_hd_combo->signal_connect(changed => sub {
 	$a = shift->get_active;
 	my ($disk, $devname) = @{@$hds[$a]};
+	$last_hd_selected = 0;
 	$target_hd = $devname;
     });
 
