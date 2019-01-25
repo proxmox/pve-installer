@@ -2555,7 +2555,7 @@ sub create_country_view {
 my $target_hd_combo;
 my $target_hd_label;
 
-my $hdopion_first_setup = 1;
+my $hdoption_first_setup = 1;
 
 my $create_basic_grid = sub {
     my $grid =  Gtk3::Grid->new();
@@ -2611,7 +2611,7 @@ my $create_raid_disk_grid = sub {
 	    });
 	}
 
-	if ($hdopion_first_setup) {
+	if ($hdoption_first_setup) {
 	    $disk_selector->set_active ($i+1) if $hds->[$i];
 	} else {
 	    my $hdind = 0;
@@ -2834,7 +2834,7 @@ sub create_hdoption_view {
     $grid->attach($options_stack, 0, $row, 2, 1);
     $row++;
 
-    $hdopion_first_setup = 0;
+    $hdoption_first_setup = 0;
 
     my $switch_view = sub {
 	my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
