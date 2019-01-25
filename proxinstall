@@ -3055,7 +3055,13 @@ sub create_hdsel_view {
 	$target_hd_combo->append_text (get_device_desc($devname, $size, $model));
     }
 
-    $target_hd_combo->set_active(0);
+    my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
+    if ($raid) {
+	$target_hd_label->set_text("Target: $config_options->{filesys} ");
+	$target_hd_combo->set_visible(0);
+	$target_hd_combo->set_no_show_all(1);
+    }
+    $target_hd_combo->set_active($config_options->{chosen_hd} // 0);
     $target_hd_combo->signal_connect(changed => sub {
 	$a = shift->get_active;
 	my ($disk, $devname) = @{@$hds[$a]};
