@@ -3043,7 +3043,7 @@ sub create_hdsel_view {
     $vbox->pack_start($hbox, 0, 0, 10);
 
     my ($disk, $devname, $size, $model) = @{@$hds[0]};
-    $target_hd = $devname;
+    $target_hd = $devname if !defined($target_hd);
 
     $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
     $hbox->pack_start($target_hd_label, 0, 0, 0);
