@@ -3066,7 +3066,7 @@ sub create_hdsel_view {
     $target_hd_combo->signal_connect(changed => sub {
 	$a = shift->get_active;
 	my ($disk, $devname) = @{@$hds[$a]};
-	$last_hd_selected = 0;
+	$last_hd_selected = $i;
 	$target_hd = $devname;
     });
 
