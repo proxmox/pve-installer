@@ -691,6 +691,9 @@ sub get_partition_dev {
 
     if ($dev =~ m|^/dev/sd([a-h]?[a-z]\|i[a-v])$|) {
 	return "${dev}$partnum";
+    # Citrix Hypervisor blockdev
+    } elsif ($dev =~ m|^/dev/xvd[a-z]$|) {
+	return "${dev}$partnum";
     } elsif ($dev =~ m|^/dev/[hxev]d[a-z]$|) {
 	return "${dev}$partnum";
     } elsif ($dev =~ m|^/dev/[^/]+/c\d+d\d+$|) {
