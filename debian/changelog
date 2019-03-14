@@ -1,3 +1,15 @@
+pve-installer (5.0-25) unstable; urgency=medium
+
+  * add support for Citrix Hypervisor blockdev
+
+  * Fix #2009: Recreate hdsize_adj with new hdsize
+
+  * implement previous button
+
+  * implement summary/acknowledgement screen
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 14 Mar 2019 16:36:13 +0100
+
 pve-installer (5.0-24) unstable; urgency=medium
 
   * change last button to 'Install'
