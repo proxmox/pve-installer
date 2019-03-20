@@ -2026,7 +2026,11 @@ sub create_ipconf_view {
 
     my $device_change_handler = sub {
 	my $current = shift;
-	$ipconf->{selected} = $device_active_map->{$current->get_active()};
+
+	my $new = $device_active_map->{$current->get_active()};
+	return if $new eq $ipconf->{selected};
+
+	$ipconf->{selected} = $new;
 	my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
 	$config->{mngmt_nic} = $iface->{name};
 	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
