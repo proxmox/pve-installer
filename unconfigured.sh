@@ -78,6 +78,9 @@ export RUNLEVEL=S
 export PREVLEVEL=N
 /etc/init.d/udev start
 
+mkdir -p /dev/shm
+mount -t tmpfs tmpfs /dev/shm
+
 # set the hostname 
 hostname proxmox
 
