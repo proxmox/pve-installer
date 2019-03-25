@@ -57,6 +57,9 @@ echo "Starting Proxmox installation"
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
 
+# ensure udev isn't snippy and ignores our request
+export SYSTEMD_IGNORE_CHROOT=1
+
 mount -n -t proc proc /proc
 mount -n -t sysfs sysfs /sys
 
