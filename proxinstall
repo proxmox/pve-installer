@@ -1614,9 +1614,6 @@ _EOD
 
 	# cleanup
 
-	# hack: remove dead.letter from sshd installation
-	syscmd("rm -rf $targetdir/dead.letter");
-
 	unlink "$targetdir/usr/sbin/policy-rc.d";
 
 	diversion_remove($targetdir, "/sbin/start-stop-daemon");
