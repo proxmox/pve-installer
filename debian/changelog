@@ -1,3 +1,9 @@
+pve-installer (6.0-1) pmg pve; urgency=medium
+
+  * bump for Debian Buster
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 22 May 2019 10:02:08 +0200
+
 pve-installer (5.0-26) unstable; urgency=medium
 
   * ipconf view: only (re)set fields if nic really changed
