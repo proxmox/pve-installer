@@ -58,7 +58,7 @@ upload-pmg: ${PMG_DEB}
 
 .phony: upload-pve
 upload-pve: ${PVE_DEB}
-	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist stretch
+	tar cf - ${PVE_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve --dist buster
 
 %.img:
 	truncate -s 2G $@
