@@ -1,8 +1,7 @@
-PKGVER=5.0
-PKGREL=26
+include /usr/share/dpkg/pkg-info.mk
 
-PVE_DEB=pve-installer_${PKGVER}-${PKGREL}_all.deb
-PMG_DEB=pmg-installer_${PKGVER}-${PKGREL}_all.deb
+PVE_DEB=pve-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
+PMG_DEB=pmg-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
 
 DEBS = ${PVE_DEB} ${PMG_DEB}
 
