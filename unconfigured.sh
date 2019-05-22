@@ -40,6 +40,7 @@ real_reboot() {
 
     umount -l -n /target >/dev/null 2>&1
     umount -l -n /dev
+    umount -l -n /run
     umount -l -n /sys
     umount -l -n /proc
 
@@ -62,6 +63,7 @@ export SYSTEMD_IGNORE_CHROOT=1
 
 mount -n -t proc proc /proc
 mount -n -t sysfs sysfs /sys
+mount -n -t tmpfs tmpfs /run
 
 parse_cmdline
 

@@ -1289,6 +1289,11 @@ sub extract_data {
 	    }
 	}
 
+	mkdir "$targetdir/mnt";
+	mkdir "$targetdir/mnt/hostrun";
+	syscmd("mount --bind /run $targetdir/mnt/hostrun") == 0 ||
+	    die "unable to bindmount run on $targetdir/mnt/hostrun\n";
+
 	update_progress(1, 0.05, $maxper, "extracting base system");
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
@@ -1318,6 +1323,8 @@ sub extract_data {
 	    die "unable to mount proc on $targetdir/proc\n";
 	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
 	    die "unable to mount sysfs on $targetdir/sys\n";
+	syscmd("chroot $targetdir mount --bind /mnt/hostrun /run") == 0 ||
+	    die "unable to re-bindmount hostrun on /run in chroot\n";
 
 	update_progress(1, $maxper, 0.5, "configuring base system");
 
@@ -1675,6 +1682,8 @@ _EOD
 	syscmd("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> final.pkglist");
     }
 
+    syscmd("umount $targetdir/run");
+    syscmd("umount $targetdir/mnt/hostrun");
     syscmd("umount $targetdir/tmp");
     syscmd("umount $targetdir/proc");
     syscmd("umount $targetdir/sys");
