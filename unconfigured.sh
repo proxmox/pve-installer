@@ -81,6 +81,12 @@ export PREVLEVEL=N
 mkdir -p /dev/shm
 mount -t tmpfs tmpfs /dev/shm
 
+if [ $proxdebug -ne 0 ]; then
+    echo "Dropping in debug shell inside chroot before starting installation"
+    echo "type exit or CTRL-D to start installation wizard"
+    debugsh
+fi
+
 # set the hostname 
 hostname proxmox
 
