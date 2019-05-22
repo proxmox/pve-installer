@@ -1742,7 +1742,11 @@ sub display_html {
     my $data = file_get_contents($path);
 
     if ($filename eq 'license.htm') {
-	my $license = decode('utf8', file_get_contents("${proxmox_cddir}/EULA"));
+	my $license = eval { decode('utf8', file_get_contents("${proxmox_cddir}/EULA")) };
+	if (my $err = $@) {
+	    die $err if !$opt_testmode;
+	    $license = "TESTMODE: Ignore non existent EULA...\n";
+	}
 	my $title = "END USER LICENSE AGREEMENT (EULA)";
 	$data =~ s/__LICENSE__/$license/;
 	$data =~ s/__LICENSE_TITLE__/$title/;
