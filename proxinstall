@@ -13,7 +13,7 @@ use IO::File;
 use IO::Select;
 use Cwd 'abs_path';
 use Gtk3 '-init';
-use Gtk3::WebKit;
+use Gtk3::WebKit2;
 use Encode;
 use String::ShellQuote;
 use Data::Dumper;
@@ -1748,7 +1748,7 @@ sub display_html {
 	$data =~ s/__LICENSE_TITLE__/$title/;
     }
 
-    $htmlview->load_html_string($data, $url);
+    $htmlview->load_html($data, $url);
 
     $last_display_change = time();
 }
@@ -1822,7 +1822,7 @@ sub create_main_window {
     my $vbox2 = Gtk3::VBox->new(0, 0);
     $hbox->add($vbox2);
 
-    $htmlview = Gtk3::WebKit::WebView->new();
+    $htmlview = Gtk3::WebKit2::WebView->new();
     my $scrolls = Gtk3::ScrolledWindow->new();
     $scrolls->add($htmlview);
 
