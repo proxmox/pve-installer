@@ -2038,7 +2038,7 @@ sub create_ipconf_view {
 	my $current = shift;
 
 	my $new = $device_active_map->{$current->get_active()};
-	return if $new eq $ipconf->{selected};
+	return if defined($ipconf->{selected}) && $new eq $ipconf->{selected};
 
 	$ipconf->{selected} = $new;
 	my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
