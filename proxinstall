@@ -2793,6 +2793,13 @@ sub create_hdoption_view {
     $grid->attach($sep, 0, $row, 2, 1);
     $row++;
 
+    my $hw_raid_note = Gtk3::Label->new("Note: ZFS is not compatible with disks backed by a hardware RAID controller. For details see the reference documentation.");
+    $hw_raid_note->set_line_wrap(1);
+    $hw_raid_note->set_max_width_chars(30);
+    #$hw_raid_note->set_size_request(150, -1);
+    $hw_raid_note->set_visible(0);
+    $grid->attach($hw_raid_note, 0, $row++, 2, 1);
+
     my $hdsize_labeled_widgets = [];
 
     # size compute
@@ -2860,6 +2867,7 @@ sub create_hdoption_view {
 	$target_hd_combo->set_visible(!$raid);
 	$options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
 	$options_stack->get_child_by_name("raiddisk")->set_visible($raid);
+	$hw_raid_note->set_visible($raid);
 	$options_stack_switcher->set_visible($enable_zfs_opts);
 	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($enable_zfs_opts);
 	if ($raid) {
