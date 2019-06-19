@@ -2796,7 +2796,6 @@ sub create_hdoption_view {
     my $hw_raid_note = Gtk3::Label->new("Note: ZFS is not compatible with disks backed by a hardware RAID controller. For details see the reference documentation.");
     $hw_raid_note->set_line_wrap(1);
     $hw_raid_note->set_max_width_chars(30);
-    #$hw_raid_note->set_size_request(150, -1);
     $hw_raid_note->set_visible(0);
     $grid->attach($hw_raid_note, 0, $row++, 2, 1);
 
@@ -2888,6 +2887,10 @@ sub create_hdoption_view {
 	$config_options->{filesys} = $fstypecb->get_active_text();
 	&$switch_view();
     });
+
+    my $sep2 = Gtk3::HSeparator->new();
+    $sep2->set_visible(1);
+    $contarea->pack_end($sep2, 1, 1, 10);
 
     $dialog->show();
 
