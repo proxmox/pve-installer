@@ -1,3 +1,9 @@
+pve-installer (6.0-2) pmg pve; urgency=medium
+
+  * add note regarding issues with ZFS on HW raid controller
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 25 Jun 2019 10:27:54 +0200
+
 pve-installer (6.0-1) pmg pve; urgency=medium
 
   * bump for Debian Buster
