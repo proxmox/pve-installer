@@ -18,6 +18,7 @@ use Encode;
 use String::ShellQuote;
 use Data::Dumper;
 use File::Basename;
+use File::Path;
 use Time::HiRes;
 
 use ProxmoxInstallerSetup;
@@ -99,6 +100,7 @@ my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
 
 $grub_plattform = "efi-amd64" if -d "/sys/firmware/efi";
+my $boot_type = -d '/sys/firmware/efi' ? 'efi' : 'bios';
 
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
 my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
@@ -1078,6 +1080,30 @@ sub compute_swapsize {
     return $swapsize;
 }
 
+sub prepare_systemd_boot_esp {
+    my ($espdev, $targetdir) = @_;
+
+    my $espuuid = find_dev_by_uuid($espdev);
+    my $espmp = "var/tmp/$espuuid";
+    mkdir "$targetdir/$espmp";
+
+    syscmd("mount -n $espdev -t vfat $targetdir/$espmp") == 0 ||
+	die "unable to mount ESP $espdev\n";
+
+    File::Path::make_path("$targetdir/$espmp/EFI/proxmox") ||
+	die "unable to create directory $targetdir/$espmp/EFI/proxmox\n";
+
+    syscmd("chroot $targetdir bootctl --no-variables --path /$espmp install") == 0 ||
+	die "unable to install systemd-boot loader\n";
+    write_config("timeout 3\ndefault proxmox-*\n",
+	"$targetdir/$espmp/loader/loader.conf");
+    syscmd("chroot $targetdir /etc/kernel/postinst.d/zz-pve-efiboot") == 0 ||
+	die "unable to generate systemd-boot config\n";
+
+    syscmd("umount $targetdir/$espmp") == 0 ||
+	die "unable to umount ESP $targetdir/$espmp\n";
+
+}
 
 sub extract_data {
     my ($basefile, $targetdir) = @_;
@@ -1185,10 +1211,11 @@ sub extract_data {
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
 
-		my ($size, $osdev) =
+		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
 		zfs_mirror_size_check($disksize, $size) if $disksize;
-		push @$bootdevinfo, { devname => $devname, osdev => $osdev};
+		push @$bootdevinfo, { esp => $efidev, devname => $devname,
+					osdev => $osdev};
 		$disksize = $size;
 	    }
 
@@ -1420,7 +1447,7 @@ sub extract_data {
 	if ($grub_plattform =~ m/^efi-/) {
 	    if (scalar(@$bootdevinfo)) {
 		my $di = @$bootdevinfo[0]; # simply use first disk
-		if ($di->{esp}) {
+		if ($di->{esp} && ! $use_zfs) {
 		    my $efi_boot_uuid = $di->{esp};
 		    if (my $uuid = find_dev_by_uuid ($di->{esp})) {
 			$efi_boot_uuid = "UUID=$uuid";
@@ -1563,6 +1590,9 @@ _EOD
 	if ($use_zfs) {
 	    syscmd("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
+	    if ($boot_type eq 'efi') {
+		write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs", "$targetdir/etc/kernel/cmdline");
+	    }
 
 	}
 
@@ -1592,7 +1622,9 @@ _EOD
 		syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
 			die "unable to install the i386-pc boot loader on '$dev'\n";
 
-		if ($di->{esp}) {
+		if ($di->{esp} && $use_zfs) {
+			prepare_systemd_boot_esp($di->{esp}, $targetdir);
+		} elsif ($di->{esp}) {
 		    syscmd("mount -n $di->{esp} -t vfat $targetdir/boot/efi") == 0 ||
 			die "unable to mount $di->{esp}\n";
 		    my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
