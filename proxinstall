@@ -97,9 +97,6 @@ my $proxmox_libdir = $opt_testmode ?
 my $proxmox_cddir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
 my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
-my $grub_plattform = "pc"; # pc, efi-amd64 or efi-ia32
-
-$grub_plattform = "efi-amd64" if -d "/sys/firmware/efi";
 my $boot_type = -d '/sys/firmware/efi' ? 'efi' : 'bios';
 
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
@@ -1444,7 +1441,7 @@ sub extract_data {
 	# Note: this is required by current grub, but really dangerous, because
 	# vfat does not have journaling, so it triggers manual fsck after each crash
 	# so we only mount /boot/efi if really required (efi systems).
-	if ($grub_plattform =~ m/^efi-/) {
+	if ($boot_type eq 'efi') {
 	    if (scalar(@$bootdevinfo)) {
 		my $di = @$bootdevinfo[0]; # simply use first disk
 		if ($di->{esp} && ! $use_zfs) {
@@ -1510,10 +1507,6 @@ _EOD
 	    chomp;
 	    my $path = $_;
 	    my ($deb) = $path =~ m/${proxmox_pkgdir}\/(.*\.deb)/;
-#	    if ($deb =~ m/^grub-efi-/ && $deb !~ m/^grub-${grub_plattform}/) {
-#		$count++;
-#		next;
-#	    }
 	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print "extracting: $deb\n";
 	    syscmd("cp $path $targetdir/tmp/$deb") == 0 ||
