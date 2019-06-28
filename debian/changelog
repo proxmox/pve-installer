@@ -1,3 +1,9 @@
+pve-installer (6.0-3) pmg pve; urgency=medium
+
+  * add support for ZFS on EFI
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 28 Jun 2019 14:03:21 +0200
+
 pve-installer (6.0-2) pmg pve; urgency=medium
 
   * add note regarding issues with ZFS on HW raid controller
