@@ -1201,18 +1201,24 @@ sub extract_data {
 
 	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
 
-	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		&$clean_disk(@$hd[1]);
 	    }
+
+	    my $disksize;
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
 
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
+
 		zfs_mirror_size_check($disksize, $size) if $disksize;
-		push @$bootdevinfo, { esp => $efidev, devname => $devname,
-					osdev => $osdev};
+
+		push @$bootdevinfo, {
+		    esp => $efidev,
+		    devname => $devname,
+		    osdev => $osdev
+		};
 		$disksize = $size;
 	    }
 
@@ -1441,10 +1447,11 @@ sub extract_data {
 	# Note: this is required by current grub, but really dangerous, because
 	# vfat does not have journaling, so it triggers manual fsck after each crash
 	# so we only mount /boot/efi if really required (efi systems).
-	if ($boot_type eq 'efi') {
+	if ($boot_type eq 'efi' && !$use_zfs) {
 	    if (scalar(@$bootdevinfo)) {
 		my $di = @$bootdevinfo[0]; # simply use first disk
-		if ($di->{esp} && ! $use_zfs) {
+
+		if ($di->{esp}) {
 		    my $efi_boot_uuid = $di->{esp};
 		    if (my $uuid = find_dev_by_uuid ($di->{esp})) {
 			$efi_boot_uuid = "UUID=$uuid";
@@ -1583,6 +1590,7 @@ _EOD
 	if ($use_zfs) {
 	    syscmd("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
+
 	    if ($boot_type eq 'efi') {
 		write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs", "$targetdir/etc/kernel/cmdline");
 	    }
