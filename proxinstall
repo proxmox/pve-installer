@@ -1102,6 +1102,29 @@ sub prepare_systemd_boot_esp {
 
 }
 
+sub prepare_grub_efi_boot_esp {
+    my ($dev, $espdev, $targetdir) = @_;
+
+    syscmd("mount -n $espdev -t vfat $targetdir/boot/efi") == 0 ||
+	die "unable to mount $espdev\n";
+
+    my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
+    if ($rc != 0) {
+	if ($boot_type eq 'efi') {
+	    die "unable to install the EFI boot loader on '$dev'\n";
+	} else {
+	    warn "unable to install the EFI boot loader on '$dev', ignoring (not booted using UEFI)\n";
+	}
+    }
+    # also install fallback boot file (OVMF does not boot without)
+    mkdir("$targetdir/boot/efi/EFI/BOOT");
+    syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
+	die "unable to copy efi boot loader\n";
+
+    syscmd("umount $targetdir/boot/efi") == 0 ||
+	die "unable to umount $targetdir/boot/efi\n";
+}
+
 sub extract_data {
     my ($basefile, $targetdir) = @_;
 
@@ -1623,26 +1646,12 @@ _EOD
 		syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
 			die "unable to install the i386-pc boot loader on '$dev'\n";
 
-		if ($di->{esp} && $use_zfs) {
-			prepare_systemd_boot_esp($di->{esp}, $targetdir);
-		} elsif ($di->{esp}) {
-		    syscmd("mount -n $di->{esp} -t vfat $targetdir/boot/efi") == 0 ||
-			die "unable to mount $di->{esp}\n";
-		    my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
-		    if ($rc != 0) {
-			if (-d '/sys/firmware/efi') {
-			    die "unable to install the EFI boot loader on '$dev'\n";
-			} else {
-			    warn "unable to install the EFI boot loader on '$dev', ignoring (not booted using UEFI)\n";
-			}
+		if (my $esp = $di->{esp}) {
+		    if ($use_zfs) {
+			prepare_systemd_boot_esp($esp, $targetdir);
+		    } else {
+			prepare_grub_efi_boot_esp($dev, $esp, $targetdir);
 		    }
-		    # also install fallback boot file (OVMF does not boot without)
-		    mkdir("$targetdir/boot/efi/EFI/BOOT");
-		    syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
-			die "unable to copy efi boot loader\n";
-
-		    syscmd("umount $targetdir/boot/efi") == 0 ||
-			die "unable to umount $targetdir/boot/efi\n";
 		}
 	    }
 
