@@ -1094,8 +1094,6 @@ sub prepare_systemd_boot_esp {
 	die "unable to install systemd-boot loader\n";
     write_config("timeout 3\ndefault proxmox-*\n",
 	"$targetdir/$espmp/loader/loader.conf");
-    syscmd("chroot $targetdir /etc/kernel/postinst.d/zz-pve-efiboot") == 0 ||
-	die "unable to generate systemd-boot config\n";
 
     syscmd("umount $targetdir/$espmp") == 0 ||
 	die "unable to umount ESP $targetdir/$espmp\n";
@@ -1657,6 +1655,9 @@ _EOD
 
 	    syscmd("chroot $targetdir /usr/sbin/update-grub") == 0 ||
 		die "unable to update boot loader config\n";
+
+	    syscmd("chroot $targetdir /etc/kernel/postinst.d/zz-pve-efiboot") == 0 ||
+		die "unable to generate systemd-boot config\n";
 
 	    syscmd("umount $targetdir/dev");
 	}
