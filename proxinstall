@@ -900,6 +900,7 @@ my $clean_disk = sub {
 	next if $part eq $disk;
 	next if $part !~ /^\Q$disk\E/;
 	eval { syscmd("pvremove -ff -y $part"); };
+	eval { syscmd("zpool labelclear -f $part"); };
 	eval { syscmd("dd if=/dev/zero of=$part bs=1M count=16"); };
     }
 };
