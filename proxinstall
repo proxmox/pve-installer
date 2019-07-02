@@ -1250,11 +1250,8 @@ sub extract_data {
 		my $devname = $di->{devname};
 		$di->{by_id} = find_stable_path ("/dev/disk/by-id", $devname);
 
-		# Note: using /dev/disk/by-id/ does not work for unknown reason, we get
-		# cannot create 'rpool': no such pool or dataset
-		#my $osdev = find_stable_path ("/dev/disk/by-id", $di->{osdev}) || $di->{osdev};
+		my $osdev = find_stable_path ("/dev/disk/by-id", $di->{osdev}) || $di->{osdev};
 
-		my $osdev = $di->{osdev};
 		$vdev =~ s/ $devname/ $osdev/;
 	    }
 
