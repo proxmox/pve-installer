@@ -40,6 +40,11 @@ my $zfstestpool = "test_rpool";
 my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
 my $zfsrootvolname = "$setup->{product}-1";
 
+my $product_fullname = {
+    pve => 'Proxmox VE',
+    pmg => 'Proxmox MailGateway',
+};
+
 my $storage_cfg_zfs = <<__EOD__;
 dir: local
 	path /var/lib/vz
@@ -3233,7 +3238,10 @@ sub create_intro_view {
     cleanup_view();
 
     if (int($total_memory) < 1024) {
-	display_error("Less than 1 GiB memory detected, installation will probably fail.\n");
+	my $fullname = $product_fullname->{$setup->{product}};
+
+	display_error("Less than 1 GiB memory detected, installation will probably fail.\n\n".
+	    "See 'System Requirements' in the $fullname documentation.");
     }
 
     if ($setup->{product} eq 'pve') {
