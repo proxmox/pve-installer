@@ -3236,7 +3236,7 @@ sub create_intro_view {
 	eval {
 	    my $cpuinfo = file_get_contents('/proc/cpuinfo');
 	    if ($cpuinfo && !($cpuinfo =~ /^flags\s*:.*(vmx|svm)/m)) {
-		display_error("No support for KVM virtualisation detected.\n\n" .
+		display_error("No support for KVM virtualization detected.\n\n" .
 			      "Check BIOS settings for Intel VT / AMD-V / SVM.")
 	    }
 	};
