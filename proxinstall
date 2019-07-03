@@ -3232,9 +3232,8 @@ sub create_intro_view {
 
     cleanup_view();
 
-    if (int($total_memory/1024) < 1) {
-	display_error("you need at least 1GB memory to install Proxmox\n");
-	die "not enough memory";
+    if (int($total_memory) < 1024) {
+	display_error("Less than 1 GiB memory detected, installation will probably fail.\n");
     }
 
     if ($setup->{product} eq 'pve') {
