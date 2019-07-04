@@ -1,3 +1,15 @@
+pve-installer (6.0-4) pmg pve; urgency=medium
+
+  * update systemd-boot config after initializing esps
+
+  * clear zpool labels on selected disks' partitions
+
+  * use by-id diskpath for zpool create
+
+  * warn if host memory is less than 1 GB
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 04 Jul 2019 18:10:06 +0200
+
 pve-installer (6.0-3) pmg pve; urgency=medium
 
   * add support for ZFS on EFI
