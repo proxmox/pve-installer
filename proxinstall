@@ -592,6 +592,7 @@ sub hd_list {
 	next if $info !~ m/^E: DEVTYPE=disk$/m;
 
 	next if $info =~ m/^E: ID_CDROM/m;
+	next if $info =~ m/^E: ID_FS_TYPE=iso9660/m;
 
 	my ($name) = $info =~ m/^N: (\S+)$/m;
 
