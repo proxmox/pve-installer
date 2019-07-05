@@ -3241,7 +3241,7 @@ sub create_intro_view {
     if (int($total_memory) < 1024) {
 	my $fullname = $product_fullname->{$setup->{product}};
 
-	display_error("Less than 1 GiB memory detected, installation will probably fail.\n\n".
+	display_error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
 	    "See 'System Requirements' in the $fullname documentation.");
     }
 
