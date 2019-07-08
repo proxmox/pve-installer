@@ -41,6 +41,7 @@ real_reboot() {
     umount -l -n /target >/dev/null 2>&1
     umount -l -n /dev
     umount -l -n /run
+    [ -d /sys/firmware/efi/efivars ] && umount -l -n /sys/firmware/efi/efivars
     umount -l -n /sys
     umount -l -n /proc
 
@@ -65,7 +66,7 @@ mount -n -t proc proc /proc
 mount -n -t sysfs sysfs /sys
 if [ -d /sys/firmware/efi ]; then
     echo "EFI boot mode detected, mounting efivars filesystem"
-    mount -nt efivarfs none /sys/firmware/efi/efivars
+    mount -n -t efivarfs efivarfs /sys/firmware/efi/efivars
 fi
 mount -n -t tmpfs tmpfs /run
 

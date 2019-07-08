@@ -1379,7 +1379,7 @@ sub extract_data {
 	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
 	    die "unable to mount sysfs on $targetdir/sys\n";
 	if ($boot_type eq 'efi') {
-	    syscmd("mount -n -t efivarfs none $targetdir/sys/firmware/efi/efivars") == 0 ||
+	    syscmd("mount -n -t efivarfs efivarfs $targetdir/sys/firmware/efi/efivars") == 0 ||
 		die "unable to mount efivarfs on $targetdir/sys/firmware/efi/efivars: $!\n";
 	}
 	syscmd("chroot $targetdir mount --bind /mnt/hostrun /run") == 0 ||
