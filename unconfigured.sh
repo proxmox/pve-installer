@@ -63,6 +63,10 @@ export SYSTEMD_IGNORE_CHROOT=1
 
 mount -n -t proc proc /proc
 mount -n -t sysfs sysfs /sys
+if [ -d /sys/firmware/efi ]; then
+    echo "EFI boot mode detected, mounting efivars filesystem"
+    mount -nt efivarfs none /sys/firmware/efi/efivars
+fi
 mount -n -t tmpfs tmpfs /run
 
 parse_cmdline

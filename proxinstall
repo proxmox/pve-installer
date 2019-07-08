@@ -1097,7 +1097,7 @@ sub prepare_systemd_boot_esp {
     File::Path::make_path("$targetdir/$espmp/EFI/proxmox") ||
 	die "unable to create directory $targetdir/$espmp/EFI/proxmox\n";
 
-    syscmd("chroot $targetdir bootctl --no-variables --path /$espmp install") == 0 ||
+    syscmd("chroot $targetdir bootctl --path /$espmp install") == 0 ||
 	die "unable to install systemd-boot loader\n";
     write_config("timeout 3\ndefault proxmox-*\n",
 	"$targetdir/$espmp/loader/loader.conf");
@@ -1378,6 +1378,10 @@ sub extract_data {
 	    die "unable to mount proc on $targetdir/proc\n";
 	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
 	    die "unable to mount sysfs on $targetdir/sys\n";
+	if ($boot_type eq 'efi') {
+	    syscmd("mount -n -t efivarfs none $targetdir/sys/firmware/efi/efivars") == 0 ||
+		die "unable to mount efivarfs on $targetdir/sys/firmware/efi/efivars: $!\n";
+	}
 	syscmd("chroot $targetdir mount --bind /mnt/hostrun /run") == 0 ||
 	    die "unable to re-bindmount hostrun on /run in chroot\n";
 
@@ -1735,6 +1739,7 @@ _EOD
     syscmd("umount $targetdir/mnt/hostrun");
     syscmd("umount $targetdir/tmp");
     syscmd("umount $targetdir/proc");
+    syscmd("umount $targetdir/sys/firmware/efi/efivars");
     syscmd("umount $targetdir/sys");
 
     if ($use_zfs) {
