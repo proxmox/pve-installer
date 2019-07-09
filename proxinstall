@@ -1514,6 +1514,9 @@ sub extract_data {
 	die "unable to create a new machine-id\n" if ! $machine_id;
 	write_config($machine_id, "$targetdir/etc/machine-id");
 
+	syscmd("cp /etc/hostid $targetdir/etc/") == 0 ||
+	    die "unable to copy hostid\n";
+
 	syscmd("touch  $targetdir/proxmox_install_mode");
 
 	my $grub_install_devices_txt = '';
