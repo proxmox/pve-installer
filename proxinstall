@@ -1510,6 +1510,10 @@ sub extract_data {
 	diversion_add($targetdir, "/usr/sbin/update-grub", "/bin/true");
 	diversion_add($targetdir, "/usr/sbin/update-initramfs", "/bin/true");
 
+	my $machine_id = run_command("systemd-id128 new");
+	die "unable to create a new machine-id\n" if ! $machine_id;
+	write_config($machine_id, "$targetdir/etc/machine-id");
+
 	syscmd("touch  $targetdir/proxmox_install_mode");
 
 	my $grub_install_devices_txt = '';
