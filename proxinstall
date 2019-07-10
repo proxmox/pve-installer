@@ -1154,24 +1154,8 @@ sub compute_swapsize {
 sub prepare_systemd_boot_esp {
     my ($espdev, $targetdir) = @_;
 
-    my $espuuid = find_dev_by_uuid($espdev);
-    my $espmp = "var/tmp/$espuuid";
-    mkdir "$targetdir/$espmp";
-
-    syscmd("mount -n $espdev -t vfat $targetdir/$espmp") == 0 ||
-	die "unable to mount ESP $espdev\n";
-
-    File::Path::make_path("$targetdir/$espmp/EFI/proxmox") ||
-	die "unable to create directory $targetdir/$espmp/EFI/proxmox\n";
-
-    syscmd("chroot $targetdir bootctl --path /$espmp install") == 0 ||
-	die "unable to install systemd-boot loader\n";
-    write_config("timeout 3\ndefault proxmox-*\n",
-	"$targetdir/$espmp/loader/loader.conf");
-
-    syscmd("umount $targetdir/$espmp") == 0 ||
-	die "unable to umount ESP $targetdir/$espmp\n";
-
+    syscmd("chroot $targetdir pve-efiboot-tool init $espdev") == 0 ||
+	die "unable to init ESP and install systemd-boot loader on '$espdev'\n";
 }
 
 sub prepare_grub_efi_boot_esp {
