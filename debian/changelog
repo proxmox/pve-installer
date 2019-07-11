@@ -1,3 +1,19 @@
+pve-installer (6.0-5) pmg pve; urgency=medium
+
+  * hd_list: skip all devices with iso9660 as FS
+
+  * mount efivarfs to ensure we can read bigger EFI NVRAM backed variables
+
+  * fix #1603: create a new and unique machine-id
+
+  * copy /etc/hostid from installer root to target
+
+  * prompt user if a vgrename is OK for exisiting 'pve'/'pmg' VGs
+
+  * use pve-efiboot-tool for systemd boot ESP preparation
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 11 Jul 2019 19:22:31 +0200
+
 pve-installer (6.0-4) pmg pve; urgency=medium
 
   * update systemd-boot config after initializing esps
