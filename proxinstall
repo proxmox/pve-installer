@@ -1868,6 +1868,9 @@ sub display_html {
 	my $title = "END USER LICENSE AGREEMENT (EULA)";
 	$data =~ s/__LICENSE__/$license/;
 	$data =~ s/__LICENSE_TITLE__/$title/;
+    } elsif ($filename eq 'success.htm') {
+	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
+	$data =~ s/\@IPADDR\@/$addr/;
     }
 
     $htmlview->load_html($data, $url);
