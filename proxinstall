@@ -1164,21 +1164,29 @@ sub prepare_grub_efi_boot_esp {
     syscmd("mount -n $espdev -t vfat $targetdir/boot/efi") == 0 ||
 	die "unable to mount $espdev\n";
 
-    my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
-    if ($rc != 0) {
-	if ($boot_type eq 'efi') {
-	    die "unable to install the EFI boot loader on '$dev'\n";
-	} else {
-	    warn "unable to install the EFI boot loader on '$dev', ignoring (not booted using UEFI)\n";
+    eval {
+	my $rc = syscmd("chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev");
+	if ($rc != 0) {
+	    if ($boot_type eq 'efi') {
+		die "unable to install the EFI boot loader on '$dev'\n";
+	    } else {
+		warn "unable to install the EFI boot loader on '$dev', ignoring (not booted using UEFI)\n";
+	    }
 	}
-    }
-    # also install fallback boot file (OVMF does not boot without)
-    mkdir("$targetdir/boot/efi/EFI/BOOT");
-    syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
-	die "unable to copy efi boot loader\n";
+	# also install fallback boot file (OVMF does not boot without)
+	mkdir("$targetdir/boot/efi/EFI/BOOT");
+	syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
+	    die "unable to copy efi boot loader\n";
+    };
+    my $err = $@;
 
-    syscmd("umount $targetdir/boot/efi") == 0 ||
-	die "unable to umount $targetdir/boot/efi\n";
+    eval {
+	syscmd("umount $targetdir/boot/efi") == 0 ||
+	    die "unable to umount $targetdir/boot/efi\n";
+    };
+    warn $@ if $@;
+
+    die "failed to prepare EFI boot using Grub on '$espdev': $err" if $err;
 }
 
 sub extract_data {
@@ -1218,6 +1226,8 @@ sub extract_data {
 
 	die "unable to load zfs kernel module\n" if !$i;
     }
+
+    my $bootloader_err;
 
     eval {
 
@@ -1702,29 +1712,45 @@ _EOD
 	    symlink ("/proc/mounts", "$targetdir/etc/mtab");
 	    syscmd("mount -n --bind /dev $targetdir/dev");
 
-	    syscmd("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
-		die "unable to install initramfs\n";
+	    my $bootloader_err_list = [];
+	    eval {
+		syscmd("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
+		    die "unable to install initramfs\n";
 
-	    foreach my $di (@$bootdevinfo) {
-		my $dev = $di->{devname};
-		syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-			die "unable to install the i386-pc boot loader on '$dev'\n";
+		foreach my $di (@$bootdevinfo) {
+		    my $dev = $di->{devname};
+		    eval {
+			syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+				die "unable to install the i386-pc boot loader on '$dev'\n";
+		    };
+		    push @$bootloader_err_list, $@ if $@;
 
-		if (my $esp = $di->{esp}) {
-		    if ($use_zfs) {
-			prepare_systemd_boot_esp($esp, $targetdir);
-		    } else {
-			prepare_grub_efi_boot_esp($dev, $esp, $targetdir);
-		    }
+		    eval {
+			if (my $esp = $di->{esp}) {
+			    if ($use_zfs) {
+				prepare_systemd_boot_esp($esp, $targetdir);
+			    } else {
+				prepare_grub_efi_boot_esp($dev, $esp, $targetdir);
+			    }
+			}
+		    };
+		    push @$bootloader_err_list, $@ if $@;
 		}
-	    }
 
-	    syscmd("chroot $targetdir /usr/sbin/update-grub") == 0 ||
-		die "unable to update boot loader config\n";
+		syscmd("chroot $targetdir /usr/sbin/update-grub") == 0 ||
+		    die "unable to update boot loader config\n";
 
-	    if ($use_zfs && $boot_type eq 'efi') {
-		syscmd("chroot $targetdir /etc/kernel/postinst.d/zz-pve-efiboot") == 0 ||
-		    die "unable to generate systemd-boot config\n";
+		if ($use_zfs && $boot_type eq 'efi') {
+		    syscmd("chroot $targetdir /etc/kernel/postinst.d/zz-pve-efiboot") == 0 ||
+			die "unable to generate systemd-boot config\n";
+		}
+	    };
+	    push @$bootloader_err_list, $@ if $@;
+
+	    if (scalar(@$bootloader_err_list) > 0) {
+		$bootloader_err = "bootloader setup errors:\n";
+		map { $bootloader_err .= "- $_" } @$bootloader_err_list;
+		warn $bootloader_err;
 	    }
 
 	    syscmd("umount $targetdir/dev");
@@ -1817,6 +1843,10 @@ _EOD
 	syscmd("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname")  == 0 ||
 	    die "zfs set bootfs failed\n";
 	syscmd("zpool export $zfspoolname");
+    }
+
+    if ($bootloader_err) {
+	$err = $err ? "$err\n$bootloader_err" : $bootloader_err;
     }
 
     die $err if $err;
