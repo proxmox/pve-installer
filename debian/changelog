@@ -1,3 +1,13 @@
+pve-installer (6.0-8) pmg pve; urgency=medium
+
+  * success screen: show real final IP addr with port
+
+  * handle bootloader installation errors gracefully
+
+  * efiboot: remove redundant call to zz-pve-efiboot
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 25 Jul 2019 12:40:37 +0200
+
 pve-installer (6.0-5) pmg pve; urgency=medium
 
   * hd_list: skip all devices with iso9660 as FS
