@@ -620,7 +620,7 @@ sub hd_list {
 
 sub read_cmap {
     my $countryfn = "${proxmox_libdir}/country.dat";
-    open (TMP, "<$countryfn") || die "unable to open '$countryfn' - $!\n";
+    open (TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
     my $line;
     my $country = {};
     my $countryhash = {};
