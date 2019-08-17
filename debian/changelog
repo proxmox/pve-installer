@@ -1,3 +1,9 @@
+pve-installer (6.0-9) pmg pve; urgency=medium
+
+  * fix #2313: load country.dat file with utf8 encoding
+
+ -- Proxmox Support Team <support@proxmox.com>  Sat, 17 Aug 2019 10:31:38 +0200
+
 pve-installer (6.0-8) pmg pve; urgency=medium
 
   * success screen: show real final IP addr with port
