@@ -1643,6 +1643,8 @@ _EOD
 	syscmd("chroot $targetdir /usr/sbin/postfix check");
 	# cleanup mail queue
 	syscmd("chroot $targetdir /usr/sbin/postsuper -d ALL");
+	# create /etc/aliases.db (/etc/aliases is shipped in the base squashfs)
+	syscmd("chroot $targetdir /usr/bin/newaliases");
 
 	# enable NTP (timedatectl set-ntp true  does not work without DBUS)
 	syscmd("chroot $targetdir /bin/systemctl enable systemd-timesyncd.service");
