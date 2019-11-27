@@ -937,7 +937,6 @@ sub partition_bootable_disk {
     die "unknown partition type '$ptype'"
 	if !($ptype eq '8E00' || $ptype eq '8300' || $ptype eq 'BF01');
 
-    syscmd("sgdisk -Z ${target_dev}");
     my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
 
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
@@ -951,6 +950,8 @@ sub partition_bootable_disk {
 
     my $hdgb = int($hdsize/(1024*1024));
     die "hardisk '$target_dev' too small (${hdgb}GB)\n" if $hdgb < 8;
+
+    syscmd("sgdisk -Z ${target_dev}");
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1M
     # 2 - EFI ESP: next free 512M
