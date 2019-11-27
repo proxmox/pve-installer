@@ -1410,6 +1410,7 @@ sub extract_data {
 
 	foreach my $di (@$bootdevinfo) {
 	    next if !$di->{esp};
+	    # FIXME remove '-s1' once https://github.com/dosfstools/dosfstools/issues/111 is fixed
 	    my $vfat_extra_opts = ($di->{logical_bsize} == 4096) ? '-s1' : '';
 	    syscmd("mkfs.vfat $vfat_extra_opts -F32 $di->{esp}") == 0 ||
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
