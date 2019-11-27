@@ -686,7 +686,7 @@ sub hd_size {
 
     foreach my $hd (@$hds) {
 	my ($disk, $devname, $size, $model) = @$hd;
-	# size is always in 512B "sectors"! convert to KB
+	# size is always (also for 4kn disks) in 512B "sectors"! convert to KB
 	return int($size/2) if $devname eq $dev;
     }
 
