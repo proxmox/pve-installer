@@ -568,7 +568,7 @@ sub hd_list {
 	my @disks = split /,/, $opt_testmode;
 
 	for my $disk (@disks) {
-	    push @$res, [-1, $disk, int((-s $disk)/512), "TESTDISK"];
+	    push @$res, [-1, $disk, int((-s $disk)/512), "TESTDISK", 512];
 	}
 	return $res;
     }
@@ -611,7 +611,12 @@ sub hd_list {
 	    if (length ($model) > 30) {
 		$model = substr ($model, 0, 30);
 	    }
-	    push @$res, [$count++, $real_name, $size, $model] if $size;
+
+	    my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
+	    chomp $logical_bsize;
+	    $logical_bsize = undef if !($logical_bsize && $logical_bsize =~ m/^\d+$/);
+
+	    push @$res, [$count++, $real_name, $size, $model, $logical_bsize] if $size;
 	} else {
 	    print STDERR "ERROR: unable to map device $dev ($bd)\n";
 	}
@@ -685,9 +690,20 @@ sub hd_size {
     my ($dev) = @_;
 
     foreach my $hd (@$hds) {
-	my ($disk, $devname, $size, $model) = @$hd;
+	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	# size is always (also for 4kn disks) in 512B "sectors"! convert to KB
 	return int($size/2) if $devname eq $dev;
+    }
+
+    die "no such device '$dev'\n";
+}
+
+sub logical_blocksize {
+    my ($dev) = @_;
+
+    foreach my $hd (@$hds) {
+	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
+	return $logical_bsize if $devname eq $dev;
     }
 
     die "no such device '$dev'\n";
@@ -2761,7 +2777,7 @@ my $create_raid_disk_grid = sub {
 	$disk_selector->set_active(0);
 	$disk_selector->set_visible(1);
 	foreach my $hd (@$hds) {
-	    my ($disk, $devname, $size, $model) = @$hd;
+	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	    $disk_selector->append_text(get_device_desc ($devname, $size, $model));
 	    $disk_selector->{pve_disk_id} = $i;
 	    $disk_selector->signal_connect (changed => sub {
@@ -3096,7 +3112,7 @@ my $get_raid_devlist = sub {
     my $devlist = [];
     for (my $i = 0; $i < @$hds; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
-	    my ($disk, $devname, $size, $model) = @$hd;
+	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	    die "device '$devname' is used more than once\n"
 		if $dev_name_hash->{$devname};
 	    $dev_name_hash->{$devname} = $hd;
@@ -3215,7 +3231,7 @@ sub create_hdsel_view {
     my $hbox =  Gtk3::HBox->new(0, 0);
     $vbox->pack_start($hbox, 0, 0, 10);
 
-    my ($disk, $devname, $size, $model) = @{@$hds[0]};
+    my ($disk, $devname, $size, $model, $logical_bsize) = @{@$hds[0]};
     $target_hd = $devname if !defined($target_hd);
 
     $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
@@ -3224,7 +3240,7 @@ sub create_hdsel_view {
     $target_hd_combo = Gtk3::ComboBoxText->new();
 
     foreach my $hd (@$hds) {
-	($disk, $devname, $size, $model) = @$hd;
+	($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	$target_hd_combo->append_text (get_device_desc($devname, $size, $model));
     }
 
