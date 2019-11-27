@@ -1294,8 +1294,12 @@ sub extract_data {
 		    partition_bootable_disk($devname, undef, '8300');
 		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
 		my $by_id = find_stable_path("/dev/disk/by-id", $devname);
-		push @$bootdevinfo, { esp => $efidev, devname => $devname,
-				      osdev => $osdev, by_id => $by_id };
+		push @$bootdevinfo, {
+		    esp => $efidev,
+		    devname => $devname,
+		    osdev => $osdev,
+		    by_id => $by_id,
+		};
 		push @$btrfs_partitions, $osdev;
 		$disksize = $size;
 	    }
@@ -1355,8 +1359,12 @@ sub extract_data {
 	    &$udevadm_trigger_block();
 
 	    my $by_id = find_stable_path ("/dev/disk/by-id", $target_hd);
-	    push @$bootdevinfo, { esp => $efidev, devname => $target_hd,
-				  osdev => $osdev, by_id => $by_id };
+	    push @$bootdevinfo, {
+		esp => $efidev,
+		devname => $target_hd,
+		osdev => $osdev,
+		by_id => $by_id,
+	    };
 
 	    my $swap_size = compute_swapsize($os_size);
 	    ($rootdev, $swapfile, $datadev) =
