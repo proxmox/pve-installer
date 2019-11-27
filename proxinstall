@@ -975,11 +975,15 @@ sub partition_bootable_disk {
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
 
-    $pnum = 1;
-    $pcmd = ['sgdisk', '-a1', "-n$pnum:34:2047", "-t$pnum:EF02" , $target_dev];
+    my $blocksize = logical_blocksize($target_dev);
 
-    syscmd($pcmd) == 0 ||
-	die "unable to create bios_boot partition '${target_dev}'\n";
+    if ($blocksize != 4096) {
+	$pnum = 1;
+	$pcmd = ['sgdisk', '-a1', "-n$pnum:34:2047", "-t$pnum:EF02" , $target_dev];
+
+	syscmd($pcmd) == 0 ||
+	    die "unable to create bios_boot partition '${target_dev}'\n";
+    }
 
     &$udevadm_trigger_block();
 
@@ -1289,6 +1293,8 @@ sub extract_data {
 	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		my $devname = @$hd[1];
+		my $logical_bsize = @$hd[4];
+
 		&$clean_disk($devname);
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, undef, '8300');
@@ -1299,6 +1305,7 @@ sub extract_data {
 		    devname => $devname,
 		    osdev => $osdev,
 		    by_id => $by_id,
+		    logical_bsize => $logical_bsize,
 		};
 		push @$btrfs_partitions, $osdev;
 		$disksize = $size;
@@ -1319,6 +1326,7 @@ sub extract_data {
 	    my $disksize;
 	    foreach my $hd (@$bootdevlist) {
 		my $devname = @$hd[1];
+		my $logical_bsize = @$hd[4];
 
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
@@ -1328,7 +1336,8 @@ sub extract_data {
 		push @$bootdevinfo, {
 		    esp => $efidev,
 		    devname => $devname,
-		    osdev => $osdev
+		    osdev => $osdev,
+		    logical_bsize => $logical_bsize,
 		};
 		$disksize = $size;
 	    }
@@ -1352,6 +1361,8 @@ sub extract_data {
 
 	    &$clean_disk($target_hd);
 
+	    my $logical_bsize = logical_blocksize($target_hd);
+
 	    my ($os_size, $osdev, $efidev);
 	    ($os_size, $osdev, $efidev) =
 		partition_bootable_disk($target_hd, $config_options->{hdsize}, '8E00');
@@ -1364,6 +1375,7 @@ sub extract_data {
 		devname => $target_hd,
 		osdev => $osdev,
 		by_id => $by_id,
+		logical_bsize => $logical_bsize,
 	    };
 
 	    my $swap_size = compute_swapsize($os_size);
@@ -1390,7 +1402,8 @@ sub extract_data {
 
 	foreach my $di (@$bootdevinfo) {
 	    next if !$di->{esp};
-	    syscmd("mkfs.vfat -F32 $di->{esp}") == 0 ||
+	    my $vfat_extra_opts = ($di->{logical_bsize} == 4096) ? '-s1' : '';
+	    syscmd("mkfs.vfat $vfat_extra_opts -F32 $di->{esp}") == 0 ||
 		die "unable to initialize EFI ESP on device $di->{esp}\n";
 	}
 
@@ -1745,13 +1758,20 @@ _EOD
 		syscmd("chroot $targetdir /usr/sbin/update-initramfs -c -k $kapi") == 0 ||
 		    die "unable to install initramfs\n";
 
+		my $native_4k_disk_bootable = 0;
+		foreach my $di (@$bootdevinfo) {
+		    $native_4k_disk_bootable |= ($di->{logical_bsize} == 4096);
+		}
+
 		foreach my $di (@$bootdevinfo) {
 		    my $dev = $di->{devname};
-		    eval {
-			syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-				die "unable to install the i386-pc boot loader on '$dev'\n";
-		    };
-		    push @$bootloader_err_list, $@ if $@;
+		    if (!$native_4k_disk_bootable) {
+			eval {
+			    syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+				    die "unable to install the i386-pc boot loader on '$dev'\n";
+			};
+			push @$bootloader_err_list, $@ if $@;
+		    }
 
 		    eval {
 			if (my $esp = $di->{esp}) {
@@ -3138,6 +3158,12 @@ sub zfs_mirror_size_check {
 	if abs($expected - $actual) > $expected / 10;
 }
 
+sub legacy_bios_4k_check {
+    my ($lbs) = @_;
+    die "Booting from 4kn drive in legacy BIOS mode is not supported.\n"
+	if (($boot_type ne 'efi') && ($lbs == 4096));
+}
+
 sub get_zfs_raid_setup {
 
     my $filesys = $config_options->{filesys};
@@ -3153,6 +3179,7 @@ sub get_zfs_raid_setup {
     if ($filesys eq 'zfs (RAID0)') {
 	push @$bootdevlist, @$devlist[0];
 	foreach my $hd (@$devlist) {
+	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
 	}
     } elsif ($filesys eq 'zfs (RAID1)') {
@@ -3162,6 +3189,7 @@ sub get_zfs_raid_setup {
 	my $expected_size = @$hd[2]; # all disks need approximately same size
 	foreach $hd (@$devlist) {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
+	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
@@ -3175,6 +3203,8 @@ sub get_zfs_raid_setup {
 	    my $hd1 = @$devlist[$i];
 	    my $hd2 = @$devlist[$i+1];
 	    zfs_mirror_size_check(@$hd1[2], @$hd2[2]); # pairs need approximately same size
+	    legacy_bios_4k_check(@$hd1[4]);
+	    legacy_bios_4k_check(@$hd2[4]);
 	    $cmd .= ' mirror ' . @$hd1[1] . ' ' . @$hd2[1];
 	}
 
@@ -3187,6 +3217,7 @@ sub get_zfs_raid_setup {
 	$cmd .= " raidz$level";
 	foreach $hd (@$devlist) {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
+	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
 	    push @$bootdevlist, $hd;
 	}
@@ -3294,6 +3325,11 @@ sub create_hdsel_view {
 	    }
 	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 	} else {
+	    eval { legacy_bios_4k_check(logical_blocksize($target_hd)) };
+	    if (my $err = $@) {
+		display_message("Warning: $err\n");
+		return;
+	    }
 	    $config_options->{target_hds} = [ $target_hd ];
 	}
 
