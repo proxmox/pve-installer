@@ -1,3 +1,11 @@
+pve-installer (6.1-2) pmg pve; urgency=medium
+
+  * add all ZFS vdevs with stable by-id device path
+
+  * fix #1211: allow installation on 4k-native (4kn) disks booting with UEFI
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 27 Nov 2019 19:20:45 +0100
+
 pve-installer (6.1-1) pmg pve; urgency=medium
 
   * raise postifx main.cf compatibility_level to 2
