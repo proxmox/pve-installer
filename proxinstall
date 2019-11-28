@@ -2586,7 +2586,7 @@ sub create_password_view {
 	}
 
 	my $t3 = $eme->get_text;
-	if ($t3 !~ m/^\S+\@\S+\.\S+$/) {
+	if ($t3 !~ m/^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$/) {
 	    display_message("E-Mail does not look like a valid address" .
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
