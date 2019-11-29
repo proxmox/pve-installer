@@ -64,22 +64,26 @@ upload-pve: ${PVE_DEB}
 	truncate -s 2G $@
 
 check-pve: ${PVE_DEB} test.img
+	umount -Rd testdir || true
 	rm -rf testdir
 	dpkg -X ${PVE_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pve-multidisks: ${PVE_DEB} test.img test2.img test3.img test4.img
+	umount -Rd testdir || true
 	rm -rf testdir
 	dpkg -X ${PVE_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img
 
 check-pmg: ${PMG_DEB} test.img
+	umount -Rd testdir || true
 	rm -rf testdir
 	dpkg -X ${PMG_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 .phony: clean
 clean:
+	umount -Rd testdir || true
 	make -C html-common clean
 	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist *.buildinfo *.changes country.dat final.pkglist
 	find . -name '*~' -exec rm {} ';'
