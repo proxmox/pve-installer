@@ -2,8 +2,9 @@ include /usr/share/dpkg/pkg-info.mk
 
 PVE_DEB=pve-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
 PMG_DEB=pmg-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
+PBS_DEB=pbs-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
 
-DEBS = ${PVE_DEB} ${PMG_DEB}
+DEBS = ${PVE_DEB} ${PMG_DEB} ${PBS_DEB}
 
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\
@@ -11,6 +12,7 @@ INSTALLER_SOURCES=		\
 	interfaces		\
 	pmg-banner.png		\
 	pve-banner.png		\
+	pbs-banner.png		\
 	checktime		\
 	xinitrc			\
 	Xdefaults		\
@@ -25,12 +27,13 @@ all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 country.dat: country.pl
 	./country.pl > country.dat
 
-deb: ${DEBS} 
+deb: ${DEBS}
 ${DEBS}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian -X man ${PVE_DEB}
 	lintian -X man ${PMG_DEB}
+	lintian -X man ${PBS_DEB}
 
 .phony: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
@@ -48,6 +51,9 @@ pmg-banner.png: pmg-banner.svg
 	rsvg-convert -o $@ $<
 
 pve-banner.png: pve-banner.svg
+	rsvg-convert -o $@ $<
+
+pbs-banner.png: pbs-banner.svg
 	rsvg-convert -o $@ $<
 
 .phony: upload-pmg
@@ -78,6 +84,13 @@ check-pmg: ${PMG_DEB} test.img
 	rm -rf testdir
 	dpkg -X ${PMG_DEB} testdir
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
+check-pbs: ${PBS_DEB} test.img
+	umount -Rd testdir || true
+	rm -rf testdir
+	dpkg -X ${PBS_DEB} testdir
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
 
 .phony: clean
 clean:

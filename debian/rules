@@ -12,8 +12,10 @@ SETUPFN = "/usr/share/perl5/ProxmoxInstallerSetup.pm"
 override_dh_auto_install:
 	install -D -m 0644 ProxmoxInstallerSetup-pve.pm $(CURDIR)/debian/pve-installer/${SETUPFN}
 	install -D -m 0644 ProxmoxInstallerSetup-pmg.pm $(CURDIR)/debian/pmg-installer/${SETUPFN}
+	install -D -m 0644 ProxmoxInstallerSetup-pbs.pm $(CURDIR)/debian/pbs-installer/${SETUPFN}
 	dh_auto_install --destdir debian/pve-installer
 	dh_auto_install --destdir debian/pmg-installer
+	dh_auto_install --destdir debian/pbs-installer
 
 override_dh_auto_test:
 	# do nothing here

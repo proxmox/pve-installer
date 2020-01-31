@@ -29,3 +29,13 @@ Depends: geoip-bin,
          ${perl:Depends},
 Description: Proxmox Mail Gateway Installer
  This package contains the graphical installer for Proxmox Mail Gateway.
+
+Package: pbs-installer
+Architecture: all
+Depends: geoip-bin,
+         libgtk3-webkit2-perl,
+         pve-kernel-helper,
+         squashfs-tools,
+         ${perl:Depends},
+Description: Proxmox Backup Server Installer
+ This package contains the graphical installer for Proxmox Backup Server
