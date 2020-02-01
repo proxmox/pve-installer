@@ -1600,7 +1600,6 @@ sub extract_data {
 	    }
 	}
 
-
 	$fstab .= "$swapfile none swap sw 0 0\n" if $swapfile;
 
 	$fstab .= "proc /proc proc defaults 0 0\n";
@@ -1608,11 +1607,7 @@ sub extract_data {
 	write_config($fstab, "$targetdir/etc/fstab");
 	write_config("", "$targetdir/etc/mtab");
 
-	syscmd("cp ${proxmox_libdir}/policy-disable-rc.d " .
-		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
-		die "unable to copy policy-rc.d\n";
-	syscmd("cp ${proxmox_libdir}/fake-start-stop-daemon " .
-		"$targetdir/sbin/") == 0 ||
+	syscmd("cp ${proxmox_libdir}/fake-start-stop-daemon $targetdir/sbin/") == 0 ||
 		die "unable to copy start-stop-daemon\n";
 
 	diversion_add($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");

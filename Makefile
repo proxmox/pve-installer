@@ -8,7 +8,6 @@ DEBS = ${PVE_DEB} ${PMG_DEB}
 INSTALLER_SOURCES=		\
 	unconfigured.sh 	\
 	fake-start-stop-daemon	\
-	policy-disable-rc.d	\
 	interfaces		\
 	pmg-banner.png		\
 	pve-banner.png		\
@@ -38,7 +37,6 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	make -C html-common install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	install -D -m 755 fake-start-stop-daemon ${DESTDIR}/var/lib/pve-installer/fake-start-stop-daemon
-	install -D -m 755 policy-disable-rc.d ${DESTDIR}/var/lib/pve-installer/policy-disable-rc.d
 	install -D -m 644 country.dat ${DESTDIR}/var/lib/pve-installer/country.dat
 	install -D -m 755 unconfigured.sh ${DESTDIR}/sbin/unconfigured.sh
 	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
