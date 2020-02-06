@@ -7,7 +7,7 @@ sub setup {
     return {
 	product => 'pbs',
 	enable_btrfs => 0,
-	bridged_network => 1,
+	bridged_network => 0,
     };
 }
 
