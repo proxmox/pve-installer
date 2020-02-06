@@ -326,12 +326,8 @@
              id="tspan58"
              x="431.66534"
              y="316.12653"
-             style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:12.57653904px;font-family:Lato;-inkscape-font-specification:'Lato, Medium';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#e6e6e6;stroke-width:0.33687156">Proxmox Backup Server</tspan><tspan
-             sodipodi:role="line"
-             x="431.66534"
-             y="332.97009"
-             style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:12.57653904px;font-family:Lato;-inkscape-font-specification:'Lato, Medium';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#e6e6e6;stroke-width:0.33687156"
-             id="tspan3790">ALPHA</tspan></text>
+             style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:12.57653904px;font-family:Lato;-inkscape-font-specification:'Lato, Medium';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#e6e6e6;stroke-width:0.33687156">Proxmox Backup Server</tspan>
+        </text>
       </g>
     </g>
   </g>
