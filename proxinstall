@@ -1728,11 +1728,6 @@ _EOD
 	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
 	}
 
-	if ($setup->{product} eq 'pbs') {
-	    # correct permissions and owners on /etc/proxmox-backup
-	    syscmd("chown -R backup:root /etc/proxmox-backup");
-	}
-
 	update_progress(0.8, 0.95, 1, "make system bootable");
 
 	if ($use_zfs) {
