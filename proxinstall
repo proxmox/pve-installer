@@ -42,8 +42,8 @@ my $zfsrootvolname = "$setup->{product}-1";
 
 my $product_fullname = {
     pve => 'Proxmox VE',
-    pmg => 'Proxmox MailGateway',
-    pbs => 'Proxmox BackupServer',
+    pmg => 'Proxmox Mail Gateway',
+    pbs => 'Proxmox Backup Server',
 };
 
 my $storage_cfg_zfs = <<__EOD__;
