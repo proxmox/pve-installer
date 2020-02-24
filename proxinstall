@@ -1359,7 +1359,7 @@ sub extract_data {
 		my $devname = @$hd[1];
 		my $by_id = find_stable_path ("/dev/disk/by-id", $devname);
 
-		$vdev =~ s/ $devname/ $by_id/;
+		$vdev =~ s/ $devname/ $by_id/ if $by_id;
 	    }
 
 	    zfs_create_rpool($vdev);
