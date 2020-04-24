@@ -48,7 +48,7 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
-	install -D -m 644 spice-vdagent.sh ${DESTDIR}/.spice-vdagent.sh
+	install -D -m 755 spice-vdagent.sh ${DESTDIR}/.spice-vdagent.sh
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
 
 pmg-banner.png: pmg-banner.svg
