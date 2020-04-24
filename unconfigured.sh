@@ -88,6 +88,10 @@ export PREVLEVEL=N
 mkdir -p /dev/shm
 mount -t tmpfs tmpfs /dev/shm
 
+# allow pseudo terminals for debuggin in X
+mkdir -p /dev/pts
+mount -vt devpts devpts /dev/pts -o gid=5,mode=620
+
 if [ $proxdebug -ne 0 ]; then
     echo "Dropping in debug shell inside chroot before starting installation"
     echo "type exit or CTRL-D to start installation wizard"
