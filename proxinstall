@@ -1991,6 +1991,7 @@ sub create_main_window {
     $window = Gtk3::Window->new();
     $window->set_default_size(1024, 768);
     $window->set_has_resize_grip(0);
+    $window->fullscreen() if !$opt_testmode;
     $window->set_decorated(0) if !$opt_testmode;
 
     my $vbox = Gtk3::VBox->new(0, 0);
