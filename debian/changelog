@@ -1,3 +1,13 @@
+pve-installer (6.1-4) pmg pve; urgency=medium
+
+  * unconfigured: allow pseudo terminals, mount devpts
+
+  * start installer window always in full screen mode
+
+  * improve spice integration
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 24 Apr 2020 19:40:23 +0200
+
 pve-installer (6.1-3) pmg pve; urgency=medium
 
   * fix behavior if ZFS disks have no /dev/by-id path
