@@ -93,6 +93,7 @@ mkdir -p /dev/pts
 mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
 if [ $proxdebug -ne 0 ]; then
+    /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     echo "Dropping in debug shell inside chroot before starting installation"
     echo "type exit or CTRL-D to start installation wizard"
     debugsh
