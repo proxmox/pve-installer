@@ -51,7 +51,7 @@ real_reboot() {
 err_reboot() {
 
     echo "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)"
-    debugsh
+    debugsh || true
     real_reboot
 }
 
@@ -96,7 +96,7 @@ if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     echo "Dropping in debug shell inside chroot before starting installation"
     echo "type exit or CTRL-D to start installation wizard"
-    debugsh
+    debugsh || true
 fi
 
 # set the hostname 
@@ -114,7 +114,7 @@ sync
 
 if [ $proxdebug -ne 0 ]; then 
     echo "Debugging mode (type exit or CTRL-D to reboot)"
-    debugsh 
+    debugsh || true
 fi
 
 echo "Installation done, rebooting... "
