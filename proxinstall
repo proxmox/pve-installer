@@ -243,7 +243,7 @@ my $prev_btn;
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
 
-my ($ipversion, $ipaddress, $ipconf_entry_addr);
+my ($ipversion, $ipaddress, $cidr, $ipconf_entry_addr);
 my ($netmask, $ipconf_entry_mask);
 my ($gateway, $ipconf_entry_gw);
 my ($dnsserver, $ipconf_entry_dns);
@@ -1529,8 +1529,7 @@ sub extract_data {
 
 	    $ifaces .=
 		"\nauto vmbr0\niface vmbr0 $ntype static\n" .
-		"\taddress $ipaddress\n" .
-		"\tnetmask $netmask\n" .
+		"\taddress $cidr\n" .
 		"\tgateway $gateway\n" .
 		"\tbridge_ports $ethdev\n" .
 		"\tbridge_stp off\n" .
@@ -1538,8 +1537,7 @@ sub extract_data {
 	} else {
 	    $ifaces .= "auto $ethdev\n" .
 		"iface $ethdev $ntype static\n" .
-		"\taddress $ipaddress\n" .
-		"\tnetmask $netmask\n" .
+		"\taddress $cidr\n" .
 		"\tgateway $gateway\n";
 	}
 
@@ -2357,8 +2355,10 @@ sub create_ipconf_view {
 	$text =~ s/\s+$//;
 	if (($ipversion == 6) && ($text =~ m/^(\d+)$/) && ($1 >= 8) && ($1 <= 126)) {
 	    $netmask = $text;
+	    $cidr = "$ipaddress/$netmask";
 	} elsif (($ipversion == 4) && defined($ipv4_mask_hash->{$text})) {
 	    $netmask = $text;
+	    $cidr = "$ipaddress/" . $ipv4_mask_hash->{$text};
 	} else {
 	    display_message("Netmask is not valid.");
 	    $ipconf_entry_mask->grab_focus();
@@ -2421,6 +2421,7 @@ sub create_ack_view {
 	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
 	__hostname__ => $hostname,
 	__ip__ => $ipaddress,
+	__cidr__ => $cidr,
 	__netmask__ => $netmask,
 	__gateway__ => $gateway,
 	__dnsserver__ => $dnsserver,
