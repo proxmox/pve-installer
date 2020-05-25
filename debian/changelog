@@ -1,3 +1,11 @@
+pve-installer (6.2-2) pmg pve; urgency=medium
+
+  * write out network configuration in CIDR notation
+
+  * create default DS
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 25 May 2020 21:10:33 +0200
+
 pve-installer (6.2-1) pmg pve; urgency=medium
 
   * unconfigured: don't trap "bad" debug-shell exits
