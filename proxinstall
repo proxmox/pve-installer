@@ -1854,6 +1854,19 @@ _EOD
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 
 	    syscmd("rm -rf $tmpdir");
+	} elsif ($setup->{product} eq 'pbs') {
+	    my $base_cfg_path = "/etc/proxmox-backup";
+	    my $default_ds_path = '/var/datastore/default';
+	    mkdir "$targetdir/var/datastore";
+	    mkdir "$targetdir/$default_ds_path";
+	    mkdir "$targetdir/$base_cfg_path";
+	    syscmd("chroot $targetdir /bin/chown backup:backup -R $default_ds_path $base_cfg_path") == 0 ||
+		die "unable to set owner for default backup datastore or config directory\n";
+	    syscmd("chroot $targetdir /bin/chmod 0700 $base_cfg_path") == 0 ||
+		die "unable to set owner for datastore config base path\n";
+
+	    syscmd("chroot $targetdir /usr/sbin/proxmox-backup-manager datastore create default $default_ds_path") == 0 ||
+		die "unable to create default backup datastore\n";
 	}
     };
 
