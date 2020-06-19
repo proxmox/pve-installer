@@ -107,6 +107,9 @@ echo -n "Attempting to get DHCP leases... "
 dhclient -v
 echo "done"
 
+echo "Starting a root shell on tty3."
+setsid /sbin/agetty -a root --noclear tty3 &
+
 xinit -- -dpi 96 >/dev/tty2 2>&1
 
 # just to be sure everything is on disk
