@@ -1,3 +1,11 @@
+pve-installer (6.2-3) pmg pve; urgency=medium
+
+  * fix #2804: add a root shell on tty3
+
+  * pbs: update installation html texts
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 07 Jul 2020 15:37:04 +0200
+
 pve-installer (6.2-2) pmg pve; urgency=medium
 
   * write out network configuration in CIDR notation
