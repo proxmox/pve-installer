@@ -2666,8 +2666,19 @@ sub create_country_view {
 	if (my $kmap = $cmap->{kmaphash}->{$sel}) {
 	    my $xkmap = $cmap->{kmap}->{$kmap}->{x11};
 	    my $xvar = $cmap->{kmap}->{$kmap}->{x11var};
-	    syscmd ("setxkbmap $xkmap $xvar") if !$opt_testmode;
 	    $keymap = $kmap;
+
+	    if (! $opt_testmode) {
+		syscmd ("setxkbmap $xkmap $xvar");
+		my $kbd_config = qq{
+		    XKBLAYOUT="$xkmap"
+		    XKBVARIANT="$xvar"
+		    BACKSPACE="guess"
+		};
+		$kbd_config =~ s/^\s+//gm;
+		write_config($kbd_config, '/etc/default/keyboard');
+		syscmd ("setupcon");
+	    }
 	}
     });
 
