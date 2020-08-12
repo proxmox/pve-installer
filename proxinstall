@@ -1737,9 +1737,7 @@ _EOD
 	    syscmd("sed -i -e 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"root=ZFS=$zfspoolname\\/ROOT\\/$zfsrootvolname boot=zfs\"/' $targetdir/etc/default/grub") == 0 ||
 		die "unable to update /etc/default/grub\n";
 
-	    if ($boot_type eq 'efi') {
-		write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs", "$targetdir/etc/kernel/cmdline");
-	    }
+	    write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs", "$targetdir/etc/kernel/cmdline");
 
 	}
 
