@@ -279,7 +279,7 @@ my $config = {
 
 my $config_options = {};
 
-if ($cmdline =~ m/\s(ext3|ext4|xfs)(\s.*)?$/) {
+if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
     $config_options->{filesys} = $1;
 } else {
     $config_options->{filesys} = 'ext4';
@@ -774,12 +774,6 @@ sub update_progress {
 }
 
 my $fssetup = {
-    ext3 => {
-	mkfs => 'mkfs.ext3 -F',
-	mkfs_root_opt => '',
-	mkfs_data_opt => '-m 0',
-	root_mountopt => 'errors=remount-ro',
-    },
     ext4 => {
 	mkfs => 'mkfs.ext4 -F',
 	mkfs_root_opt => '',
@@ -2982,7 +2976,7 @@ sub create_hdoption_view {
 
     my $fstypecb = Gtk3::ComboBoxText->new();
 
-    my $fstype = ['ext3', 'ext4', 'xfs',
+    my $fstype = ['ext4', 'xfs',
 		  'zfs (RAID0)', 'zfs (RAID1)',
 		  'zfs (RAID10)', 'zfs (RAIDZ-1)',
 		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)'];
