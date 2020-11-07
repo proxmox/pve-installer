@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
-$ENV{DEBIAN_FRONTEND} = 'noninteractive';
-$ENV{LC_ALL} = 'C';
-
 use strict;
 use warnings;
+
+$ENV{DEBIAN_FRONTEND} = 'noninteractive';
+$ENV{LC_ALL} = 'C';
 
 use Getopt::Long;
 use IPC::Open2;
@@ -414,7 +414,7 @@ sub run_command {
     print $writer $input if defined $input;
     close $writer;
 
-    my $select = new IO::Select;
+    my $select = IO::Select->new();
     $select->add($reader);
     $select->add($error);
 
@@ -516,16 +516,16 @@ sub detect_country {
 
 sub get_memtotal {
 
-    open (MEMINFO, "/proc/meminfo");
+    open (my $MEMINFO, '<', '/proc/meminfo');
 
     my $res = 512; # default to 512 if something goes wrong
-    while (my $line = <MEMINFO>) {
+    while (my $line = <$MEMINFO>) {
 	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
 	    $res = int ($1 / 1024);
 	}
     }
 
-    close (MEMINFO);
+    close($MEMINFO);
 
     return $res;
 }
@@ -628,13 +628,13 @@ sub hd_list {
 
 sub read_cmap {
     my $countryfn = "${proxmox_libdir}/country.dat";
-    open (TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
+    open (my $TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
     my $line;
     my $country = {};
     my $countryhash = {};
     my $kmap = {};
     my $kmaphash = {};
-    while (defined ($line = <TMP>)) {
+    while (defined ($line = <$TMP>)) {
 	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
 	    $kmap->{$1} = {
 		name => $2,
@@ -655,13 +655,14 @@ sub read_cmap {
 	    warn "unable to parse 'country.dat' line: $line";
 	}
     }
-    close (TMP);
+    close ($TMP);
+    $TMP = undef;
 
     my $zones = {};
     my $cczones = {};
     my $zonefn = "/usr/share/zoneinfo/zone.tab";
-    open (TMP, "<$zonefn") || die "unable to open '$zonefn' - $!\n";
-    while (defined ($line = <TMP>)) {
+    open ($TMP, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
+    while (defined ($line = <$TMP>)) {
 	next if $line =~ m/^\#/;
 	next if $line =~ m/^\s*$/;
 	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
@@ -672,7 +673,7 @@ sub read_cmap {
 
 	}
     }
-    close (TMP);
+    close ($TMP);
 
     return {
 	zones => $zones,
@@ -3209,7 +3210,7 @@ sub get_zfs_raid_setup {
 	$cmd .= ' mirror ';
 	my $hd = @$devlist[0];
 	my $expected_size = @$hd[2]; # all disks need approximately same size
-	foreach $hd (@$devlist) {
+	foreach my $hd (@$devlist) {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
@@ -3237,7 +3238,7 @@ sub get_zfs_raid_setup {
 	my $hd = @$devlist[0];
 	my $expected_size = @$hd[2]; # all disks need approximately same size
 	$cmd .= " raidz$level";
-	foreach $hd (@$devlist) {
+	foreach my $hd (@$devlist) {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
