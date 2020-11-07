@@ -1170,6 +1170,29 @@ sub compute_swapsize {
     return $swapsize;
 }
 
+my sub chroot_chown {
+    my ($root, $path, %param) = @_;
+
+    my $recursive = $param{recursive} ? ' -R' : '';
+    my $user = $param{user};
+    die "can not chown without user parameter\n" if !defined($user);
+    my $group = $param{group} // $user;
+
+    syscmd("chroot $root /bin/chown $user:$group $recursive $path") == 0 ||
+	die "chroot: unable to change owner for '$path'\n";
+}
+
+my sub chroot_chmod {
+    my ($root, $path, %param) = @_;
+
+    my $recursive = $param{recursive} ? ' -R' : '';
+    my $mode = $param{mode};
+    die "can not chmod without mode parameter\n" if !defined($mode);
+
+    syscmd("chroot $root /bin/chmod $mode $recursive $path") == 0 ||
+	die "chroot: unable to change permission mode for '$path'\n";
+}
+
 sub prepare_systemd_boot_esp {
     my ($espdev, $targetdir) = @_;
 
@@ -1849,11 +1872,11 @@ _EOD
 	    syscmd("rm -rf $tmpdir");
 	} elsif ($setup->{product} eq 'pbs') {
 	    my $base_cfg_path = "/etc/proxmox-backup";
-	    mkdir "$targetdir/$base_cfg_path";
-	    syscmd("chroot $targetdir /bin/chown backup:backup -R $base_cfg_path") == 0 ||
-		die "unable to set owner for config directory\n";
-	    syscmd("chroot $targetdir /bin/chmod 0700 $base_cfg_path") == 0 ||
-		die "unable to set owner for config base path\n";
+	    my $target_cfg_path = "$targetdir/$base_cfg_path";
+	    mkdir $target_cfg_path;
+
+	    chroot_chown($targetdir, $base_cfg_path, user => 'backup', recursive => 1);
+	    chroot_chmod($targetdir, $base_cfg_path, mode => '0700');
 	}
     };
 
