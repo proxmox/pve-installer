@@ -2137,18 +2137,45 @@ sub check_number {
 sub create_text_input {
     my ($default, $text) = @_;
 
-    my $hbox = Gtk3::HBox->new(0, 0);
+    my $hbox = Gtk3::Box->new('horizontal', 0);
 
     my $label = Gtk3::Label->new($text);
     $label->set_size_request(150, -1);
     $label->set_alignment(1, 0.5);
     $hbox->pack_start($label, 0, 0, 10);
     my $e1 = Gtk3::Entry->new();
-    $e1->set_width_chars(30);
+    $e1->set_width_chars(35);
     $hbox->pack_start($e1, 0, 0, 0);
     $e1->set_text($default);
 
     return ($hbox, $e1);
+}
+sub create_cidr_inputs {
+    my ($default_ip, $default_mask) = @_;
+
+    my $hbox = Gtk3::Box->new('horizontal', 0);
+
+    my $label = Gtk3::Label->new('IP Address (CIDR)');
+    $label->set_size_request(150, -1);
+    $label->set_alignment(1, 0.5);
+    $hbox->pack_start($label, 0, 0, 10);
+
+    my $ip_el = Gtk3::Entry->new();
+    $ip_el->set_width_chars(28);
+    $hbox->pack_start($ip_el, 0, 0, 0);
+    $ip_el->set_text($default_ip);
+
+    $label = Gtk3::Label->new('/');
+    $label->set_size_request(10, -1);
+    $label->set_alignment(0.5, 0.5);
+    $hbox->pack_start($label, 0, 0, 2);
+
+    my $cidr_el = Gtk3::Entry->new();
+    $cidr_el->set_width_chars(3);
+    $hbox->pack_start($cidr_el, 0, 0, 0);
+    $cidr_el->set_text($default_mask);
+
+    return ($hbox, $ip_el, $cidr_el);
 }
 
 sub get_ip_config {
@@ -2191,6 +2218,7 @@ sub get_ip_config {
 	    $default = $index if !$default;
 
 	    $ifaces->{"$index"}->{"$family"} = {
+		prefix => $prefix,
 		mask => $mask,
 		addr => $ip,
 	    };
@@ -2239,22 +2267,18 @@ sub create_ipconf_view {
     cleanup_view();
     display_html();
 
-    my $vbox =  Gtk3::VBox->new(0, 0);
-    $inbox->pack_start($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::HBox->new(0, 0);
-    $vbox->pack_start($hbox, 0, 0, 10);
-    my $vbox2 =  Gtk3::VBox->new(0, 0);
-    $hbox->add($vbox2);
+    my $vcontainer = Gtk3::Box->new('vertical', 0);
+    $inbox->pack_start($vcontainer, 1, 0, 0);
+    my $hcontainer =  Gtk3::Box->new('horizontal', 0);
+    $vcontainer->pack_start($hcontainer, 0, 0, 10);
+    my $vbox =  Gtk3::Box->new('vertical', 0);
+    $hcontainer->add($vbox);
 
     my $ipaddr_text = $config->{ipaddress} // "192.168.100.2";
-    my $ipbox;
-    ($ipbox, $ipconf_entry_addr) =
-	create_text_input($ipaddr_text, 'IP Address:');
-
-    my $netmask_text = $config->{netmask} // "255.255.255.0";
-    my $maskbox;
-    ($maskbox, $ipconf_entry_mask) =
-	create_text_input($netmask_text, 'Netmask:');
+    my $netmask_text = $config->{netmask} // "24";
+    my $cidr_box;
+    ($cidr_box, $ipconf_entry_addr, $ipconf_entry_mask) =
+	create_cidr_inputs($ipaddr_text, $netmask_text);
 
     my $device_cb = Gtk3::ComboBoxText->new();
     $device_cb->set_active(0);
@@ -2279,8 +2303,8 @@ sub create_ipconf_view {
 	$config->{mngmt_nic} = $iface->{name};
 	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
 	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-	$ipconf_entry_mask->set_text($iface->{inet}->{mask} || $iface->{inet6}->{mask})
-	    if $iface->{inet}->{mask} || $iface->{inet6}->{mask};
+	$ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
+	    if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
     };
 
     my $i = 0;
@@ -2310,17 +2334,14 @@ sub create_ipconf_view {
     $devicebox->pack_start($label, 0, 0, 10);
     $devicebox->pack_start($device_cb, 0, 0, 0);
 
-    $vbox2->pack_start($devicebox, 0, 0, 2);
+    $vbox->pack_start($devicebox, 0, 0, 2);
 
     my $hn = $config->{fqdn} //  "$setup->{product}." . ($ipconf->{domain} // "example.invalid");
 
-    my ($hostbox, $hostentry) =
-	create_text_input($hn, 'Hostname (FQDN):');
-    $vbox2->pack_start($hostbox, 0, 0, 2);
+    my ($hostbox, $hostentry) = create_text_input($hn, 'Hostname (FQDN):');
+    $vbox->pack_start($hostbox, 0, 0, 2);
 
-    $vbox2->pack_start($ipbox, 0, 0, 2);
-
-    $vbox2->pack_start($maskbox, 0, 0, 2);
+    $vbox->pack_start($cidr_box, 0, 0, 2);
 
     $gateway = $config->{gateway} // $ipconf->{gateway} || '192.168.100.1';
 
@@ -2328,7 +2349,7 @@ sub create_ipconf_view {
     ($gwbox, $ipconf_entry_gw) =
 	create_text_input($gateway, 'Gateway:');
 
-    $vbox2->pack_start($gwbox, 0, 0, 2);
+    $vbox->pack_start($gwbox, 0, 0, 2);
 
     $dnsserver = $config->{dnsserver} // $ipconf->{dnsserver} || $gateway;
 
@@ -2336,7 +2357,7 @@ sub create_ipconf_view {
     ($dnsbox, $ipconf_entry_dns) =
 	create_text_input($dnsserver, 'DNS Server:');
 
-    $vbox2->pack_start($dnsbox, 0, 0, 0);
+    $vbox->pack_start($dnsbox, 0, 0, 0);
 
     $inbox->show_all;
     set_next(undef, sub {
@@ -2390,17 +2411,19 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_mask->get_text();
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
-	if (($ipversion == 6) && ($text =~ m/^(\d+)$/) && ($1 >= 8) && ($1 <= 126)) {
+	if ($ipversion == 6 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 126) {
 	    $netmask = $text;
-	    $cidr = "$ipaddress/$netmask";
-	} elsif (($ipversion == 4) && defined($ipv4_mask_hash->{$text})) {
+	} elsif ($ipversion == 4 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 32) {
 	    $netmask = $text;
-	    $cidr = "$ipaddress/" . $ipv4_mask_hash->{$text};
+	} elsif ($ipversion == 4 && defined($ipv4_mask_hash->{$text})) {
+	    # costs nothing to handle 255.x.y.z style masks, so continue to allow it
+	    $netmask = $ipv4_mask_hash->{$text};
 	} else {
 	    display_message("Netmask is not valid.");
 	    $ipconf_entry_mask->grab_focus();
 	    return;
 	}
+	$cidr = "$ipaddress/$netmask";
 	$config->{netmask} = $netmask;
 
 	$text = $ipconf_entry_gw->get_text();
