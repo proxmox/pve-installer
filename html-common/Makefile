@@ -13,6 +13,7 @@ install:
 	install -D -m 644 nonics.htm ${DESTDIR}/var/lib/pve-installer/html/nonics.htm
 	install -D -m 644 ack_template.htm ${DESTDIR}/var/lib/pve-installer/html/ack_template.htm
 	install -D -m 644 success.htm ${DESTDIR}/var/lib/pve-installer/html/success.htm
+	install -D -m 644 fail.htm ${DESTDIR}/var/lib/pve-installer/html/fail.htm
 
 .phony: clean
 clean:
