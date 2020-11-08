@@ -1852,8 +1852,7 @@ _EOD
 			 "$tmpdir/datacenter.cfg");
 
 	    # save admin email
-	    write_config("user:root\@pam:1:0:::${mailto}::\n",
-			 "$tmpdir/user.cfg");
+	    write_config("user:root\@pam:1:0:::${mailto}::\n", "$tmpdir/user.cfg");
 
 	    # write storage.cfg
 	    my $storage_cfg_fn = "$tmpdir/storage.cfg";
@@ -1872,11 +1871,15 @@ _EOD
 	    syscmd("rm -rf $tmpdir");
 	} elsif ($setup->{product} eq 'pbs') {
 	    my $base_cfg_path = "/etc/proxmox-backup";
-	    my $target_cfg_path = "$targetdir/$base_cfg_path";
-	    mkdir $target_cfg_path;
+	    mkdir "$targetdir/$base_cfg_path";
 
 	    chroot_chown($targetdir, $base_cfg_path, user => 'backup', recursive => 1);
 	    chroot_chmod($targetdir, $base_cfg_path, mode => '0700');
+
+	    my $user_cfg_fn = "$base_cfg_path/user.cfg";
+	    write_config("user: root\@pam\n\temail ${mailto}\n", "$targetdir/$user_cfg_fn");
+	    chroot_chown($targetdir, $user_cfg_fn, user => 'root', group => 'backup');
+	    chroot_chmod($targetdir, $user_cfg_fn, mode => '0640');
 	}
     };
 
