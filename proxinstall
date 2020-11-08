@@ -12,6 +12,7 @@ use IPC::Open3;
 use IO::File;
 use IO::Select;
 use Cwd 'abs_path';
+use Glib;
 use Gtk3 '-init';
 use Gtk3::WebKit2;
 use Encode;
@@ -266,6 +267,7 @@ my $keymap = 'en-us';
 my $password;
 my $mailto = 'mail@example.invalid';
 my $cmap;
+my $autoreboot_seconds = 5;
 
 my $config = {
     # TODO: add all the user-provided options for previous button
@@ -286,7 +288,9 @@ my $config = {
 
 # parse command line args
 
-my $config_options = {};
+my $config_options = {
+    autoreboot => 1,
+};
 
 if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
     $config_options->{filesys} = $1;
@@ -1990,6 +1994,11 @@ sub display_html {
 	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
 	$data =~ s/__IPADDR__/$addr/g;
 	$data =~ s/__PORT__/$product->{port}/g;
+
+	my $autoreboot_msg = $config_options->{autoreboot}
+	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
+	    : '';
+	$data =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
     }
     $data =~ s/__FULL_PRODUCT_NAME__/$product->{fullname}/g;
 
@@ -2469,6 +2478,19 @@ sub create_ack_view {
 
     cleanup_view();
 
+    my $vbox =  Gtk3::VBox->new(0, 0);
+    $inbox->pack_start($vbox, 1, 0, 0);
+    #my $hbox =  Gtk3::HBox->new(0, 0);
+    #$vbox->pack_start($hbox, 0, 0, 10);
+
+    my $reboot_checkbox = Gtk3::CheckButton->new('Automatically reboot after successful installation');
+    $reboot_checkbox->set_active(1);
+    $reboot_checkbox->signal_connect ("toggled" => sub {
+	my $cb = shift;
+	$config_options->{autoreboot} = $cb->get_active();
+    });
+    $vbox->pack_start($reboot_checkbox, 0, 0, 2);
+
     my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
     my $ack_html = "${proxmox_libdir}/html/$steps[$step_number]->{html}";
     my $html_data = file_get_contents($ack_template);
@@ -2496,6 +2518,8 @@ sub create_ack_view {
     write_config($html_data, $ack_html);
 
     display_html();
+
+    $inbox->show_all;
 
     set_next(undef, sub {
 	$step_number++;
@@ -3469,6 +3493,17 @@ sub create_extract_view {
     } else {
 	cleanup_view();
 	display_html("success.htm");
+
+        if ($config_options->{autoreboot}) {
+	    Glib::Timeout->add(1000, sub {
+		if ($autoreboot_seconds > 0) {
+		    $autoreboot_seconds--;
+		    display_html("success.htm");
+		} else {
+		    exit(0);
+		}
+	    });
+	}
     }
 }
 
