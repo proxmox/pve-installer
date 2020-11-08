@@ -40,10 +40,19 @@ my $zfstestpool = "test_rpool";
 my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
 my $zfsrootvolname = "$setup->{product}-1";
 
-my $product_fullname = {
-    pve => 'Proxmox VE',
-    pmg => 'Proxmox Mail Gateway',
-    pbs => 'Proxmox Backup Server',
+my $product_cfg = {
+    pve => {
+	fullname => 'Proxmox VE',
+	port => '8006',
+    },
+    pmg => {
+	fullname => 'Proxmox Mail Gateway',
+	port => '8006',
+    },
+    pbs => {
+	fullname => 'Proxmox Backup Server',
+	port => '8007',
+    },
 };
 
 my $storage_cfg_zfs = <<__EOD__;
@@ -1966,6 +1975,8 @@ sub display_html {
 
     my $data = file_get_contents($path);
 
+    my $product = $product_cfg->{$setup->{product}};
+
     if ($filename eq 'license.htm') {
 	my $license = eval { decode('utf8', file_get_contents("${proxmox_cddir}/EULA")) };
 	if (my $err = $@) {
@@ -3443,10 +3454,10 @@ sub create_intro_view {
     cleanup_view();
 
     if (int($total_memory) < 1024) {
-	my $fullname = $product_fullname->{$setup->{product}};
+	my $product = $product_cfg->{$setup->{product}};
 
 	display_error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
-	    "See 'System Requirements' in the $fullname documentation.");
+	    "See 'System Requirements' in the $product->{fullname} documentation.");
     }
 
     if ($setup->{product} eq 'pve') {
