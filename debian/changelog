@@ -1,3 +1,19 @@
+pve-installer (6.3-1) pmg pve; urgency=medium
+
+  * fix #2925: edit /etc/kernel/cmdline unconditionally
+
+  * set console keymap on language selection
+
+  * fix #3057: remove ext3 option from installer
+
+  * pbs: actually write out email to user.cfg
+
+  * network: replace dot notation netmask with CIDR notation as primary input
+
+  * fix #3093: allow one to automatically reboot on installation success
+
+ -- Proxmox Support Team <support@proxmox.com>  Sun, 08 Nov 2020 19:35:45 +0100
+
 pve-installer (6.2-3) pmg pve; urgency=medium
 
   * fix #2804: add a root shell on tty3
