@@ -1988,8 +1988,10 @@ sub display_html {
 	$data =~ s/__LICENSE_TITLE__/$title/;
     } elsif ($filename eq 'success.htm') {
 	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
-	$data =~ s/\@IPADDR\@/$addr/;
+	$data =~ s/__IPADDR__/$addr/g;
+	$data =~ s/__PORT__/$product->{port}/g;
     }
+    $data =~ s/__FULL_PRODUCT_NAME__/$product->{fullname}/g;
 
     $htmlview->load_html($data, $url);
 
