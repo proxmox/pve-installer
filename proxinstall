@@ -2751,14 +2751,6 @@ sub create_country_view {
 
 	    if (! $opt_testmode) {
 		syscmd ("setxkbmap $xkmap $xvar");
-		my $kbd_config = qq{
-		    XKBLAYOUT="$xkmap"
-		    XKBVARIANT="$xvar"
-		    BACKSPACE="guess"
-		};
-		$kbd_config =~ s/^\s+//gm;
-		write_config($kbd_config, '/etc/default/keyboard');
-		syscmd ("setupcon");
 	    }
 	}
     });
