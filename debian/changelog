@@ -1,3 +1,12 @@
+pve-installer (6.3-2) pmg pve; urgency=medium
+
+  * minor spelling/grammar fixes all over the place
+
+  * do not configure VT keyboard layout during installation, may hang the
+    installer
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 10 Nov 2020 15:03:14 +0100
+
 pve-installer (6.3-1) pmg pve; urgency=medium
 
   * fix #2925: edit /etc/kernel/cmdline unconditionally
