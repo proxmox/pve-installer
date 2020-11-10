@@ -2639,7 +2639,7 @@ sub create_password_view {
     $hbox2->pack_start($pwe2, 0, 0, 0);
 
     my $hbox3 = Gtk3::HBox->new(0, 0);
-    $label = Gtk3::Label->new("E-Mail");
+    $label = Gtk3::Label->new("Email");
     $label->set_size_request(150, -1);
     $label->set_alignment(1, 0.5);
     $hbox3->pack_start($label, 0, 0, 10);
@@ -2676,14 +2676,14 @@ sub create_password_view {
 
 	my $t3 = $eme->get_text;
 	if ($t3 !~ m/^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$/) {
-	    display_message("E-Mail does not look like a valid address" .
+	    display_message("Email does not look like a valid address" .
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
 	}
 
 	if ($t3 eq 'mail@example.invalid') {
-	    display_message("Please enter a valid E-Mail address");
+	    display_message("Please enter a valid Email address");
 	    $eme->grab_focus();
 	    return;
 	}
