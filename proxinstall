@@ -21,6 +21,7 @@ use Data::Dumper;
 use File::Basename;
 use File::Path;
 use Time::HiRes;
+use POSIX ":sys_wait_h";
 
 use ProxmoxInstallerSetup;
 
@@ -482,6 +483,23 @@ sub run_command {
     }
 
     return $ostream;
+}
+
+# forks and runs the provided coderef in the child
+# do not use syscmd or run_command as both confuse the GTK mainloop if
+# run from a child process
+sub run_in_background {
+    my ($cmd) = @_;
+
+    my $pid = fork() // die "fork failed: $!\n";
+    if (!$pid) {
+	eval { $cmd->(); };
+	if (my $err = $@) {
+	    warn "run_in_background error: $err\n";
+	    POSIX::_exit(1);
+	}
+	POSIX::_exit(0);
+    }
 }
 
 sub detect_country {
@@ -3611,5 +3629,10 @@ if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
 create_intro_view () if !$initial_error;
 
 Gtk3->main;
+
+# reap left over zombie processes
+while ((my $child = waitpid(-1, POSIX::WNOHANG)) > 0) {
+    print "reaped child $child\n";
+}
 
 exit 0;
