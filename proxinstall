@@ -2549,6 +2549,8 @@ sub get_device_desc {
     }
 }
 
+my $last_layout;
+my $country_layout;
 sub update_layout {
     my ($cb, $kmap) = @_;
 
@@ -2562,7 +2564,14 @@ sub update_layout {
 	$i++;
     }
 
-    $cb->set_active($ind || $def || 0);
+    my $val = $ind || $def || 0;
+
+    if (!defined($kmap)) {
+	$last_layout //= $val;
+    } elsif (!defined($country_layout) || $country_layout != $val) {
+	$last_layout = $country_layout = $val;
+    }
+    $cb->set_active($last_layout);
 }
 
 my $lastzonecb;
@@ -2699,6 +2708,7 @@ sub create_password_view {
 
 }
 
+my $installer_kmap;
 sub create_country_view {
 
     cleanup_view();
@@ -2744,10 +2754,15 @@ sub create_country_view {
 
     $kmapcb->signal_connect ('changed' => sub {
 	my $sel = $kmapcb->get_active_text();
+	$last_layout = $kmapcb->get_active();
 	if (my $kmap = $cmap->{kmaphash}->{$sel}) {
 	    my $xkmap = $cmap->{kmap}->{$kmap}->{x11};
 	    my $xvar = $cmap->{kmap}->{$kmap}->{x11var};
 	    $keymap = $kmap;
+
+	    return if (defined($installer_kmap) && $installer_kmap eq $kmap);
+
+	    $installer_kmap = $keymap;
 
 	    if (! $opt_testmode) {
 		syscmd ("setxkbmap $xkmap $xvar");
