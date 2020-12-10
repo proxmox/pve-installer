@@ -2995,7 +2995,7 @@ my $get_hdsize_spinbtn = sub {
 
 my $create_raid_advanced_grid = sub {
     my $labeled_widgets = [];
-    my $spinbutton_ashift = Gtk3::SpinButton->new_with_range(9,13,1);
+    my $spinbutton_ashift = Gtk3::SpinButton->new_with_range(9, 13, 1);
     $spinbutton_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
     $spinbutton_ashift->signal_connect ("value-changed" => sub {
 	my $w = shift;
@@ -3048,7 +3048,7 @@ my $create_raid_advanced_grid = sub {
     push @$labeled_widgets, "copies", $spinbutton_copies;
 
     push @$labeled_widgets, "hdsize", $get_hdsize_spinbtn->();
-    return &$create_label_widget_grid($labeled_widgets);;
+    return $create_label_widget_grid->($labeled_widgets);;
 };
 
 sub create_hdoption_view {
@@ -3073,26 +3073,28 @@ sub create_hdoption_view {
     my $row = 0;
 
     # Filesystem type
-
     my $label0 = Gtk3::Label->new("Filesystem");
     $label0->set_alignment (1, 0.5);
     $grid->attach($label0, 0, $row, 1, 1);
 
     my $fstypecb = Gtk3::ComboBoxText->new();
-
-    my $fstype = ['ext4', 'xfs',
-		  'zfs (RAID0)', 'zfs (RAID1)',
-		  'zfs (RAID10)', 'zfs (RAIDZ-1)',
-		  'zfs (RAIDZ-2)', 'zfs (RAIDZ-3)'];
-
+    my $fstype = [
+	'ext4',
+	'xfs',
+	'zfs (RAID0)',
+	'zfs (RAID1)',
+	'zfs (RAID10)',
+	'zfs (RAIDZ-1)',
+	'zfs (RAIDZ-2)',
+	'zfs (RAIDZ-3)',
+    ];
     push @$fstype, 'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'
 	if $setup->{enable_btrfs};
 
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
 	$fstypecb->append_text($tmp);
-	$fstypecb->set_active ($tcount)
-	    if $config_options->{filesys} eq $tmp;
+	$fstypecb->set_active ($tcount) if $config_options->{filesys} eq $tmp;
 	$tcount++;
     }
 
