@@ -2899,8 +2899,9 @@ my $create_label_widget_grid = sub {
 };
 
 my $create_raid_disk_grid = sub {
+    my $hd_count = scalar(@$hds);
     my $disk_labeled_widgets = [];
-    for (my $i = 0; $i < @$hds; $i++) {
+    for (my $i = 0; $i < $hd_count; $i++) {
 	my $disk_selector = Gtk3::ComboBoxText->new();
 	$disk_selector->append_text("-- do not use --");
 	$disk_selector->set_active(0);
@@ -2937,7 +2938,7 @@ my $create_raid_disk_grid = sub {
 
     my $scrolled_window = Gtk3::ScrolledWindow->new();
     $scrolled_window->set_hexpand(1);
-    $scrolled_window->set_propagate_natural_height(1) if @$hds > 4;
+    $scrolled_window->set_propagate_natural_height(1) if $hd_count > 4;
     $scrolled_window->add(&$create_label_widget_grid($disk_labeled_widgets));
     $scrolled_window->set_policy('never', 'automatic');
 
