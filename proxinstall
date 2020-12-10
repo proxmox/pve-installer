@@ -2870,8 +2870,8 @@ my $create_basic_grid = sub {
     $grid->set_row_spacing(10);
     $grid->set_hexpand(1);
 
-    $grid->set_margin_start(5);
-    $grid->set_margin_end(5);
+    $grid->set_margin_start(10);
+    $grid->set_margin_end(20);
     $grid->set_margin_top(5);
     $grid->set_margin_bottom(5);
 
@@ -2957,6 +2957,7 @@ my $create_raid_disk_grid = sub {
     $scrolled_window->add($diskgrid);
     $scrolled_window->set_policy('never', 'automatic');
     $scrolled_window->set_visible(1);
+    $scrolled_window->set_min_content_height(180);
 
     my $vbox = Gtk3::Box->new('vertical', 0);
     $vbox->pack_start($scrolled_window, 1, 1, 10);
@@ -3061,13 +3062,13 @@ sub create_hdoption_view {
     my $contarea = $dialog->get_content_area();
 
     my $hbox2 =  Gtk3::Box->new('horizontal', 0);
-    $contarea->pack_start($hbox2, 1, 1, 10);
+    $contarea->pack_start($hbox2, 1, 1, 5);
 
     my $grid =  Gtk3::Grid->new();
     $grid->set_column_spacing(10);
     $grid->set_row_spacing(10);
 
-    $hbox2->pack_start($grid, 1, 0, 10);
+    $hbox2->pack_start($grid, 1, 0, 5);
 
     my $row = 0;
 
