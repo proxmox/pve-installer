@@ -2957,7 +2957,7 @@ my $create_raid_disk_grid = sub {
     $scrolled_window->add($diskgrid);
     $scrolled_window->set_policy('never', 'automatic');
     $scrolled_window->set_visible(1);
-    $scrolled_window->set_min_content_height(180);
+    $scrolled_window->set_min_content_height(190);
 
     my $vbox = Gtk3::Box->new('vertical', 0);
     $vbox->pack_start($scrolled_window, 1, 1, 10);
