@@ -12,7 +12,7 @@ pve-installer (6.4-1) pmg pve; urgency=medium
 
   * fix #3165: start chrony after DHCP client for an opportunistic time-sync
 
- -- Proxmox Support Team <support@proxmox.com>  Fri, 26 Mar 2021 16:01:23 +0100
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 26 Mar 2021 19:47:08 +0100
 
 pve-installer (6.3-2) pmg pve; urgency=medium
 
