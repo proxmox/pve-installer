@@ -1,3 +1,19 @@
+pve-installer (6.4-1) pmg pve; urgency=medium
+
+  * fix #2518: disk selector: add "deselect all" button if there are
+    more than three disks
+
+  * avoid triggering keyboard layout auto-selection heuristic if it was
+    changed explicitly
+
+  * partially fix #2804: set debug-console keymap on language selection
+
+  * fix #3223: fix hardcoded port value in success page html
+
+  * fix #3165: start chrony after DHCP client for an opportunistic time-sync
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 26 Mar 2021 16:01:23 +0100
+
 pve-installer (6.3-2) pmg pve; urgency=medium
 
   * minor spelling/grammar fixes all over the place
