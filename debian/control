@@ -13,6 +13,7 @@ Homepage: https://www.proxmox.com
 Package: pve-installer
 Architecture: all
 Depends: geoip-bin,
+         chrony,
          libgtk3-webkit2-perl,
          pve-kernel-helper,
          squashfs-tools,
@@ -23,6 +24,7 @@ Description: Proxmox VE Installer
 Package: pmg-installer
 Architecture: all
 Depends: geoip-bin,
+         chrony,
          libgtk3-webkit2-perl,
          pve-kernel-helper,
          squashfs-tools,
@@ -33,6 +35,7 @@ Description: Proxmox Mail Gateway Installer
 Package: pbs-installer
 Architecture: all
 Depends: geoip-bin,
+         chrony,
          libgtk3-webkit2-perl,
          pve-kernel-helper,
          squashfs-tools,
