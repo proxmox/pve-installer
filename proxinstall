@@ -1368,14 +1368,15 @@ sub extract_data {
 
 	} elsif ($use_zfs) {
 
-	    my ($devlist, $bootdevlist, $vdev) = get_zfs_raid_setup();
+	    my ($devlist, $vdev) = get_zfs_raid_setup();
 
 	    foreach my $hd (@$devlist) {
 		&$clean_disk(@$hd[1]);
 	    }
 
+	    # install esp/boot part on all, we can only win!
 	    my $disksize;
-	    foreach my $hd (@$bootdevlist) {
+	    for my $hd (@$devlist) {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
 
@@ -3348,11 +3349,8 @@ sub get_zfs_raid_setup {
     my $diskcount = scalar(@$devlist);
     die "$filesys needs at least one device\n" if $diskcount < 1;
 
-    my $bootdevlist = [];
-
     my $cmd= '';
     if ($filesys eq 'zfs (RAID0)') {
-	push @$bootdevlist, @$devlist[0];
 	foreach my $hd (@$devlist) {
 	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
@@ -3366,13 +3364,10 @@ sub get_zfs_raid_setup {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
-	    push @$bootdevlist, $hd;
 	}
     } elsif ($filesys eq 'zfs (RAID10)') {
 	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
 	die "zfs (RAID10) needs an even number of devices\n" if $diskcount & 1;
-
-	push @$bootdevlist, @$devlist[0], @$devlist[1];
 
 	for (my $i = 0; $i < $diskcount; $i+=2) {
 	    my $hd1 = @$devlist[$i];
@@ -3394,13 +3389,12 @@ sub get_zfs_raid_setup {
 	    zfs_mirror_size_check($expected_size, @$hd[2]);
 	    legacy_bios_4k_check(@$hd[4]);
 	    $cmd .= " @$hd[1]";
-	    push @$bootdevlist, $hd;
 	}
     } else {
 	die "unknown zfs mode '$filesys'\n";
     }
 
-    return ($devlist, $bootdevlist, $cmd);
+    return ($devlist, $cmd);
 }
 
 sub get_btrfs_raid_setup {
