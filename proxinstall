@@ -2555,9 +2555,14 @@ sub get_device_desc {
 	my $text = "$devname (";
 	if ($size >= 1024) {
 	    $size = int($size/1024); # size in GB
-	    $text .= "${size}GB";
+	    if ($size >= 1024) {
+		$size = int($size/1024); # size in GB
+		$text .= "${size}TiB";
+	    } else {
+		$text .= "${size}GiB";
+	    }
 	} else {
-	    $text .= "${size}MB";
+	    $text .= "${size}MiB";
 	}
 
 	$text .= ", $model" if $model;
