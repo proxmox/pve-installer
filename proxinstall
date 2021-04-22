@@ -1362,7 +1362,7 @@ sub extract_data {
 		$disksize = $size;
 	    }
 
-	    &$udevadm_trigger_block();
+	    $udevadm_trigger_block->();
 
 	    btrfs_create($btrfs_partitions, $btrfs_mode);
 
@@ -1371,7 +1371,7 @@ sub extract_data {
 	    my ($devlist, $vdev) = get_zfs_raid_setup();
 
 	    foreach my $hd (@$devlist) {
-		&$clean_disk(@$hd[1]);
+		$clean_disk->(@$hd[1]);
 	    }
 
 	    # install esp/boot part on all, we can only win!
@@ -1394,7 +1394,7 @@ sub extract_data {
 		$disksize = $size;
 	    }
 
-	    &$udevadm_trigger_block();
+	    $udevadm_trigger_block->();
 
 	    foreach my $di (@$bootdevinfo) {
 		my $devname = $di->{devname};
@@ -3341,7 +3341,6 @@ sub legacy_bios_4k_check {
 }
 
 sub get_zfs_raid_setup {
-
     my $filesys = $config_options->{filesys};
 
     my $devlist = &$get_raid_devlist();
