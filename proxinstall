@@ -1224,11 +1224,11 @@ my sub chroot_chmod {
 	die "chroot: unable to change permission mode for '$path'\n";
 }
 
-sub prepare_systemd_boot_esp {
+sub prepare_proxmox_boot_esp {
     my ($espdev, $targetdir) = @_;
 
-    syscmd("chroot $targetdir pve-efiboot-tool init $espdev") == 0 ||
-	die "unable to init ESP and install systemd-boot loader on '$espdev'\n";
+    syscmd("chroot $targetdir proxmox-boot-tool init $espdev") == 0 ||
+	die "unable to init ESP and install proxmox-boot loader on '$espdev'\n";
 }
 
 sub prepare_grub_efi_boot_esp {
@@ -1821,19 +1821,19 @@ _EOD
 
 		foreach my $di (@$bootdevinfo) {
 		    my $dev = $di->{devname};
-		    if (!$native_4k_disk_bootable) {
-			eval {
-			    syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
-				    die "unable to install the i386-pc boot loader on '$dev'\n";
-			};
-			push @$bootloader_err_list, $@ if $@;
-		    }
+		    if ($use_zfs) {
+			prepare_proxmox_boot_esp($di->{esp}, $targetdir);
+		    } else {
+			if (!$native_4k_disk_bootable) {
+			    eval {
+				syscmd("chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev") == 0 ||
+					die "unable to install the i386-pc boot loader on '$dev'\n";
+			    };
+			    push @$bootloader_err_list, $@ if $@;
+			}
 
 		    eval {
 			if (my $esp = $di->{esp}) {
-			    if ($use_zfs) {
-				prepare_systemd_boot_esp($esp, $targetdir);
-			    } else {
 				prepare_grub_efi_boot_esp($dev, $esp, $targetdir);
 			    }
 			}
