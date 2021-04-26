@@ -1,3 +1,16 @@
+pve-installer (6.4-2) pmg pve; urgency=medium
+
+  * zfs: assume that all devices are boot devices as firmware is weird and
+    sometimes allows booting only from certain devices, which we cannot know
+    here, and potentially only the boot partition could be corrupted/broken/...
+    in which case another dev in the raid 0 could allow successful booting
+
+  * legacy BIOS: boot ZFS indirectly using proxmox-boot-tool and the vfat based
+    ESP as the primary boot partition to avoid issues with the ZFS
+    implementation of GRUB.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 26 Apr 2021 18:53:55 +0200
+
 pve-installer (6.4-1) pmg pve; urgency=medium
 
   * fix #2518: disk selector: add "deselect all" button if there are
