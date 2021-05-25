@@ -1,3 +1,18 @@
+proxmox-installer (7.0-1) bullseye; urgency=medium
+
+  * unify installer packages into single binary-package
+
+  * use wipefs to really clean the disks used for the root filesystem, as with
+    wiping only the partions through sgdik, things like LVS refuse to operate
+    if they find traces of existing LVs.
+
+  * override grub default config via installer instead of separate grub
+    package
+
+  * re-build for Debian 11 Bullseye based releases
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 25 May 2021 19:54:34 +0200
+
 pve-installer (6.4-2) pmg pve; urgency=medium
 
   * zfs: assume that all devices are boot devices as firmware is weird and
