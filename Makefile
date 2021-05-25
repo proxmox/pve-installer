@@ -84,5 +84,6 @@ check-pbs: prepare-check-env test.img
 clean:
 	umount -Rd testdir || true
 	make -C html-common clean
-	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist *.buildinfo *.changes country.dat final.pkglist
+	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist \
+	  *.buildinfo *.changes country.dat final.pkglist cd-info.test
 	find . -name '*~' -exec rm {} ';'
