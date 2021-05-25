@@ -2,12 +2,12 @@ Source: proxmox-installer
 Section: perl
 Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper (>= 12),
                iso-codes,
                libpve-common-perl,
                librsvg2-bin,
-               perl (>= 5.10.0-19),
-Standards-Version: 3.9.5
+               perl,
+Standards-Version: 4.5.1
 Homepage: https://www.proxmox.com
 
 Package: proxmox-installer
