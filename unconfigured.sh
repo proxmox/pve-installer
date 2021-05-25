@@ -5,7 +5,7 @@ trap "err_reboot" ERR
 parse_cmdline() {
     root=
     proxdebug=0
-    for par in $(cat /proc/cmdline); do 
+    for par in $(cat /proc/cmdline); do
 	case $par in
 	    root=*)
 		root=${par#root=}
@@ -22,10 +22,9 @@ debugsh() {
 }
 
 real_reboot() {
+    trap - ERR
 
-    trap - ERR 
-
-    /etc/init.d/networking stop 
+    /etc/init.d/networking stop
 
     # stop udev (release file handles)
     /etc/init.d/udev stop
@@ -49,7 +48,6 @@ real_reboot() {
 }
 
 err_reboot() {
-
     echo "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)"
     debugsh || true
     real_reboot
@@ -81,7 +79,7 @@ modprobe -q usbhid || /bin/true
 modprobe -q dm_mod || /bin/true
 
 echo "Installing additional hardware drivers"
-export RUNLEVEL=S 
+export RUNLEVEL=S
 export PREVLEVEL=N
 /etc/init.d/udev start
 
@@ -99,7 +97,7 @@ if [ $proxdebug -ne 0 ]; then
     debugsh || true
 fi
 
-# set the hostname 
+# set the hostname
 hostname proxmox
 
 # try to get ip config with dhcp

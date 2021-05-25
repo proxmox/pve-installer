@@ -2491,8 +2491,6 @@ sub create_ack_view {
 
     my $vbox =  Gtk3::VBox->new(0, 0);
     $inbox->pack_start($vbox, 1, 0, 0);
-    #my $hbox =  Gtk3::HBox->new(0, 0);
-    #$vbox->pack_start($hbox, 0, 0, 10);
 
     my $reboot_checkbox = Gtk3::CheckButton->new('Automatically reboot after successful installation');
     $reboot_checkbox->set_active(1);
