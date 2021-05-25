@@ -1,6 +1,4 @@
 banner/pve-banner.png /var/lib/proxmox-installer
 banner/pmg-banner.png /var/lib/proxmox-installer
 banner/pbs-banner.png /var/lib/proxmox-installer
-html-pve/*.htm /var/lib/proxmox-installer/html/pve
-html-pmg/*.htm /var/lib/proxmox-installer/html/pmg
-html-pbs/*.htm /var/lib/proxmox-installer/html/pbs
+html /var/lib/proxmox-installer/

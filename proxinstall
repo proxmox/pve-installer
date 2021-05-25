@@ -1982,10 +1982,8 @@ sub display_html {
     my $path;
     if (-f "$htmldir/$setup->{product}/$filename") {
 	$path = "$htmldir/$setup->{product}/$filename";
-    } elsif (-f "$htmldir/common/$filename") {
-	$path = "$htmldir/common/$filename";
     } else {
-	# FIXME: die now already?
+	$path = "$htmldir/$filename";
     }
 
     my $data = file_get_contents($path);
@@ -2011,9 +2009,8 @@ sub display_html {
     }
     $data =~ s/__FULL_PRODUCT_NAME__/$setup->{fullname}/g;
 
-    # HACK: always set base-path to common path, all resources are there.
-    # NOTE: we could also use an overlayfs with lower=common upper=$product & work=/run/$tmp
-    $htmlview->load_html($data,  "file://$htmldir/common/");
+    # always set base-path to common path, all resources are accesible from there.
+    $htmlview->load_html($data,  "file://$htmldir/");
 
     $last_display_change = time();
 }
@@ -2500,7 +2497,7 @@ sub create_ack_view {
     });
     $vbox->pack_start($reboot_checkbox, 0, 0, 2);
 
-    my $ack_template = "${proxmox_libdir}/html/common/ack_template.htm";
+    my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
     my $ack_html = "${proxmox_libdir}/html/$setup->{product}/$steps[$step_number]->{html}";
     my $html_data = file_get_contents($ack_template);
 
@@ -2520,7 +2517,7 @@ sub create_ack_view {
 	__dnsserver__ => $dnsserver,
     );
 
-    while ( my ($k, $v) = each %config_values) {
+    while (my ($k, $v) = each %config_values) {
 	$html_data =~ s/$k/$v/g;
     }
 

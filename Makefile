@@ -34,7 +34,6 @@ HTMLDIR=$(VARLIBDIR)/html/common
 
 .PHONY: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
-	$(MAKE) -C html-common install
 	$(MAKE) -C banner install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	install -D -m 755 fake-start-stop-daemon ${VARLIBDIR}/fake-start-stop-daemon
@@ -83,7 +82,6 @@ check-pbs: prepare-check-env test.img
 .phony: clean
 clean:
 	umount -Rd testdir || true
-	make -C html-common clean
 	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist \
 	  *.buildinfo *.changes country.dat final.pkglist cd-info.test
 	find . -name '*~' -exec rm {} ';'
