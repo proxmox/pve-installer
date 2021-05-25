@@ -1,4 +1,4 @@
-Source: pve-installer
+Source: proxmox-installer
 Section: perl
 Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
@@ -10,7 +10,7 @@ Build-Depends: debhelper (>= 9),
 Standards-Version: 3.9.5
 Homepage: https://www.proxmox.com
 
-Package: pve-installer
+Package: proxmox-installer
 Architecture: all
 Depends: geoip-bin,
          chrony,
@@ -18,27 +18,10 @@ Depends: geoip-bin,
          pve-kernel-helper,
          squashfs-tools,
          ${perl:Depends},
-Description: Proxmox VE Installer
- This package contains the graphical installer for Proxmox VE.
-
-Package: pmg-installer
-Architecture: all
-Depends: geoip-bin,
-         chrony,
-         libgtk3-webkit2-perl,
-         pve-kernel-helper,
-         squashfs-tools,
-         ${perl:Depends},
-Description: Proxmox Mail Gateway Installer
- This package contains the graphical installer for Proxmox Mail Gateway.
-
-Package: pbs-installer
-Architecture: all
-Depends: geoip-bin,
-         chrony,
-         libgtk3-webkit2-perl,
-         pve-kernel-helper,
-         squashfs-tools,
-         ${perl:Depends},
-Description: Proxmox Backup Server Installer
- This package contains the graphical installer for Proxmox Backup Server
+Breaks: pve-installer (<< 7~), pbs-installer (<< 7~), pbs-installer (<< 7~)
+Replaces: pve-installer (<< 7~), pbs-installer (<< 7~), pbs-installer (<< 7~)
+Description: Installer for Proxmox Projects
+ This package contains the graphical installer for:
+  * Proxmox VE.
+  * Proxmox Mail Gateway.
+  * Proxmox Backup Server

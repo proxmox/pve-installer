@@ -9,13 +9,13 @@ SETUPFN = "/usr/share/perl5/ProxmoxInstallerSetup.pm"
 %:
 	dh $@
 
+# FIXME: could all be in d/install or in makefile?!
 override_dh_auto_install:
-	install -D -m 0644 ProxmoxInstallerSetup-pve.pm $(CURDIR)/debian/pve-installer/${SETUPFN}
-	install -D -m 0644 ProxmoxInstallerSetup-pmg.pm $(CURDIR)/debian/pmg-installer/${SETUPFN}
-	install -D -m 0644 ProxmoxInstallerSetup-pbs.pm $(CURDIR)/debian/pbs-installer/${SETUPFN}
-	dh_auto_install --destdir debian/pve-installer
-	dh_auto_install --destdir debian/pmg-installer
-	dh_auto_install --destdir debian/pbs-installer
+	install -D -m 0644 ProxmoxInstallerSetup.pm $(CURDIR)/debian/proxmox-installer/${SETUPFN}
+	dh_auto_install --destdir debian/proxmox-installer
+
+override_dh_missing:
+	dh_missing --fail-missing
 
 override_dh_auto_test:
 	# do nothing here

@@ -25,37 +25,21 @@ use POSIX ":sys_wait_h";
 
 use ProxmoxInstallerSetup;
 
-my $setup = ProxmoxInstallerSetup::setup();
-
-my $opt_testmode;
-
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
 
+my $opt_testmode;
 if (!GetOptions('testmode=s' => \$opt_testmode)) {
     die "usage error\n";
     exit (-1);
 }
 
+my ($setup, $cd_info) = ProxmoxInstallerSetup::setup();
+
 my $zfstestpool = "test_rpool";
 my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
 my $zfsrootvolname = "$setup->{product}-1";
-
-my $product_cfg = {
-    pve => {
-	fullname => 'Proxmox VE',
-	port => '8006',
-    },
-    pmg => {
-	fullname => 'Proxmox Mail Gateway',
-	port => '8006',
-    },
-    pbs => {
-	fullname => 'Proxmox Backup Server',
-	port => '8007',
-    },
-};
 
 my $storage_cfg_zfs = <<__EOD__;
 dir: local
@@ -109,8 +93,10 @@ sub file_read_firstline {
 
 my $logfd = IO::File->new(">/tmp/install.log");
 
-my $proxmox_libdir = $opt_testmode ?
-    Cwd::cwd() . "/testdir/var/lib/pve-installer" : "/var/lib/pve-installer";
+my $proxmox_libdir = $opt_testmode
+    ? Cwd::cwd() . "/testdir/var/lib/proxmox-installer"
+    : "/var/lib/proxmox-installer"
+    ;
 my $proxmox_cddir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
 my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
@@ -1992,13 +1978,17 @@ sub display_html {
 
     $filename = $steps[$step_number]->{html} if !$filename;
 
-    my $path = "${proxmox_libdir}/html/$filename";
-
-    my $url = "file://$path";
+    my $htmldir = "${proxmox_libdir}/html";
+    my $path;
+    if (-f "$htmldir/$setup->{product}/$filename") {
+	$path = "$htmldir/$setup->{product}/$filename";
+    } elsif (-f "$htmldir/common/$filename") {
+	$path = "$htmldir/common/$filename";
+    } else {
+	# FIXME: die now already?
+    }
 
     my $data = file_get_contents($path);
-
-    my $product = $product_cfg->{$setup->{product}};
 
     if ($filename eq 'license.htm') {
 	my $license = eval { decode('utf8', file_get_contents("${proxmox_cddir}/EULA")) };
@@ -2012,16 +2002,18 @@ sub display_html {
     } elsif ($filename eq 'success.htm') {
 	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
 	$data =~ s/__IPADDR__/$addr/g;
-	$data =~ s/__PORT__/$product->{port}/g;
+	$data =~ s/__PORT__/$setup->{port}/g;
 
 	my $autoreboot_msg = $config_options->{autoreboot}
 	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
 	    : '';
 	$data =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
     }
-    $data =~ s/__FULL_PRODUCT_NAME__/$product->{fullname}/g;
+    $data =~ s/__FULL_PRODUCT_NAME__/$setup->{fullname}/g;
 
-    $htmlview->load_html($data, $url);
+    # HACK: always set base-path to common path, all resources are there.
+    # NOTE: we could also use an overlayfs with lower=common upper=$product & work=/run/$tmp
+    $htmlview->load_html($data,  "file://$htmldir/common/");
 
     $last_display_change = time();
 }
@@ -2510,8 +2502,8 @@ sub create_ack_view {
     });
     $vbox->pack_start($reboot_checkbox, 0, 0, 2);
 
-    my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
-    my $ack_html = "${proxmox_libdir}/html/$steps[$step_number]->{html}";
+    my $ack_template = "${proxmox_libdir}/html/common/ack_template.htm";
+    my $ack_html = "${proxmox_libdir}/html/$setup->{product}/$steps[$step_number]->{html}";
     my $html_data = file_get_contents($ack_template);
 
     my %config_values = (
@@ -3578,10 +3570,8 @@ sub create_intro_view {
     cleanup_view();
 
     if (int($total_memory) < 1024) {
-	my $product = $product_cfg->{$setup->{product}};
-
 	display_error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
-	    "See 'System Requirements' in the $product->{fullname} documentation.");
+	    "See 'System Requirements' in the $setup->{fullname} documentation.");
     }
 
     if ($setup->{product} eq 'pve') {
