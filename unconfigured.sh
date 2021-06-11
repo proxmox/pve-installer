@@ -71,12 +71,12 @@ mount -n -t tmpfs tmpfs /run
 parse_cmdline
 
 # always load most common input drivers
-modprobe -q psmouse || /bin/true
-modprobe -q sermouse || /bin/true
-modprobe -q usbhid || /bin/true
+modprobe -q psmouse || true
+modprobe -q sermouse ||  true
+modprobe -q usbhid ||  true
 
 # load device mapper - used by lilo
-modprobe -q dm_mod || /bin/true
+modprobe -q dm_mod || true
 
 echo "Installing additional hardware drivers"
 export RUNLEVEL=S
@@ -117,7 +117,7 @@ xinit -- -dpi 96 >/dev/tty2 2>&1
 sync
 
 if [ $proxdebug -ne 0 ]; then 
-    echo "Debugging mode (type exit or CTRL-D to reboot)"
+    echo "Debug shell after installation exited (type exit or CTRL-D to reboot)"
     debugsh || true
 fi
 

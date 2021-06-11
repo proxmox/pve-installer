@@ -780,7 +780,7 @@ sub update_progress {
     my ($frac, $start, $end, $text) = @_;
 
     my $part = $end - $start;
-    my $res = $start + $frac*$part;
+    my $res = $start + $frac * $part;
 
     $progress->set_fraction ($res);
     $progress->set_text (sprintf ("%d%%", int ($res*100)));
@@ -1562,12 +1562,9 @@ sub extract_data {
 	    }
 	});
 
-	syscmd("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 ||
-	    die "unable to mount tmpfs on $targetdir/tmp\n";
-	syscmd("mount -n -t proc proc $targetdir/proc") == 0 ||
-	    die "unable to mount proc on $targetdir/proc\n";
-	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 ||
-	    die "unable to mount sysfs on $targetdir/sys\n";
+	syscmd("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 || die "unable to mount tmpfs on $targetdir/tmp\n";
+	syscmd("mount -n -t proc proc $targetdir/proc") == 0 || die "unable to mount proc on $targetdir/proc\n";
+	syscmd("mount -n -t sysfs sysfs $targetdir/sys") == 0 || die "unable to mount sysfs on $targetdir/sys\n";
 	if ($boot_type eq 'efi') {
 	    syscmd("mount -n -t efivarfs efivarfs $targetdir/sys/firmware/efi/efivars") == 0 ||
 		die "unable to mount efivarfs on $targetdir/sys/firmware/efi/efivars: $!\n";
