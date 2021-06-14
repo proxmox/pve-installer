@@ -83,6 +83,27 @@ err_reboot() {
     real_reboot
 }
 
+# NOTE: dbus must be launched before this, else iwd cannot work
+# FIXME: very crude, still needs to actually copy over any iwd config to target
+handle_wireless() {
+    wireless_found=
+    for iface in /sys/class/net/*; do
+        if [ -d "$iface/wireless" ]; then
+            wireless_found=1
+        fi
+    done
+    if [ -z $wireless_found ]; then
+        return;
+    fi
+
+    if [ -x /usr/libexec/iwd ]; then
+        echo "wireless device(s) found, starting iwd; use 'iwctl' to manage connections (experimental)"
+        /usr/libexec/iwd &
+    else
+        echo "wireless device found but iwd not available, ignoring"
+    fi
+}
+
 echo "Starting Proxmox installation"
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
@@ -122,6 +143,16 @@ mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
 # set the hostname
 hostname proxmox
+
+if command -v dbus-daemon; then
+    echo "starting D-Bus daemon"
+    mkdir /run/dbus
+    dbus-daemon --system --syslog-only
+
+    if [ $proxdebug -ne 0 ]; then # FIXME: better intergration, e.g., use iwgtk?
+        handle_wireless # no-op if not wireless dev is found
+    fi
+fi
 
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
