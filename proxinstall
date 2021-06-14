@@ -1340,7 +1340,7 @@ sub extract_data {
 
 	my $maxper = 0.25;
 
-	update_progress(0, 0, $maxper, "create partitions");
+	update_progress(0, 0, $maxper, "cleanup root-disks");
 
 	syscmd("vgchange -an") if !$opt_testmode; # deactivate all detected VGs
 
@@ -1373,13 +1373,19 @@ sub extract_data {
 	} elsif ($use_btrfs) {
 
 	    my ($devlist, $btrfs_mode) = get_btrfs_raid_setup();
+
+	    foreach my $hd (@$devlist) {
+		$clean_disk->(@$hd[1]);
+	    }
+
+	    update_progress(0, 0.02, $maxper, "create partitions");
+
 	    my $btrfs_partitions = [];
 	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
 
-		&$clean_disk($devname);
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, undef, '8300');
 		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
@@ -1397,6 +1403,8 @@ sub extract_data {
 
 	    $udevadm_trigger_block->();
 
+	    update_progress(0, 0.03, $maxper, "create btrfs");
+
 	    btrfs_create($btrfs_partitions, $btrfs_mode);
 
 	} elsif ($use_zfs) {
@@ -1406,6 +1414,8 @@ sub extract_data {
 	    foreach my $hd (@$devlist) {
 		$clean_disk->(@$hd[1]);
 	    }
+
+	    update_progress(0, 0.02, $maxper, "create partitions");
 
 	    # install esp/boot part on all, we can only win!
 	    my $disksize;
@@ -1445,13 +1455,17 @@ sub extract_data {
 		$vdev =~ s/ $devname/ $by_id/ if $by_id;
 	    }
 
+	    update_progress(0, 0.03, $maxper, "create rpool");
+
 	    zfs_create_rpool($vdev);
 
 	} else {
 
 	    die "target '$target_hd' is not a valid block device\n" if ! -b $target_hd;
 
-	    &$clean_disk($target_hd);
+	    $clean_disk->($target_hd);
+
+	    update_progress(0, 0.02, $maxper, "create partitions");
 
 	    my $logical_bsize = logical_blocksize($target_hd);
 
@@ -1470,6 +1484,8 @@ sub extract_data {
 		logical_bsize => $logical_bsize,
 	    };
 
+	    update_progress(0, 0.03, $maxper, "create LVs");
+
 	    my $swap_size = compute_swapsize($os_size);
 	    ($rootdev, $swapfile, $datadev) =
 		create_lvm_volumes($osdev, $os_size, $swap_size);
@@ -1484,13 +1500,13 @@ sub extract_data {
 		die "unable to set zfs properties\n";
 	}
 
-	update_progress(0.03, 0, $maxper, "create swap space");
+	update_progress(0.04, 0, $maxper, "create swap space");
 	if ($swapfile) {
 	    syscmd("mkswap -f $swapfile") == 0 ||
 		die "unable to create swap space\n";
 	}
 
-	update_progress(0.05, 0, $maxper, "creating filesystems");
+	update_progress(0.045, 0, $maxper, "creating root filesystems");
 
 	foreach my $di (@$bootdevinfo) {
 	    next if !$di->{esp};
