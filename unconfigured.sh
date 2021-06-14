@@ -60,6 +60,8 @@ real_reboot() {
     echo "done."
 
     umount -l -n /target >/dev/null 2>&1
+    umount -l -n /dev/pts
+    umount -l -n /dev/shm
     umount -l -n /dev
     umount -l -n /run
     [ -d /sys/firmware/efi/efivars ] && umount -l -n /sys/firmware/efi/efivars
