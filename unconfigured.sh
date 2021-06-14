@@ -120,6 +120,9 @@ mount -t tmpfs tmpfs /dev/shm
 mkdir -p /dev/pts
 mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
+# set the hostname
+hostname proxmox
+
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     echo "Dropping in debug shell before starting installation"
@@ -127,16 +130,13 @@ if [ $proxdebug -ne 0 ]; then
     debugsh || true
 fi
 
-# set the hostname
-hostname proxmox
-
 # try to get ip config with dhcp
 echo -n "Attempting to get DHCP leases... "
 dhclient -v
 echo "done"
 
 echo -n "Starting chrony for opportunistic time-sync... "
-chronyd || echo "starting chrony failed"
+chronyd || echo "starting chrony failed ($?)"
 
 echo "Starting a root shell on tty3."
 setsid /sbin/agetty -a root --noclear tty3 &
