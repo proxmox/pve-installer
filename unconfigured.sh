@@ -30,10 +30,9 @@ real_reboot() {
     /etc/init.d/udev stop
 
     echo -n "Deactivating swap..."
-    swap=$(grep /dev /proc/swaps);
+    swap=$(awk '/^\/dev\// { print $1 }' /proc/swaps);
     if [ -n "$swap" ]; then
-       set $swap
-       swapoff $1
+       swapoff "$swap"
     fi
     echo "done."
 
