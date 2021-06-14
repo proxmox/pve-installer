@@ -44,7 +44,7 @@ real_reboot() {
 }
 
 err_reboot() {
-    echo "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)"
+    printf "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)\n"
     debugsh || true
     real_reboot
 }
@@ -88,8 +88,8 @@ mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
-    echo "Dropping in debug shell inside chroot before starting installation"
-    echo "type exit or CTRL-D to start installation wizard"
+    echo "Dropping in debug shell before starting installation"
+    echo "type exit or CTRL-D to continue and start the installation wizard"
     debugsh || true
 fi
 
