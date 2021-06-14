@@ -932,14 +932,17 @@ my $udevadm_trigger_block = sub {
 my $clean_disk = sub {
     my ($disk) = @_;
 
-    my $partitions = `lsblk --output kname --noheadings --path --list $disk`;
-    foreach my $part (split "\n", $partitions) {
+    my @partitions = split("\n", `lsblk --output kname --noheadings --path --list $disk`);
+
+    for my $part (@partitions) {
 	next if $part eq $disk;
 	next if $part !~ /^\Q$disk\E/;
 	eval { syscmd("pvremove -ff -y $part"); };
 	eval { syscmd("zpool labelclear -f $part"); };
 	eval { syscmd("dd if=/dev/zero of=$part bs=1M count=16"); };
     }
+    eval { syscmd("wipefs -a " . cmd2string(\@partitions)) };
+    warn "$@" if $@;
 };
 
 sub partition_bootable_disk {
@@ -964,7 +967,7 @@ sub partition_bootable_disk {
     my $hdgb = int($hdsize/(1024*1024));
     die "hardisk '$target_dev' too small (${hdgb}GB)\n" if $hdgb < 8;
 
-    syscmd("wipefs -a ${target_dev}");
+    syscmd("sgdisk -Z ${target_dev}");
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1M
     # 2 - EFI ESP: next free 512M
