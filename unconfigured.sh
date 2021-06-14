@@ -2,6 +2,8 @@
 
 trap "err_reboot" ERR
 
+# NOTE: we nowadays get exec'd by the initrd's PID 1, so we're the new PID 1
+
 parse_cmdline() {
     proxdebug=0
     # shellcheck disable=SC2013 # per word splitting is wanted here
@@ -16,6 +18,30 @@ parse_cmdline() {
 
 debugsh() {
     /bin/bash
+}
+
+eject_and_reboot() {
+    iso_dev=$(awk '/ iso9660 / {print $1}' /proc/mounts)
+
+    for try in 5 4 3 2 1; do
+        echo "unmounting all"
+        if umount -a; then
+            break
+        fi
+        if test -n $try; then
+            echo "unmount failed -trying again in 5 seconds"
+            sleep 5
+        fi
+    done
+
+    if [ -n "$iso_dev" ]; then
+        eject "$iso_dev"
+    fi
+
+    echo "rebooting - please remove the ISO boot media"
+    sleep 3
+    echo b > /proc/sysrq-trigger
+    sleep 100
 }
 
 real_reboot() {
@@ -37,10 +63,16 @@ real_reboot() {
     umount -l -n /dev
     umount -l -n /run
     [ -d /sys/firmware/efi/efivars ] && umount -l -n /sys/firmware/efi/efivars
-    umount -l -n /sys
-    umount -l -n /proc
 
-    exit 0
+    # do not unmount proc and sys for now, at least /proc is still required to trigger the actual
+    # reboot, and both are virtual FS only anyway
+
+    kill -s KILL -1 # kill all but current init (our self) PID 1
+    sleep 1
+
+    eject_and_reboot
+
+    exit 0 # shouldn't be reached, kernel will panic in that case
 }
 
 err_reboot() {
@@ -53,7 +85,7 @@ echo "Starting Proxmox installation"
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
 
-# ensure udev isn't snippy and ignores our request
+# ensure udev doesn't ignores our request; FIXME: not required anymore, as we use switch_root now
 export SYSTEMD_IGNORE_CHROOT=1
 
 mount -n -t proc proc /proc
