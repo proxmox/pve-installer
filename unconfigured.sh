@@ -166,6 +166,9 @@ if command -v dbus-daemon; then
     fi
 fi
 
+# we use a trimmed down debootstrap so make busybox tools available to compensate that
+busybox --install -s || true
+
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     printf "\nDropping in debug shell before starting installation\n"
