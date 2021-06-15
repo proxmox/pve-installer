@@ -1,3 +1,20 @@
+proxmox-installer (7.0-2) bullseye; urgency=medium
+
+  * lvm: always tell lvm to wipe the signatures
+
+  * clean disk: pass all partitions separately to wipe2fs, as else it won't
+    bother cleaning up child ones
+
+  * disk preparation: make progress report for cleaning up disks slightly more
+    granular
+
+  * unconfigured: handle being the new PID 1
+
+  * unconfigured: heuristically detect high-dpi and adapt debugshell font and
+    GDK_SCALE for the wizard in that case
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 15 Jun 2021 15:07:04 +0200
+
 proxmox-installer (7.0-1) bullseye; urgency=medium
 
   * unify installer packages into single binary-package
