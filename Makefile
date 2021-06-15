@@ -51,7 +51,7 @@ install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 
 .PHONY: upload
 upload: ${DEB}
-	tar cf - ${PMG_DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist bullseye
+	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist bullseye
 
 %.img:
 	truncate -s 2G $@
