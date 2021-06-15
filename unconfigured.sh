@@ -141,6 +141,18 @@ mount -t tmpfs tmpfs /dev/shm
 mkdir -p /dev/pts
 mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
+# shellcheck disable=SC2207
+console_dim=($(IFS=' ' stty size)) # [height, width]
+DPI=96
+if (("${console_dim[0]}" > 100)) && (("${console_dim[1]}" > 400)); then
+    # heuristic only, high resolution can still mean normal/low DPI if it's a really big screen
+    # FIXME: use `edid-decode` as it can contain physical dimensions to calculate actual dpi?
+    echo "detected huge console, setting bigger font/dpi"
+    DPI=192
+    export GDK_SCALE=2
+    setfont /usr/share/consolefonts/Uni2-Terminus32x16.psf.gz
+fi
+
 # set the hostname
 hostname proxmox
 
@@ -172,7 +184,7 @@ chronyd || echo "starting chrony failed ($?)"
 echo "Starting a root shell on tty3."
 setsid /sbin/agetty -a root --noclear tty3 &
 
-xinit -- -dpi 96 >/dev/tty2 2>&1
+xinit -- -dpi "$DPI" >/dev/tty2 2>&1
 
 # just to be sure everything is on disk
 sync
