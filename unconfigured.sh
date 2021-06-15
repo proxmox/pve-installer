@@ -104,9 +104,9 @@ handle_wireless() {
     fi
 }
 
-echo "Starting Proxmox installation"
-
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
+
+echo "Starting Proxmox installation"
 
 # ensure udev doesn't ignores our request; FIXME: not required anymore, as we use switch_root now
 export SYSTEMD_IGNORE_CHROOT=1
@@ -156,7 +156,7 @@ fi
 
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
-    echo "Dropping in debug shell before starting installation"
+    printf "\nDropping in debug shell before starting installation\n"
     echo "type exit or CTRL-D to continue and start the installation wizard"
     debugsh || true
 fi
@@ -178,7 +178,7 @@ xinit -- -dpi 96 >/dev/tty2 2>&1
 sync
 
 if [ $proxdebug -ne 0 ]; then 
-    echo "Debug shell after installation exited (type exit or CTRL-D to reboot)"
+    printf "\nDebug shell after installation exited (type exit or CTRL-D to reboot)\n"
     debugsh || true
 fi
 
