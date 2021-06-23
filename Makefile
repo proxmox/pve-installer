@@ -23,7 +23,7 @@ country.dat: country.pl
 	./country.pl > country.dat
 
 deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} ProxmoxInstallerSetup.pm
 	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian ${DEB}
