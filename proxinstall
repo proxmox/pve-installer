@@ -3210,9 +3210,7 @@ sub create_hdoption_view {
     $grid->attach($sep, 0, $row, 2, 1);
     $row++;
 
-    my $hw_raid_note = Gtk3::Label->new(
-        "Note: ZFS is not compatible with hardware RAID controllers, for details see the documentation."
-    );
+    my $hw_raid_note = Gtk3::Label->new(""); # text will be set below, before making it visible
     $hw_raid_note->set_line_wrap(1);
     $hw_raid_note->set_max_width_chars(30);
     $hw_raid_note->set_visible(0);
@@ -3280,14 +3278,22 @@ sub create_hdoption_view {
 
     my $switch_view = sub {
 	my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
-	my $enable_zfs_opts = $config_options->{filesys} =~ m/zfs/;
+	my $is_zfs = $config_options->{filesys} =~ m/zfs/;
 
 	$target_hd_combo->set_visible(!$raid);
 	$options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
 	$options_stack->get_child_by_name("raiddisk")->set_visible($raid);
+
+	if ($raid) {
+	    my $msg = "<b>Note</b>: " . ($is_zfs
+		? "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
+		: "BTRFS integration in $setup->{fullname} is a Technology Preview!"
+	    );
+	    $hw_raid_note->set_markup($msg);
+	}
 	$hw_raid_note->set_visible($raid);
-	$options_stack_switcher->set_visible($enable_zfs_opts);
-	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($enable_zfs_opts);
+	$options_stack_switcher->set_visible($is_zfs);
+	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($is_zfs);
 	if ($raid) {
 	    $target_hd_label->set_text("Target: $config_options->{filesys} ");
 	    $options_stack->set_visible_child_name("raiddisk");
