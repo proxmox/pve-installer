@@ -56,7 +56,7 @@ my $storage_cfg_btrfs = <<__EOD__;
 dir: local
 	path /var/lib/vz
 	content iso,vztmpl,backup
-	disabled
+	disable
 
 btrfs: local-btrfs
 	path /var/lib/pve/local-btrfs
