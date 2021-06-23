@@ -7,7 +7,7 @@ my $product_cfg = {
     pve => {
 	fullname => 'Proxmox VE',
 	port => '8006',
-	enable_btrfs => 0,
+	enable_btrfs => 1,
 	bridged_network => 1,
     },
     pmg => {
