@@ -69,8 +69,12 @@ real_reboot() {
     # do not unmount proc and sys for now, at least /proc is still required to trigger the actual
     # reboot, and both are virtual FS only anyway
 
-    kill -s KILL -1 # kill all but current init (our self) PID 1
-    sleep 1
+    echo "Terminate all remaining processes"
+    kill -s TERM -1 # TERMinate all but current init (our self) PID 1
+    sleep 2
+    echo "Kill any remaining processes"
+    kill -s KILL -1 # KILL all but current init (our self) PID 1
+    sleep 0.5
 
     eject_and_reboot
 
