@@ -1,3 +1,11 @@
+proxmox-installer (7.0-3) bullseye; urgency=medium
+
+  * pid1: shutdown: send a more friendly TERM signal first
+
+  * Proxmox VE: enable BTRFS support on installation as technology preview
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 23 Jun 2021 23:03:22 +0200
+
 proxmox-installer (7.0-2) bullseye; urgency=medium
 
   * lvm: always tell lvm to wipe the signatures
