@@ -930,7 +930,9 @@ my $udevadm_trigger_block = sub {
 my $clean_disk = sub {
     my ($disk) = @_;
 
-    my @partitions = split("\n", `lsblk --output kname --noheadings --path --list $disk`);
+    # sort longest first as we need to cleanup depth-first
+    my @partitions = sort { length($b) <=> length($a) }
+	split("\n", `lsblk --output kname --noheadings --path --list $disk`);
 
     for my $part (@partitions) {
 	next if $part eq $disk;
