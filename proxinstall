@@ -1627,9 +1627,9 @@ sub extract_data {
 		"\nauto vmbr0\niface vmbr0 $ntype static\n" .
 		"\taddress $cidr\n" .
 		"\tgateway $gateway\n" .
-		"\tbridge_ports $ethdev\n" .
-		"\tbridge_stp off\n" .
-		"\tbridge_fd 0\n";
+		"\tbridge-ports $ethdev\n" .
+		"\tbridge-stp off\n" .
+		"\tbridge-fd 0\n";
 	} else {
 	    $ifaces .= "auto $ethdev\n" .
 		"iface $ethdev $ntype static\n" .
