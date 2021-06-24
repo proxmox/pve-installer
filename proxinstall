@@ -398,11 +398,7 @@ sub run_command {
 
     my $orig_pid = $$;
 
-    my $pid;
-    eval {
-	$pid = open3($writer, $reader, $error, @$cmd) || die $!;
-    };
-
+    my $pid = eval { open3($writer, $reader, $error, @$cmd) || die $!; };
     my $err = $@;
 
     # catch exec errors
