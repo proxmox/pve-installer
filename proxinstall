@@ -1380,8 +1380,6 @@ sub extract_data {
 		my ($size, $osdev, $efidev) =
 		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
 
-		zfs_mirror_size_check($disksize, $size) if $disksize;
-
 		push @$bootdevinfo, {
 		    esp => $efidev,
 		    devname => $devname,
