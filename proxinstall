@@ -35,6 +35,8 @@ if (!GetOptions('testmode=s' => \$opt_testmode)) {
     exit (-1);
 }
 
+$ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
+
 my ($setup, $cd_info) = ProxmoxInstallerSetup::setup();
 
 my $zfstestpool = "test_rpool";
