@@ -3241,7 +3241,7 @@ sub create_hdoption_view {
 	if ($raid) {
 	    my $msg = "<b>Note</b>: " . ($is_zfs
 		? "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
-		: "BTRFS integration in $setup->{fullname} is a Technology Preview!"
+		: "BTRFS integration in $setup->{fullname} is a technology preview!"
 	    );
 	    $hw_raid_note->set_markup($msg);
 	}
