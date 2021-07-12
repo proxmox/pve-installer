@@ -38,6 +38,8 @@ eject_and_reboot() {
         eject "$iso_dev"
     fi
 
+    umount -l -n /dev
+
     echo "rebooting - please remove the ISO boot media"
     sleep 3
     echo b > /proc/sysrq-trigger
@@ -64,7 +66,6 @@ real_reboot() {
     umount -l -n /target >/dev/null 2>&1
     umount -l -n /dev/pts
     umount -l -n /dev/shm
-    umount -l -n /dev
     umount -l -n /run
     [ -d /sys/firmware/efi/efivars ] && umount -l -n /sys/firmware/efi/efivars
 
