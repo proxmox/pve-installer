@@ -24,8 +24,8 @@ eject_and_reboot() {
     iso_dev=$(awk '/ iso9660 / {print $1}' /proc/mounts)
 
     for try in 5 4 3 2 1; do
-        echo "unmounting all"
-        if umount -a; then
+        echo "unmounting ISO"
+        if umount -v -a --types iso9660; then
             break
         fi
         if test -n $try; then
