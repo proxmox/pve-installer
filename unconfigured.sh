@@ -56,12 +56,12 @@ real_reboot() {
     # stop udev (release file handles)
     /etc/init.d/udev stop
 
-    echo -n "Deactivating swap..."
     swap=$(awk '/^\/dev\// { print $1 }' /proc/swaps);
     if [ -n "$swap" ]; then
-       swapoff "$swap"
+        echo -n "Deactivating swap..."
+        swapoff "$swap"
+        echo "done."
     fi
-    echo "done."
 
     umount -l -n /target >/dev/null 2>&1
     umount -l -n /dev/pts
