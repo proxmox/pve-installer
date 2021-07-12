@@ -1,4 +1,4 @@
-proxmox-installer (7.0-5) bullseye; urgency=medium
+proxmox-installer (7.0-6) bullseye; urgency=medium
 
   * bridged network: set bridge HW-address (MAC) to the one of the physical
     port
@@ -9,7 +9,7 @@ proxmox-installer (7.0-5) bullseye; urgency=medium
 
   * unconfigured: only log about swap if there's actually one we can deactivate
 
- -- Proxmox Support Team <support@proxmox.com>  Mon, 12 Jul 2021 11:54:56 +0200
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 12 Jul 2021 13:21:09 +0200
 
 proxmox-installer (7.0-4) bullseye; urgency=medium
 
