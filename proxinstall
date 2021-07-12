@@ -1574,28 +1574,29 @@ sub extract_data {
 
 	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
 
-	my $ethdev = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
+	my $ethdev = $ipconf->{ifaces}->{$ipconf->{selected}};
 
 	if ($setup->{bridged_network}) {
-	    $ifaces .= "iface $ethdev $ntype manual\n";
+	    $ifaces .= "iface $ethdev->{name} $ntype manual\n";
 
 	    $ifaces .=
 		"\nauto vmbr0\niface vmbr0 $ntype static\n" .
 		"\taddress $cidr\n" .
 		"\tgateway $gateway\n" .
-		"\tbridge-ports $ethdev\n" .
+		"\thwaddress $ethdev->{mac}\n" .
+		"\tbridge-ports $ethdev->{name}\n" .
 		"\tbridge-stp off\n" .
 		"\tbridge-fd 0\n";
 	} else {
-	    $ifaces .= "auto $ethdev\n" .
-		"iface $ethdev $ntype static\n" .
+	    $ifaces .= "auto $ethdev->{name}\n" .
+		"iface $ethdev->{name} $ntype static\n" .
 		"\taddress $cidr\n" .
 		"\tgateway $gateway\n";
 	}
 
 	foreach my $iface (sort keys %{$ipconf->{ifaces}}) {
 	    my $name = $ipconf->{ifaces}->{$iface}->{name};
-	    next if $name eq $ethdev;
+	    next if $name eq $ethdev->{name};
 
 	    $ifaces .= "\niface $name $ntype manual\n";
 	}
