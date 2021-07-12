@@ -29,7 +29,7 @@ eject_and_reboot() {
             break
         fi
         if test -n $try; then
-            echo "unmount failed -trying again in 5 seconds"
+            echo "unmount failed - trying again in 5 seconds"
             sleep 5
         fi
     done
@@ -47,7 +47,9 @@ eject_and_reboot() {
 real_reboot() {
     trap - ERR
 
-    /etc/init.d/networking stop
+    if [[ -x /etc/init.d/networking ]]; then
+        /etc/init.d/networking stop
+    fi
 
     # stop udev (release file handles)
     /etc/init.d/udev stop
