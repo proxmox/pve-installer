@@ -1,3 +1,16 @@
+proxmox-installer (7.0-7) bullseye; urgency=medium
+
+  * Revert "bridged network: set bridge HW-address to port one", to subtle to
+    do as static configuration
+
+  * avoid copying packages into ram, bind-mount into target chroot and extract
+    directly
+
+  * unconfigured: avoid doing the reset "sysrq" if possible, prefer a normal
+    reboot system call.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 14 Jul 2021 12:16:27 +0200
+
 proxmox-installer (7.0-6) bullseye; urgency=medium
 
   * bridged network: set bridge HW-address (MAC) to the one of the physical
