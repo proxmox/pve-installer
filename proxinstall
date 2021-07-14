@@ -1292,8 +1292,6 @@ sub extract_data {
     my $bootloader_err;
 
     eval {
-
-
 	my $maxper = 0.25;
 
 	update_progress(0, 0, $maxper, "cleanup root-disks");
@@ -1728,8 +1726,7 @@ _EOD
 	run_command($cmd, sub {
 	    my $line = shift;
 	    if ($line =~ m/Setting up\s+(\S+)/) {
-		update_progress((++$count)/$pkg_count, 0.75, 0.95,
-				"configuring $1");
+		update_progress((++$count)/$pkg_count, 0.75, 0.95, "configuring $1");
 	    }
 	});
 
