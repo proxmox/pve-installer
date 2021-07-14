@@ -35,13 +35,17 @@ eject_and_reboot() {
     done
 
     if [ -n "$iso_dev" ]; then
-        eject "$iso_dev"
+        eject "$iso_dev" || true # cannot really work currently, don't care
     fi
 
     umount -l -n /dev
 
     echo "rebooting - please remove the ISO boot media"
     sleep 3
+    reboot -f
+    sleep 5
+    echo "trigger reset system request"
+    # we do not expect the reboot above to fail, so rather to avoid kpanic when pid 1 exits
     echo b > /proc/sysrq-trigger
     sleep 100
 }
@@ -62,6 +66,9 @@ real_reboot() {
         swapoff "$swap"
         echo "done."
     fi
+
+    # just to be sure
+    sync
 
     umount -l -n /target >/dev/null 2>&1
     umount -l -n /dev/pts
