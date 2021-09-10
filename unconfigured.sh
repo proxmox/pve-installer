@@ -201,6 +201,7 @@ chronyd || echo "starting chrony failed ($?)"
 echo "Starting a root shell on tty3."
 setsid /sbin/agetty -a root --noclear tty3 &
 
+echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
 xinit -- -dpi "$DPI" >/dev/tty2 2>&1
 
 # just to be sure everything is on disk
