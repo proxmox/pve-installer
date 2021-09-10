@@ -42,7 +42,7 @@ eject_and_reboot() {
 
     echo "rebooting - please remove the ISO boot media"
     sleep 3
-    reboot -f
+    reboot -nf
     sleep 5
     echo "trigger reset system request"
     # we do not expect the reboot above to fail, so rather to avoid kpanic when pid 1 exits
