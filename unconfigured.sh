@@ -195,7 +195,7 @@ echo -n "Attempting to get DHCP leases... "
 dhclient -v
 echo "done"
 
-echo -n "Starting chrony for opportunistic time-sync... "
+echo "Starting chrony for opportunistic time-sync... "
 chronyd || echo "starting chrony failed ($?)"
 
 echo "Starting a root shell on tty3."
