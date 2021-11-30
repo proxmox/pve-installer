@@ -1789,7 +1789,7 @@ _EOD
 	    my $zfs_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\"";
 	    write_config($zfs_snippet, "$targetdir/etc/default/grub.d/zfs.cfg");
 
-	    write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs", "$targetdir/etc/kernel/cmdline");
+	    write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\n", "$targetdir/etc/kernel/cmdline");
 
 	}
 
