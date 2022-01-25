@@ -2554,16 +2554,16 @@ sub get_device_desc {
     my ($devname, $size, $model) = @_;
 
     if ($size && ($size > 0)) {
-	$size = int($size/2048); # size in MB, from 512B "sectors"
+	$size = int($size/2048); # size in MiB, from 512B "sectors"
 
 	my $text = "$devname (";
 	if ($size >= 1024) {
-	    $size = int($size/1024); # size in GB
+	    $size = $size/1024; # size in GiB
 	    if ($size >= 1024) {
-		$size = int($size/1024); # size in GB
-		$text .= "${size}TiB";
+		$size = $size/1024; # size in TiB
+		$text .= sprintf("%.2f", $size) . "TiB";
 	    } else {
-		$text .= "${size}GiB";
+		$text .= sprintf("%.2f", $size) . "GiB";
 	    }
 	} else {
 	    $text .= "${size}MiB";
@@ -2571,6 +2571,7 @@ sub get_device_desc {
 
 	$text .= ", $model" if $model;
 	$text .= ")";
+	return $text;
 
     } else {
 	return $devname;
