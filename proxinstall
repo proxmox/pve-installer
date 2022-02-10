@@ -900,8 +900,8 @@ sub zfs_create_rpool {
     syscmd("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
 	die "unable to create zfs $zfspoolname/ROOT/$zfsrootvolname volume\n";
 
-    # disable atime during install
-    syscmd("zfs set atime=off $zfspoolname") == 0 ||
+    # default to `relatime` on, fast enough for the installer and production
+    syscmd("zfs set atime=on relatime=on $zfspoolname") == 0 ||
 	die "unable to set zfs properties\n";
 
     my $value = $config_options->{compress};
