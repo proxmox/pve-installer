@@ -2281,8 +2281,7 @@ sub get_ip_config {
 sub display_message {
     my ($msg) = @_;
 
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal',
-					  'info', 'ok', $msg);
+    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'info', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
 }
@@ -2290,8 +2289,7 @@ sub display_message {
 sub display_error {
     my ($msg) = @_;
 
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal',
-					  'error', 'ok', $msg);
+    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
 }
