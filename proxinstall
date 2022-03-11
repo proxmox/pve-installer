@@ -1932,6 +1932,7 @@ _EOD
     syscmd("umount $targetdir/proc");
     syscmd("umount $targetdir/sys/firmware/efi/efivars");
     syscmd("umount $targetdir/sys");
+    rmdir("$targetdir/mnt/hostrun");
 
     if ($use_zfs) {
 	syscmd("zfs umount -a") == 0 ||
