@@ -3062,8 +3062,7 @@ my $create_raid_advanced_grid = sub {
 
     my $combo_compress = Gtk3::ComboBoxText->new();
     $combo_compress->set_tooltip_text("zfs compression algorithm for rpool dataset");
-    # note: gzip / lze not allowed for bootfs vdevs
-    my $comp_opts = ["on","off","lzjb","lz4"];
+    my $comp_opts = ["on","off","lzjb","lz4", "lze", "gzip", "zstd"];
     foreach my $opt (@$comp_opts) {
 	$combo_compress->append($opt, $opt);
     }
