@@ -2950,7 +2950,40 @@ my $create_label_widget_grid = sub {
     return $grid;
 };
 
+my $get_hdsize_adjustment = sub {
+    my $hdsize = shift;
+
+    if (!defined($hdsize)) {
+	#compute based on selected disks
+	my $hd_count = scalar(@$hds);
+	for (my $i = 0; $i < $hd_count; $i++) {
+	    if (defined(my $cur_hd = $config_options->{"disksel$i"})) {
+		my $disksize = int(@$cur_hd[2] / (2*1024*1024.0)); # size in GB
+		$hdsize //= $disksize;
+		$hdsize = $disksize if $disksize < $hdsize;
+	    }
+	}
+    }
+    die "could not determine hdsize for adjustment!\n" if !$hdsize;
+
+    return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+};
+
+my $get_hdsize_spinbtn = sub {
+    my $hdsize = shift;
+
+    my $hdsize_entry_buffer = Gtk3::EntryBuffer->new(undef, 1);
+    my $hdsize_size_adj = $get_hdsize_adjustment->($hdsize);
+
+    my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
+    $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
+    $spinbutton_hdsize->set_adjustment($hdsize_size_adj);
+    $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
+    return $spinbutton_hdsize;
+};
+
 my $create_raid_disk_grid = sub {
+    my ($hdsize_btn) = @_;
     my $hd_count = scalar(@$hds);
     my $disk_labeled_widgets = [];
     for (my $i = 0; $i < $hd_count; $i++) {
@@ -2967,6 +3000,8 @@ my $create_raid_disk_grid = sub {
 		my $diskid = $w->{pve_disk_id};
 		my $a = $w->get_active - 1;
 		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
+		my $hdsize_adj = $get_hdsize_adjustment->();
+		$hdsize_btn->set_adjustment($hdsize_adj);
 	    });
 	}
 
@@ -3022,30 +3057,8 @@ my $create_raid_disk_grid = sub {
     return $vbox;
 };
 
-# shared between different ui parts (e.g., ZFS and "normal" single disk FS)
-my $hdsize_size_adj;
-my $hdsize_entry_buffer;
-
-my $get_hdsize_spinbtn = sub {
-    my $hdsize = shift;
-
-    $hdsize_entry_buffer //= Gtk3::EntryBuffer->new(undef, 1);
-
-    if (defined($hdsize)) {
-	$hdsize_size_adj = Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
-    } else {
-	die "called get_hdsize_spinbtn with \$hdsize_size_adj not defined but did not pass hdsize!\n"
-	    if !defined($hdsize_size_adj);
-    }
-
-    my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
-    $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
-    $spinbutton_hdsize->set_adjustment($hdsize_size_adj);
-    $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
-    return $spinbutton_hdsize;
-};
-
 my $create_raid_advanced_grid = sub {
+    my ($hdsize_btn) = @_;
     my $labeled_widgets = [];
     my $spinbutton_ashift = Gtk3::SpinButton->new_with_range(9, 13, 1);
     $spinbutton_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
@@ -3098,7 +3111,7 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_copies->set_value($config_options->{copies});
     push @$labeled_widgets, "copies", $spinbutton_copies;
 
-    push @$labeled_widgets, "hdsize", $get_hdsize_spinbtn->();
+    push @$labeled_widgets, "hdsize", $hdsize_btn;
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
@@ -3176,8 +3189,9 @@ sub create_hdoption_view {
 	$hdsize = int((-s $target_hd) / (1024*1024*1024.0));
     }
 
-    my $spinbutton_hdsize = $get_hdsize_spinbtn->($hdsize);
-    push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize;
+    my $spinbutton_hdsize_nonraid = $get_hdsize_spinbtn->($hdsize);
+    push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize_nonraid;
+    my $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
 
     my $entry_swapsize = Gtk3::Entry->new();
     $entry_swapsize->set_tooltip_text("maximum SWAP size (GB)");
@@ -3208,13 +3222,14 @@ sub create_hdoption_view {
 	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
     }
 
+    my $spinbutton_hdsize_zfs = $get_hdsize_spinbtn->($hdsize);
     my $options_stack = Gtk3::Stack->new();
     $options_stack->set_visible(1);
     $options_stack->set_hexpand(1);
     $options_stack->set_vexpand(1);
-    $options_stack->add_titled(&$create_raid_disk_grid(), "raiddisk", "Disk Setup");
+    $options_stack->add_titled(&$create_raid_disk_grid($spinbutton_hdsize_zfs), "raiddisk", "Disk Setup");
     $options_stack->add_titled(&$create_label_widget_grid($hdsize_labeled_widgets), "hdsize", "Size Options");
-    $options_stack->add_titled(&$create_raid_advanced_grid("zfs"), "raidzfsadvanced", "Advanced Options");
+    $options_stack->add_titled(&$create_raid_advanced_grid($spinbutton_hdsize_zfs), "raidzfsadvanced", "Advanced Options");
     $options_stack->set_visible_child_name("raiddisk");
     my $options_stack_switcher = Gtk3::StackSwitcher->new();
     $options_stack_switcher->set_halign('center');
@@ -3250,6 +3265,13 @@ sub create_hdoption_view {
 	} else {
 	    $target_hd_label->set_text("Target Harddisk: ");
 	}
+
+	if ($raid) {
+	    $spinbutton_hdsize = $spinbutton_hdsize_zfs;
+	} else {
+	    $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
+	}
+
 	my (undef, $pref_width) = $dialog->get_preferred_width();
 	my (undef, $pref_height) = $dialog->get_preferred_height();
 	$pref_height = 750 if $pref_height > 750;
