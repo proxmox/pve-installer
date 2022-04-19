@@ -1341,7 +1341,7 @@ sub extract_data {
 		my $logical_bsize = @$hd[4];
 
 		my ($size, $osdev, $efidev) =
-		    partition_bootable_disk($devname, undef, '8300');
+		    partition_bootable_disk($devname, $config_options->{hdsize}, '8300');
 		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
 		my $by_id = find_stable_path("/dev/disk/by-id", $devname);
 		push @$bootdevinfo, {
@@ -2983,7 +2983,7 @@ my $get_hdsize_spinbtn = sub {
 };
 
 my $create_raid_disk_grid = sub {
-    my ($hdsize_btn) = @_;
+    my ($hdsize_buttons) = @_;
     my $hd_count = scalar(@$hds);
     my $disk_labeled_widgets = [];
     for (my $i = 0; $i < $hd_count; $i++) {
@@ -3001,7 +3001,9 @@ my $create_raid_disk_grid = sub {
 		my $a = $w->get_active - 1;
 		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
 		my $hdsize_adj = $get_hdsize_adjustment->();
-		$hdsize_btn->set_adjustment($hdsize_adj);
+		for my $btn (@$hdsize_buttons) {
+		    $btn->set_adjustment($hdsize_adj);
+		}
 	    });
 	}
 
@@ -3115,6 +3117,13 @@ my $create_raid_advanced_grid = sub {
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
+my $create_btrfs_raid_advanced_grid = sub {
+    my ($hdsize_btn) = @_;
+    my $labeled_widgets = [];
+    push @$labeled_widgets, "hdsize", $hdsize_btn;
+    return $create_label_widget_grid->($labeled_widgets);;
+};
+
 sub create_hdoption_view {
 
     my $dialog = Gtk3::Dialog->new();
@@ -3223,13 +3232,16 @@ sub create_hdoption_view {
     }
 
     my $spinbutton_hdsize_zfs = $get_hdsize_spinbtn->($hdsize);
+    my $spinbutton_hdsize_btrfs = $get_hdsize_spinbtn->($hdsize);
+    my $hdsize_buttons = [ $spinbutton_hdsize_zfs, $spinbutton_hdsize_btrfs ];
     my $options_stack = Gtk3::Stack->new();
     $options_stack->set_visible(1);
     $options_stack->set_hexpand(1);
     $options_stack->set_vexpand(1);
-    $options_stack->add_titled(&$create_raid_disk_grid($spinbutton_hdsize_zfs), "raiddisk", "Disk Setup");
+    $options_stack->add_titled(&$create_raid_disk_grid($hdsize_buttons), "raiddisk", "Disk Setup");
     $options_stack->add_titled(&$create_label_widget_grid($hdsize_labeled_widgets), "hdsize", "Size Options");
     $options_stack->add_titled(&$create_raid_advanced_grid($spinbutton_hdsize_zfs), "raidzfsadvanced", "Advanced Options");
+    $options_stack->add_titled(&$create_btrfs_raid_advanced_grid($spinbutton_hdsize_btrfs), "raidbtrfsadvanced", "Advanced Options");
     $options_stack->set_visible_child_name("raiddisk");
     my $options_stack_switcher = Gtk3::StackSwitcher->new();
     $options_stack_switcher->set_halign('center');
@@ -3257,8 +3269,9 @@ sub create_hdoption_view {
 	    $hw_raid_note->set_markup($msg);
 	}
 	$hw_raid_note->set_visible($raid);
-	$options_stack_switcher->set_visible($is_zfs);
+	$options_stack_switcher->set_visible($raid);
 	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($is_zfs);
+	$options_stack->get_child_by_name("raidbtrfsadvanced")->set_visible(!$is_zfs);
 	if ($raid) {
 	    $target_hd_label->set_text("Target: $config_options->{filesys} ");
 	    $options_stack->set_visible_child_name("raiddisk");
@@ -3267,7 +3280,7 @@ sub create_hdoption_view {
 	}
 
 	if ($raid) {
-	    $spinbutton_hdsize = $spinbutton_hdsize_zfs;
+	    $spinbutton_hdsize = $is_zfs ? $spinbutton_hdsize_zfs : $spinbutton_hdsize_btrfs;
 	} else {
 	    $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
 	}
