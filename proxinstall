@@ -2969,7 +2969,7 @@ my $get_hdsize_adjustment = sub {
     return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
 };
 
-my $get_hdsize_spinbtn = sub {
+my sub get_hdsize_spin_button {
     my $hdsize = shift;
 
     my $hdsize_entry_buffer = Gtk3::EntryBuffer->new(undef, 1);
@@ -3200,7 +3200,7 @@ sub create_hdoption_view {
 	$hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
     }
 
-    my $spinbutton_hdsize_nonraid = $get_hdsize_spinbtn->($hdsize);
+    my $spinbutton_hdsize_nonraid = get_hdsize_spin_button($hdsize);
     push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize_nonraid;
     my $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
 
@@ -3233,8 +3233,8 @@ sub create_hdoption_view {
 	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
     }
 
-    my $spinbutton_hdsize_zfs = $get_hdsize_spinbtn->($hdsize);
-    my $spinbutton_hdsize_btrfs = $get_hdsize_spinbtn->($hdsize);
+    my $spinbutton_hdsize_zfs = get_hdsize_spin_button($hdsize);
+    my $spinbutton_hdsize_btrfs = get_hdsize_spin_button($hdsize);
     my $hdsize_buttons = [ $spinbutton_hdsize_zfs, $spinbutton_hdsize_btrfs ];
     my $options_stack = Gtk3::Stack->new();
     $options_stack->set_visible(1);
