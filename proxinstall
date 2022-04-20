@@ -2951,7 +2951,7 @@ my $create_label_widget_grid = sub {
 };
 
 # only relevant for raid with its multipl diskX to diskY mappings.
-my $get_hdsize_adjustment = sub {
+my $get_selected_hdsize = sub {
     my $hdsize = shift;
     return $hdsize if defined($hdsize);
 
@@ -2963,16 +2963,30 @@ my $get_hdsize_adjustment = sub {
 	$hdsize //= $disksize;
 	$hdsize = $disksize if $disksize < $hdsize;
     }
-    $hdsize //= 0; # fall back to zero, e.g., if none is selected hdsize cannot be any size
-
-    return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+    return $hdsize // 0; # fall back to zero, e.g., if none is selected hdsize cannot be any size
 };
+
+my sub update_hdsize_adjustment {
+    my ($adjustment, $hdsize) = @_;
+
+    $hdsize = $get_selected_hdsize->($hdsize);
+    # expect that lower = 0 and step increments = 1 still are valid
+    $adjustment->set_upper($hdsize + 1);
+    $adjustment->set_value($hdsize);
+}
+
+my sub create_hdsize_adjustment {
+    my ($hdsize) = @_;
+    $hdsize = $get_selected_hdsize->($hdsize);
+    # params are: initial value, lower, upper, step increment, page increment, page size
+    return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+}
 
 my sub get_hdsize_spin_button {
     my $hdsize = shift;
 
     my $hdsize_entry_buffer = Gtk3::EntryBuffer->new(undef, 1);
-    my $hdsize_size_adj = $get_hdsize_adjustment->($hdsize);
+    my $hdsize_size_adj = create_hdsize_adjustment($hdsize);
 
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
     $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
@@ -3003,9 +3017,8 @@ my $create_raid_disk_grid = sub {
 	    my $diskid = $w->{pve_disk_id};
 	    my $a = $w->get_active - 1;
 	    $config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
-	    my $hdsize_adj = $get_hdsize_adjustment->();
 	    for my $btn (@$hdsize_buttons) {
-		$btn->set_adjustment($hdsize_adj);
+		update_hdsize_adjustment($btn->get_adjustment());
 	    }
 	});
 
