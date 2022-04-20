@@ -2996,18 +2996,19 @@ my $create_raid_disk_grid = sub {
 	foreach my $hd (@$hds) {
 	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	    $disk_selector->append_text(get_device_desc ($devname, $size, $model));
-	    $disk_selector->{pve_disk_id} = $i;
-	    $disk_selector->signal_connect (changed => sub {
-		my $w = shift;
-		my $diskid = $w->{pve_disk_id};
-		my $a = $w->get_active - 1;
-		$config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
-		my $hdsize_adj = $get_hdsize_adjustment->();
-		for my $btn (@$hdsize_buttons) {
-		    $btn->set_adjustment($hdsize_adj);
-		}
-	    });
 	}
+
+	$disk_selector->{pve_disk_id} = $i;
+	$disk_selector->signal_connect(changed => sub {
+	    my $w = shift;
+	    my $diskid = $w->{pve_disk_id};
+	    my $a = $w->get_active - 1;
+	    $config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
+	    my $hdsize_adj = $get_hdsize_adjustment->();
+	    for my $btn (@$hdsize_buttons) {
+		$btn->set_adjustment($hdsize_adj);
+	    }
+	});
 
 	if ($hdoption_first_setup) {
 	    $disk_selector->set_active ($i+1) if $hds->[$i];
