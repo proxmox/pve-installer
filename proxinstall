@@ -2950,21 +2950,20 @@ my $create_label_widget_grid = sub {
     return $grid;
 };
 
+# only relevant for raid with its multipl diskX to diskY mappings.
 my $get_hdsize_adjustment = sub {
     my $hdsize = shift;
+    return $hdsize if defined($hdsize);
 
-    if (!defined($hdsize)) {
-	#compute based on selected disks
-	my $hd_count = scalar(@$hds);
-	for (my $i = 0; $i < $hd_count; $i++) {
-	    if (defined(my $cur_hd = $config_options->{"disksel$i"})) {
-		my $disksize = int(@$cur_hd[2] / (2*1024*1024.0)); # size in GB
-		$hdsize //= $disksize;
-		$hdsize = $disksize if $disksize < $hdsize;
-	    }
-	}
+    # compute the smallest disk size of the actually selected disks
+    my $hd_count = scalar(@$hds);
+    for (my $i = 0; $i < $hd_count; $i++) {
+	my $cur_hd = $config_options->{"disksel$i"} // next;
+	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
+	$hdsize //= $disksize;
+	$hdsize = $disksize if $disksize < $hdsize;
     }
-    die "could not determine hdsize for adjustment!\n" if !$hdsize;
+    $hdsize //= 0; # fall back to zero, e.g., if none is selected hdsize cannot be any size
 
     return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
 };
