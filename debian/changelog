@@ -1,3 +1,27 @@
+proxmox-installer (7.1-1) bullseye; urgency=medium
+
+  * init:
+    + add missing newline for chorny log message
+    + add hint that GUI should start and where to find potential errors
+    + do not sync on actual reboot, was already done after installation
+      finished
+
+  * proxmox-boot-preparation: add newline to /etc/kernel/cmdline
+
+  * display disk size with 2 decimal places
+
+  * zfs create: default to relatime
+
+  * fix #3905: allow lze/gzip/zstd compression for ZFS
+
+  * zfs: allow RAID0 with different-sized disks
+
+  * fix #3188: update hdsize spin-button on disk-selection change
+
+  * fix #3587: make hdsize configurable for btrfs setups
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 20 Apr 2022 14:17:52 +0200
+
 proxmox-installer (7.0-7) bullseye; urgency=medium
 
   * Revert "bridged network: set bridge HW-address to port one", to subtle to
