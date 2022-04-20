@@ -56,6 +56,9 @@ upload: ${DEB}
 %.img:
 	truncate -s 2G $@
 
+%.big.img:
+	truncate -s 8G $@
+
 .PHONY: prepare-check-env
 prepare-check-env: $(DEB)
 	umount -Rd testdir || true
@@ -66,9 +69,9 @@ check-pve: prepare-check-env test.img
 	printf '%s\n' "PRODUCT='pve'" >cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
-check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img
+check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img test5.big.img
 	printf '%s\n' "PRODUCT='pve'" >cd-info.test
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
 check-pmg: prepare-check-env test.img
 	printf '%s\n' "PRODUCT='pmg'" >cd-info.test
