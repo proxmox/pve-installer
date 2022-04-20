@@ -2984,6 +2984,7 @@ my $get_hdsize_spinbtn = sub {
 
 my $create_raid_disk_grid = sub {
     my ($hdsize_buttons) = @_;
+
     my $hd_count = scalar(@$hds);
     my $disk_labeled_widgets = [];
     for (my $i = 0; $i < $hd_count; $i++) {
@@ -2991,6 +2992,7 @@ my $create_raid_disk_grid = sub {
 	$disk_selector->append_text("-- do not use --");
 	$disk_selector->set_active(0);
 	$disk_selector->set_visible(1);
+
 	foreach my $hd (@$hds) {
 	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	    $disk_selector->append_text(get_device_desc ($devname, $size, $model));
@@ -3125,7 +3127,6 @@ my $create_btrfs_raid_advanced_grid = sub {
 };
 
 sub create_hdoption_view {
-
     my $dialog = Gtk3::Dialog->new();
 
     $dialog->set_title("Harddisk options");
@@ -3193,9 +3194,9 @@ sub create_hdoption_view {
     # size compute
     my $hdsize = 0;
     if ( -b $target_hd) {
-	$hdsize = int(hd_size ($target_hd) / (1024*1024.0)); # size in GB
+	$hdsize = int(hd_size ($target_hd) / (1024 * 1024.0)); # size in GB
     } elsif ($target_hd) {
-	$hdsize = int((-s $target_hd) / (1024*1024*1024.0));
+	$hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
     }
 
     my $spinbutton_hdsize_nonraid = $get_hdsize_spinbtn->($hdsize);
@@ -3494,7 +3495,7 @@ sub create_hdsel_view {
 
     foreach my $hd (@$hds) {
 	($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	$target_hd_combo->append_text (get_device_desc($devname, $size, $model));
+	$target_hd_combo->append_text(get_device_desc($devname, $size, $model));
     }
 
     my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
