@@ -2963,6 +2963,11 @@ my $get_selected_hdsize = sub {
 	$hdsize //= $disksize;
 	$hdsize = $disksize if $disksize < $hdsize;
     }
+
+    if (my $cfg_hdsize = $config_options->{hdsize}) {
+	# had the dialog open previously and set an even lower size than the disk selection allows
+	$hdsize = $cfg_hdsize if $cfg_hdsize < $hdsize;
+    }
     return $hdsize // 0; # fall back to zero, e.g., if none is selected hdsize cannot be any size
 };
 
