@@ -1740,9 +1740,6 @@ _EOD
 	# create /etc/aliases.db (/etc/aliases is shipped in the base squashfs)
 	syscmd("chroot $targetdir /usr/bin/newaliases");
 
-	# enable NTP (timedatectl set-ntp true  does not work without DBUS)
-	syscmd("chroot $targetdir /bin/systemctl enable systemd-timesyncd.service");
-
 	unlink  "$targetdir/proxmox_install_mode";
 
 	# set timezone
