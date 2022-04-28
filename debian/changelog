@@ -1,3 +1,14 @@
+proxmox-installer (7.1-2) bullseye; urgency=medium
+
+  * disks: raid: avoid restting hdsize when reopening options
+
+  * drop trying to enable timesyncd, wrong since chrony switch & unnecessary
+    anyway
+
+  * remove /mnt/hostrun after install to avoid lingering directory
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 28 Apr 2022 08:08:47 +0200
+
 proxmox-installer (7.1-1) bullseye; urgency=medium
 
   * init:
