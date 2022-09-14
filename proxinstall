@@ -965,7 +965,19 @@ sub partition_bootable_disk {
     }
 
     my $hdgb = int($hdsize/(1024*1024));
-    die "hardisk '$target_dev' too small (${hdgb}GB)\n" if $hdgb < 8;
+
+    my ($hard_limit, $soft_limit) = (2, 8);
+
+    die "root disk '$target_dev' too small (${hdgb} GB < $hard_limit GB)\n" if $hdgb < $hard_limit;
+    if ($hdgb < $soft_limit) {
+	my $response = display_prompt(
+	    "Root disk space ${hdgb} GB is below recommended minimum space of $soft_limit GB,"
+	    ." installation might not be successful! Continue?"
+	);
+	die "root disk '$target_dev' too small (${hdgb} GB < $soft_limit GB), and warning not accepted.\n"
+	    if $response ne 'ok';
+    }
+
 
     syscmd("sgdisk -Z ${target_dev}");
 
