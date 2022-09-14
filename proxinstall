@@ -1057,9 +1057,7 @@ sub ask_existing_vg_rename_or_abort {
     }
     $message .= "or cancel the installation?";
 
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'ok-cancel', $message);
-    my $response = $dialog->run();
-    $dialog->destroy();
+    my $response = display_prompt($message);
 
     if ($response eq 'ok') {
 	for my $vg_uuid (keys %$duplicate_vgs) {
@@ -2288,6 +2286,16 @@ sub display_error {
     my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
+}
+
+sub display_prompt {
+    my ($query) = @_;
+
+    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'ok-cancel', $query);
+    my $response = $dialog->run();
+    $dialog->destroy();
+
+    return $response;
 }
 
 my $ipconf_first_view = 1;
