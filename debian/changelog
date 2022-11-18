@@ -1,3 +1,9 @@
+proxmox-installer (7.2-3) bullseye; urgency=medium
+
+  * create lvm: improve rounding/alignment
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 18 Nov 2022 16:51:40 +0100
+
 proxmox-installer (7.2-1) bullseye; urgency=medium
 
   * zfs compression - fix wrongly added zle option
