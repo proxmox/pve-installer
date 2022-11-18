@@ -1104,8 +1104,9 @@ sub create_lvm_volumes {
     syscmd("/sbin/vgcreate $vgname $lvmdev") == 0 ||
 	die "unable to create volume group '$vgname'\n";
 
-    my $hdgb = int($os_size/(1024*1024));
-    my $space = (($hdgb > 128) ? 16 : ($hdgb/8))*1024*1024;
+    my $hdgb = int($os_size / (1024 * 1024));
+    # FIXME: drop odd by-default unallocated space?
+    my $space = $hdgb <= 32 ? 0 : (($hdgb > 128 ? 16 : $hdgb / 8) * 1024 * 1024);
 
     my $rootsize;
     my $datasize = 0;
@@ -1119,23 +1120,31 @@ sub create_lvm_volumes {
 	    $maxroot = 96;
 	}
 
-	$rootsize = (($hdgb > ($maxroot*4)) ? $maxroot : $hdgb/4)*1024*1024;
+	my $rest = $os_size - $swap_size;
+	my $rest_gb = $rest / 1024 / 1024;
 
-	my $rest = $os_size - $swap_size - $rootsize; # in KB
-
-	my $minfree;
-	if (defined($config_options->{minfree})) {
-	    $minfree = (($config_options->{minfree}*1024*1024) >= $rest ) ? $space :
-		$config_options->{minfree}*1024*1024 ;
+	if ($rest_gb < 12) {
+	    $rootsize = $rest_gb - 0.1; # no point in wasting space, try to get us actually installed
+	} elsif ($rest_gb < 48) {
+	    $rootsize = $rest_gb / 2;
 	} else {
-	    $minfree = $space;
+	    $rootsize = $rest_gb / 4 + 12;
+	}
+
+	$rootsize = $maxroot if $rootsize > $maxroot;
+	$rootsize = int($rootsize * 1024 * 1024);
+
+	$rest -= $rootsize; # in KB
+
+	my $minfree = $space;
+	if (defined(my $cfg_minfree = $config_options->{minfree})) {
+	    $minfree = $cfg_minfree * 1024 * 1024 >= $rest ? $space : $cfg_minfree * 1024 * 1024;
 	}
 
 	$rest = $rest - $minfree;
 
-	if (defined($config_options->{maxvz})) {
-	    $rest = (($config_options->{maxvz}*1024*1024) <= $rest) ?
-		$config_options->{maxvz}*1024*1024 : $rest;
+	if (defined(my $maxvz = $config_options->{maxvz})) {
+	    $rest = $maxvz * 1024 * 1024 <= $rest ? $maxvz * 1024 * 1024 : $rest;
 	}
 
 	$datasize = $rest;
@@ -1172,6 +1181,9 @@ sub create_lvm_volumes {
 	syscmd("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
 	    die "unable to create data thin-pool\n";
     } else {
+	if  ($setup->{product} eq 'pve' && !defined($config_options->{maxvz})) {
+	    display_message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
+	}
 	$datadev = undef;
     }
 
