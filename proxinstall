@@ -1202,11 +1202,14 @@ sub compute_swapsize {
     if (defined($config_options->{swapsize})) {
 	$swapsize = $config_options->{swapsize} * 1024 * 1024;
     } else {
-	my $ss = int ($total_memory / 1024);
-	$ss = 4 if $ss < 4;
-	$ss = ($hdgb/8) if $ss > ($hdgb/8);
-	$ss = 8 if $ss > 8;
-	$swapsize = $ss*1024*1024;
+	my $ss = int($total_memory);
+	$ss = 4096 if $ss < 4096 && $hdgb >= 64;
+	$ss = 2048 if $ss < 2048 && $hdgb >= 32;
+	$ss = 1024 if $ss >= 2048 && $hdgb <= 16;
+	$ss = 512 if $ss < 512;
+	$ss = int($hdgb * 128) if $ss > $hdgb * 128;
+	$ss = 8192 if $ss > 8192;
+	$swapsize = $ss * 1024;
     }
 
     return $swapsize;
