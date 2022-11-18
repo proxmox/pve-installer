@@ -1,3 +1,21 @@
+proxmox-installer (7.2-1) bullseye; urgency=medium
+
+  * zfs compression - fix wrongly added zle option
+
+  * fix #4236: split disk space check into soft and hard limits, warn
+    below 8 GB but only hard fail on 2 GB - which can never work
+
+  * fine tune swap selection for low memory/space setups
+
+  * lvm create: rework auto-space distribution and improve for low size
+    setups. Avoid a per-default extra free space block if the disk has
+    less than 32 GB of total space. Use the full rest size for root if
+    it's below 12 GB, not much of a point in setting up a data thin LVM
+    for guests then. Then also show a display message if no thin LVM is
+    created to inform the admin.
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 18 Nov 2022 10:44:33 +0100
+
 proxmox-installer (7.1-2) bullseye; urgency=medium
 
   * disks: raid: avoid restting hdsize when reopening options
