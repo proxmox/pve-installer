@@ -1155,6 +1155,7 @@ sub create_lvm_volumes {
     } else {
 	my $minfree = defined($config_options->{minfree}) ? $config_options->{minfree}*1024*1024 : $space;
 	$rootsize = $os_size - $minfree - $swap_size; # in KB
+	$rootsize &= ~0xFFF; # align down to 4 MB boundaries
     }
 
     if ($swap_size) {
