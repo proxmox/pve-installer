@@ -1213,7 +1213,7 @@ sub compute_swapsize {
 	$ss = 512 if $ss < 512;
 	$ss = int($hdgb * 128) if $ss > $hdgb * 128;
 	$ss = 8192 if $ss > 8192;
-	$swapsize_kb = int($ss * 1024);
+	$swapsize_kb = int($ss * 1024) & ~0xFFF; # align to 4 MB to avoid all to odd SWAP size
     }
 
     return $swapsize_kb;
