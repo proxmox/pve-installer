@@ -1105,8 +1105,10 @@ sub create_lvm_volumes {
 	die "unable to create volume group '$vgname'\n";
 
     my $hdgb = int($os_size / (1024 * 1024));
-    # FIXME: drop odd by-default unallocated space?
-    my $space = $hdgb <= 32 ? 0 : (($hdgb > 128 ? 16 : $hdgb / 8) * 1024 * 1024);
+
+    # always leave some space at the end to avoid roudning issues with LVM's physical extent (PE)
+    # size of 4 MB.
+    my $space = $hdgb <= 32 ? 4 * 1024 : (($hdgb > 128 ? 16 : $hdgb / 8) * 1024 * 1024);
 
     my $rootsize;
     my $datasize = 0;
