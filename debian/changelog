@@ -1,10 +1,16 @@
 proxmox-installer (7.3-1) bullseye; urgency=medium
 
-  * create lvm: improve rounding of target root LV size by aligning it down to
+  * lvm create: improve rounding of target root LV size by aligning it down to
     the 4MB boundary to ensure that LVM doesn't try to over allocates by one
     extent.
 
- -- Proxmox Support Team <support@proxmox.com>  Tue, 29 Nov 2022 05:53:42 +0100
+  * align computed swap size down to 4 MB to avoid oddly specific sizes and
+    issues with LVM rounding PEs up on creation
+
+  * lvm create: leave 4 MB space unallocated space for small disks (<= 32GB)
+    too
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 29 Nov 2022 07:24:09 +0100
 
 proxmox-installer (7.2-3) bullseye; urgency=medium
 
