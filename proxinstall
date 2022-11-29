@@ -1202,9 +1202,9 @@ sub compute_swapsize {
 
     my $hdgb = int($hdsize/(1024*1024));
 
-    my $swapsize;
+    my $swapsize_kb;
     if (defined($config_options->{swapsize})) {
-	$swapsize = $config_options->{swapsize} * 1024 * 1024;
+	$swapsize_kb = $config_options->{swapsize} * 1024 * 1024;
     } else {
 	my $ss = int($total_memory);
 	$ss = 4096 if $ss < 4096 && $hdgb >= 64;
@@ -1213,10 +1213,10 @@ sub compute_swapsize {
 	$ss = 512 if $ss < 512;
 	$ss = int($hdgb * 128) if $ss > $hdgb * 128;
 	$ss = 8192 if $ss > 8192;
-	$swapsize = $ss * 1024;
+	$swapsize_kb = int($ss * 1024);
     }
 
-    return $swapsize;
+    return $swapsize_kb;
 }
 
 my sub chroot_chown {
