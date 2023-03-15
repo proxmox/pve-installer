@@ -955,6 +955,9 @@ sub partition_bootable_disk {
 
     my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
 
+    my $esp_size = 512; # MB
+    my $esp_end = $esp_size + 1;
+
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
     if ($maxhdsizegb) {
 	my $maxhdsize = $maxhdsizegb * 1024 * 1024;
@@ -992,14 +995,14 @@ sub partition_bootable_disk {
     my $pcmd = ['sgdisk'];
 
     my $pnum = 2;
-    push @$pcmd, "-n${pnum}:1M:+512M", "-t$pnum:EF00";
+    push @$pcmd, "-n${pnum}:1M:+${esp_size}M", "-t$pnum:EF00";
 
     $pnum = 3;
-    push @$pcmd, "-n${pnum}:513M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
+    push @$pcmd, "-n${pnum}:${esp_end}M:${restricted_hdsize_mb}", "-t$pnum:$ptype";
 
     push @$pcmd, $target_dev;
 
-    my $os_size = $hdsize - 513*1024; # 512M efi + 1M bios_boot + 1M alignment
+    my $os_size = $hdsize - $esp_end * 1024; # efi + 1M bios_boot + 1M alignment
 
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
