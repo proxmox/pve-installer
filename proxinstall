@@ -2657,6 +2657,7 @@ sub update_zonelist {
 
     $cb->signal_connect('changed' => sub {
 	$timezone = $cb->get_active_text();
+	$timezone =~ s|Etc/UTC|UTC|;
     });
 
     my @za;
@@ -2672,6 +2673,9 @@ sub update_zonelist {
 	$cb->append_text($zone);
 	$i++;
     }
+
+    # Append Etc/UTC here, so it is always the last item and never the default for any country.
+    $cb->append_text('Etc/UTC');
 
     $cb->set_active($ind || 0);
 
