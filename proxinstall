@@ -1370,7 +1370,6 @@ sub extract_data {
 	    update_progress(0, 0.02, $maxper, "create partitions");
 
 	    my $btrfs_partitions = [];
-	    my $disksize;
 	    foreach my $hd (@$devlist) {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
@@ -1387,7 +1386,6 @@ sub extract_data {
 		    logical_bsize => $logical_bsize,
 		};
 		push @$btrfs_partitions, $osdev;
-		$disksize = $size;
 	    }
 
 	    $udevadm_trigger_block->();
@@ -1407,7 +1405,6 @@ sub extract_data {
 	    update_progress(0, 0.02, $maxper, "create partitions");
 
 	    # install esp/boot part on all, we can only win!
-	    my $disksize;
 	    for my $hd (@$devlist) {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
@@ -1421,7 +1418,6 @@ sub extract_data {
 		    osdev => $osdev,
 		    logical_bsize => $logical_bsize,
 		};
-		$disksize = $size;
 	    }
 
 	    $udevadm_trigger_block->();
