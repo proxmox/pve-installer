@@ -955,7 +955,8 @@ sub partition_bootable_disk {
 
     my $hdsize = hd_size($target_dev); # size in KB (1024 bytes)
 
-    my $esp_size = 512; # MB
+    # For bigger disks default to generous ESP size to allow users having multiple kernels/UKI's
+    my $esp_size = $hdsize > 100 * 1024 * 1024 ? 1024 : 512; # MB
     my $esp_end = $esp_size + 1;
 
     my $restricted_hdsize_mb = 0; # 0 ==> end of partition
@@ -984,8 +985,8 @@ sub partition_bootable_disk {
 
     syscmd("sgdisk -Z ${target_dev}");
 
-    # 1 - BIOS boot partition (Grub Stage2): first free 1M
-    # 2 - EFI ESP: next free 512M
+    # 1 - BIOS boot partition (Grub Stage2): first free 1 MB
+    # 2 - EFI ESP: next free 512 or 1024 MB
     # 3 - OS/Data partition: rest, up to $maxhdsize in MB
 
     my $grubbootdev = get_partition_dev($target_dev, 1);
