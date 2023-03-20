@@ -15,7 +15,7 @@ Architecture: all
 Depends: geoip-bin,
          chrony,
          libgtk3-webkit2-perl,
-         pve-kernel-helper,
+         proxmox-kernel-helper,
          squashfs-tools,
          ${perl:Depends},
 Breaks: pve-installer (<< 7~), pbs-installer (<< 7~), pbs-installer (<< 7~)
