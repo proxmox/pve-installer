@@ -1,3 +1,9 @@
+proxmox-installer (7.4-2) bullseye; urgency=medium
+
+  * d/control: depend on renamed and split-out proxmox-kernel-helper
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 20 Mar 2023 21:15:56 +0100
+
 proxmox-installer (7.4-1) bullseye; urgency=medium
 
   * zfs: fix wrong command reference in error message
