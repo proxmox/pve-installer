@@ -3716,7 +3716,7 @@ create_main_window ();
 my $initial_error = 0;
 
 if (!defined ($hds) || (scalar (@$hds) <= 0)) {
-    print "no hardisks found\n";
+    print "no harddisks found\n";
     $initial_error = 1;
     display_html("nohds.htm");
     set_next("Reboot", sub { exit(0); } );
