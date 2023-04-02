@@ -24,6 +24,7 @@ use Time::HiRes;
 use POSIX ":sys_wait_h";
 
 use Proxmox::Install::Setup;
+use Proxmox::Log;
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
@@ -94,7 +95,7 @@ sub file_read_firstline {
     return $res;
 }
 
-my $logfd = IO::File->new(">/tmp/install.log");
+Proxmox::Log::init("/tmp/install.log");
 
 my $proxmox_libdir = is_test_mode()
     ? Cwd::cwd() . "/testdir/var/lib/proxmox-installer"
@@ -391,7 +392,7 @@ sub run_command {
 	STDOUT->flush();
     }
 
-    print $logfd $cmdtxt;
+    log_cmd($cmdtxt);
 
     my $reader = IO::File->new();
     my $writer = IO::File->new();
@@ -449,7 +450,7 @@ sub run_command {
 	    }
 	    print $buf;
 	    STDOUT->flush();
-	    print $logfd $buf;
+	    log_cmd($buf);
 	}
     }
 
@@ -500,13 +501,13 @@ sub detect_country {
 	local $SIG{ALRM} = sub { die "timed out!\n" };
 	my $line;
 	while (defined ($line = <TMP>)) {
-	    print $logfd "DC TRACEROUTE: $line";
+	    log_debug("DC TRACEROUTE: $line");
 	    if ($line =~ m/\s*\d+\s+(\d+\.\d+\.\d+\.\d+)\s/) {
 		my $geoip = `geoiplookup $1`;
-		print $logfd "DC GEOIP: $geoip";
+		log_debug("DC GEOIP: $geoip");
 		if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
 		    $country = lc ($1);
-		    print $logfd "DC FOUND: $country\n";
+		    log_info("DC FOUND: $country\n");
 		    last;
 		}
 	    }
@@ -3715,7 +3716,7 @@ $country = detect_country() if $ipconf->{default} || is_test_mode();
 $cmap = read_cmap();
 
 if (!defined($cmap->{country}->{$country})) {
-    print $logfd "ignoring detected country '$country', invalid or unknown\n";
+    log_warn("ignoring detected country '$country', invalid or unknown\n");
     $country = undef;
 }
 
