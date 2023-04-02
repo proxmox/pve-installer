@@ -4,15 +4,8 @@
 #DH_VERBOSE = 1
 
 
-SETUPFN = "/usr/share/perl5/ProxmoxInstallerSetup.pm"
-
 %:
 	dh $@
-
-# FIXME: could all be in d/install or in makefile?!
-override_dh_auto_install:
-	install -D -m 0644 ProxmoxInstallerSetup.pm $(CURDIR)/debian/proxmox-installer/${SETUPFN}
-	dh_auto_install --destdir debian/proxmox-installer
 
 override_dh_missing:
 	dh_missing --fail-missing

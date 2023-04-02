@@ -1,4 +1,4 @@
-package ProxmoxInstallerSetup;
+package Proxmox::Install::Setup;
 
 use strict;
 use warnings;

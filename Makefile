@@ -35,6 +35,7 @@ HTMLDIR=$(VARLIBDIR)/html/common
 .PHONY: install
 install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 	$(MAKE) -C banner install
+	$(MAKE) -C Proxmox install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
 	install -D -m 755 fake-start-stop-daemon ${VARLIBDIR}/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d $(VARLIBDIR)/policy-disable-rc.d

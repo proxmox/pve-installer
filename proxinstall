@@ -23,7 +23,7 @@ use File::Path;
 use Time::HiRes;
 use POSIX ":sys_wait_h";
 
-use ProxmoxInstallerSetup;
+use Proxmox::Install::Setup;
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
@@ -37,7 +37,7 @@ if (!GetOptions('testmode=s' => \$opt_testmode)) {
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
-my ($setup, $cd_info) = ProxmoxInstallerSetup::setup();
+my ($setup, $cd_info) = Proxmox::Install::Setup::setup();
 
 my $zfstestpool = "test_rpool";
 my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
