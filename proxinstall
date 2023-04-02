@@ -29,18 +29,19 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
 
-my $opt_testmode;
-if (!GetOptions('testmode=s' => \$opt_testmode)) {
-    die "usage error\n";
-    exit (-1);
-}
+my $test_image;
+GetOptions(
+    'test-image|t=s' => \$test_image
+) or die "usage error\n";
+
+Proxmox::Install::Setup::enable_test_mode() if $test_image;
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
 my ($setup, $cd_info) = Proxmox::Install::Setup::setup();
 
 my $zfstestpool = "test_rpool";
-my $zfspoolname = $opt_testmode ? $zfstestpool : 'rpool';
+my $zfspoolname = is_test_mode() ? $zfstestpool : 'rpool';
 my $zfsrootvolname = "$setup->{product}-1";
 
 my $storage_cfg_zfs = <<__EOD__;
@@ -95,11 +96,11 @@ sub file_read_firstline {
 
 my $logfd = IO::File->new(">/tmp/install.log");
 
-my $proxmox_libdir = $opt_testmode
+my $proxmox_libdir = is_test_mode()
     ? Cwd::cwd() . "/testdir/var/lib/proxmox-installer"
     : "/var/lib/proxmox-installer"
     ;
-my $proxmox_cddir = $opt_testmode ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
+my $proxmox_cddir = is_test_mode() ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
 my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
 my $boot_type = -d '/sys/firmware/efi' ? 'efi' : 'bios';
@@ -385,7 +386,7 @@ sub run_command {
 	$cmdtxt = "# $cmdstr\n";
     }
 
-    if ($opt_testmode) {
+    if (is_test_mode()) {
 	print $cmdtxt;
 	STDOUT->flush();
     }
@@ -580,8 +581,8 @@ sub hd_list {
 
     my $res = ();
 
-    if ($opt_testmode) {
-	my @disks = split /,/, $opt_testmode;
+    if (is_test_mode()) {
+	my @disks = split /,/, $test_image;
 
 	for my $disk (@disks) {
 	    push @$res, [-1, $disk, int((-s $disk)/512), "TESTDISK", 512];
@@ -948,7 +949,7 @@ my $clean_disk = sub {
 sub partition_bootable_disk {
     my ($target_dev, $maxhdsizegb, $ptype) = @_;
 
-    die "too dangerous" if $opt_testmode;
+    die "too dangerous" if is_test_mode();
 
     die "unknown partition type '$ptype'"
 	if !($ptype eq '8E00' || $ptype eq '8300' || $ptype eq 'BF01');
@@ -1331,11 +1332,11 @@ sub extract_data {
 
 	update_progress(0, 0, $maxper, "cleanup root-disks");
 
-	syscmd("vgchange -an") if !$opt_testmode; # deactivate all detected VGs
+	syscmd("vgchange -an") if !is_test_mode(); # deactivate all detected VGs
 
-	if ($opt_testmode) {
+	if (is_test_mode()) {
 
-	    $rootdev = abs_path($opt_testmode);
+	    $rootdev = abs_path($test_image);
 	    syscmd("umount $rootdev");
 
 	    if ($use_btrfs) {
@@ -1596,7 +1597,7 @@ sub extract_data {
 
 	write_config("$hostname\n", "$targetdir/etc/hostname");
 
-	syscmd("/bin/hostname $hostname") if !$opt_testmode;
+	syscmd("/bin/hostname $hostname") if !is_test_mode();
 
 	# configure interfaces
 
@@ -1830,7 +1831,7 @@ _EOD
 	}
 	die "unable to detect kernel version\n" if !defined($kapi);
 
-	if (!$opt_testmode) {
+	if (!is_test_mode()) {
 
 	    unlink ("$targetdir/etc/mtab");
 	    symlink ("/proc/mounts", "$targetdir/etc/mtab");
@@ -1948,7 +1949,7 @@ _EOD
 
     print $err if $err;
 
-    if ($opt_testmode) {
+    if (is_test_mode()) {
 	my $elapsed = Time::HiRes::tv_interval($starttime);
 	print "Elapsed extract time: $elapsed\n";
 
@@ -2034,7 +2035,7 @@ sub display_html {
     if ($filename eq 'license.htm') {
 	my $license = eval { decode('utf8', file_get_contents("${proxmox_cddir}/EULA")) };
 	if (my $err = $@) {
-	    die $err if !$opt_testmode;
+	    die $err if !is_test_mode();
 	    $license = "TESTMODE: Ignore non existent EULA...\n";
 	}
 	my $title = "END USER LICENSE AGREEMENT (EULA)";
@@ -2088,8 +2089,8 @@ sub create_main_window {
     $window = Gtk3::Window->new();
     $window->set_default_size(1024, 768);
     $window->set_has_resize_grip(0);
-    $window->fullscreen() if !$opt_testmode;
-    $window->set_decorated(0) if !$opt_testmode;
+    $window->fullscreen() if !is_test_mode();
+    $window->set_decorated(0) if !is_test_mode();
 
     my $vbox = Gtk3::VBox->new(0, 0);
 
@@ -2837,7 +2838,7 @@ sub create_country_view {
 
 	    $installer_kmap = $keymap;
 
-	    if (! $opt_testmode) {
+	    if (!is_test_mode()) {
 		syscmd ("setxkbmap $xkmap $xvar");
 
 		my $kbd_config = qq{
@@ -3648,7 +3649,7 @@ sub create_extract_view {
 
     $inbox->show_all();
 
-    my $tdir = $opt_testmode ? "target" : "/target";
+    my $tdir = is_test_mode() ? "target" : "/target";
     mkdir $tdir;
     my $base = "${proxmox_cddir}/$setup->{product}-base.squashfs";
 
@@ -3708,7 +3709,7 @@ sub create_intro_view {
 
 $ipconf = get_ip_config();
 
-$country = detect_country() if $ipconf->{default} || $opt_testmode;
+$country = detect_country() if $ipconf->{default} || is_test_mode();
 
 # read country, kmap and timezone infos
 $cmap = read_cmap();

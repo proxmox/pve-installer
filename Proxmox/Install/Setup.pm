@@ -3,6 +3,9 @@ package Proxmox::Install::Setup;
 use strict;
 use warnings;
 
+use base qw(Exporter);
+our @EXPORT = qw(is_test_mode);
+
 my $product_cfg = {
     pve => {
 	fullname => 'Proxmox VE',
@@ -56,6 +59,14 @@ sub get_cd_info {
     die "CD-info is missing required key 'product'!\n" if !defined $cd_info->{product};
 
     return $cd_info;
+}
+
+my $test_mode;
+sub enable_test_mode {
+    $test_mode = 1;
+}
+sub is_test_mode {
+    return !!$test_mode;
 }
 
 1;
