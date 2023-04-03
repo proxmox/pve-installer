@@ -14,6 +14,7 @@ Package: proxmox-installer
 Architecture: all
 Depends: geoip-bin,
          chrony,
+         libgtk3-perl,
          libgtk3-webkit2-perl,
          proxmox-kernel-helper,
          squashfs-tools,
