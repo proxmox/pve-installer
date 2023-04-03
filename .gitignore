@@ -1,0 +1,7 @@
+/*.deb
+/*.changes
+/*.buildinfo
+/build/
+/testdir/
+/test*.img
+country.dat
