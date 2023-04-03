@@ -307,22 +307,22 @@ sub get_memtotal {
 
 my $total_memory = get_memtotal();
 
-sub link_points_to {
-    my ($src, $dest) = @_;
+sub is_same_file {
+    my ($a, $b) = @_;
 
-    my ($dev1,$ino1) = stat ($src);
-    my ($dev2,$ino2) = stat ($dest);
+    my ($dev_a ,$ino_a) = stat($a);
+    my ($dev_b, $ino_b) = stat($b);
 
-    return 0 if !($dev1 && $dev2 && $ino1 && $ino2);
+    return 0 if !($dev_a && $dev_b && $ino_a && $ino_b);
 
-    return $ino1 == $ino2 && $dev1 == $dev2;
+    return $ino_a == $ino_b && $dev_a == $dev_b;
 }
 
 sub find_stable_path {
     my ($stabledir, $bdev) = @_;
 
     foreach my $path (<$stabledir/*>) {
-	if (link_points_to($path, $bdev)) {
+	if (is_same_file($path, $bdev)) {
 	    return wantarray ? ($path, basename($path)) : $path;
 	}
     }
