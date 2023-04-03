@@ -3365,13 +3365,13 @@ sub create_intro_view {
     }
 
     if ($setup->{product} eq 'pve') {
-	eval {
-	    my $cpuinfo = file_get_contents('/proc/cpuinfo');
-	    if ($cpuinfo && !($cpuinfo =~ /^flags\s*:.*(vmx|svm)/m)) {
-		display_error("No support for KVM virtualization detected.\n\n" .
-			      "Check BIOS settings for Intel VT / AMD-V / SVM.")
-	    }
-	};
+	my $cpuinfo = eval { file_get_contents('/proc/cpuinfo') };
+	if (!$cpuinfo || $cpuinfo !~ /^flags\s*:.*(vmx|svm)/m) {
+	    display_error(
+		"No support for hardware-accelerated KVM virtualization detected.\n\n"
+		."Check BIOS settings for Intel VT / AMD-V / SVM."
+	    );
+	}
     }
 
     display_html();
