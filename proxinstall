@@ -604,30 +604,28 @@ sub debconfig_set {
 sub diversion_add {
     my ($targetdir, $cmd, $new_cmd) = @_;
 
-    syscmd("chroot $targetdir dpkg-divert --package proxmox " .
-	   "--add --rename $cmd") == 0 ||
-	   die "unable to exec dpkg-divert\n";
+    syscmd("chroot $targetdir dpkg-divert --package proxmox --add --rename $cmd") == 0
+        || die "unable to exec dpkg-divert\n";
 
-    syscmd("ln -sf ${new_cmd} $targetdir/$cmd") == 0 ||
-	die "unable to link diversion to ${new_cmd}\n";
+    syscmd("ln -sf ${new_cmd} $targetdir/$cmd") == 0
+        || die "unable to link diversion to ${new_cmd}\n";
 }
 
 sub diversion_remove {
     my  ($targetdir, $cmd) = @_;
 
-    syscmd("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0 ||
-	die "unable to remove $cmd diversion\n";
+    syscmd("mv $targetdir/${cmd}.distrib $targetdir/${cmd};") == 0
+        || die "unable to remove $cmd diversion\n";
 
-    syscmd("chroot $targetdir dpkg-divert --remove $cmd") == 0 ||
-	die "unable to remove $cmd diversion\n";
+    syscmd("chroot $targetdir dpkg-divert --remove $cmd") == 0
+        || die "unable to remove $cmd diversion\n";
 }
 
 sub btrfs_create {
     my ($partitions, $mode) = @_;
 
     die "unknown btrfs mode '$mode'"
-	if !($mode eq 'single' || $mode eq 'raid0' ||
-	     $mode eq 'raid1' || $mode eq 'raid10');
+	if !($mode eq 'single' || $mode eq 'raid0' || $mode eq 'raid1' || $mode eq 'raid10');
 
     my $cmd = ['mkfs.btrfs', '-f'];
 
