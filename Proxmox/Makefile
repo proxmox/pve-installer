@@ -8,6 +8,7 @@ PERL5DIR=$(DESTDIR)/usr/share/perl5/Proxmox
 PERL_MODULES=\
     Install/Setup.pm \
     Log.pm \
+    Sys/Command.pm \
 
 .PHONY: install
 install: $(PERL_MODULES)

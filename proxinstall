@@ -8,16 +8,12 @@ $ENV{LC_ALL} = 'C';
 
 use Getopt::Long;
 use IPC::Open2;
-use IPC::Open3;
 use IO::File;
-use IO::Select;
 use Cwd 'abs_path';
 use Glib;
 use Gtk3 '-init';
 use Gtk3::WebKit2;
 use Encode;
-use String::ShellQuote;
-use Data::Dumper;
 use File::Basename;
 use File::Path;
 use Time::HiRes;
@@ -25,6 +21,7 @@ use POSIX ":sys_wait_h";
 
 use Proxmox::Install::Setup;
 use Proxmox::Log;
+use Proxmox::Sys::Command qw(run_command syscmd);
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
@@ -337,156 +334,6 @@ compatibility_level = 2
 
 _EOD
 
-sub shellquote {
-    my $str = shift;
-
-    return String::ShellQuote::shell_quote($str);
-}
-
-sub cmd2string {
-    my ($cmd) = @_;
-
-    die "no arguments" if !$cmd;
-
-    return $cmd if !ref($cmd);
-
-    my @qa = ();
-    foreach my $arg (@$cmd) { push @qa, shellquote($arg); }
-
-    return join (' ', @qa);
-}
-
-sub syscmd {
-    my ($cmd) = @_;
-
-    return run_command($cmd, undef, undef, 1);
-}
-
-sub run_command {
-    my ($cmd, $func, $input, $noout) = @_;
-
-    my $cmdstr;
-    if (!ref($cmd)) {
-	$cmdstr = $cmd;
-	if ($cmd =~ m/|/) {
-	    # see 'man bash' for option pipefail
-	    $cmd = [ '/bin/bash', '-c', "set -o pipefail && $cmd" ];
-	} else {
-	    $cmd = [ $cmd ];
-	}
-    } else {
-	$cmdstr = cmd2string($cmd);
-    }
-
-    my $cmdtxt;
-    if ($input && ($cmdstr !~ m/chpasswd/)) {
-	$cmdtxt = "# $cmdstr <<EOD\n$input";
-	chomp $cmdtxt;
-	$cmdtxt .= "\nEOD\n";
-    } else {
-	$cmdtxt = "# $cmdstr\n";
-    }
-
-    if (is_test_mode()) {
-	print $cmdtxt;
-	STDOUT->flush();
-    }
-
-    log_cmd($cmdtxt);
-
-    my $reader = IO::File->new();
-    my $writer = IO::File->new();
-    my $error  = IO::File->new();
-
-    my $orig_pid = $$;
-
-    my $pid = eval { open3($writer, $reader, $error, @$cmd) || die $!; };
-    my $err = $@;
-
-    # catch exec errors
-    if ($orig_pid != $$) {
-	POSIX::_exit (1);
-	kill ('KILL', $$);
-    }
-
-    die $err if $err;
-
-    print $writer $input if defined $input;
-    close $writer;
-
-    my $select = IO::Select->new();
-    $select->add($reader);
-    $select->add($error);
-
-    my ($ostream, $logout) = ('', '', '');
-
-    while ($select->count) {
-	my @handles = $select->can_read (0.2);
-
-	Gtk3::main_iteration() while Gtk3::events_pending();
-
-	next if !scalar (@handles); # timeout
-
-	foreach my $h (@handles) {
-	    my $buf = '';
-	    my $count = sysread ($h, $buf, 4096);
-	    if (!defined ($count)) {
-		my $err = $!;
-		kill (9, $pid);
-		waitpid ($pid, 0);
-		die "command '$cmd' failed: $err";
-	    }
-	    $select->remove($h) if !$count;
-	    if ($h eq $reader) {
-		$ostream .= $buf if !($noout || $func);
-		$logout .= $buf;
-		while ($logout =~ s/^([^\010\r\n]*)(\r|\n|(\010)+|\r\n)//s) {
-		    my $line = $1;
-		    &$func($line) if $func;
-		}
-
-	    } elsif ($h eq $error) {
-		$ostream .= $buf if !($noout || $func);
-	    }
-	    print $buf;
-	    STDOUT->flush();
-	    log_cmd($buf);
-	}
-    }
-
-    &$func($logout) if $func;
-
-    my $rv = waitpid ($pid, 0);
-
-    return $? if $noout; # behave like standard system();
-
-    if ($? == -1) {
-	die "command '$cmdstr' failed to execute\n";
-    } elsif (my $sig = ($? & 127)) {
-	die "command '$cmdstr' failed - got signal $sig\n";
-    } elsif (my $exitcode = ($? >> 8)) {
-	die "command '$cmdstr' failed with exit code $exitcode";
-    }
-
-    return $ostream;
-}
-
-# forks and runs the provided coderef in the child
-# do not use syscmd or run_command as both confuse the GTK mainloop if
-# run from a child process
-sub run_in_background {
-    my ($cmd) = @_;
-
-    my $pid = fork() // die "fork failed: $!\n";
-    if (!$pid) {
-	eval { $cmd->(); };
-	if (my $err = $@) {
-	    warn "run_in_background error: $err\n";
-	    POSIX::_exit(1);
-	}
-	POSIX::_exit(0);
-    }
-}
 
 sub detect_country {
 
@@ -2849,7 +2696,7 @@ sub create_country_view {
 		};
 		$kbd_config =~ s/^\s+//gm;
 
-		run_in_background( sub {
+		Proxmox::Sys::Command::run_in_background(sub {
 		    write_config($kbd_config, '/etc/default/keyboard');
 		    system("setupcon");
 		});
