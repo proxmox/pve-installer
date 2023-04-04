@@ -20,7 +20,8 @@ HTML_COMMON_SOURCES=$(wildcard html-common/*.htm) $(wildcard html-common/*.css) 
 all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
 
 country.dat: country.pl
-	./country.pl > country.dat
+	./country.pl > country.dat.tmp
+	mv country.dat.tmp country.dat
 
 deb: ${DEB}
 ${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} ProxmoxInstallerSetup.pm
