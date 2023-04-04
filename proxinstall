@@ -22,6 +22,7 @@ use POSIX ":sys_wait_h";
 use Proxmox::Install::Setup;
 use Proxmox::Log;
 use Proxmox::Sys::Command qw(run_command syscmd);
+use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
@@ -81,17 +82,6 @@ dir: local
 	path /var/lib/vz
 	content iso,vztmpl,backup,rootdir,images
 __EOD__
-
-sub file_read_firstline {
-    my ($filename) = @_;
-
-    my $fh = IO::File->new ($filename, "r");
-    return undef if !$fh;
-    my $res = <$fh>;
-    chomp $res if $res;
-    $fh->close;
-    return $res;
-}
 
 Proxmox::Log::init("/tmp/install.log");
 
@@ -510,30 +500,6 @@ sub get_partition_dev {
 
 }
 
-sub file_get_contents {
-    my ($filename, $max) = @_;
-
-    my $fh = IO::File->new($filename, "r") ||
-	die "can't open '$filename' - $!\n";
-
-    local $/; # slurp mode
-
-    my $content = <$fh>;
-
-    close $fh;
-
-    return $content;
-}
-
-sub write_config {
-    my ($text, $filename) = @_;
-
-    my $fd = IO::File->new(">$filename") ||
-	die "unable to open file '$filename' - $!\n";
-    print $fd $text;
-    $fd->close();
-}
-
 sub update_progress {
     my ($frac, $start, $end, $text) = @_;
 
@@ -596,7 +562,7 @@ sub debconfig_set {
     my ($targetdir, $dcdata) = @_;
 
     my $cfgfile = "/tmp/debconf.txt";
-    write_config($dcdata, "$targetdir/$cfgfile");
+    file_write_all("$targetdir/$cfgfile", $dcdata);
     syscmd("chroot $targetdir debconf-set-selections $cfgfile");
     unlink "$targetdir/$cfgfile";
 }
@@ -1350,9 +1316,9 @@ sub extract_data {
 	    "ff02::2 ip6-allrouters\n" .
 	    "ff02::3 ip6-allhosts\n";
 
-	write_config($hosts, "$targetdir/etc/hosts");
+	file_write_all("$targetdir/etc/hosts", $hosts);
 
-	write_config("$hostname\n", "$targetdir/etc/hostname");
+	file_write_all("$targetdir/etc/hostname", "$hostname\n");
 
 	syscmd("/bin/hostname $hostname") if !is_test_mode();
 
@@ -1388,12 +1354,12 @@ sub extract_data {
 	    $ifaces .= "\niface $name $ntype manual\n";
 	}
 
-	write_config($ifaces, "$targetdir/etc/network/interfaces");
+	file_write_all("$targetdir/etc/network/interfaces", $ifaces);
 
 	# configure dns
 
 	my $resolvconf = "search $domain\nnameserver $dnsserver\n";
-	write_config($resolvconf, "$targetdir/etc/resolv.conf");
+	file_write_all("$targetdir/etc/resolv.conf", $resolvconf);
 
 	# configure fstab
 
@@ -1444,8 +1410,8 @@ sub extract_data {
 
 	$fstab .= "proc /proc proc defaults 0 0\n";
 
-	write_config($fstab, "$targetdir/etc/fstab");
-	write_config("", "$targetdir/etc/mtab");
+	file_write_all("$targetdir/etc/fstab", $fstab);
+	file_write_all("$targetdir/etc/mtab", "");
 
 	syscmd("cp ${proxmox_libdir}/policy-disable-rc.d " .
 		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
@@ -1460,7 +1426,7 @@ sub extract_data {
 
 	my $machine_id = run_command("systemd-id128 new");
 	die "unable to create a new machine-id\n" if ! $machine_id;
-	write_config($machine_id, "$targetdir/etc/machine-id");
+	file_write_all("$targetdir/etc/machine-id", $machine_id);
 
 	syscmd("cp /etc/hostid $targetdir/etc/") == 0 ||
 	    die "unable to copy hostid\n";
@@ -1519,7 +1485,7 @@ _EOD
 
 	unlink "$targetdir/etc/mailname";
 	$postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
-	write_config($postfix_main_cf, "$targetdir/etc/postfix/main.cf");
+	file_write_all("$targetdir/etc/postfix/main.cf", $postfix_main_cf);
 
 	# make sure we have all postfix directories
 	syscmd("chroot $targetdir /usr/sbin/postfix check");
@@ -1533,7 +1499,7 @@ _EOD
 	# set timezone
 	unlink ("$targetdir/etc/localtime");
 	symlink ("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
-	write_config("$timezone\n", "$targetdir/etc/timezone");
+	file_write_all("$targetdir/etc/timezone", "$timezone\n");
 
 	# set apt mirror
 	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
@@ -1543,7 +1509,7 @@ _EOD
 
 	# create extended_states for apt (avoid cron job warning if that
 	# file does not exist)
-	write_config('', "$targetdir/var/lib/apt/extended_states");
+	file_write_all("$targetdir/var/lib/apt/extended_states", '');
 
 	# allow ssh root login
 	syscmd(['sed', '-i', 's/^#\?PermitRootLogin.*/PermitRootLogin yes/', "$targetdir/etc/ssh/sshd_config"]);
@@ -1570,9 +1536,9 @@ _EOD
 	if ($use_zfs) {
 	    # add ZFS options while preserving existing kernel cmdline
 	    my $zfs_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\"";
-	    write_config($zfs_snippet, "$targetdir/etc/default/grub.d/zfs.cfg");
+	    file_write_all("$targetdir/etc/default/grub.d/zfs.cfg", $zfs_snippet);
 
-	    write_config("root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\n", "$targetdir/etc/kernel/cmdline");
+	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\n");
 
 	}
 
@@ -1653,8 +1619,7 @@ _EOD
 
 	if ($setup->{product} eq 'pmg') {
 	    # save admin email
-	    write_config("section: admin\n\temail ${mailto}\n",
-			 "$targetdir/etc/pmg/pmg.conf");
+	    file_write_all("$targetdir/etc/pmg/pmg.conf", "section: admin\n\temail ${mailto}\n");
 
 	} elsif ($setup->{product} eq 'pve') {
 
@@ -1665,23 +1630,23 @@ _EOD
 
 	    # write vnc keymap to datacenter.cfg
 	    my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
-	    write_config("keyboard: $vnckmap\n",
-			 "$tmpdir/datacenter.cfg");
+	    file_write_all("$tmpdir/datacenter.cfg", "keyboard: $vnckmap\n");
 
 	    # save admin email
-	    write_config("user:root\@pam:1:0:::${mailto}::\n", "$tmpdir/user.cfg");
+	    file_write_all("$tmpdir/user.cfg", "user:root\@pam:1:0:::${mailto}::\n");
 
 	    # write storage.cfg
-	    my $storage_cfg_fn = "$tmpdir/storage.cfg";
+	    my $storage_cfg;
 	    if ($use_zfs) {
-		write_config($storage_cfg_zfs, $storage_cfg_fn);
+		$storage_cfg = $storage_cfg_zfs;
 	    } elsif ($use_btrfs) {
-		write_config($storage_cfg_btrfs, $storage_cfg_fn);
+		$storage_cfg = $storage_cfg_btrfs;
 	    } elsif ($datadev) {
-		write_config($storage_cfg_lvmthin, $storage_cfg_fn);
+		$storage_cfg = $storage_cfg_lvmthin;
 	    } else {
-		write_config($storage_cfg_local, $storage_cfg_fn);
+		$storage_cfg = $storage_cfg_local;
 	    }
+	    file_write_all("$tmpdir/storage.cfg", $storage_cfg);
 
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 
@@ -1694,7 +1659,7 @@ _EOD
 	    chroot_chmod($targetdir, $base_cfg_path, mode => '0700');
 
 	    my $user_cfg_fn = "$base_cfg_path/user.cfg";
-	    write_config("user: root\@pam\n\temail ${mailto}\n", "$targetdir/$user_cfg_fn");
+	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
 	    chroot_chown($targetdir, $user_cfg_fn, user => 'root', group => 'backup');
 	    chroot_chmod($targetdir, $user_cfg_fn, mode => '0640');
 	}
@@ -1787,10 +1752,10 @@ sub display_html {
 	$path = "$htmldir/$filename";
     }
 
-    my $data = file_get_contents($path);
+    my $data = file_read_all($path);
 
     if ($filename eq 'license.htm') {
-	my $license = eval { decode('utf8', file_get_contents("${proxmox_cddir}/EULA")) };
+	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
 	if (my $err = $@) {
 	    die $err if !is_test_mode();
 	    $license = "TESTMODE: Ignore non existent EULA...\n";
@@ -2231,7 +2196,7 @@ sub create_ack_view {
 
     my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
     my $ack_html = "${proxmox_libdir}/html/$setup->{product}/$steps[$step_number]->{html}";
-    my $html_data = file_get_contents($ack_template);
+    my $html_data = file_read_all($ack_template);
 
     my %config_values = (
 	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
@@ -2253,7 +2218,7 @@ sub create_ack_view {
 	$html_data =~ s/$k/$v/g;
     }
 
-    write_config($html_data, $ack_html);
+    file_write_all($ack_html, $html_data);
 
     display_html();
 
@@ -2522,7 +2487,7 @@ sub create_country_view {
 		$kbd_config =~ s/^\s+//gm;
 
 		Proxmox::Sys::Command::run_in_background(sub {
-		    write_config($kbd_config, '/etc/default/keyboard');
+		    file_write_all('/etc/default/keyboard', $kbd_config);
 		    system("setupcon");
 		});
 	    }
@@ -3365,7 +3330,7 @@ sub create_intro_view {
     }
 
     if ($setup->{product} eq 'pve') {
-	my $cpuinfo = eval { file_get_contents('/proc/cpuinfo') };
+	my $cpuinfo = eval { file_read_all('/proc/cpuinfo') };
 	if (!$cpuinfo || $cpuinfo !~ /^flags\s*:.*(vmx|svm)/m) {
 	    display_error(
 		"No support for hardware-accelerated KVM virtualization detected.\n\n"

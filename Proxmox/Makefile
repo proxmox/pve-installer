@@ -9,6 +9,7 @@ PERL_MODULES=\
     Install/Setup.pm \
     Log.pm \
     Sys/Command.pm \
+    Sys/File.pm \
     Sys/Net.pm \
 
 .PHONY: install
