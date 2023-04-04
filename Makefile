@@ -2,29 +2,16 @@ include /usr/share/dpkg/pkg-info.mk
 
 DEB=proxmox-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
 
-INSTALLER_SOURCES=		\
-	unconfigured.sh 	\
-	fake-start-stop-daemon	\
-	policy-disable-rc.d	\
-	interfaces		\
-	checktime		\
-	xinitrc			\
-	spice-vdagent.sh	\
-	Xdefaults		\
-	country.dat		\
-	proxinstall
+INSTALLER_SOURCES=$(shell git ls-files) country.dat
 
-HTML_SOURCES=$(wildcard html/*.htm)
-HTML_COMMON_SOURCES=$(wildcard html-common/*.htm) $(wildcard html-common/*.css) $(wildcard html-common/*.png)
-
-all: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+all:
 
 country.dat: country.pl
 	./country.pl > country.dat.tmp
 	mv country.dat.tmp country.dat
 
 deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES} ProxmoxInstallerSetup.pm
+${DEB}: ${INSTALLER_SOURCES}
 	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian ${DEB}
@@ -34,7 +21,7 @@ VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
 
 .PHONY: install
-install: ${INSTALLER_SOURCES} ${HTML_COMMON_SOURCES} ${HTML_SOURCES}
+install: ${INSTALLER_SOURCES}
 	$(MAKE) -C banner install
 	$(MAKE) -C Proxmox install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
