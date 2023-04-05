@@ -3,6 +3,8 @@ package Proxmox::Install::Env;
 use strict;
 use warnings;
 
+use Carp;
+
 use base qw(Exporter);
 our @EXPORT = qw(is_test_mode);
 
@@ -61,12 +63,18 @@ sub get_cd_info {
     return $cd_info;
 }
 
-my $test_mode;
-sub enable_test_mode {
-    $test_mode = 1;
+my $test_images;
+# sets a test image to use as disk and enables the testmode
+sub set_test_image {
+    my ($new_test_image) = @_;
+    croak "cannot disable test mode again after enabled" if defined($test_images) && !defined($new_test_image);
+    $test_images = $new_test_image;
 }
 sub is_test_mode {
-    return !!$test_mode;
+    return !!$test_images;
+}
+sub get_test_images {
+    return [ split(/,/, $test_images) ];
 }
 
 1;

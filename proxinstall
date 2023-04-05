@@ -34,7 +34,7 @@ GetOptions(
     'test-image|t=s' => \$test_image
 ) or die "usage error\n";
 
-Proxmox::Install::Env::enable_test_mode() if $test_image;
+Proxmox::Install::Env::set_test_image($test_image) if $test_image;
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
