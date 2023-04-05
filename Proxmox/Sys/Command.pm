@@ -9,7 +9,7 @@ use IPC::Open3;
 use IO::Select;
 use String::ShellQuote;
 
-use Proxmox::Install::Setup;
+use Proxmox::Install::Env;
 use Proxmox::Log;
 
 use base qw(Exporter);
