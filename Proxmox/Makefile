@@ -8,6 +8,7 @@ PERL5DIR=$(DESTDIR)/usr/share/perl5/Proxmox
 PERL_MODULES=\
     Install/Env.pm \
     Log.pm \
+    Sys/Block.pm \
     Sys/Command.pm \
     Sys/File.pm \
     Sys/Net.pm \
