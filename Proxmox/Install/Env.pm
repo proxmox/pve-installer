@@ -29,19 +29,7 @@ my $product_cfg = {
     },
 };
 
-sub setup {
-    my $cd_info = get_cd_info();
-    my $product = $cd_info->{product};
-
-    my $setup_info = $product_cfg->{$product};
-    die "unknown product '$product'\n" if !$setup_info;
-
-    $setup_info->{product} = $product;
-
-    return ($setup_info, $cd_info);
-}
-
-sub get_cd_info {
+my sub get_cd_info {
     my $info_fn = '/.cd-info'; # default place in the ISO environment
     if (!-f $info_fn && -f "cd-info.test") {
 	$info_fn = "cd-info.test"; # use from CWD for test mode
@@ -61,6 +49,17 @@ sub get_cd_info {
     die "CD-info is missing required key 'product'!\n" if !defined $cd_info->{product};
 
     return $cd_info;
+}
+
+sub setup {
+    my $cd_info = get_cd_info();
+    my $product = $cd_info->{product};
+
+    my $setup_info = $product_cfg->{$product} or die "unknown product '$product'\n";
+
+    $setup_info->{product} = $product;
+
+    return ($setup_info, $cd_info);
 }
 
 my $test_images;
