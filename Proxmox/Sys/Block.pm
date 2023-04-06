@@ -50,19 +50,16 @@ sub get_dev_uuid {
 
 sub hd_list {
 
-    my $res = ();
-
     if (is_test_mode()) {
 	my $disks = Proxmox::Install::Env::get_test_images();
 
-	for my $disk ($disks->@*) {
-	    push @$res, [-1, $disk, int((-s $disk)/512), "TESTDISK", 512];
-	}
-	return $res;
+	return [
+	    map { [ -1, $_, int((-s $_)/512), "TESTDISK", 512] } $disks->@*
+	];
     }
 
+    my $res = [];
     my $count = 0;
-
     foreach my $bd (</sys/block/*>) {
 	next if $bd =~ m|^/sys/block/ram\d+$|;
 	next if $bd =~ m|^/sys/block/loop\d+$|;

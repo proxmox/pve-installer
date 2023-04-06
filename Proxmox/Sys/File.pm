@@ -21,7 +21,6 @@ sub file_read_firstline {
     return $res;
 }
 
-
 sub file_read_all {
     my ($filename) = @_;
 
