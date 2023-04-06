@@ -3,6 +3,7 @@ package Proxmox::Sys::Command;
 use strict;
 use warnings;
 
+use Carp;
 use Gtk3 qw(); # FIXME: drop once possible (when (G)UI plugin approacg is there)
 use IO::File;
 use IPC::Open3;
@@ -131,11 +132,11 @@ sub run_command {
     return $? if $noout; # behave like standard system();
 
     if ($? == -1) {
-	die "command '$cmdstr' failed to execute\n";
+	croak "command '$cmdstr' failed to execute\n";
     } elsif (my $sig = ($? & 127)) {
-	die "command '$cmdstr' failed - got signal $sig\n";
+	croak "command '$cmdstr' failed - got signal $sig\n";
     } elsif (my $exitcode = ($? >> 8)) {
-	die "command '$cmdstr' failed with exit code $exitcode";
+	croak "command '$cmdstr' failed with exit code $exitcode";
     }
 
     return $ostream;
