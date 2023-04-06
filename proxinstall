@@ -21,7 +21,7 @@ use POSIX ":sys_wait_h";
 
 use Proxmox::Install::Env;
 use Proxmox::Log;
-use Proxmox::Sys::Block;
+use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
@@ -358,9 +358,6 @@ sub read_cmap {
 	kmaphash => $kmaphash,
     }
 }
-
-# search for Harddisks
-my $hds = Proxmox::Sys::Block::hd_list();
 
 sub update_progress {
     my ($frac, $start, $end, $text) = @_;
@@ -927,7 +924,7 @@ sub extract_data {
 
 	    update_progress(0, 0.02, $maxper, "create partitions");
 
-	    my $logical_bsize = logical_blocksize($target_hd, $hds);
+	    my $logical_bsize = logical_blocksize($target_hd);
 
 	    my ($os_size, $osdev, $efidev) =
 	        partition_bootable_disk($target_hd, $config_options->{hdsize}, '8E00');
@@ -2396,8 +2393,9 @@ my $get_selected_hdsize = sub {
     return $hdsize if defined($hdsize);
 
     # compute the smallest disk size of the actually selected disks
-    my $hd_count = scalar(@$hds);
-    for (my $i = 0; $i < $hd_count; $i++) {
+    my $cached_disks = get_cached_disks();
+    my $disk_count = scalar(@$cached_disks);
+    for (my $i = 0; $i < $disk_count; $i++) {
 	my $cur_hd = $config_options->{"disksel$i"} // next;
 	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
 	$hdsize //= $disksize;
@@ -2443,17 +2441,18 @@ my sub get_hdsize_spin_button {
 my $create_raid_disk_grid = sub {
     my ($hdsize_buttons) = @_;
 
-    my $hd_count = scalar(@$hds);
+    my $cached_disks = get_cached_disks();
+    my $disk_count = scalar(@$cached_disks);
     my $disk_labeled_widgets = [];
-    for (my $i = 0; $i < $hd_count; $i++) {
+    for (my $i = 0; $i < $disk_count; $i++) {
 	my $disk_selector = Gtk3::ComboBoxText->new();
 	$disk_selector->append_text("-- do not use --");
 	$disk_selector->set_active(0);
 	$disk_selector->set_visible(1);
 
-	foreach my $hd (@$hds) {
+	for my $hd (@$cached_disks) {
 	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	    $disk_selector->append_text(get_device_desc ($devname, $size, $model));
+	    $disk_selector->append_text(get_device_desc($devname, $size, $model));
 	}
 
 	$disk_selector->{pve_disk_id} = $i;
@@ -2461,18 +2460,18 @@ my $create_raid_disk_grid = sub {
 	    my $w = shift;
 	    my $diskid = $w->{pve_disk_id};
 	    my $a = $w->get_active - 1;
-	    $config_options->{"disksel${diskid}"} = ($a >= 0) ? $hds->[$a] : undef;
+	    $config_options->{"disksel${diskid}"} = ($a >= 0) ? $cached_disks->[$a] : undef;
 	    for my $btn (@$hdsize_buttons) {
 		update_hdsize_adjustment($btn->get_adjustment());
 	    }
 	});
 
 	if ($hdoption_first_setup) {
-	    $disk_selector->set_active ($i+1) if $hds->[$i];
+	    $disk_selector->set_active ($i+1) if $cached_disks->[$i];
 	} else {
 	    my $hdind = 0;
 	    if (my $cur_hd = $config_options->{"disksel$i"}) {
-		foreach my $hd (@$hds) {
+		foreach my $hd (@$cached_disks) {
 		    if (@$hd[1] eq @$cur_hd[1]) {
 			$disk_selector->set_active($hdind+1);
 			last;
@@ -2486,7 +2485,7 @@ my $create_raid_disk_grid = sub {
     }
 
     my $clear_all_button = Gtk3::Button->new('_Deselect All');
-    if ($hd_count > 3) {
+    if ($disk_count > 3) {
 	$clear_all_button->signal_connect('clicked', sub {
 	    my $is_widget = 0;
 	    for my $disk_selector (@$disk_labeled_widgets) {
@@ -2499,7 +2498,7 @@ my $create_raid_disk_grid = sub {
 
     my $scrolled_window = Gtk3::ScrolledWindow->new();
     $scrolled_window->set_hexpand(1);
-    $scrolled_window->set_propagate_natural_height(1) if $hd_count > 4;
+    $scrolled_window->set_propagate_natural_height(1) if $disk_count > 4;
 
     my $diskgrid = $create_label_widget_grid->($disk_labeled_widgets);
 
@@ -2652,7 +2651,7 @@ sub create_hdoption_view {
     # size compute
     my $hdsize = 0;
     if ( -b $target_hd) {
-	$hdsize = int(hd_size($target_hd, $hds) / (1024 * 1024.0)); # size in GB
+	$hdsize = int(hd_size($target_hd) / (1024 * 1024.0)); # size in GB
     } elsif ($target_hd) {
 	$hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
     }
@@ -2818,8 +2817,9 @@ my $get_raid_devlist = sub {
 
     my $dev_name_hash = {};
 
+    my $cached_disks = get_cached_disks();
     my $devlist = [];
-    for (my $i = 0; $i < @$hds; $i++) {
+    for (my $i = 0; $i < @$cached_disks; $i++) {
 	if (my $hd = $config_options->{"disksel$i"}) {
 	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	    die "device '$devname' is used more than once\n"
@@ -2943,7 +2943,8 @@ sub create_hdsel_view {
     my $hbox =  Gtk3::HBox->new(0, 0);
     $vbox->pack_start($hbox, 0, 0, 10);
 
-    my ($disk, $devname, $size, $model, $logical_bsize) = @{@$hds[0]};
+    my $cached_disks = get_cached_disks();
+    my ($disk, $devname, $size, $model, $logical_bsize) = $cached_disks->[0]->@*;
     $target_hd = $devname if !defined($target_hd);
 
     $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
@@ -2951,7 +2952,7 @@ sub create_hdsel_view {
 
     $target_hd_combo = Gtk3::ComboBoxText->new();
 
-    foreach my $hd (@$hds) {
+    foreach my $hd ($cached_disks->@*) {
 	($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	$target_hd_combo->append_text(get_device_desc($devname, $size, $model));
     }
@@ -2965,7 +2966,7 @@ sub create_hdsel_view {
     $target_hd_combo->set_active($last_hd_selected);
     $target_hd_combo->signal_connect(changed => sub {
 	$a = shift->get_active;
-	my ($disk, $devname) = @{@$hds[$a]};
+	my ($disk, $devname) = @{@$cached_disks[$a]};
 	$last_hd_selected = $a;
 	$target_hd = $devname;
     });
@@ -2999,7 +3000,7 @@ sub create_hdsel_view {
 	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 	} else {
 	    eval {
-		my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd, $hds);
+		my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
 		legacy_bios_4k_check($target_block_size);
 	    };
 	    if (my $err = $@) {
@@ -3117,16 +3118,19 @@ create_main_window ();
 
 my $initial_error = 0;
 
-if (!defined ($hds) || (scalar (@$hds) <= 0)) {
-    print "no harddisks found\n";
-    $initial_error = 1;
-    display_html("nohds.htm");
-    set_next("Reboot", sub { exit(0); } );
-} else {
-    foreach my $hd (@$hds) {
-	my ($disk, $devname) = @$hd;
-	next if $devname =~ m|^/dev/md\d+$|;
-	print "found Disk$disk N:$devname\n";
+{
+    my $cached_disks = get_cached_disks();
+    if (!defined($cached_disks) || (scalar (@$cached_disks) <= 0)) {
+	print "no harddisks found\n";
+	$initial_error = 1;
+	display_html("nohds.htm");
+	set_next("Reboot", sub { exit(0); } );
+    } else {
+	foreach my $hd (@$cached_disks) {
+	    my ($disk, $devname) = @$hd;
+	    next if $devname =~ m|^/dev/md\d+$|;
+	    print "found Disk$disk N:$devname\n";
+	}
     }
 }
 

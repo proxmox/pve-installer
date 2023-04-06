@@ -5,13 +5,14 @@ use warnings;
 
 use File::Basename;
 use IO::File;
+use List::Util qw(first);
 
 use Proxmox::Install::Env;
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
 
-#use base qw(Exporter);
-#our @EXPORT_OK = qw();
+use base qw(Exporter);
+our @EXPORT_OK = qw(get_cached_disks);
 
 my sub is_same_file {
     my ($a, $b) = @_;
@@ -48,7 +49,7 @@ sub get_dev_uuid {
     return basename($by_uuid_path);
 }
 
-sub hd_list {
+my sub hd_list {
 
     if (is_test_mode()) {
 	my $disks = Proxmox::Install::Env::get_test_images();
@@ -110,27 +111,39 @@ sub hd_list {
     return $res;
 }
 
+my $cached_disks;
+sub cache_disks {
+    $cached_disks = hd_list();
+}
+sub get_cached_disks {
+    cache_disks() if !defined($cached_disks);
+    return $cached_disks;
+}
+
+sub find_cached_disk_by_devname {
+    my ($dev, $noerr) = @_;
+
+    my $disks = get_cached_disks();
+    my $record = first { $_->[1] eq $dev } $disks->@*; # ($disk, $devname, $size, $model, $lbsize)
+    die "no such disk device '$dev'\n" if !defined($record) && !$noerr;
+
+    return $record;
+}
+
 sub hd_size {
-    my ($dev, $hds) = @_;
+    my ($dev) = @_;
 
-    foreach my $hd (@$hds) {
-	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	# size is always (also for 4kn disks) in 512B "sectors"! convert to KB
-	return int($size/2) if $devname eq $dev;
-    }
+    my ($_disk, $_name, $size) = find_cached_disk_by_devname($dev)->@*;
 
-    die "no such device '$dev'\n";
+    return int($size / 2);
 }
 
 sub logical_blocksize {
-    my ($dev, $hds) = @_;
+    my ($dev) = @_;
 
-    foreach my $hd (@$hds) {
-	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	return $logical_bsize if $devname eq $dev;
-    }
+    my ($_disk, $_dev, $_size, $_model, $logical_bsize) = find_cached_disk_by_devname($dev)->@*;
 
-    die "no such device '$dev'\n";
+    return $logical_bsize;
 }
 
 sub get_partition_dev {
@@ -185,7 +198,7 @@ sub wipe_disk {
 };
 
 sub partition_bootable_disk {
-    my ($target_dev, $maxhdsizegb, $ptype, $hds) = @_;
+    my ($target_dev, $maxhdsizegb, $ptype) = @_;
 
     die "too dangerous" if is_test_mode();
 
@@ -221,7 +234,6 @@ sub partition_bootable_disk {
 	    if $response ne 'ok';
     }
 
-
     syscmd("sgdisk -Z ${target_dev}");
 
     # 1 - BIOS boot partition (Grub Stage2): first free 1 MB
@@ -247,7 +259,7 @@ sub partition_bootable_disk {
     syscmd($pcmd) == 0 ||
 	die "unable to partition harddisk '${target_dev}'\n";
 
-    my $blocksize = logical_blocksize($target_dev, $hds);
+    my $blocksize = logical_blocksize($target_dev);
 
     if ($blocksize != 4096) {
 	$pnum = 1;
