@@ -30,12 +30,14 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
 
-my $test_image;
-GetOptions(
-    'test-image|t=s' => \$test_image
-) or die "usage error\n";
+{
+    my $test_image;
+    GetOptions(
+	'test-image|t=s' => \$test_image
+    ) or die "usage error\n";
 
-Proxmox::Install::Env::set_test_image($test_image) if $test_image;
+    Proxmox::Install::Env::set_test_image($test_image) if $test_image;
+}
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
@@ -809,7 +811,8 @@ sub extract_data {
 
 	if (is_test_mode()) {
 
-	    $rootdev = abs_path($test_image);
+	    my $test_images = Proxmox::Install::Env::get_test_images();
+	    $rootdev = abs_path($test_images->[0]); # FIXME: use all selected for test too!
 	    syscmd("umount $rootdev");
 
 	    if ($use_btrfs) {
