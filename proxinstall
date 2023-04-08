@@ -92,7 +92,7 @@ my $proxmox_libdir = is_test_mode()
     ? Cwd::cwd() . "/testdir/var/lib/proxmox-installer"
     : "/var/lib/proxmox-installer"
     ;
-my $proxmox_cddir = is_test_mode() ? "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
+my $proxmox_cddir = is_test_mode() ? $ENV{'CD_BUILDER_DIR'} || "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
 my $proxmox_pkgdir = "${proxmox_cddir}/proxmox/packages/";
 
 my $boot_type = -d '/sys/firmware/efi' ? 'efi' : 'bios';
