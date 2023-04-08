@@ -51,6 +51,19 @@ my sub get_cd_info {
     return $cd_info;
 }
 
+my sub get_locations {
+    my $is_test = is_test_mode();
+
+    my $base_lib_dir = '/var/lib/proxmox-installer';
+    my $iso_dir = $is_test ? $ENV{'CD_BUILDER_DIR'} || "../pve-cd-builder/tmp/data-gz/" : "/cdrom";
+
+    return {
+	iso => $iso_dir,
+	lib => $is_test ? Cwd::cwd() . "/testdir/${base_lib_dir}" : $base_lib_dir,
+	pkg => "${iso_dir}/proxmox/packages/",
+    };
+}
+
 sub setup {
     my $cd_info = get_cd_info();
     my $product = $cd_info->{product};
@@ -58,10 +71,13 @@ sub setup {
     my $cfg = $product_cfg->{$product} or die "unknown product '$product'\n";
     $cfg->{product} = $product;
 
+    my $locations = get_locations();
+
     my $env = {
 	product => $product,
 	cfg => $cfg,
 	iso => $cd_info,
+	locations => $locations,
     };
 
     return $env;
