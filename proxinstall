@@ -41,11 +41,11 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
-my ($setup, $cd_info) = Proxmox::Install::Env::setup();
+my $env = Proxmox::Install::Env::setup();
 
 my $zfstestpool = "test_rpool";
 my $zfspoolname = is_test_mode() ? $zfstestpool : 'rpool';
-my $zfsrootvolname = "$setup->{product}-1";
+my $zfsrootvolname = "$env->{product}-1";
 
 my $storage_cfg_zfs = <<__EOD__;
 dir: local
@@ -206,7 +206,7 @@ if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
     $config_options->{minfree} = $1;
 }
 
-if ($setup->{product} eq 'pve') {
+if ($env->{product} eq 'pve') {
     if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
 	$config_options->{maxvz} = $1;
     }
@@ -471,7 +471,7 @@ sub zfs_create_rpool {
     syscmd("zfs create $zfspoolname/ROOT")  == 0 ||
         die "unable to create zfs $zfspoolname/ROOT volume\n";
 
-    if ($setup->{product} eq 'pve') {
+    if ($env->{product} eq 'pve') {
 	syscmd("zfs create $zfspoolname/data")  == 0 ||
 	    die "unable to create zfs $zfspoolname/data volume\n";
     }
@@ -562,7 +562,7 @@ sub ask_existing_vg_rename_or_abort {
 sub create_lvm_volumes {
     my ($lvmdev, $os_size, $swap_size) = @_;
 
-    my $vgname = $setup->{product};
+    my $vgname = $env->{product};
 
     ask_existing_vg_rename_or_abort($vgname);
 
@@ -586,7 +586,7 @@ sub create_lvm_volumes {
     my $rootsize;
     my $datasize = 0;
 
-    if ($setup->{product} eq 'pve') {
+    if ($env->{product} eq 'pve') {
 
 	my $maxroot_mb;
 	if ($config_options->{maxroot}) {
@@ -660,7 +660,7 @@ sub create_lvm_volumes {
 	syscmd("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
 	    die "unable to create data thin-pool\n";
     } else {
-	if  ($setup->{product} eq 'pve' && !defined($config_options->{maxvz})) {
+	if ($env->{product} eq 'pve' && !defined($config_options->{maxvz})) {
 	    display_message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
 	}
 	$datadev = undef;
@@ -995,7 +995,7 @@ sub extract_data {
 	mkdir "$targetdir/var";
 	mkdir "$targetdir/var/lib";
 
-	if ($setup->{product} eq 'pve') {
+	if ($env->{product} eq 'pve') {
 	    mkdir "$targetdir/var/lib/vz";
 	    mkdir "$targetdir/var/lib/pve";
 
@@ -1015,7 +1015,7 @@ sub extract_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size) = stat ($basefile);
 	$ino || die "unable to open file '$basefile' - $!\n";
 
-	my $files = file_read_firstline("${proxmox_cddir}/proxmox/$setup->{product}-base.cnt") ||
+	my $files = file_read_firstline("${proxmox_cddir}/proxmox/$env->{product}-base.cnt") ||
 	    die "unable to read base file count\n";
 
 	my $per = 0;
@@ -1076,7 +1076,7 @@ sub extract_data {
 
 	my $ethdev = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
 
-	if ($setup->{bridged_network}) {
+	if ($env->{cfg}->{bridged_network}) {
 	    $ifaces .= "iface $ethdev $ntype manual\n";
 
 	    $ifaces .=
@@ -1260,7 +1260,7 @@ _EOD
 	# allow ssh root login
 	syscmd(['sed', '-i', 's/^#\?PermitRootLogin.*/PermitRootLogin yes/', "$targetdir/etc/ssh/sshd_config"]);
 
-	if ($setup->{product} eq 'pmg') {
+	if ($env->{product} eq 'pmg') {
 	    # install initial clamav DB
 	    my $srcdir = "${proxmox_cddir}/proxmox/clamav";
 	    foreach my $fn ("main.cvd", "bytecode.cvd", "daily.cvd", "safebrowsing.cvd") {
@@ -1271,7 +1271,7 @@ _EOD
 		die "unable to set owner for clamav database files\n";
 	}
 
-	if ($setup->{product} eq 'pve') {
+	if ($env->{product} eq 'pve') {
 	    # save installer settings
 	    my $ucc = uc ($country);
 	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
@@ -1363,11 +1363,11 @@ _EOD
 	run_command("chroot $targetdir /usr/sbin/chpasswd", undef,
 		    "root:$octets\n");
 
-	if ($setup->{product} eq 'pmg') {
+	if ($env->{product} eq 'pmg') {
 	    # save admin email
 	    file_write_all("$targetdir/etc/pmg/pmg.conf", "section: admin\n\temail ${mailto}\n");
 
-	} elsif ($setup->{product} eq 'pve') {
+	} elsif ($env->{product} eq 'pve') {
 
 	    # create pmxcfs DB
 
@@ -1397,7 +1397,7 @@ _EOD
 	    run_command("chroot $targetdir /usr/bin/create_pmxcfs_db /tmp/pve /var/lib/pve-cluster/config.db");
 
 	    syscmd("rm -rf $tmpdir");
-	} elsif ($setup->{product} eq 'pbs') {
+	} elsif ($env->{product} eq 'pbs') {
 	    my $base_cfg_path = "/etc/proxmox-backup";
 	    mkdir "$targetdir/$base_cfg_path";
 
@@ -1492,8 +1492,8 @@ sub display_html {
 
     my $htmldir = "${proxmox_libdir}/html";
     my $path;
-    if (-f "$htmldir/$setup->{product}/$filename") {
-	$path = "$htmldir/$setup->{product}/$filename";
+    if (-f "$htmldir/$env->{product}/$filename") {
+	$path = "$htmldir/$env->{product}/$filename";
     } else {
 	$path = "$htmldir/$filename";
     }
@@ -1512,14 +1512,14 @@ sub display_html {
     } elsif ($filename eq 'success.htm') {
 	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
 	$data =~ s/__IPADDR__/$addr/g;
-	$data =~ s/__PORT__/$setup->{port}/g;
+	$data =~ s/__PORT__/$env->{cfg}->{port}/g;
 
 	my $autoreboot_msg = $config_options->{autoreboot}
 	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
 	    : '';
 	$data =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
     }
-    $data =~ s/__FULL_PRODUCT_NAME__/$setup->{fullname}/g;
+    $data =~ s/__FULL_PRODUCT_NAME__/$env->{cfg}->{fullname}/g;
 
     # always set base-path to common path, all resources are accesible from there.
     $htmlview->load_html($data,  "file://$htmldir/");
@@ -1562,7 +1562,7 @@ sub create_main_window {
 
     my $vbox = Gtk3::VBox->new(0, 0);
 
-    my $logofn = "$setup->{product}-banner.png";
+    my $logofn = "$env->{product}-banner.png";
     my $image = Gtk3::Image->new_from_file("${proxmox_libdir}/$logofn");
 
     my $provider = Gtk3::CssProvider->new();
@@ -1818,7 +1818,7 @@ sub create_ipconf_view {
 
     $vbox->pack_start($devicebox, 0, 0, 2);
 
-    my $hn = $config->{fqdn} //  "$setup->{product}." . ($ipconf->{domain} // "example.invalid");
+    my $hn = $config->{fqdn} // "$env->{product}." . ($ipconf->{domain} // "example.invalid");
 
     my ($hostbox, $hostentry) = create_text_input($hn, 'Hostname (FQDN):');
     $vbox->pack_start($hostbox, 0, 0, 2);
@@ -1941,7 +1941,7 @@ sub create_ack_view {
     $vbox->pack_start($reboot_checkbox, 0, 0, 2);
 
     my $ack_template = "${proxmox_libdir}/html/ack_template.htm";
-    my $ack_html = "${proxmox_libdir}/html/$setup->{product}/$steps[$step_number]->{html}";
+    my $ack_html = "${proxmox_libdir}/html/$env->{product}/$steps[$step_number]->{html}";
     my $html_data = file_read_all($ack_template);
 
     my %config_values = (
@@ -2616,7 +2616,7 @@ sub create_hdoption_view {
 	'zfs (RAIDZ-3)',
     ];
     push @$fstype, 'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'
-	if $setup->{enable_btrfs};
+	if $env->{cfg}->{enable_btrfs};
 
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
@@ -2663,7 +2663,7 @@ sub create_hdoption_view {
     push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
 
     my $entry_maxroot = Gtk3::Entry->new();
-    if ($setup->{product} eq 'pve') {
+    if ($env->{product} eq 'pve') {
 	$entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
 	$entry_maxroot->signal_connect (key_press_event => \&check_float);
 	$entry_maxroot->set_text($config_options->{maxroot}) if $config_options->{maxroot};
@@ -2677,7 +2677,7 @@ sub create_hdoption_view {
     push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
 
     my $entry_maxvz;
-    if ($setup->{product} eq 'pve') {
+    if ($env->{product} eq 'pve') {
 	$entry_maxvz = Gtk3::Entry->new();
 	$entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
 	$entry_maxvz->signal_connect (key_press_event => \&check_float);
@@ -2718,7 +2718,7 @@ sub create_hdoption_view {
 	if ($raid) {
 	    my $msg = "<b>Note</b>: " . ($is_zfs
 		? "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
-		: "BTRFS integration in $setup->{fullname} is a technology preview!"
+		: "BTRFS integration in $env->{cfg}->{fullname} is a technology preview!"
 	    );
 	    $hw_raid_note->set_markup($msg);
 	}
@@ -3042,7 +3042,7 @@ sub create_extract_view {
 
     my $tdir = is_test_mode() ? "target" : "/target";
     mkdir $tdir;
-    my $base = "${proxmox_cddir}/$setup->{product}-base.squashfs";
+    my $base = "${proxmox_cddir}/$env->{product}-base.squashfs";
 
     eval  { extract_data($base, $tdir); };
     my $err = $@;
@@ -3079,10 +3079,10 @@ sub create_intro_view {
 
     if (int($total_memory) < 1024) {
 	display_error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
-	    "See 'System Requirements' in the $setup->{fullname} documentation.");
+	    "See 'System Requirements' in the $env->{cfg}->{fullname} documentation.");
     }
 
-    if ($setup->{product} eq 'pve') {
+    if ($env->{product} eq 'pve') {
 	my $cpuinfo = eval { file_read_all('/proc/cpuinfo') };
 	if (!$cpuinfo || $cpuinfo !~ /^flags\s*:.*(vmx|svm)/m) {
 	    display_error(

@@ -55,11 +55,16 @@ sub setup {
     my $cd_info = get_cd_info();
     my $product = $cd_info->{product};
 
-    my $setup_info = $product_cfg->{$product} or die "unknown product '$product'\n";
+    my $cfg = $product_cfg->{$product} or die "unknown product '$product'\n";
+    $cfg->{product} = $product;
 
-    $setup_info->{product} = $product;
+    my $env = {
+	product => $product,
+	cfg => $cfg,
+	iso => $cd_info,
+    };
 
-    return ($setup_info, $cd_info);
+    return $env;
 }
 
 my $test_images;
