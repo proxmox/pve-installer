@@ -303,12 +303,8 @@ my $total_memory = get_memtotal();
 sub read_cmap {
     my $countryfn = "${proxmox_libdir}/country.dat";
     open (my $TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
-    my $line;
-    my $country = {};
-    my $countryhash = {};
-    my $kmap = {};
-    my $kmaphash = {};
-    while (defined ($line = <$TMP>)) {
+    my ($country, $countryhash, $kmap, $kmaphash) = ({}, {}, {}, {});
+    while (defined (my $line = <$TMP>)) {
 	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
 	    $kmap->{$1} = {
 		name => $2,
@@ -336,7 +332,7 @@ sub read_cmap {
     my $cczones = {};
     my $zonefn = "/usr/share/zoneinfo/zone.tab";
     open ($TMP, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
-    while (defined ($line = <$TMP>)) {
+    while (defined (my $line = <$TMP>)) {
 	next if $line =~ m/^\#/;
 	next if $line =~ m/^\s*$/;
 	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
