@@ -29,6 +29,62 @@ my $product_cfg = {
     },
 };
 
+my sub read_cmap {
+    my ($lib_dir) = @_;
+    my $countryfn = "${lib_dir}/country.dat";
+    open (my $TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
+    my ($country, $countryhash, $kmap, $kmaphash) = ({}, {}, {}, {});
+    while (defined (my $line = <$TMP>)) {
+	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
+	    $kmap->{$1} = {
+		name => $2,
+		kvm => $3,
+		console => $4,
+		x11 => $5,
+		x11var => $6,
+	    };
+	    $kmaphash->{$2} = $1;
+	} elsif ($line =~ m|^([a-z]{2}):([^:]+):([^:]*):([^:]*):$|) {
+	    $country->{$1} = {
+		name => $2,
+		kmap => $3,
+		mirror => $4,
+	    };
+	    $countryhash->{lc($2)} = $1;
+	} else {
+	    warn "unable to parse 'country.dat' line: $line";
+	}
+    }
+    close ($TMP);
+    $TMP = undef;
+
+    my $zones = {};
+    my $cczones = {};
+    my $zonefn = "/usr/share/zoneinfo/zone.tab";
+    open ($TMP, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
+    while (defined (my $line = <$TMP>)) {
+	next if $line =~ m/^\#/;
+	next if $line =~ m/^\s*$/;
+	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
+	    my $cc = lc($1);
+	    $cczones->{$cc}->{$2} = 1;
+	    $country->{$cc}->{zone} = $2 if !defined ($country->{$cc}->{zone});
+	    $zones->{$2} = 1;
+
+	}
+    }
+    close ($TMP);
+
+    return {
+	zones => $zones,
+	cczones => $cczones,
+	country => $country,
+	countryhash => $countryhash,
+	kmap => $kmap,
+	kmaphash => $kmaphash,
+    }
+}
+
 my sub get_cd_info {
     my $info_fn = '/.cd-info'; # default place in the ISO environment
     if (!-f $info_fn && -f "cd-info.test") {
