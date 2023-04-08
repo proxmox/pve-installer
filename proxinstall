@@ -155,7 +155,7 @@ my $timezone = 'Europe/Vienna';
 my $keymap = 'en-us';
 my $password;
 my $mailto = 'mail@example.invalid';
-my $cmap;
+my $cmap = $env->{locales};
 my $autoreboot_seconds = 5;
 
 my $config = {
@@ -3041,9 +3041,6 @@ sub create_intro_view {
 $ipconf = Proxmox::Sys::Net::get_ip_config();
 
 $country = detect_country() if $ipconf->{default} || is_test_mode();
-
-# read country, kmap and timezone infos
-$cmap = Proxmox::Install::Env::read_cmap($env->{locations}->{lib});
 
 if (!defined($cmap->{country}->{$country})) {
     log_warn("ignoring detected country '$country', invalid or unknown\n");

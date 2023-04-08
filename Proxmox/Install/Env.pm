@@ -29,7 +29,7 @@ my $product_cfg = {
     },
 };
 
-my sub read_cmap {
+my sub read_locale_info {
     my ($lib_dir) = @_;
 
     my $countryfn = "${lib_dir}/country.dat";
@@ -134,6 +134,7 @@ sub setup {
 	cfg => $cfg,
 	iso => $cd_info,
 	locations => $locations,
+	locales => read_locale_info($locations->{lib}),
     };
 
     return $env;
