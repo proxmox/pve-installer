@@ -11,7 +11,7 @@ use IPC::Open2;
 use IO::File;
 use Cwd 'abs_path';
 use Glib;
-use Gtk3 '-init';
+use Gtk3;
 use Gtk3::WebKit2;
 use Encode;
 use File::Basename;
@@ -3109,6 +3109,8 @@ if (!defined($cmap->{country}->{$country})) {
     log_warn("ignoring detected country '$country', invalid or unknown\n");
     $country = undef;
 }
+
+Gtk3::init();
 
 create_main_window ();
 
