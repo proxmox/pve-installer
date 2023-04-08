@@ -50,7 +50,6 @@ sub get_dev_uuid {
 }
 
 my sub hd_list {
-
     if (is_test_mode()) {
 	my $disks = Proxmox::Install::Env::get_test_images();
 

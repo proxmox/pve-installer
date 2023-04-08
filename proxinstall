@@ -1159,11 +1159,9 @@ sub extract_data {
 	file_write_all("$targetdir/etc/fstab", $fstab);
 	file_write_all("$targetdir/etc/mtab", "");
 
-	syscmd("cp ${proxmox_libdir}/policy-disable-rc.d " .
-		"$targetdir/usr/sbin/policy-rc.d") == 0 ||
+	syscmd("cp ${proxmox_libdir}/policy-disable-rc.d $targetdir/usr/sbin/policy-rc.d") == 0 ||
 		die "unable to copy policy-rc.d\n";
-	syscmd("cp ${proxmox_libdir}/fake-start-stop-daemon " .
-		"$targetdir/sbin/") == 0 ||
+	syscmd("cp ${proxmox_libdir}/fake-start-stop-daemon $targetdir/sbin/") == 0 ||
 		die "unable to copy start-stop-daemon\n";
 
 	diversion_add($targetdir, "/sbin/start-stop-daemon", "/sbin/fake-start-stop-daemon");
@@ -1468,7 +1466,7 @@ my $display_info_items = [
     "extract2-rulesystem.htm",
     "extract3-spam.htm",
     "extract4-virus.htm",
-    ];
+];
 
 sub display_info {
 
@@ -2838,7 +2836,7 @@ sub zfs_mirror_size_check {
 sub legacy_bios_4k_check {
     my ($lbs) = @_;
     die "Booting from 4kn drive in legacy BIOS mode is not supported.\n"
-	if (($boot_type ne 'efi') && ($lbs == 4096));
+	if $boot_type ne 'efi' && $lbs == 4096;
 }
 
 sub get_zfs_raid_setup {
