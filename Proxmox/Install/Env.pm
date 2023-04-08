@@ -31,10 +31,12 @@ my $product_cfg = {
 
 my sub read_cmap {
     my ($lib_dir) = @_;
+
     my $countryfn = "${lib_dir}/country.dat";
-    open (my $TMP, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
+    open (my $COUNTRY_MAP_FH, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
+
     my ($country, $countryhash, $kmap, $kmaphash) = ({}, {}, {}, {});
-    while (defined (my $line = <$TMP>)) {
+    while (defined (my $line = <$COUNTRY_MAP_FH>)) {
 	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
 	    $kmap->{$1} = {
 		name => $2,
@@ -55,16 +57,14 @@ my sub read_cmap {
 	    warn "unable to parse 'country.dat' line: $line";
 	}
     }
-    close ($TMP);
-    $TMP = undef;
+    close ($COUNTRY_MAP_FH);
 
-    my $zones = {};
-    my $cczones = {};
     my $zonefn = "/usr/share/zoneinfo/zone.tab";
-    open ($TMP, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
-    while (defined (my $line = <$TMP>)) {
-	next if $line =~ m/^\#/;
-	next if $line =~ m/^\s*$/;
+    open (my $ZONE_TAB_FH, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
+
+    my ($zones, $cczones) = ({}, {});
+    while (defined (my $line = <$ZONE_TAB_FH>)) {
+	next if $line =~ m/^\s*(?:#|$)/;
 	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
 	    my $cc = lc($1);
 	    $cczones->{$cc}->{$2} = 1;
@@ -73,7 +73,7 @@ my sub read_cmap {
 
 	}
     }
-    close ($TMP);
+    close ($ZONE_TAB_FH);
 
     return {
 	zones => $zones,
