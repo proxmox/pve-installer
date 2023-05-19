@@ -155,7 +155,6 @@ my $timezone = 'Europe/Vienna';
 my $keymap = 'en-us';
 my $password;
 my $mailto = 'mail@example.invalid';
-my $cmap = $env->{locales};
 my $autoreboot_seconds = 5;
 
 my $config = {
@@ -1126,7 +1125,7 @@ sub extract_data {
 	}
 
 	# Note: keyboard-configuration/xbkb-keymap is used by console-setup
-	my $xkmap = $cmap->{kmap}->{$keymap}->{x11} // 'us';
+	my $xkmap = $env->{locales}->{kmap}->{$keymap}->{x11} // 'us';
 
 	debconfig_set ($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
@@ -1188,7 +1187,7 @@ _EOD
 	file_write_all("$targetdir/etc/timezone", "$timezone\n");
 
 	# set apt mirror
-	if (my $mirror = $cmap->{country}->{$country}->{mirror}) {
+	if (my $mirror = $env->{locales}->{country}->{$country}->{mirror}) {
 	    my $fn = "$targetdir/etc/apt/sources.list";
 	    syscmd("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'");
 	}
@@ -1315,7 +1314,7 @@ _EOD
 	    mkdir $tmpdir;
 
 	    # write vnc keymap to datacenter.cfg
-	    my $vnckmap = $cmap->{kmap}->{$keymap}->{kvm} || 'en-us';
+	    my $vnckmap = $env->{locales}->{kmap}->{$keymap}->{kvm} || 'en-us';
 	    file_write_all("$tmpdir/datacenter.cfg", "keyboard: $vnckmap\n");
 
 	    # save admin email
@@ -1887,7 +1886,7 @@ sub create_ack_view {
     my %config_values = (
 	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
 	__target_fs__ => $config_options->{filesys},
-	__country__ => $cmap->{country}->{$country}->{name},
+	__country__ => $env->{locales}->{country}->{$country}->{name},
 	__timezone__ => $timezone,
 	__keymap__ => $keymap,
 	__mailto__ => $mailto,
@@ -1952,7 +1951,7 @@ sub update_layout {
     my $ind;
     my $def;
     my $i = 0;
-    my $kmaphash = $cmap->{kmaphash};
+    my $kmaphash = $env->{locales}->{kmaphash};
     foreach my $layout (sort keys %$kmaphash) {
 	$def = $i if $kmaphash->{$layout} eq 'en-us';
 	$ind = $i if $kmap && $kmaphash->{$layout} eq $kmap;
@@ -1973,34 +1972,24 @@ my $lastzonecb;
 sub update_zonelist {
     my ($box, $cc) = @_;
 
-    my $cczones = $cmap->{cczones};
-    my $zones = $cmap->{zones};
-
-    my $sel;
+    my $sel = $timezone; # initial default
     if ($lastzonecb) {
 	$sel = $lastzonecb->get_active_text();
-	$box->remove ($lastzonecb);
-    } else {
-	$sel = $timezone; # used once to select default
+	$box->remove($lastzonecb);
     }
 
     my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
     $cb->set_size_request(200, -1);
-
     $cb->signal_connect('changed' => sub {
 	$timezone = $cb->get_active_text();
     });
 
-    my @za;
-    if ($cc && defined ($cczones->{$cc})) {
-	@za = keys %{$cczones->{$cc}};
-    } else {
-	@za = keys %$zones;
-    }
-    my $ind;
-    my $i = 0;
-    foreach my $zone (sort @za) {
-	$ind = $i if $sel && $zone eq $sel;
+    my ($cczones, $zones) = $env->{locales}->@{'cczones', 'zones'};
+    my @available_zones = $cc && defined($cczones->{$cc}) ? keys %{$cczones->{$cc}} : keys %$zones;
+
+    my ($i, $selected_index) = (0, undef);
+    for my $zone (sort @available_zones) {
+	$selected_index = $i if $sel && $zone eq $sel;
 	$cb->append_text($zone);
 	$i++;
     }
@@ -2008,7 +1997,7 @@ sub update_zonelist {
     # Append UTC here, so it is always the last item and never the default for any country.
     $cb->append_text('UTC');
 
-    $cb->set_active($ind || 0);
+    $cb->set_active($selected_index || 0);
 
     $cb->show;
     $box->pack_start($cb, 0, 0, 0);
@@ -2111,8 +2100,7 @@ sub create_country_view {
 
     cleanup_view();
 
-    my $countryhash = $cmap->{countryhash};
-    my $ctr = $cmap->{country};
+    my $locales = $env->{locales};
 
     my $vbox2 =  Gtk3::VBox->new(0, 0);
     $inbox->pack_start($vbox2, 1, 0, 0);
@@ -2143,8 +2131,8 @@ sub create_country_view {
 
     my $kmapcb = Gtk3::ComboBoxText->new();
     $kmapcb->set_size_request (200, -1);
-    foreach my $layout (sort keys %{$cmap->{kmaphash}}) {
-	$kmapcb->append_text ($layout);
+    for my $layout (sort keys %{$locales->{kmaphash}}) {
+	$kmapcb->append_text($layout);
     }
 
     update_layout($kmapcb);
@@ -2153,9 +2141,9 @@ sub create_country_view {
     $kmapcb->signal_connect ('changed' => sub {
 	my $sel = $kmapcb->get_active_text();
 	$last_layout = $kmapcb->get_active();
-	if (my $kmap = $cmap->{kmaphash}->{$sel}) {
-	    my $xkmap = $cmap->{kmap}->{$kmap}->{x11};
-	    my $xvar = $cmap->{kmap}->{$kmap}->{x11var};
+	if (my $kmap = $locales->{kmaphash}->{$sel}) {
+	    my $xkmap = $locales->{kmap}->{$kmap}->{x11};
+	    my $xvar = $locales->{kmap}->{$kmap}->{x11var};
 	    $keymap = $kmap;
 
 	    return if (defined($installer_kmap) && $installer_kmap eq $kmap);
@@ -2184,9 +2172,9 @@ sub create_country_view {
 	my ($entry, $event) = @_;
 	my $text = $entry->get_text;
 
-	if (my $cc = $countryhash->{lc($text)}) {
+	if (my $cc = $locales->{countryhash}->{lc($text)}) {
 	    update_zonelist($hbox2, $cc);
-	    my $kmap = $ctr->{$cc}->{kmap} || 'en-us';
+	    my $kmap = $locales->{country}->{$cc}->{kmap} || 'en-us';
 	    update_layout($kmapcb, $kmap);
 	}
     });
@@ -2198,20 +2186,19 @@ sub create_country_view {
 	my $val = $event->get_keyval;
 
 	if ($val == Gtk3::Gdk::KEY_Tab) {
-	    my $cc = $countryhash->{lc($text)};
+	    my $cc = $locales->{countryhash}->{lc($text)};
 
 	    my $found = 0;
 	    my $compl;
 
 	    if ($cc) {
 		$found = 1;
-		$compl = $ctr->{$cc}->{name};
+		$compl = $locales->{country}->{$cc}->{name};
 	    } else {
-		foreach my $cc (keys %$ctr) {
-		    my $ct = $ctr->{$cc}->{name};
-		    if ($ct =~ m/^\Q$text\E.*$/i) {
+		for my $country (values $locales->{country}->%*) {
+		    if ($country->{name} =~ m/^\Q$text\E.*$/i) {
 			$found++;
-			$compl = $ct;
+			$compl = $country->{name};
 		    }
 		    last if $found > 1;
 		}
@@ -2237,12 +2224,13 @@ sub create_country_view {
 	return undef;
     });
 
-    my $ls = Gtk3::ListStore->new('Glib::String');
-    foreach my $cc (sort {$ctr->{$a}->{name} cmp $ctr->{$b}->{name} } keys %$ctr) {
-	my $iter = $ls->append();
-	$ls->set ($iter, 0, $ctr->{$cc}->{name});
+    my $country_store = Gtk3::ListStore->new('Glib::String');
+    my $countries = $locales->{country};
+    for my $cc (sort { $countries->{$a}->{name} cmp $countries->{$b}->{name} } keys %$countries) {
+	my $iter = $country_store->append();
+	$country_store->set($iter, 0, $countries->{$cc}->{name});
     }
-    $c->set_model ($ls);
+    $c->set_model($country_store);
 
     $w->set_completion ($c);
 
@@ -2258,8 +2246,8 @@ sub create_country_view {
     $vbox->pack_start($hbox2, 0, 0, 5);
     $vbox->pack_start($hbox3, 0, 0, 5);
 
-    if ($country && $ctr->{$country}) {
-	$w->set_text ($ctr->{$country}->{name});
+    if ($country && (my $entry = $locales->{country}->{$country})) {
+	$w->set_text($entry->{name});
     }
 
     $inbox->show_all;
@@ -2269,7 +2257,7 @@ sub create_country_view {
 
 	my $text = $w->get_text;
 
-	if (my $cc = $countryhash->{lc($text)}) {
+	if (my $cc = $locales->{countryhash}->{lc($text)}) {
 	    $country = $cc;
 	    $step_number++;
 	    create_password_view();
@@ -3042,7 +3030,7 @@ $ipconf = Proxmox::Sys::Net::get_ip_config();
 
 $country = detect_country() if $ipconf->{default} || is_test_mode();
 
-if (!defined($cmap->{country}->{$country})) {
+if (!defined($env->{locales}->{country}->{$country})) {
     log_warn("ignoring detected country '$country', invalid or unknown\n");
     $country = undef;
 }
