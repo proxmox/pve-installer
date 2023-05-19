@@ -1,20 +1,24 @@
 #!/usr/bin/perl -w
 
 use strict;
+use warnings;
+
 use File::stat;
+use POSIX qw(strftime);
 
 sub testtime {
-
-    my $st = stat ("/usr/bin/checktime") || stat ("./checktime");
+    my $st = stat("/usr/bin/checktime") || stat("./checktime");
 
     my $ctime = time();
 
     if ($ctime < $st->atime) {
-	warn "detected wrong system time\n";
+	my $system_time_str = strftime "%F %T", localtime $ctime;
+	my $pkg_time_str = strftime "%F %T", localtime $st->atime;
+	warn "detected wrong system time $system_time_str, older than installer ($pkg_time_str)\n";
 	my $tstr = localtime $st->atime;
 	# correct system time to avoid errors, i.e gpg fails
 	system ("date -s '$tstr'"); 
-    }   
+    }
 }
 
 testtime();
