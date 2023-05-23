@@ -71,6 +71,10 @@ fn yes_no_dialog(
 }
 
 fn trigger_abort_install_dialog(siv: &mut Cursive) {
+    #[cfg(debug_assertions)]
+    siv.quit();
+
+    #[cfg(not(debug_assertions))]
     yes_no_dialog(
         siv,
         "Abort installation?",
