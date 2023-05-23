@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 use cursive::{
+    event::Event,
     view::{Resizable, ViewWrapper},
     views::{
         Button, Dialog, DummyView, LinearLayout, PaddedView, ResizedView, ScrollView, TextView,
@@ -40,6 +41,9 @@ impl ViewWrapper for InstallerView {
 fn main() {
     let mut siv = cursive::termion();
 
+    siv.clear_global_callbacks(Event::CtrlChar('c'));
+    siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
+
     siv.add_active_screen();
     siv.screen_mut().add_layer(license_dialog());
     siv.run();
@@ -66,15 +70,17 @@ fn yes_no_dialog(
     )
 }
 
+fn trigger_abort_install_dialog(siv: &mut Cursive) {
+    yes_no_dialog(
+        siv,
+        "Abort installation?",
+        "Are you sure you want to abort the installation?",
+        &Cursive::quit,
+    )
+}
+
 fn abort_install_button() -> Button {
-    Button::new("Abort", |siv| {
-        yes_no_dialog(
-            siv,
-            "Abort installation?",
-            "Are you sure you want to abort the installation?",
-            &Cursive::quit,
-        )
-    })
+    Button::new("Abort", trigger_abort_install_dialog)
 }
 
 fn get_eula() -> String {
