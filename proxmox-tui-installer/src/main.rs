@@ -88,8 +88,9 @@ fn abort_install_button() -> Button {
 }
 
 fn get_eula() -> String {
-    #[cfg(debug_assertions)]
-    "< Debug build - ignoring non-existing EULA >".to_owned()
+    // TODO: properly using info from Proxmox::Install::Env::setup()
+    std::fs::read_to_string("/cdrom/EULA")
+        .unwrap_or_else(|_| "< Debug build - ignoring non-existing EULA >".to_owned())
 }
 
 fn license_dialog() -> InstallerView {
