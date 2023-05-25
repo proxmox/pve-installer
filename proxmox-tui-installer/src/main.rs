@@ -21,21 +21,25 @@ const LOGO: &str = r#"
 const TITLE: &str = "Proxmox VE Installer";
 
 struct InstallerView {
-    view: LinearLayout,
+    view: ResizedView<LinearLayout>,
 }
 
 impl InstallerView {
     pub fn new<T: View>(view: T) -> Self {
+        let inner = LinearLayout::vertical()
+            .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(LOGO).center()))
+            .child(Dialog::around(view).title(TITLE));
+
         Self {
-            view: LinearLayout::vertical()
-                .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(LOGO).center()))
-                .child(Dialog::around(view).title(TITLE)),
+            // Limit the maximum to something reasonable, such that it won't get spread out much
+            // depending on the screen.
+            view: ResizedView::with_max_size((120, 40), inner),
         }
     }
 }
 
 impl ViewWrapper for InstallerView {
-    cursive::wrap_impl!(self.view: LinearLayout);
+    cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
 }
 
 fn main() {
@@ -102,9 +106,8 @@ fn license_dialog() -> InstallerView {
             0,
             TextView::new("END USER LICENSE AGREEMENT (EULA)").center(),
         ))
-        .child(Dialog::around(ResizedView::with_max_size(
-            (120, 25),
-            ScrollView::new(TextView::new(get_eula())),
+        .child(Panel::new(ScrollView::new(
+            TextView::new(get_eula()).center(),
         )))
         .child(PaddedView::lrtb(
             1,
