@@ -4,7 +4,8 @@ use cursive::{
     event::Event,
     view::{Resizable, ViewWrapper},
     views::{
-        Button, Dialog, DummyView, LinearLayout, PaddedView, ResizedView, ScrollView, TextView,
+        Button, Dialog, DummyView, LinearLayout, PaddedView, Panel, ResizedView, ScrollView,
+        TextView,
     },
     Cursive, View,
 };
