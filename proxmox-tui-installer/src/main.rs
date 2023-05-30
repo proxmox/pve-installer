@@ -54,10 +54,13 @@ fn main() {
     siv.run();
 }
 
-fn add_next_screen(constructor: &dyn Fn() -> InstallerView) -> Box<dyn Fn(&mut Cursive) + '_> {
+fn add_next_screen(
+    constructor: &dyn Fn(&mut Cursive) -> InstallerView,
+) -> Box<dyn Fn(&mut Cursive) + '_> {
     Box::new(|siv: &mut Cursive| {
+        let v = constructor(siv);
         siv.add_active_screen();
-        siv.screen_mut().add_layer(constructor());
+        siv.screen_mut().add_layer(v);
     })
 }
 
@@ -124,6 +127,6 @@ fn license_dialog() -> InstallerView {
     InstallerView::new(inner)
 }
 
-fn bootdisk_dialog() -> InstallerView {
+fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
     InstallerView::new(DummyView)
 }
