@@ -64,11 +64,11 @@ impl ViewWrapper for NumericEditView {
     }
 }
 
-pub struct DiskSizeInputView {
+pub struct DiskSizeFormInputView {
     view: LinearLayout,
 }
 
-impl DiskSizeInputView {
+impl DiskSizeFormInputView {
     pub fn new(label: &str) -> Self {
         let view = LinearLayout::horizontal()
             .child(TextView::new(format!("{label}: ")))
@@ -101,6 +101,25 @@ impl DiskSizeInputView {
     }
 }
 
-impl ViewWrapper for DiskSizeInputView {
+impl ViewWrapper for DiskSizeFormInputView {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
+pub struct FormInputView {
+    view: LinearLayout,
+}
+
+impl FormInputView {
+    pub fn new<T: View>(label: &str, input: T) -> Self {
+        let view = LinearLayout::horizontal()
+            .child(TextView::new(format!("{label}: ")))
+            .child(DummyView.full_width())
+            .child(input.full_width());
+
+        Self { view }
+    }
+}
+
+impl ViewWrapper for FormInputView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }

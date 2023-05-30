@@ -2,7 +2,7 @@
 
 mod views;
 
-use crate::views::DiskSizeInputView;
+use crate::views::DiskSizeFormInputView;
 use cursive::{
     event::Event,
     view::{Finder, Nameable, Resizable, ViewWrapper},
@@ -13,6 +13,7 @@ use cursive::{
     Cursive, View,
 };
 use std::fmt;
+use views::FormInputView;
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -314,26 +315,26 @@ struct LvmBootdiskOptionsView {
 impl LvmBootdiskOptionsView {
     fn new(disks: &[Disk], options: &LvmBootdiskOptions) -> Self {
         let view = LinearLayout::vertical()
+            .child(FormInputView::new(
+                "Target harddisk",
+                SelectView::new()
+                    .popup()
+                    .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
+                    .with_name("bootdisk-disk"),
+            ))
+            .child(DiskSizeFormInputView::new("Total size").content(options.total_size))
+            .child(DiskSizeFormInputView::new("Swap size").content(options.swap_size))
             .child(
-                LinearLayout::horizontal()
-                    .child(TextView::new("Target harddisk: "))
-                    .child(DummyView.full_width())
-                    .child(
-                        SelectView::new()
-                            .popup()
-                            .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
-                            .with_name("bootdisk-disk"),
-                    ),
-            )
-            .child(DiskSizeInputView::new("Total size").content(options.total_size))
-            .child(DiskSizeInputView::new("Swap size").content(options.swap_size))
-            .child(
-                DiskSizeInputView::new("Maximum root volume size").content(options.max_root_size),
+                DiskSizeFormInputView::new("Maximum root volume size")
+                    .content(options.max_root_size),
             )
             .child(
-                DiskSizeInputView::new("Maximum data volume size").content(options.max_data_size),
+                DiskSizeFormInputView::new("Maximum data volume size")
+                    .content(options.max_data_size),
             )
-            .child(DiskSizeInputView::new("Minimum free LVM space").content(options.min_lvm_free));
+            .child(
+                DiskSizeFormInputView::new("Minimum free LVM space").content(options.min_lvm_free),
+            );
 
         Self { view }
     }
@@ -349,7 +350,7 @@ impl LvmBootdiskOptionsView {
         let mut get_disksize_value = |i| {
             self.view
                 .get_child_mut(i)?
-                .downcast_mut::<DiskSizeInputView>()?
+                .downcast_mut::<DiskSizeFormInputView>()?
                 .get_content()
         };
 
