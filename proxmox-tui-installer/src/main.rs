@@ -9,6 +9,7 @@ use cursive::{
     },
     Cursive, View,
 };
+use std::fmt;
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -43,11 +44,100 @@ impl ViewWrapper for InstallerView {
     cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
 }
 
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+enum FsType {
+    #[default]
+    Ext4,
+    Xfs,
+}
+
+impl fmt::Display for FsType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            FsType::Ext4 => "ext4",
+            FsType::Xfs => "XFS",
+        };
+        write!(f, "{s}")
+    }
+}
+
+#[derive(Clone, Debug)]
+struct LvmBootdiskOptions {
+    disk: Disk,
+    total_size: u64,
+    swap_size: u64,
+    max_root_size: u64,
+    max_data_size: u64,
+    min_lvm_free: u64,
+}
+
+impl LvmBootdiskOptions {
+    fn defaults_from(disk: &Disk) -> Self {
+        let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
+            16 * 1024 * 1024
+        } else {
+            disk.size / 8
+        };
+
+        Self {
+            disk: disk.clone(),
+            total_size: disk.size,
+            swap_size: 4 * 1024 * 1024, // TODO: value from installed memory
+            max_root_size: 0,
+            max_data_size: 0,
+            min_lvm_free,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+enum AdvancedBootdiskOptions {
+    Lvm(LvmBootdiskOptions),
+}
+
+#[derive(Clone, Debug)]
+struct Disk {
+    path: String,
+    size: u64,
+}
+
+impl fmt::Display for Disk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: Format sizes properly with `proxmox-human-byte` once merged
+        // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
+        write!(f, "{} ({} B)", self.path, self.size)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct BootdiskOptions {
+    disks: Vec<Disk>,
+    fstype: FsType,
+    advanced: AdvancedBootdiskOptions,
+}
+
+#[derive(Clone, Debug)]
+struct InstallerOptions {
+    bootdisk: BootdiskOptions,
+}
+
 fn main() {
     let mut siv = cursive::termion();
 
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
+
+    let disks = vec![Disk {
+        path: "/dev/vda".to_owned(),
+        size: 17179869184,
+    }];
+    siv.set_user_data(InstallerOptions {
+        bootdisk: BootdiskOptions {
+            disks: disks.clone(),
+            fstype: FsType::default(),
+            advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(&disks[0])),
+        },
+    });
 
     siv.add_active_screen();
     siv.screen_mut().add_layer(license_dialog());
