@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod views;
+
 use cursive::{
     event::Event,
     view::{Resizable, ViewWrapper},
