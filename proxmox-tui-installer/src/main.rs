@@ -2,12 +2,13 @@
 
 mod views;
 
+use crate::views::DiskSizeInputView;
 use cursive::{
     event::Event,
-    view::{Resizable, ViewWrapper},
+    view::{Finder, Nameable, Resizable, ViewWrapper},
     views::{
         Button, Dialog, DummyView, LinearLayout, PaddedView, Panel, ResizedView, ScrollView,
-        TextView,
+        SelectView, TextView,
     },
     Cursive, View,
 };
@@ -156,6 +157,11 @@ fn add_next_screen(
     })
 }
 
+fn switch_to_prev_screen(siv: &mut Cursive) {
+    let id = siv.active_screen().saturating_sub(1);
+    siv.set_screen(id);
+}
+
 fn yes_no_dialog(
     siv: &mut Cursive,
     title: &str,
@@ -220,5 +226,148 @@ fn license_dialog() -> InstallerView {
 }
 
 fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
+    let options = siv
+        .user_data::<InstallerOptions>()
+        .map(|o| o.clone())
+        .unwrap()
+        .bootdisk;
+
+    let AdvancedBootdiskOptions::Lvm(advanced) = options.advanced;
+
+    let fstype_select = LinearLayout::horizontal()
+        .child(TextView::new("Filesystem: "))
+        .child(DummyView.full_width())
+        .child(
+            SelectView::new()
+                .popup()
+                .with_all(FS_TYPES.iter().map(|t| (t.to_string(), t)))
+                .selected(
+                    FS_TYPES
+                        .iter()
+                        .position(|t| *t == options.fstype)
+                        .unwrap_or_default(),
+                )
+                .on_submit({
+                    let disks = options.disks.clone();
+                    let advanced = advanced.clone();
+                    move |siv, fstype: &FsType| {
+                        let view = match fstype {
+                            FsType::Ext4 | FsType::Xfs => {
+                                LvmBootdiskOptionsView::new(&disks, &advanced)
+                            }
+                        };
+
+                        siv.call_on_name("bootdisk-options", |v: &mut LinearLayout| {
+                            v.clear();
+                            v.add_child(view);
+                        });
+                    }
+                })
+                .with_name("fstype")
+                .full_width(),
+        );
+
+    let inner = LinearLayout::vertical()
+        .child(fstype_select)
+        .child(DummyView)
+        .child(
+            LinearLayout::horizontal()
+                .child(LvmBootdiskOptionsView::new(&options.disks, &advanced))
+                .with_name("bootdisk-options"),
+        )
+        .child(PaddedView::lrtb(
+            1,
+            1,
+            1,
+            0,
+            LinearLayout::horizontal()
+                .child(abort_install_button())
+                .child(DummyView.full_width())
+                .child(Button::new("Previous", switch_to_prev_screen))
+                .child(DummyView)
+                .child(Button::new("Next", |siv| {
+                    let options = siv
+                        .call_on_name("bootdisk-options", |v: &mut LinearLayout| {
+                            v.get_child_mut(0)?
+                                .downcast_mut::<LvmBootdiskOptionsView>()?
+                                .get_values()
+                                .map(AdvancedBootdiskOptions::Lvm)
+                        })
+                        .flatten()
+                        .unwrap();
+
+                    siv.with_user_data(|opts: &mut InstallerOptions| {
+                        opts.bootdisk.advanced = options;
+                    });
+
+                    add_next_screen(&location_and_tz_dialog)(siv)
+                })),
+        ));
+
+    InstallerView::new(inner)
+}
+
+struct LvmBootdiskOptionsView {
+    view: LinearLayout,
+}
+
+impl LvmBootdiskOptionsView {
+    fn new(disks: &[Disk], options: &LvmBootdiskOptions) -> Self {
+        let view = LinearLayout::vertical()
+            .child(
+                LinearLayout::horizontal()
+                    .child(TextView::new("Target harddisk: "))
+                    .child(DummyView.full_width())
+                    .child(
+                        SelectView::new()
+                            .popup()
+                            .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
+                            .with_name("bootdisk-disk"),
+                    ),
+            )
+            .child(DiskSizeInputView::new("Total size").content(options.total_size))
+            .child(DiskSizeInputView::new("Swap size").content(options.swap_size))
+            .child(
+                DiskSizeInputView::new("Maximum root volume size").content(options.max_root_size),
+            )
+            .child(
+                DiskSizeInputView::new("Maximum data volume size").content(options.max_data_size),
+            )
+            .child(DiskSizeInputView::new("Minimum free LVM space").content(options.min_lvm_free));
+
+        Self { view }
+    }
+
+    fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
+        let disk = self
+            .view
+            .call_on_name("bootdisk-disk", |view: &mut SelectView<Disk>| {
+                view.selection()
+            })?
+            .map(|d| (*d).clone())?;
+
+        let mut get_disksize_value = |i| {
+            self.view
+                .get_child_mut(i)?
+                .downcast_mut::<DiskSizeInputView>()?
+                .get_content()
+        };
+
+        Some(LvmBootdiskOptions {
+            disk,
+            total_size: get_disksize_value(1)?,
+            swap_size: get_disksize_value(2)?,
+            max_root_size: get_disksize_value(3)?,
+            max_data_size: get_disksize_value(4)?,
+            min_lvm_free: get_disksize_value(5)?,
+        })
+    }
+}
+
+impl ViewWrapper for LvmBootdiskOptionsView {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
+fn location_and_tz_dialog(_: &mut Cursive) -> InstallerView {
     InstallerView::new(DummyView)
 }
