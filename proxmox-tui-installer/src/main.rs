@@ -7,8 +7,8 @@ use cursive::{
     event::Event,
     view::{Finder, Nameable, Resizable, ViewWrapper},
     views::{
-        Button, Dialog, DummyView, LinearLayout, PaddedView, Panel, ResizedView, ScrollView,
-        SelectView, TextView,
+        Button, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel, ResizedView,
+        ScrollView, SelectView, TextView,
     },
     Cursive, View,
 };
@@ -140,8 +140,24 @@ struct BootdiskOptions {
 }
 
 #[derive(Clone, Debug)]
+struct TimezoneOptions {
+    timezone: String,
+    kb_layout: String,
+}
+
+impl Default for TimezoneOptions {
+    fn default() -> Self {
+        Self {
+            timezone: "Europe/Vienna".to_owned(),
+            kb_layout: "en_US".to_owned(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct InstallerOptions {
     bootdisk: BootdiskOptions,
+    timezone: TimezoneOptions,
 }
 
 fn main() {
@@ -160,6 +176,7 @@ fn main() {
             fstype: FsType::default(),
             advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(&disks[0])),
         },
+        timezone: TimezoneOptions::default(),
     });
 
     siv.add_active_screen();
@@ -313,7 +330,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                 opts.bootdisk.advanced = options;
             });
 
-            add_next_screen(&location_and_tz_dialog)(siv)
+            add_next_screen(&timezone_dialog)(siv)
         }),
     )
 }
@@ -379,6 +396,52 @@ impl ViewWrapper for LvmBootdiskOptionsView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
-fn location_and_tz_dialog(_: &mut Cursive) -> InstallerView {
-    InstallerView::new(DummyView, Box::new(|_| {}))
+fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
+    let options = siv
+        .user_data::<InstallerOptions>()
+        .map(|o| o.timezone.clone())
+        .unwrap_or_default();
+
+    let inner = LinearLayout::vertical()
+        .child(FormInputView::new(
+            "Country",
+            EditView::new().content("Austria"),
+        ))
+        .child(FormInputView::new(
+            "Timezone",
+            EditView::new()
+                .content(options.timezone)
+                .with_name("timezone-tzname"),
+        ))
+        .child(FormInputView::new(
+            "Keyboard layout",
+            EditView::new()
+                .content(options.kb_layout)
+                .with_name("timezone-kblayout"),
+        ));
+
+    InstallerView::new(
+        inner,
+        Box::new(|siv| {
+            let timezone = siv
+                .call_on_name("timezone-tzname", |v: &mut EditView| {
+                    (*v.get_content()).clone()
+                })
+                .unwrap();
+
+            let kb_layout = siv
+                .call_on_name("timezone-kblayout", |v: &mut EditView| {
+                    (*v.get_content()).clone()
+                })
+                .unwrap();
+
+            siv.with_user_data(|opts: &mut InstallerOptions| {
+                opts.timezone = TimezoneOptions {
+                    timezone,
+                    kb_layout,
+                };
+                dbg!(&opts.timezone);
+            });
+        }),
+    )
 }
