@@ -43,15 +43,19 @@ impl ViewWrapper for NumericEditView {
     cursive::wrap_impl!(self.view: EditView);
 
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
+        let original = self.view.get_content();
+
         let result = match event {
             Event::Char(c) if !(c.is_numeric() || c == '.') => EventResult::consumed(),
             _ => self.view.on_event(event),
         };
 
+        // Check if the new value is actually valid according to the max value, if set
         if let Some(max) = self.max_value {
             if let Ok(val) = self.get_content() {
-                if val > max {
-                    let cb = self.view.remove(1);
+                if result.is_consumed() && val > max {
+                    // Restore the original value, before the insert
+                    let cb = self.view.set_content((*original).clone());
                     return EventResult::with_cb_once(move |siv| {
                         result.process(siv);
                         cb(siv);
