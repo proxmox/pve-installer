@@ -30,7 +30,7 @@ impl NumericEditView {
     }
 
     pub fn content(mut self, content: f64) -> Self {
-        let _ = self.view.set_content(content.to_string());
+        self.view = self.view.content(content.to_string());
         self
     }
 
