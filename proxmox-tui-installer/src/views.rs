@@ -98,12 +98,11 @@ impl DiskSizeFormInputView {
     pub fn content(mut self, content: u64) -> Self {
         let val = (content as f64) / 1024. / 1024.;
 
-        let view = self
+        if let Some(view) = self
             .view
             .get_child_mut(2)
-            .and_then(|v| v.downcast_mut::<ResizedView<NumericEditView>>());
-
-        if let Some(view) = view {
+            .and_then(|v| v.downcast_mut::<ResizedView<NumericEditView>>())
+        {
             *view = NumericEditView::new().content(val).full_width();
         }
 
