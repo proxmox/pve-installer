@@ -10,6 +10,7 @@ use cursive::{
 pub struct NumericEditView {
     view: EditView,
     max_value: Option<f64>,
+    ints_only: bool,
 }
 
 impl NumericEditView {
@@ -17,6 +18,7 @@ impl NumericEditView {
         Self {
             view: EditView::new().content("0."),
             max_value: None,
+            ints_only: false,
         }
     }
 
@@ -25,8 +27,15 @@ impl NumericEditView {
         self
     }
 
-    pub fn set_content(&mut self, content: f64) {
-        self.view.set_content(content.to_string());
+    pub fn ints_only(mut self) -> Self {
+        self.view = self.view.content("0");
+        self.ints_only = true;
+        self
+    }
+
+    pub fn max_content_width(mut self, width: usize) -> Self {
+        self.view = self.view.max_content_width(width);
+        self
     }
 
     pub fn content(mut self, content: f64) -> Self {
@@ -46,7 +55,10 @@ impl ViewWrapper for NumericEditView {
         let original = self.view.get_content();
 
         let result = match event {
-            Event::Char(c) if !(c.is_numeric() || c == '.') => EventResult::consumed(),
+            // Drop all other characters than numbers; allow dots if not set to integer-only
+            Event::Char(c) if !(c.is_numeric() || (!self.ints_only && c == '.')) => {
+                EventResult::consumed()
+            }
             _ => self.view.on_event(event),
         };
 

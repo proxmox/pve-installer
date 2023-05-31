@@ -12,8 +12,11 @@ use cursive::{
     },
     Cursive, View,
 };
-use std::fmt;
-use views::FormInputView;
+use std::{
+    fmt,
+    net::{IpAddr, Ipv4Addr},
+};
+use views::{FormInputView, NumericEditView};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -170,10 +173,35 @@ impl Default for PasswordOptions {
 }
 
 #[derive(Clone, Debug)]
+struct NetworkOptions {
+    ifname: String,
+    fqdn: String,
+    ip_addr: IpAddr,
+    cidr_mask: usize,
+    gateway: IpAddr,
+    dns_server: IpAddr,
+}
+
+impl Default for NetworkOptions {
+    fn default() -> Self {
+        // TODO: Retrieve automatically
+        Self {
+            ifname: String::new(),
+            fqdn: "pve.example.invalid".to_owned(),
+            ip_addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            cidr_mask: 0,
+            gateway: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            dns_server: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct InstallerOptions {
     bootdisk: BootdiskOptions,
     timezone: TimezoneOptions,
     password: PasswordOptions,
+    network: NetworkOptions,
 }
 
 fn main() {
@@ -194,6 +222,7 @@ fn main() {
         },
         timezone: TimezoneOptions::default(),
         password: PasswordOptions::default(),
+        network: NetworkOptions::default(),
     });
 
     siv.add_active_screen();
@@ -491,6 +520,56 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
             EditView::new()
                 .content(options.email)
                 .with_name("password-dialog-email"),
+        ));
+
+    InstallerView::new(
+        inner,
+        Box::new(|siv| {
+            // TODO: password validation
+            add_next_screen(&network_dialog)(siv)
+        }),
+    )
+}
+
+fn network_dialog(siv: &mut Cursive) -> InstallerView {
+    let options = siv
+        .user_data::<InstallerOptions>()
+        .map(|o| o.network.clone())
+        .unwrap_or_default();
+
+    let inner = LinearLayout::vertical()
+        .child(FormInputView::new(
+            "Management interface",
+            SelectView::new().popup().with_all_str(vec!["eth0"]),
+        ))
+        .child(FormInputView::new(
+            "Hostname (FQDN)",
+            EditView::new().content(options.fqdn),
+        ))
+        .child(FormInputView::new(
+            "IP address (CIDR)",
+            LinearLayout::horizontal()
+                .child(
+                    EditView::new()
+                        .content(options.ip_addr.to_string())
+                        .full_width(),
+                )
+                .child(TextView::new(" / "))
+                .child(
+                    NumericEditView::new()
+                        .max_value(32.)
+                        .ints_only()
+                        .max_content_width(2)
+                        .fixed_width(3),
+                ),
+        ))
+        .child(FormInputView::new(
+            "Gateway address",
+            EditView::new().content(options.gateway.to_string()),
+        ))
+        .child(FormInputView::new(
+            "DNS serveraddress",
+            EditView::new().content(options.dns_server.to_string()),
         ));
 
     InstallerView::new(inner, Box::new(|_| {}))
