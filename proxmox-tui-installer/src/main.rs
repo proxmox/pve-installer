@@ -340,14 +340,17 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                         .get_values()
                         .map(AdvancedBootdiskOptions::Lvm)
                 })
-                .flatten()
-                .unwrap();
+                .flatten();
 
-            siv.with_user_data(|opts: &mut InstallerOptions| {
-                opts.bootdisk.advanced = options;
-            });
+            if let Some(options) = options {
+                siv.with_user_data(|opts: &mut InstallerOptions| {
+                    opts.bootdisk.advanced = options;
+                });
 
-            add_next_screen(&timezone_dialog)(siv)
+                add_next_screen(&timezone_dialog)(siv)
+            } else {
+                siv.add_layer(Dialog::info("Invalid values"));
+            }
         }),
     )
 }
@@ -440,26 +443,26 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            let timezone = siv
-                .call_on_name("timezone-tzname", |v: &mut EditView| {
-                    (*v.get_content()).clone()
-                })
-                .unwrap();
-
-            let kb_layout = siv
-                .call_on_name("timezone-kblayout", |v: &mut EditView| {
-                    (*v.get_content()).clone()
-                })
-                .unwrap();
-
-            siv.with_user_data(|opts: &mut InstallerOptions| {
-                opts.timezone = TimezoneOptions {
-                    timezone,
-                    kb_layout,
-                };
+            let timezone = siv.call_on_name("timezone-tzname", |v: &mut EditView| {
+                (*v.get_content()).clone()
             });
 
-            add_next_screen(&password_dialog)(siv);
+            let kb_layout = siv.call_on_name("timezone-kblayout", |v: &mut EditView| {
+                (*v.get_content()).clone()
+            });
+
+            if let (Some(timezone), Some(kb_layout)) = (timezone, kb_layout) {
+                siv.with_user_data(|opts: &mut InstallerOptions| {
+                    opts.timezone = TimezoneOptions {
+                        timezone,
+                        kb_layout,
+                    };
+                });
+
+                add_next_screen(&password_dialog)(siv);
+            } else {
+                siv.add_layer(Dialog::info("Invalid values"));
+            }
         }),
     )
 }
