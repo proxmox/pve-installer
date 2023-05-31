@@ -31,7 +31,24 @@ struct InstallerView {
 }
 
 impl InstallerView {
-    pub fn new<T: View>(view: T) -> Self {
+    pub fn new<T: View>(view: T, next_cb: Box<dyn Fn(&mut Cursive)>) -> Self {
+        let inner = LinearLayout::vertical().child(view).child(PaddedView::lrtb(
+            1,
+            1,
+            1,
+            0,
+            LinearLayout::horizontal()
+                .child(abort_install_button())
+                .child(DummyView.full_width())
+                .child(Button::new("Previous", switch_to_prev_screen))
+                .child(DummyView)
+                .child(Button::new("Next", next_cb)),
+        ));
+
+        Self::with_raw(inner)
+    }
+
+    pub fn with_raw<T: View>(view: T) -> Self {
         let inner = LinearLayout::vertical()
             .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(LOGO).center()))
             .child(Dialog::around(view).title(TITLE));
@@ -217,7 +234,7 @@ fn license_dialog() -> InstallerView {
         .child(PaddedView::lrtb(
             1,
             1,
-            0,
+            1,
             0,
             LinearLayout::horizontal()
                 .child(abort_install_button())
@@ -225,7 +242,7 @@ fn license_dialog() -> InstallerView {
                 .child(Button::new("I agree", add_next_screen(&bootdisk_dialog))),
         ));
 
-    InstallerView::new(inner)
+    InstallerView::with_raw(inner)
 }
 
 fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
@@ -277,37 +294,28 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
             LinearLayout::horizontal()
                 .child(LvmBootdiskOptionsView::new(&options.disks, &advanced))
                 .with_name("bootdisk-options"),
-        )
-        .child(PaddedView::lrtb(
-            1,
-            1,
-            1,
-            0,
-            LinearLayout::horizontal()
-                .child(abort_install_button())
-                .child(DummyView.full_width())
-                .child(Button::new("Previous", switch_to_prev_screen))
-                .child(DummyView)
-                .child(Button::new("Next", |siv| {
-                    let options = siv
-                        .call_on_name("bootdisk-options", |v: &mut LinearLayout| {
-                            v.get_child_mut(0)?
-                                .downcast_mut::<LvmBootdiskOptionsView>()?
-                                .get_values()
-                                .map(AdvancedBootdiskOptions::Lvm)
-                        })
-                        .flatten()
-                        .unwrap();
+        );
 
-                    siv.with_user_data(|opts: &mut InstallerOptions| {
-                        opts.bootdisk.advanced = options;
-                    });
+    InstallerView::new(
+        inner,
+        Box::new(|siv| {
+            let options = siv
+                .call_on_name("bootdisk-options", |v: &mut LinearLayout| {
+                    v.get_child_mut(0)?
+                        .downcast_mut::<LvmBootdiskOptionsView>()?
+                        .get_values()
+                        .map(AdvancedBootdiskOptions::Lvm)
+                })
+                .flatten()
+                .unwrap();
 
-                    add_next_screen(&location_and_tz_dialog)(siv)
-                })),
-        ));
+            siv.with_user_data(|opts: &mut InstallerOptions| {
+                opts.bootdisk.advanced = options;
+            });
 
-    InstallerView::new(inner)
+            add_next_screen(&location_and_tz_dialog)(siv)
+        }),
+    )
 }
 
 struct LvmBootdiskOptionsView {
@@ -372,5 +380,5 @@ impl ViewWrapper for LvmBootdiskOptionsView {
 }
 
 fn location_and_tz_dialog(_: &mut Cursive) -> InstallerView {
-    InstallerView::new(DummyView)
+    InstallerView::new(DummyView, Box::new(|_| {}))
 }
