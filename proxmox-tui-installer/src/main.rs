@@ -555,7 +555,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
             EditView::new().content(options.gateway.to_string()),
         ))
         .child(FormInputView::new(
-            "DNS serveraddress",
+            "DNS server address",
             EditView::new().content(options.dns_server.to_string()),
         ));
 
