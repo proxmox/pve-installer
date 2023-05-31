@@ -155,9 +155,25 @@ impl Default for TimezoneOptions {
 }
 
 #[derive(Clone, Debug)]
+struct PasswordOptions {
+    email: String,
+    root_password: String,
+}
+
+impl Default for PasswordOptions {
+    fn default() -> Self {
+        Self {
+            email: "mail@example.invalid".to_owned(),
+            root_password: String::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct InstallerOptions {
     bootdisk: BootdiskOptions,
     timezone: TimezoneOptions,
+    password: PasswordOptions,
 }
 
 fn main() {
@@ -177,6 +193,7 @@ fn main() {
             advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(&disks[0])),
         },
         timezone: TimezoneOptions::default(),
+        password: PasswordOptions::default(),
     });
 
     siv.add_active_screen();
@@ -440,8 +457,38 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
                     timezone,
                     kb_layout,
                 };
-                dbg!(&opts.timezone);
             });
+
+            add_next_screen(&password_dialog)(siv);
         }),
     )
+}
+
+fn password_dialog(siv: &mut Cursive) -> InstallerView {
+    let options = siv
+        .user_data::<InstallerOptions>()
+        .map(|o| o.password.clone())
+        .unwrap_or_default();
+
+    let inner = LinearLayout::vertical()
+        .child(FormInputView::new(
+            "Root password",
+            EditView::new()
+                .secret()
+                .with_name("password-dialog-root-pw"),
+        ))
+        .child(FormInputView::new(
+            "Confirm root password",
+            EditView::new()
+                .secret()
+                .with_name("password-dialog-root-pw-confirm"),
+        ))
+        .child(FormInputView::new(
+            "Administator email",
+            EditView::new()
+                .content(options.email)
+                .with_name("password-dialog-email"),
+        ));
+
+    InstallerView::new(inner, Box::new(|_| {}))
 }
