@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{net::IpAddr, str::FromStr};
 
 use cursive::{
     event::{Event, EventResult},
@@ -139,5 +139,53 @@ impl FormInputView {
 }
 
 impl ViewWrapper for FormInputView {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
+pub struct CidrAddressEditView {
+    view: LinearLayout,
+}
+
+impl CidrAddressEditView {
+    pub fn new() -> Self {
+        let view = LinearLayout::horizontal()
+            .child(EditView::new().full_width())
+            .child(TextView::new(" / "))
+            .child(Self::mask_edit_view(0));
+
+        Self { view }
+    }
+
+    pub fn content(mut self, addr: IpAddr, mask: usize) -> Self {
+        if let Some(view) = self
+            .view
+            .get_child_mut(0)
+            .and_then(|v| v.downcast_mut::<ResizedView<EditView>>())
+        {
+            *view = EditView::new().content(addr.to_string()).full_width();
+        }
+
+        if let Some(view) = self
+            .view
+            .get_child_mut(2)
+            .and_then(|v| v.downcast_mut::<ResizedView<NumericEditView>>())
+        {
+            *view = Self::mask_edit_view(mask);
+        }
+
+        self
+    }
+
+    fn mask_edit_view(content: usize) -> ResizedView<NumericEditView> {
+        NumericEditView::new()
+            .max_value(32.)
+            .ints_only()
+            .max_content_width(2)
+            .content(content as f64)
+            .fixed_width(3)
+    }
+}
+
+impl ViewWrapper for CidrAddressEditView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }

@@ -16,7 +16,7 @@ use std::{
     fmt,
     net::{IpAddr, Ipv4Addr},
 };
-use views::{FormInputView, NumericEditView};
+use views::{CidrAddressEditView, FormInputView};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -548,20 +548,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         ))
         .child(FormInputView::new(
             "IP address (CIDR)",
-            LinearLayout::horizontal()
-                .child(
-                    EditView::new()
-                        .content(options.ip_addr.to_string())
-                        .full_width(),
-                )
-                .child(TextView::new(" / "))
-                .child(
-                    NumericEditView::new()
-                        .max_value(32.)
-                        .ints_only()
-                        .max_content_width(2)
-                        .fixed_width(3),
-                ),
+            CidrAddressEditView::new().content(options.ip_addr, options.cidr_mask),
         ))
         .child(FormInputView::new(
             "Gateway address",
