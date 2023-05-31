@@ -65,6 +65,8 @@ impl fmt::Display for FsType {
     }
 }
 
+const FS_TYPES: &[FsType] = &[FsType::Ext4, FsType::Xfs];
+
 #[derive(Clone, Debug)]
 struct LvmBootdiskOptions {
     disk: Disk,
