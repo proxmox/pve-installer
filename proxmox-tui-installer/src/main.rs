@@ -7,16 +7,16 @@ use cursive::{
     event::Event,
     view::{Finder, Nameable, Resizable, ViewWrapper},
     views::{
-        Button, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel, ResizedView,
-        ScrollView, SelectView, TextView,
+        Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
+        ResizedView, ScrollView, SelectView, TextView,
     },
     Cursive, View,
 };
 use std::{
-    fmt,
+    fmt, iter,
     net::{IpAddr, Ipv4Addr},
 };
-use views::{CidrAddressEditView, FormInputView};
+use views::{CidrAddressEditView, FormInputView, TableView, TableViewItem};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -121,6 +121,14 @@ enum AdvancedBootdiskOptions {
     Lvm(LvmBootdiskOptions),
 }
 
+impl AdvancedBootdiskOptions {
+    fn selected_disks(&self) -> impl Iterator<Item = &Disk> {
+        match self {
+            AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions { disk, .. }) => iter::once(disk),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Disk {
     path: String,
@@ -202,6 +210,34 @@ struct InstallerOptions {
     timezone: TimezoneOptions,
     password: PasswordOptions,
     network: NetworkOptions,
+}
+
+impl InstallerOptions {
+    fn to_summary(&self) -> Vec<SummaryOption> {
+        vec![
+            SummaryOption::new("Bootdisk filesystem", self.bootdisk.fstype.to_string()),
+            SummaryOption::new(
+                "Bootdisks",
+                self.bootdisk
+                    .advanced
+                    .selected_disks()
+                    .map(|d| d.path.as_str())
+                    .collect::<Vec<&str>>()
+                    .join(", "),
+            ),
+            SummaryOption::new("Timezone", &self.timezone.timezone),
+            SummaryOption::new("Keyboard layout", &self.timezone.kb_layout),
+            SummaryOption::new("Administator email:", &self.password.email),
+            SummaryOption::new("Management interface:", &self.network.ifname),
+            SummaryOption::new("Hostname:", &self.network.fqdn),
+            SummaryOption::new(
+                "Host IP (CIDR):",
+                format!("{}/{}", self.network.ip_addr, self.network.cidr_mask),
+            ),
+            SummaryOption::new("Gateway", self.network.gateway.to_string()),
+            SummaryOption::new("DNS:", self.network.dns_server.to_string()),
+        ]
+    }
 }
 
 fn main() {
@@ -558,5 +594,78 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
             EditView::new().content(options.dns_server.to_string()),
         ));
 
-    InstallerView::new(inner, Box::new(|_| {}))
+    InstallerView::new(
+        inner,
+        Box::new(|siv| {
+            add_next_screen(&summary_dialog)(siv);
+        }),
+    )
+}
+
+struct SummaryOption {
+    name: &'static str,
+    value: String,
+}
+
+impl SummaryOption {
+    pub fn new<S: Into<String>>(name: &'static str, value: S) -> Self {
+        Self {
+            name,
+            value: value.into(),
+        }
+    }
+}
+
+impl TableViewItem for SummaryOption {
+    fn get_column(&self, name: &str) -> String {
+        match name {
+            "name" => self.name.to_owned(),
+            "value" => self.value.clone(),
+            _ => unreachable!(),
+        }
+    }
+}
+
+fn summary_dialog(siv: &mut Cursive) -> InstallerView {
+    let options = siv
+        .user_data::<InstallerOptions>()
+        .map(|o| o.clone())
+        .unwrap();
+
+    let inner = LinearLayout::vertical()
+        .child(PaddedView::lrtb(
+            0,
+            0,
+            1,
+            2,
+            TableView::new()
+                .columns(&[
+                    ("name".to_owned(), "Option".to_owned()),
+                    ("value".to_owned(), "Selected value".to_owned()),
+                ])
+                .items(options.to_summary()),
+        ))
+        .child(
+            LinearLayout::horizontal()
+                .child(DummyView.full_width())
+                .child(Checkbox::new().with_name("reboot-after-install"))
+                .child(
+                    TextView::new(" Automatically reboot after successful installation").no_wrap(),
+                )
+                .child(DummyView.full_width()),
+        )
+        .child(PaddedView::lrtb(
+            1,
+            1,
+            1,
+            0,
+            LinearLayout::horizontal()
+                .child(abort_install_button())
+                .child(DummyView.full_width())
+                .child(Button::new("Previous", switch_to_prev_screen))
+                .child(DummyView)
+                .child(Button::new("Install", |_| {})),
+        ));
+
+    InstallerView::with_raw(inner)
 }
