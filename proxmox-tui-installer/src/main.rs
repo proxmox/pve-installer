@@ -225,8 +225,7 @@ fn main() {
         network: NetworkOptions::default(),
     });
 
-    siv.add_active_screen();
-    siv.screen_mut().add_layer(license_dialog());
+    add_next_screen(&license_dialog)(&mut siv);
     siv.run();
 }
 
@@ -282,7 +281,7 @@ fn get_eula() -> String {
         .unwrap_or_else(|_| "< Debug build - ignoring non-existing EULA >".to_owned())
 }
 
-fn license_dialog() -> InstallerView {
+fn license_dialog(_: &mut Cursive) -> InstallerView {
     let inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
             0,
