@@ -1,11 +1,10 @@
-use std::{net::IpAddr, str::FromStr};
-
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
     views::{DummyView, EditView, LinearLayout, ResizedView, TextView},
     View,
 };
+use std::{net::IpAddr, str::FromStr};
 
 pub struct NumericEditView {
     view: EditView,
