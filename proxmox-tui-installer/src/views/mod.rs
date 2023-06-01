@@ -1,3 +1,5 @@
+mod table_view;
+
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
@@ -5,6 +7,8 @@ use cursive::{
     View,
 };
 use std::{net::IpAddr, str::FromStr};
+
+pub use self::table_view::*;
 
 pub struct NumericEditView {
     view: EditView,
