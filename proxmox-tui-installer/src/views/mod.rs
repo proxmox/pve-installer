@@ -3,10 +3,10 @@ mod table_view;
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
-    views::{DummyView, EditView, LinearLayout, ResizedView, TextView},
+    views::{DummyView, EditView, LinearLayout, ResizedView, SelectView, TextView},
     View,
 };
-use std::{net::IpAddr, rc::Rc, str::FromStr};
+use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
 
 pub use self::table_view::*;
 
@@ -135,22 +135,58 @@ impl ViewWrapper for DiskSizeFormInputView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
-pub struct FormInputView {
-    view: LinearLayout,
+pub trait FormInputViewGetValue<R> {
+    fn get_value(&self) -> Option<R>;
 }
 
-impl FormInputView {
-    pub fn new<T: View>(label: &str, input: T) -> Self {
+pub struct FormInputView<T: View> {
+    view: LinearLayout,
+    panthom: PhantomData<T>,
+}
+
+impl<T: View> FormInputView<T> {
+    pub fn new(label: &str, input: T) -> Self {
         let view = LinearLayout::horizontal()
             .child(TextView::new(format!("{label}: ")))
             .child(DummyView.full_width())
             .child(input.full_width());
 
-        Self { view }
+        Self {
+            view,
+            panthom: PhantomData,
+        }
     }
 }
 
-impl ViewWrapper for FormInputView {
+impl FormInputViewGetValue<String> for FormInputView<EditView> {
+    fn get_value(&self) -> Option<String> {
+        self.view
+            .get_child(2)?
+            .downcast_ref::<ResizedView<EditView>>()
+            .map(|v| (*v.get_inner().get_content()).clone())
+    }
+}
+
+impl FormInputViewGetValue<String> for FormInputView<SelectView> {
+    fn get_value(&self) -> Option<String> {
+        self.view
+            .get_child(2)?
+            .downcast_ref::<ResizedView<SelectView>>()
+            .and_then(|v| v.get_inner().selection())
+            .map(|v| (*v).clone())
+    }
+}
+
+impl FormInputViewGetValue<(IpAddr, usize)> for FormInputView<CidrAddressEditView> {
+    fn get_value(&self) -> Option<(IpAddr, usize)> {
+        self.view
+            .get_child(2)?
+            .downcast_ref::<ResizedView<CidrAddressEditView>>()
+            .and_then(|v| v.get_inner().get_values())
+    }
+}
+
+impl<T: View> ViewWrapper for FormInputView<T> {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
@@ -194,6 +230,27 @@ impl CidrAddressEditView {
             .max_content_width(2)
             .content(content)
             .fixed_width(3)
+    }
+
+    fn get_values(&self) -> Option<(IpAddr, usize)> {
+        let ip_addr = self
+            .view
+            .get_child(0)?
+            .downcast_ref::<ResizedView<EditView>>()?
+            .get_inner()
+            .get_content()
+            .parse()
+            .ok()?;
+
+        let mask = self
+            .view
+            .get_child(2)?
+            .downcast_ref::<ResizedView<IntegerEditView>>()?
+            .get_inner()
+            .get_content()
+            .ok()?;
+
+        Some((ip_addr, mask))
     }
 }
 
