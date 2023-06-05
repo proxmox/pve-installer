@@ -6,33 +6,25 @@ use cursive::{
     views::{DummyView, EditView, LinearLayout, ResizedView, TextView},
     View,
 };
-use std::{net::IpAddr, str::FromStr};
+use std::{net::IpAddr, rc::Rc, str::FromStr};
 
 pub use self::table_view::*;
 
-pub struct NumericEditView {
+pub struct NumericEditView<T> {
     view: EditView,
-    max_value: Option<f64>,
-    ints_only: bool,
+    max_value: Option<T>,
 }
 
-impl NumericEditView {
+impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     pub fn new() -> Self {
         Self {
             view: EditView::new().content("0."),
             max_value: None,
-            ints_only: false,
         }
     }
 
-    pub fn max_value(mut self, max: f64) -> Self {
+    pub fn max_value(mut self, max: T) -> Self {
         self.max_value = Some(max);
-        self
-    }
-
-    pub fn ints_only(mut self) -> Self {
-        self.view = self.view.content("0");
-        self.ints_only = true;
         self
     }
 
@@ -41,30 +33,16 @@ impl NumericEditView {
         self
     }
 
-    pub fn content(mut self, content: f64) -> Self {
+    pub fn content(mut self, content: T) -> Self {
         self.view = self.view.content(content.to_string());
         self
     }
 
-    pub fn get_content(&self) -> Result<f64, <f64 as FromStr>::Err> {
+    pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
         self.view.get_content().parse()
     }
-}
 
-impl ViewWrapper for NumericEditView {
-    cursive::wrap_impl!(self.view: EditView);
-
-    fn wrap_on_event(&mut self, event: Event) -> EventResult {
-        let original = self.view.get_content();
-
-        let result = match event {
-            // Drop all other characters than numbers; allow dots if not set to integer-only
-            Event::Char(c) if !(c.is_numeric() || (!self.ints_only && c == '.')) => {
-                EventResult::consumed()
-            }
-            _ => self.view.on_event(event),
-        };
-
+    fn check_bounds(&mut self, original: Rc<String>, result: EventResult) -> EventResult {
         // Check if the new value is actually valid according to the max value, if set
         if let Some(max) = self.max_value {
             if let Ok(val) = self.get_content() {
@@ -83,6 +61,41 @@ impl ViewWrapper for NumericEditView {
     }
 }
 
+pub type FloatEditView = NumericEditView<f64>;
+pub type IntegerEditView = NumericEditView<usize>;
+
+impl ViewWrapper for FloatEditView {
+    cursive::wrap_impl!(self.view: EditView);
+
+    fn wrap_on_event(&mut self, event: Event) -> EventResult {
+        let original = self.view.get_content();
+
+        let result = match event {
+            // Drop all other characters than numbers; allow dots if not set to integer-only
+            Event::Char(c) if !(c.is_numeric() || c == '.') => EventResult::consumed(),
+            _ => self.view.on_event(event),
+        };
+
+        self.check_bounds(original, result)
+    }
+}
+
+impl ViewWrapper for IntegerEditView {
+    cursive::wrap_impl!(self.view: EditView);
+
+    fn wrap_on_event(&mut self, event: Event) -> EventResult {
+        let original = self.view.get_content();
+
+        let result = match event {
+            // Drop all other characters than numbers; allow dots if not set to integer-only
+            Event::Char(c) if !c.is_numeric() => EventResult::consumed(),
+            _ => self.view.on_event(event),
+        };
+
+        self.check_bounds(original, result)
+    }
+}
+
 pub struct DiskSizeFormInputView {
     view: LinearLayout,
 }
@@ -92,7 +105,7 @@ impl DiskSizeFormInputView {
         let view = LinearLayout::horizontal()
             .child(TextView::new(format!("{label}: ")))
             .child(DummyView.full_width())
-            .child(NumericEditView::new().full_width())
+            .child(FloatEditView::new().full_width())
             .child(TextView::new(" GB"));
 
         Self { view }
@@ -101,12 +114,8 @@ impl DiskSizeFormInputView {
     pub fn content(mut self, content: u64) -> Self {
         let val = (content as f64) / 1024. / 1024.;
 
-        if let Some(view) = self
-            .view
-            .get_child_mut(2)
-            .and_then(|v| v.downcast_mut::<ResizedView<NumericEditView>>())
-        {
-            *view = NumericEditView::new().content(val).full_width();
+        if let Some(view) = self.view.get_child_mut(2).and_then(|v| v.downcast_mut()) {
+            *view = FloatEditView::new().content(val).full_width();
         }
 
         self
@@ -115,7 +124,7 @@ impl DiskSizeFormInputView {
     pub fn get_content(&mut self) -> Option<u64> {
         self.with_view_mut(|v| {
             v.get_child_mut(2)?
-                .downcast_mut::<ResizedView<NumericEditView>>()?
+                .downcast_mut::<ResizedView<FloatEditView>>()?
                 .with_view_mut(|v| v.get_content().ok().map(|val| (val * 1024. * 1024.) as u64))?
         })
         .flatten()
@@ -171,7 +180,7 @@ impl CidrAddressEditView {
         if let Some(view) = self
             .view
             .get_child_mut(2)
-            .and_then(|v| v.downcast_mut::<ResizedView<NumericEditView>>())
+            .and_then(|v| v.downcast_mut::<ResizedView<IntegerEditView>>())
         {
             *view = Self::mask_edit_view(mask);
         }
@@ -179,12 +188,11 @@ impl CidrAddressEditView {
         self
     }
 
-    fn mask_edit_view(content: usize) -> ResizedView<NumericEditView> {
-        NumericEditView::new()
-            .max_value(32.)
-            .ints_only()
+    fn mask_edit_view(content: usize) -> ResizedView<IntegerEditView> {
+        IntegerEditView::new()
+            .max_value(32)
             .max_content_width(2)
-            .content(content as f64)
+            .content(content)
             .fixed_width(3)
     }
 }
