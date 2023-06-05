@@ -261,18 +261,14 @@ fn main() {
         network: NetworkOptions::default(),
     });
 
-    add_next_screen(&license_dialog)(&mut siv);
+    add_next_screen(&mut siv, &license_dialog);
     siv.run();
 }
 
-fn add_next_screen(
-    constructor: &dyn Fn(&mut Cursive) -> InstallerView,
-) -> Box<dyn Fn(&mut Cursive) + '_> {
-    Box::new(|siv: &mut Cursive| {
-        let v = constructor(siv);
-        siv.add_active_screen();
-        siv.screen_mut().add_layer(v);
-    })
+fn add_next_screen(siv: &mut Cursive, constructor: &dyn Fn(&mut Cursive) -> InstallerView) {
+    let v = constructor(siv);
+    siv.add_active_screen();
+    siv.screen_mut().add_layer(v);
 }
 
 fn switch_to_prev_screen(siv: &mut Cursive) {
@@ -337,7 +333,9 @@ fn license_dialog(_: &mut Cursive) -> InstallerView {
             LinearLayout::horizontal()
                 .child(abort_install_button())
                 .child(DummyView.full_width())
-                .child(Button::new("I agree", add_next_screen(&bootdisk_dialog))),
+                .child(Button::new("I agree", |siv| {
+                    add_next_screen(siv, &bootdisk_dialog)
+                })),
         ));
 
     InstallerView::with_raw(inner)
@@ -411,7 +409,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                     opts.bootdisk.advanced = options;
                 });
 
-                add_next_screen(&timezone_dialog)(siv)
+                add_next_screen(siv, &timezone_dialog);
             } else {
                 siv.add_layer(Dialog::info("Invalid values"));
             }
@@ -523,7 +521,7 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
                     };
                 });
 
-                add_next_screen(&password_dialog)(siv);
+                add_next_screen(siv, &password_dialog);
             } else {
                 siv.add_layer(Dialog::info("Invalid values"));
             }
@@ -561,7 +559,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
         inner,
         Box::new(|siv| {
             // TODO: password validation
-            add_next_screen(&network_dialog)(siv)
+            add_next_screen(siv, &network_dialog);
         }),
     )
 }
@@ -626,7 +624,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     opts.network = options;
                 });
 
-                add_next_screen(&summary_dialog)(siv);
+                add_next_screen(siv, &summary_dialog);
             }
         }),
     )
