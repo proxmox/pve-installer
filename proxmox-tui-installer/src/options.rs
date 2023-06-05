@@ -152,7 +152,7 @@ impl InstallerOptions {
         vec![
             SummaryOption::new("Bootdisk filesystem", self.bootdisk.fstype.to_string()),
             SummaryOption::new(
-                "Bootdisks",
+                "Bootdisk(s)",
                 self.bootdisk
                     .advanced
                     .selected_disks()
@@ -162,12 +162,12 @@ impl InstallerOptions {
             ),
             SummaryOption::new("Timezone", &self.timezone.timezone),
             SummaryOption::new("Keyboard layout", &self.timezone.kb_layout),
-            SummaryOption::new("Administator email:", &self.password.email),
-            SummaryOption::new("Management interface:", &self.network.ifname),
-            SummaryOption::new("Hostname:", &self.network.fqdn),
-            SummaryOption::new("Host IP (CIDR):", self.network.address.to_string()),
+            SummaryOption::new("Administator email", &self.password.email),
+            SummaryOption::new("Management interface", &self.network.ifname),
+            SummaryOption::new("Hostname", &self.network.fqdn),
+            SummaryOption::new("Host IP (CIDR)", self.network.address.to_string()),
             SummaryOption::new("Gateway", self.network.gateway.to_string()),
-            SummaryOption::new("DNS:", self.network.dns_server.to_string()),
+            SummaryOption::new("DNS", self.network.dns_server.to_string()),
         ]
     }
 }
