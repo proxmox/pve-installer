@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 
+mod options;
 mod views;
 
+use crate::options::*;
 use crate::views::DiskSizeFormInputView;
 use cursive::{
     event::Event,
@@ -11,10 +13,6 @@ use cursive::{
         ResizedView, ScrollView, SelectView, TextView,
     },
     Cursive, View,
-};
-use std::{
-    fmt, iter,
-    net::{IpAddr, Ipv4Addr},
 };
 use views::{CidrAddressEditView, FormInputView, FormInputViewGetValue, TableView, TableViewItem};
 
@@ -66,178 +64,6 @@ impl InstallerView {
 
 impl ViewWrapper for InstallerView {
     cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
-}
-
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-enum FsType {
-    #[default]
-    Ext4,
-    Xfs,
-}
-
-impl fmt::Display for FsType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
-            FsType::Ext4 => "ext4",
-            FsType::Xfs => "XFS",
-        };
-        write!(f, "{s}")
-    }
-}
-
-const FS_TYPES: &[FsType] = &[FsType::Ext4, FsType::Xfs];
-
-#[derive(Clone, Debug)]
-struct LvmBootdiskOptions {
-    disk: Disk,
-    total_size: u64,
-    swap_size: u64,
-    max_root_size: u64,
-    max_data_size: u64,
-    min_lvm_free: u64,
-}
-
-impl LvmBootdiskOptions {
-    fn defaults_from(disk: &Disk) -> Self {
-        let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
-            16 * 1024 * 1024
-        } else {
-            disk.size / 8
-        };
-
-        Self {
-            disk: disk.clone(),
-            total_size: disk.size,
-            swap_size: 4 * 1024 * 1024, // TODO: value from installed memory
-            max_root_size: 0,
-            max_data_size: 0,
-            min_lvm_free,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-enum AdvancedBootdiskOptions {
-    Lvm(LvmBootdiskOptions),
-}
-
-impl AdvancedBootdiskOptions {
-    fn selected_disks(&self) -> impl Iterator<Item = &Disk> {
-        match self {
-            AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions { disk, .. }) => iter::once(disk),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Disk {
-    path: String,
-    size: u64,
-}
-
-impl fmt::Display for Disk {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: Format sizes properly with `proxmox-human-byte` once merged
-        // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
-        write!(f, "{} ({} B)", self.path, self.size)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct BootdiskOptions {
-    disks: Vec<Disk>,
-    fstype: FsType,
-    advanced: AdvancedBootdiskOptions,
-}
-
-#[derive(Clone, Debug)]
-struct TimezoneOptions {
-    timezone: String,
-    kb_layout: String,
-}
-
-impl Default for TimezoneOptions {
-    fn default() -> Self {
-        Self {
-            timezone: "Europe/Vienna".to_owned(),
-            kb_layout: "en_US".to_owned(),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct PasswordOptions {
-    email: String,
-    root_password: String,
-}
-
-impl Default for PasswordOptions {
-    fn default() -> Self {
-        Self {
-            email: "mail@example.invalid".to_owned(),
-            root_password: String::new(),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct NetworkOptions {
-    ifname: String,
-    fqdn: String,
-    ip_addr: IpAddr,
-    cidr_mask: usize,
-    gateway: IpAddr,
-    dns_server: IpAddr,
-}
-
-impl Default for NetworkOptions {
-    fn default() -> Self {
-        // TODO: Retrieve automatically
-        Self {
-            ifname: String::new(),
-            fqdn: "pve.example.invalid".to_owned(),
-            ip_addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            cidr_mask: 0,
-            gateway: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            dns_server: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct InstallerOptions {
-    bootdisk: BootdiskOptions,
-    timezone: TimezoneOptions,
-    password: PasswordOptions,
-    network: NetworkOptions,
-}
-
-impl InstallerOptions {
-    fn to_summary(&self) -> Vec<SummaryOption> {
-        vec![
-            SummaryOption::new("Bootdisk filesystem", self.bootdisk.fstype.to_string()),
-            SummaryOption::new(
-                "Bootdisks",
-                self.bootdisk
-                    .advanced
-                    .selected_disks()
-                    .map(|d| d.path.as_str())
-                    .collect::<Vec<&str>>()
-                    .join(", "),
-            ),
-            SummaryOption::new("Timezone", &self.timezone.timezone),
-            SummaryOption::new("Keyboard layout", &self.timezone.kb_layout),
-            SummaryOption::new("Administator email:", &self.password.email),
-            SummaryOption::new("Management interface:", &self.network.ifname),
-            SummaryOption::new("Hostname:", &self.network.fqdn),
-            SummaryOption::new(
-                "Host IP (CIDR):",
-                format!("{}/{}", self.network.ip_addr, self.network.cidr_mask),
-            ),
-            SummaryOption::new("Gateway", self.network.gateway.to_string()),
-            SummaryOption::new("DNS:", self.network.dns_server.to_string()),
-        ]
-    }
 }
 
 fn main() {
@@ -631,7 +457,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
     )
 }
 
-struct SummaryOption {
+pub struct SummaryOption {
     name: &'static str,
     value: String,
 }
