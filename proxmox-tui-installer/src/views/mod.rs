@@ -6,7 +6,9 @@ use cursive::{
     views::{DummyView, EditView, LinearLayout, ResizedView, SelectView, TextView},
     View,
 };
-use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
+use std::{marker::PhantomData, rc::Rc, str::FromStr};
+
+use crate::utils::CidrAddress;
 
 pub use self::table_view::*;
 
@@ -179,8 +181,8 @@ impl FormInputViewGetValue<String> for FormInputView<SelectView> {
     }
 }
 
-impl FormInputViewGetValue<(IpAddr, usize)> for FormInputView<CidrAddressEditView> {
-    fn get_value(&self) -> Option<(IpAddr, usize)> {
+impl FormInputViewGetValue<CidrAddress> for FormInputView<CidrAddressEditView> {
+    fn get_value(&self) -> Option<CidrAddress> {
         self.inner_input().and_then(|v| v.get_values())
     }
 }
@@ -203,13 +205,15 @@ impl CidrAddressEditView {
         Self { view }
     }
 
-    pub fn content(mut self, addr: IpAddr, mask: usize) -> Self {
+    pub fn content(mut self, cidr: CidrAddress) -> Self {
         if let Some(view) = self
             .view
             .get_child_mut(0)
             .and_then(|v| v.downcast_mut::<ResizedView<EditView>>())
         {
-            *view = EditView::new().content(addr.to_string()).full_width();
+            *view = EditView::new()
+                .content(cidr.addr().to_string())
+                .full_width();
         }
 
         if let Some(view) = self
@@ -217,7 +221,7 @@ impl CidrAddressEditView {
             .get_child_mut(2)
             .and_then(|v| v.downcast_mut::<ResizedView<IntegerEditView>>())
         {
-            *view = Self::mask_edit_view(mask);
+            *view = Self::mask_edit_view(cidr.mask());
         }
 
         self
@@ -231,8 +235,8 @@ impl CidrAddressEditView {
             .fixed_width(3)
     }
 
-    fn get_values(&self) -> Option<(IpAddr, usize)> {
-        let ip_addr = self
+    fn get_values(&self) -> Option<CidrAddress> {
+        let addr = self
             .view
             .get_child(0)?
             .downcast_ref::<ResizedView<EditView>>()?
@@ -249,7 +253,7 @@ impl CidrAddressEditView {
             .get_content()
             .ok()?;
 
-        Some((ip_addr, mask))
+        CidrAddress::new(addr, mask).ok()
     }
 }
 

@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod options;
+mod utils;
 mod views;
 
 use crate::options::*;
@@ -408,7 +409,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         ))
         .child(FormInputView::new(
             "IP address (CIDR)",
-            CidrAddressEditView::new().content(options.ip_addr, options.cidr_mask),
+            CidrAddressEditView::new().content(options.address),
         ))
         .child(FormInputView::new(
             "Gateway address",
@@ -434,13 +435,10 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                         .get_value()
                 }
 
-                let (ip_addr, cidr_mask) = get_val::<CidrAddressEditView, _>(view, 2)?;
-
                 Some(NetworkOptions {
                     ifname: get_val::<SelectView, _>(view, 0)?,
                     fqdn: get_val::<EditView, _>(view, 1)?,
-                    ip_addr,
-                    cidr_mask,
+                    address: get_val::<CidrAddressEditView, _>(view, 2)?,
                     gateway: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
                     dns_server: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
                 })

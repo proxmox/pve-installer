@@ -1,4 +1,4 @@
-use crate::SummaryOption;
+use crate::{utils::CidrAddress, SummaryOption};
 use std::{
     fmt, iter,
     net::{IpAddr, Ipv4Addr},
@@ -120,8 +120,7 @@ impl Default for PasswordOptions {
 pub struct NetworkOptions {
     pub ifname: String,
     pub fqdn: String,
-    pub ip_addr: IpAddr,
-    pub cidr_mask: usize,
+    pub address: CidrAddress,
     pub gateway: IpAddr,
     pub dns_server: IpAddr,
 }
@@ -132,8 +131,8 @@ impl Default for NetworkOptions {
         Self {
             ifname: String::new(),
             fqdn: "pve.example.invalid".to_owned(),
-            ip_addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            cidr_mask: 0,
+            // Safety: The provided mask will always be valid.
+            address: CidrAddress::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0).unwrap(),
             gateway: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             dns_server: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         }
@@ -166,10 +165,7 @@ impl InstallerOptions {
             SummaryOption::new("Administator email:", &self.password.email),
             SummaryOption::new("Management interface:", &self.network.ifname),
             SummaryOption::new("Hostname:", &self.network.fqdn),
-            SummaryOption::new(
-                "Host IP (CIDR):",
-                format!("{}/{}", self.network.ip_addr, self.network.cidr_mask),
-            ),
+            SummaryOption::new("Host IP (CIDR):", self.network.address.to_string()),
             SummaryOption::new("Gateway", self.network.gateway.to_string()),
             SummaryOption::new("DNS:", self.network.dns_server.to_string()),
         ]
