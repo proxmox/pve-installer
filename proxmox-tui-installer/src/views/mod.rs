@@ -20,7 +20,7 @@ pub struct NumericEditView<T> {
 impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     pub fn new() -> Self {
         Self {
-            view: EditView::new().content("0."),
+            view: EditView::new().content("0"),
             max_value: None,
         }
     }
