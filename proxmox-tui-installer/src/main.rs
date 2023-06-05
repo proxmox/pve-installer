@@ -276,6 +276,7 @@ fn switch_to_prev_screen(siv: &mut Cursive) {
     siv.set_screen(id);
 }
 
+#[cfg(not(debug_assertions))]
 fn yes_no_dialog(
     siv: &mut Cursive,
     title: &str,
