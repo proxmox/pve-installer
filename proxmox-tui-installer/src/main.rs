@@ -16,7 +16,7 @@ use std::{
     fmt, iter,
     net::{IpAddr, Ipv4Addr},
 };
-use views::{CidrAddressEditView, FormInputView, TableView, TableViewItem};
+use views::{CidrAddressEditView, FormInputView, FormInputViewGetValue, TableView, TableViewItem};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -592,12 +592,42 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         .child(FormInputView::new(
             "DNS server address",
             EditView::new().content(options.dns_server.to_string()),
-        ));
+        ))
+        .with_name("network-options");
 
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            add_next_screen(&summary_dialog)(siv);
+            let options = siv.call_on_name("network-options", |view: &mut LinearLayout| {
+                fn get_val<T, R>(view: &LinearLayout, index: usize) -> Option<R>
+                where
+                    T: View,
+                    FormInputView<T>: FormInputViewGetValue<R>,
+                {
+                    view.get_child(index)?
+                        .downcast_ref::<FormInputView<T>>()?
+                        .get_value()
+                }
+
+                let (ip_addr, cidr_mask) = get_val::<CidrAddressEditView, _>(view, 2)?;
+
+                Some(NetworkOptions {
+                    ifname: get_val::<SelectView, _>(view, 0)?,
+                    fqdn: get_val::<EditView, _>(view, 1)?,
+                    ip_addr,
+                    cidr_mask,
+                    gateway: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
+                    dns_server: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
+                })
+            });
+
+            if let Some(options) = options.flatten() {
+                siv.with_user_data(|opts: &mut InstallerOptions| {
+                    opts.network = options;
+                });
+
+                add_next_screen(&summary_dialog)(siv);
+            }
         }),
     )
 }
