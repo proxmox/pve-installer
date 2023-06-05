@@ -156,33 +156,32 @@ impl<T: View> FormInputView<T> {
             panthom: PhantomData,
         }
     }
+
+    fn inner_input(&self) -> Option<&T> {
+        self.view
+            .get_child(2)?
+            .downcast_ref::<ResizedView<T>>()
+            .map(|v| v.get_inner())
+    }
 }
 
 impl FormInputViewGetValue<String> for FormInputView<EditView> {
     fn get_value(&self) -> Option<String> {
-        self.view
-            .get_child(2)?
-            .downcast_ref::<ResizedView<EditView>>()
-            .map(|v| (*v.get_inner().get_content()).clone())
+        self.inner_input().map(|v| (*v.get_content()).clone())
     }
 }
 
 impl FormInputViewGetValue<String> for FormInputView<SelectView> {
     fn get_value(&self) -> Option<String> {
-        self.view
-            .get_child(2)?
-            .downcast_ref::<ResizedView<SelectView>>()
-            .and_then(|v| v.get_inner().selection())
+        self.inner_input()
+            .and_then(|v| v.selection())
             .map(|v| (*v).clone())
     }
 }
 
 impl FormInputViewGetValue<(IpAddr, usize)> for FormInputView<CidrAddressEditView> {
     fn get_value(&self) -> Option<(IpAddr, usize)> {
-        self.view
-            .get_child(2)?
-            .downcast_ref::<ResizedView<CidrAddressEditView>>()
-            .and_then(|v| v.get_inner().get_values())
+        self.inner_input().and_then(|v| v.get_values())
     }
 }
 
