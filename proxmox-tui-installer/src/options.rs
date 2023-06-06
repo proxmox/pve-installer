@@ -13,11 +13,10 @@ pub enum FsType {
 
 impl fmt::Display for FsType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
-            FsType::Ext4 => "ext4",
-            FsType::Xfs => "XFS",
-        };
-        write!(f, "{s}")
+        match self {
+            FsType::Ext4 => write!(f, "ext4"),
+            FsType::Xfs => write!(f, "XFS"),
+        }
     }
 }
 
@@ -132,9 +131,9 @@ impl Default for NetworkOptions {
             ifname: String::new(),
             fqdn: "pve.example.invalid".to_owned(),
             // Safety: The provided mask will always be valid.
-            address: CidrAddress::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0).unwrap(),
-            gateway: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            dns_server: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            address: CidrAddress::new(Ipv4Addr::UNSPECIFIED, 0).unwrap(),
+            gateway: Ipv4Addr::UNSPECIFIED.into(),
+            dns_server: Ipv4Addr::UNSPECIFIED.into(),
         }
     }
 }
