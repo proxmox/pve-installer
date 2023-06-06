@@ -19,8 +19,10 @@ pub struct CidrAddress {
 }
 
 impl CidrAddress {
-    pub fn new(addr: IpAddr, mask: usize) -> Result<Self, CidrAddressParseError> {
-        if mask > 32 {
+    pub fn new<T: Into<IpAddr>>(addr: T, mask: usize) -> Result<Self, CidrAddressParseError> {
+        let addr = addr.into();
+
+        if mask > mask_limit(&addr) {
             Err(CidrAddressParseError::InvalidMask(None))
         } else {
             Ok(Self { addr, mask })
@@ -44,17 +46,16 @@ impl FromStr for CidrAddress {
             .split_once('/')
             .ok_or(CidrAddressParseError::NoDelimiter)?;
 
+        let addr = addr.parse().map_err(CidrAddressParseError::InvalidAddr)?;
+
         let mask = mask
             .parse()
             .map_err(|err| CidrAddressParseError::InvalidMask(Some(err)))?;
 
-        if mask > 32 {
+        if mask > mask_limit(&addr) {
             Err(CidrAddressParseError::InvalidMask(None))
         } else {
-            Ok(Self {
-                addr: addr.parse().map_err(CidrAddressParseError::InvalidAddr)?,
-                mask,
-            })
+            Ok(Self { addr, mask })
         }
     }
 }
@@ -62,5 +63,13 @@ impl FromStr for CidrAddress {
 impl fmt::Display for CidrAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}/{}", self.addr, self.mask)
+    }
+}
+
+fn mask_limit(addr: &IpAddr) -> usize {
+    if addr.is_ipv4() {
+        32
+    } else {
+        128
     }
 }

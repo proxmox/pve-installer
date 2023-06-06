@@ -242,7 +242,7 @@ impl CidrAddressEditView {
             .downcast_ref::<ResizedView<EditView>>()?
             .get_inner()
             .get_content()
-            .parse()
+            .parse::<IpAddr>()
             .ok()?;
 
         let mask = self
