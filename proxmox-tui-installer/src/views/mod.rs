@@ -1,3 +1,4 @@
+mod bootdisk;
 mod table_view;
 
 use crate::utils::CidrAddress;
@@ -9,6 +10,7 @@ use cursive::{
 };
 use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
 
+pub use self::bootdisk::*;
 pub use self::table_view::*;
 
 pub struct NumericEditView<T> {
