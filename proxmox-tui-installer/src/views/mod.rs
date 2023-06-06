@@ -1,14 +1,13 @@
 mod table_view;
 
+use crate::utils::CidrAddress;
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
     views::{DummyView, EditView, LinearLayout, ResizedView, SelectView, TextView},
     View,
 };
-use std::{marker::PhantomData, rc::Rc, str::FromStr};
-
-use crate::utils::CidrAddress;
+use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
 
 pub use self::table_view::*;
 
