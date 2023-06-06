@@ -1,7 +1,11 @@
 use cursive::{
+    direction::Direction,
     event::{Event, EventResult},
-    Printer, Vec2, View,
+    view::{scroll, CannotFocus},
+    Printer, Rect, Vec2, View,
 };
+
+const HEADER_HEIGHT: usize = 2;
 
 pub trait TableViewItem {
     fn get_column(&self, name: &str) -> String;
@@ -12,9 +16,10 @@ struct TableViewColumn {
     title: String,
 }
 
-pub struct TableView<T: TableViewItem> {
+pub struct TableView<T> {
     columns: Vec<TableViewColumn>,
     items: Vec<T>,
+    scroller: scroll::Core,
 }
 
 impl<T: TableViewItem> TableView<T> {
@@ -22,6 +27,7 @@ impl<T: TableViewItem> TableView<T> {
         Self {
             columns: vec![],
             items: vec![],
+            scroller: scroll::Core::new(),
         }
     }
 
@@ -54,32 +60,81 @@ impl<T: TableViewItem> TableView<T> {
         // Clear out the last delimiter again
         p.print(start, " ");
     }
+
+    fn draw_content_row(&self, p: &Printer, row: usize) {
+        let contents = self
+            .columns
+            .iter()
+            .map(|c| self.items[row].get_column(&c.name));
+        let width = (p.size.x - 1) / self.columns.len();
+
+        Self::draw_row(p, contents, width);
+    }
+
+    fn inner_required_size(&mut self, mut constraint: Vec2) -> Vec2 {
+        // Clamp the inner height to at least 3 rows (header + separator + one row) and at max. to
+        // (number of rows + header + separator)
+        constraint.y = constraint
+            .y
+            .clamp(HEADER_HEIGHT + 1, self.items.len() + HEADER_HEIGHT);
+
+        constraint
+    }
+
+    fn inner_important_area(&self, size: Vec2) -> Rect {
+        // Mark header + separator + first row as important
+        Rect::from_size((0, 0), (size.x, HEADER_HEIGHT + 1))
+    }
 }
 
 impl<T: TableViewItem + 'static> View for TableView<T> {
     fn draw(&self, p: &Printer) {
-        let col_width = (p.output_size.x - 1) / self.columns.len();
+        // Equally split up the columns width, taking into account the scrollbar size and column
+        // separator.
+        let width = (p.size.x - self.scroller.scrollbar_size().x - 1) / self.columns.len();
 
-        Self::draw_row(p, self.columns.iter().map(|c| c.title.clone()), col_width);
-        p.print_hdelim(Vec2::new(0, 1), p.output_size.x);
+        Self::draw_row(p, self.columns.iter().map(|c| c.title.clone()), width);
+        p.print_hdelim((0, 1), p.size.x);
 
-        let mut start = Vec2::new(0, 2);
-        for row in &self.items {
-            Self::draw_row(
-                &p.offset(start),
-                self.columns.iter().map(|c| row.get_column(&c.name)),
-                col_width,
-            );
-
-            start.y += 1;
-        }
+        scroll::draw_lines(self, &p.offset((0, HEADER_HEIGHT)), Self::draw_content_row);
     }
 
-    fn on_event(&mut self, _: Event) -> EventResult {
-        EventResult::Ignored
+    // TODO: Pre-compute column sizes and cache contents in the layout phase, thus avoiding any
+    // expensive operations in the draw phase.
+    fn layout(&mut self, size: Vec2) {
+        scroll::layout(
+            self,
+            size.saturating_sub((0, HEADER_HEIGHT)),
+            false,
+            |_, _| {},
+            |s, req_size| Vec2::new(req_size.x, s.items.len()),
+        )
+    }
+
+    fn needs_relayout(&self) -> bool {
+        self.scroller.needs_relayout()
     }
 
     fn required_size(&mut self, constraint: Vec2) -> Vec2 {
-        Vec2::new(constraint.x, self.items.len() + 2)
+        scroll::required_size(self, constraint, false, Self::inner_required_size)
+    }
+
+    fn on_event(&mut self, event: Event) -> EventResult {
+        scroll::on_event(
+            self,
+            event.relativized((0, HEADER_HEIGHT)),
+            |_, _| EventResult::Ignored,
+            Self::inner_important_area,
+        )
+    }
+
+    fn take_focus(&mut self, _: Direction) -> Result<EventResult, CannotFocus> {
+        Ok(EventResult::consumed())
+    }
+
+    fn important_area(&self, size: Vec2) -> Rect {
+        scroll::important_area(self, size, Self::inner_important_area)
     }
 }
+
+cursive::impl_scroller!(TableView<T>::scroller);
