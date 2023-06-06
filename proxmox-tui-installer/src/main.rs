@@ -34,18 +34,20 @@ struct InstallerView {
 
 impl InstallerView {
     pub fn new<T: View>(view: T, next_cb: Box<dyn Fn(&mut Cursive)>) -> Self {
-        let inner = LinearLayout::vertical().child(view).child(PaddedView::lrtb(
-            1,
-            1,
-            1,
-            0,
-            LinearLayout::horizontal()
-                .child(abort_install_button())
-                .child(DummyView.full_width())
-                .child(Button::new("Previous", switch_to_prev_screen))
-                .child(DummyView)
-                .child(Button::new("Next", next_cb)),
-        ));
+        let inner = LinearLayout::vertical()
+            .child(PaddedView::lrtb(0, 0, 1, 1, view))
+            .child(PaddedView::lrtb(
+                1,
+                1,
+                0,
+                0,
+                LinearLayout::horizontal()
+                    .child(abort_install_button())
+                    .child(DummyView.full_width())
+                    .child(Button::new("Previous", switch_to_prev_screen))
+                    .child(DummyView)
+                    .child(Button::new("Next", next_cb)),
+            ));
 
         Self::with_raw(inner)
     }
