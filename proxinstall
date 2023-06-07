@@ -2095,6 +2095,13 @@ sub create_main_window {
 
     my $logofn = "$setup->{product}-banner.png";
     my $image = Gtk3::Image->new_from_file("${proxmox_libdir}/$logofn");
+
+    my $provider = Gtk3::CssProvider->new();
+    my $theming = "* {\nbackground: #171717;\n}";
+    $provider->load_from_data ([map ord, split //, $theming]);
+    my $context = $image->get_style_context();
+    $context->add_provider($provider, 600);
+
     $vbox->pack_start($image, 0, 0, 0);
 
     my $hbox = Gtk3::HBox->new(0, 0);
