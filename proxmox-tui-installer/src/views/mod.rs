@@ -174,8 +174,8 @@ impl FormInputViewGetValue<String> for FormInputView<EditView> {
     }
 }
 
-impl FormInputViewGetValue<String> for FormInputView<SelectView> {
-    fn get_value(&self) -> Option<String> {
+impl<T: 'static + Clone> FormInputViewGetValue<T> for FormInputView<SelectView<T>> {
+    fn get_value(&self) -> Option<T> {
         self.inner_input()
             .and_then(|v| v.selection())
             .map(|v| (*v).clone())
