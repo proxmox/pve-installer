@@ -183,10 +183,12 @@ fi
 # we use a trimmed down debootstrap so make busybox tools available to compensate that
 busybox --install -s || true
 
+setupcon || echo "setupcon failed, TUI rendering might be garbled - $?"
+
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     printf "\nDropping in debug shell before starting installation\n"
-    echo "type exit or CTRL-D to continue and start the installation wizard"
+    echo "type 'exit' or press CTRL + D to continue and start the installation wizard"
     debugsh || true
 fi
 
