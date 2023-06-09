@@ -861,7 +861,7 @@ sub extract_data {
 
 	    update_progress(0, 0.02, $maxper, "create partitions");
 
-	    my $logical_bsize = logical_blocksize($target_hd);
+	    my $logical_bsize = Proxmox::Sys::Block::logical_blocksize($target_hd);
 
 	    my ($os_size, $osdev, $efidev) =
 	        partition_bootable_disk($target_hd, $config_options->{hdsize}, '8E00');
