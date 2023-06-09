@@ -1,4 +1,4 @@
-proxmox-installer (8.0-1) bullseye; urgency=medium
+proxmox-installer (8.0-1) bookworm; urgency=medium
 
   * fix typo in error message
 
@@ -12,7 +12,7 @@ proxmox-installer (8.0-1) bullseye; urgency=medium
   * call setupcon when starting-up final installer environment, applying the
     UTF-8 charset.
 
- -- Proxmox Support Team <support@proxmox.com>  Fri, 09 Jun 2023 09:34:07 +0200
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 09 Jun 2023 09:39:09 +0200
 
 proxmox-installer (7.4-2) bullseye; urgency=medium
 
