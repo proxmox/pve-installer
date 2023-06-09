@@ -1,12 +1,11 @@
 use crate::{utils::CidrAddress, SummaryOption};
 use std::{
-    fmt, iter,
+    fmt,
     net::{IpAddr, Ipv4Addr},
 };
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FsType {
-    #[default]
     Ext4,
     Xfs,
 }
@@ -24,7 +23,6 @@ pub const FS_TYPES: &[FsType] = &[FsType::Ext4, FsType::Xfs];
 
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
-    pub disk: Disk,
     pub total_size: u64,
     pub swap_size: u64,
     pub max_root_size: u64,
@@ -41,7 +39,6 @@ impl LvmBootdiskOptions {
         };
 
         Self {
-            disk: disk.clone(),
             total_size: disk.size,
             swap_size: 4 * 1024 * 1024, // TODO: value from installed memory
             max_root_size: 0,
@@ -54,14 +51,6 @@ impl LvmBootdiskOptions {
 #[derive(Clone, Debug)]
 pub enum AdvancedBootdiskOptions {
     Lvm(LvmBootdiskOptions),
-}
-
-impl AdvancedBootdiskOptions {
-    fn selected_disks(&self) -> impl Iterator<Item = &Disk> {
-        match self {
-            AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions { disk, .. }) => iter::once(disk),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -83,6 +72,16 @@ pub struct BootdiskOptions {
     pub disks: Vec<Disk>,
     pub fstype: FsType,
     pub advanced: AdvancedBootdiskOptions,
+}
+
+impl BootdiskOptions {
+    pub fn defaults_from(disk: &Disk) -> Self {
+        Self {
+            disks: vec![disk.clone()],
+            fstype: FsType::Ext4,
+            advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(disk)),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -153,8 +152,8 @@ impl InstallerOptions {
             SummaryOption::new(
                 "Bootdisk(s)",
                 self.bootdisk
-                    .advanced
-                    .selected_disks()
+                    .disks
+                    .iter()
                     .map(|d| d.path.as_str())
                     .collect::<Vec<&str>>()
                     .join(", "),

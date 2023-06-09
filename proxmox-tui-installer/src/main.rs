@@ -15,7 +15,7 @@ use cursive::{
     Cursive, View,
 };
 use views::{
-    BootdiskDialogView, CidrAddressEditView, FormInputView, FormInputViewGetValue, TableView,
+    BootdiskOptionsView, CidrAddressEditView, FormInputView, FormInputViewGetValue, TableView,
     TableViewItem,
 };
 
@@ -71,25 +71,32 @@ impl ViewWrapper for InstallerView {
     cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
 }
 
+#[derive(Clone)]
+struct InstallerData {
+    options: InstallerOptions,
+    available_disks: Vec<Disk>,
+}
+
 fn main() {
     let mut siv = cursive::termion();
 
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
 
-    let disks = vec![Disk {
+    // TODO: retrieve actual disk info
+    let available_disks = vec![Disk {
         path: "/dev/vda".to_owned(),
         size: 17179869184,
     }];
-    siv.set_user_data(InstallerOptions {
-        bootdisk: BootdiskOptions {
-            disks: disks.clone(),
-            fstype: FsType::default(),
-            advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(&disks[0])),
+
+    siv.set_user_data(InstallerData {
+        options: InstallerOptions {
+            bootdisk: BootdiskOptions::defaults_from(&available_disks[0]),
+            timezone: TimezoneOptions::default(),
+            password: PasswordOptions::default(),
+            network: NetworkOptions::default(),
         },
-        timezone: TimezoneOptions::default(),
-        password: PasswordOptions::default(),
-        network: NetworkOptions::default(),
+        available_disks,
     });
 
     add_next_screen(&mut siv, &license_dialog);
@@ -174,22 +181,19 @@ fn license_dialog(_: &mut Cursive) -> InstallerView {
 }
 
 fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
-    let options = siv
-        .user_data::<InstallerOptions>()
-        .map(|o| o.clone())
-        .unwrap()
-        .bootdisk;
+    let data = siv.user_data::<InstallerData>().cloned().unwrap();
 
     InstallerView::new(
-        BootdiskDialogView::new(&options).with_name("bootdisk-options"),
+        BootdiskOptionsView::new(&data.available_disks, &data.options.bootdisk)
+            .with_name("bootdisk-options"),
         Box::new(|siv| {
             let options = siv
-                .call_on_name("bootdisk-options", BootdiskDialogView::get_values)
+                .call_on_name("bootdisk-options", BootdiskOptionsView::get_values)
                 .flatten();
 
             if let Some(options) = options {
-                siv.with_user_data(|opts: &mut InstallerOptions| {
-                    opts.bootdisk.advanced = options;
+                siv.with_user_data(|data: &mut InstallerData| {
+                    data.options.bootdisk = options;
                 });
 
                 add_next_screen(siv, &timezone_dialog);
@@ -202,8 +206,8 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerOptions>()
-        .map(|o| o.timezone.clone())
+        .user_data::<InstallerData>()
+        .map(|data| data.options.timezone.clone())
         .unwrap_or_default();
 
     let inner = LinearLayout::vertical()
@@ -236,8 +240,8 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
             });
 
             if let (Some(timezone), Some(kb_layout)) = (timezone, kb_layout) {
-                siv.with_user_data(|opts: &mut InstallerOptions| {
-                    opts.timezone = TimezoneOptions {
+                siv.with_user_data(|data: &mut InstallerData| {
+                    data.options.timezone = TimezoneOptions {
                         timezone,
                         kb_layout,
                     };
@@ -253,8 +257,8 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn password_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerOptions>()
-        .map(|o| o.password.clone())
+        .user_data::<InstallerData>()
+        .map(|data| data.options.password.clone())
         .unwrap_or_default();
 
     let inner = LinearLayout::vertical()
@@ -280,7 +284,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            // TODO: password validation
+            // TODO: password validation and saving to installer options
             add_next_screen(siv, &network_dialog);
         }),
     )
@@ -288,8 +292,8 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn network_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerOptions>()
-        .map(|o| o.network.clone())
+        .user_data::<InstallerData>()
+        .map(|data| data.options.network.clone())
         .unwrap_or_default();
 
     let inner = LinearLayout::vertical()
@@ -339,8 +343,8 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
             });
 
             if let Some(options) = options.flatten() {
-                siv.with_user_data(|opts: &mut InstallerOptions| {
-                    opts.network = options;
+                siv.with_user_data(|data: &mut InstallerData| {
+                    data.options.network = options;
                 });
 
                 add_next_screen(siv, &summary_dialog);
@@ -375,8 +379,8 @@ impl TableViewItem for SummaryOption {
 
 fn summary_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerOptions>()
-        .map(|o| o.clone())
+        .user_data::<InstallerData>()
+        .map(|d| d.options.clone())
         .unwrap();
 
     let inner = LinearLayout::vertical()
