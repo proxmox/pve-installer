@@ -1,3 +1,9 @@
+proxmox-installer (8.0-2) bookworm; urgency=medium
+
+  * fix call to logical_blocksize
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 09 Jun 2023 11:16:18 +0200
+
 proxmox-installer (8.0-1) bookworm; urgency=medium
 
   * fix typo in error message
