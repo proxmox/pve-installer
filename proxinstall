@@ -21,7 +21,7 @@ use POSIX ":sys_wait_h";
 
 use Proxmox::Install::Env;
 use Proxmox::Log;
-use Proxmox::Sys::Block qw(get_cached_disks);
+use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
@@ -2575,7 +2575,7 @@ sub create_hdoption_view {
     # size compute
     my $hdsize = 0;
     if ( -b $target_hd) {
-	$hdsize = int(hd_size($target_hd) / (1024 * 1024.0)); # size in GB
+	$hdsize = int(Proxmox::Sys::Block::hd_size($target_hd) / (1024 * 1024.0)); # size in GB
     } elsif ($target_hd) {
 	$hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
     }

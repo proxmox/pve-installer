@@ -12,7 +12,7 @@ use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
 
 use base qw(Exporter);
-our @EXPORT_OK = qw(get_cached_disks);
+our @EXPORT_OK = qw(get_cached_disks wipe_disk partition_bootable_disk);
 
 my sub is_same_file {
     my ($a, $b) = @_;
