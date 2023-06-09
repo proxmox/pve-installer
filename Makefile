@@ -39,8 +39,9 @@ install: ${INSTALLER_SOURCES}
 	rsvg-convert -o $@ $<
 
 .PHONY: upload
-upload: ${DEB}
-	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist bullseye
+upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
+upload: $(DEB)
+	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
 
 %.img:
 	truncate -s 2G $@
