@@ -279,9 +279,12 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                     .get_value::<EditView, _>(2)
                     .ok_or("failed to retrieve email")?;
 
-                // TODO: proper validation
-                if root_password != confirm_password {
+                if root_password.len() < 5 {
+                    Err("password too short")
+                } else if root_password != confirm_password {
                     Err("passwords do not match")
+                } else if email.ends_with(".invalid") {
+                    Err("invalid email address")
                 } else {
                     Ok(PasswordOptions {
                         root_password,
@@ -363,6 +366,9 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     Err("host and gateway IP address version must not differ".to_owned())
                 } else if address.addr().is_ipv4() != dns_server.is_ipv4() {
                     Err("host and DNS IP address version must not differ".to_owned())
+                } else if fqdn.chars().all(|c| c.is_ascii_digit()) {
+                    // Not supported/allowed on Debian
+                    Err("hostname cannot be purely numeric".to_owned())
                 } else {
                     Ok(NetworkOptions {
                         ifname,
