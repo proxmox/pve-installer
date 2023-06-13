@@ -15,8 +15,8 @@ use cursive::{
     Cursive, View,
 };
 use views::{
-    BootdiskOptionsView, CidrAddressEditView, FormInputView, FormInputViewGetValue, TableView,
-    TableViewItem,
+    BootdiskOptionsView, CidrAddressEditView, FormView, FormInputView, FormInputViewGetValue,
+    TableView, TableViewItem,
 };
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
@@ -210,46 +210,44 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
         .map(|data| data.options.timezone.clone())
         .unwrap_or_default();
 
-    let inner = LinearLayout::vertical()
-        .child(FormInputView::new(
-            "Country",
-            EditView::new().content("Austria"),
-        ))
-        .child(FormInputView::new(
-            "Timezone",
-            EditView::new()
-                .content(options.timezone)
-                .with_name("timezone-tzname"),
-        ))
-        .child(FormInputView::new(
+    let inner = FormView::new()
+        .child("Country", EditView::new().content("Austria"))
+        .child("Timezone", EditView::new().content(options.timezone))
+        .child(
             "Keyboard layout",
-            EditView::new()
-                .content(options.kb_layout)
-                .with_name("timezone-kblayout"),
-        ));
+            EditView::new().content(options.kb_layout),
+        )
+        .with_name("timezone-options");
 
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            let timezone = siv.call_on_name("timezone-tzname", |v: &mut EditView| {
-                (*v.get_content()).clone()
-            });
+            let options: Option<Result<TimezoneOptions, String>> =
+                siv.call_on_name("timezone-options", |view: &mut FormView| {
+                    let timezone = view
+                        .get_value::<EditView, _>(1)
+                        .ok_or("failed to retrieve timezone")?;
 
-            let kb_layout = siv.call_on_name("timezone-kblayout", |v: &mut EditView| {
-                (*v.get_content()).clone()
-            });
+                    let kb_layout = view
+                        .get_value::<EditView, _>(2)
+                        .ok_or("failed to retrieve keyboard layout")?;
 
-            if let (Some(timezone), Some(kb_layout)) = (timezone, kb_layout) {
-                siv.with_user_data(|data: &mut InstallerData| {
-                    data.options.timezone = TimezoneOptions {
+                    Ok(TimezoneOptions {
                         timezone,
                         kb_layout,
-                    };
+                    })
                 });
 
-                add_next_screen(siv, &password_dialog);
-            } else {
-                siv.add_layer(Dialog::info("Invalid values"));
+            match options {
+                Some(Ok(options)) => {
+                    siv.with_user_data(|data: &mut InstallerData| {
+                        data.options.timezone = options;
+                    });
+
+                    add_next_screen(siv, &password_dialog);
+                }
+                Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
+                _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
     )
