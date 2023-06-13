@@ -166,6 +166,12 @@ impl<T: View> FormInputView<T> {
             .downcast_ref::<ResizedView<T>>()
             .map(|v| v.get_inner())
     }
+
+    fn replace_inner(&mut self, view: impl View) -> Option<Box<dyn View + 'static>> {
+        let old = self.view.remove_child(2);
+        self.view.add_child(view.full_width());
+        old
+    }
 }
 
 impl FormInputViewGetValue<String> for FormInputView<EditView> {

@@ -5,21 +5,60 @@ use std::{
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum FsType {
-    Ext4,
-    Xfs,
+pub enum ZfsRaidLevel {
+    Single,
+    Mirror,
+    Raid10,
+    RaidZ,
+    RaidZ2,
+    RaidZ3,
 }
 
-impl fmt::Display for FsType {
+impl fmt::Display for ZfsRaidLevel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use ZfsRaidLevel::*;
         match self {
-            FsType::Ext4 => write!(f, "ext4"),
-            FsType::Xfs => write!(f, "XFS"),
+            Single => write!(f, "single disk"),
+            Mirror => write!(f, "mirrored"),
+            Raid10 => write!(f, "RAID10"),
+            RaidZ => write!(f, "RAIDZ-1"),
+            RaidZ2 => write!(f, "RAIDZ-2"),
+            RaidZ3 => write!(f, "RAIDZ-3"),
         }
     }
 }
 
-pub const FS_TYPES: &[FsType] = &[FsType::Ext4, FsType::Xfs];
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum FsType {
+    Ext4,
+    Xfs,
+    Zfs(ZfsRaidLevel),
+}
+
+impl fmt::Display for FsType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use FsType::*;
+        match self {
+            Ext4 => write!(f, "ext4"),
+            Xfs => write!(f, "XFS"),
+            Zfs(level) => write!(f, "ZFS ({level})"),
+        }
+    }
+}
+
+pub const FS_TYPES: &[FsType] = {
+    use FsType::*;
+    &[
+        Ext4,
+        Xfs,
+        Zfs(ZfsRaidLevel::Single),
+        Zfs(ZfsRaidLevel::Mirror),
+        Zfs(ZfsRaidLevel::Raid10),
+        Zfs(ZfsRaidLevel::RaidZ),
+        Zfs(ZfsRaidLevel::RaidZ2),
+        Zfs(ZfsRaidLevel::RaidZ3),
+    ]
+};
 
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
@@ -48,9 +87,87 @@ impl LvmBootdiskOptions {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub enum ZfsCompressOption {
+    #[default]
+    On,
+    Off,
+    Lzjb,
+    Lz4,
+    Zle,
+    Gzip,
+    Zstd,
+}
+
+impl fmt::Display for ZfsCompressOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{self:?}").to_lowercase())
+    }
+}
+
+impl From<&ZfsCompressOption> for String {
+    fn from(value: &ZfsCompressOption) -> Self {
+        value.to_string()
+    }
+}
+
+pub const ZFS_COMPRESS_OPTIONS: &[ZfsCompressOption] = {
+    use ZfsCompressOption::*;
+    &[On, Off, Lzjb, Lz4, Zle, Gzip, Zstd]
+};
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub enum ZfsChecksumOption {
+    #[default]
+    On,
+    Off,
+    Fletcher2,
+    Fletcher4,
+    Sha256,
+}
+
+impl fmt::Display for ZfsChecksumOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{self:?}").to_lowercase())
+    }
+}
+
+impl From<&ZfsChecksumOption> for String {
+    fn from(value: &ZfsChecksumOption) -> Self {
+        value.to_string()
+    }
+}
+
+pub const ZFS_CHECKSUM_OPTIONS: &[ZfsChecksumOption] = {
+    use ZfsChecksumOption::*;
+    &[On, Off, Fletcher2, Fletcher4, Sha256]
+};
+
+#[derive(Clone, Debug)]
+pub struct ZfsBootdiskOptions {
+    pub ashift: usize,
+    pub compress: ZfsCompressOption,
+    pub checksum: ZfsChecksumOption,
+    pub copies: usize,
+    pub disk_size: u64,
+}
+
+impl ZfsBootdiskOptions {
+    pub fn defaults_from(disk: &Disk) -> Self {
+        Self {
+            ashift: 12,
+            compress: ZfsCompressOption::default(),
+            checksum: ZfsChecksumOption::default(),
+            copies: 1,
+            disk_size: disk.size,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum AdvancedBootdiskOptions {
     Lvm(LvmBootdiskOptions),
+    Zfs(ZfsBootdiskOptions),
 }
 
 #[derive(Clone, Debug)]
@@ -64,6 +181,12 @@ impl fmt::Display for Disk {
         // TODO: Format sizes properly with `proxmox-human-byte` once merged
         // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
         write!(f, "{} ({} B)", self.path, self.size)
+    }
+}
+
+impl From<&Disk> for String {
+    fn from(value: &Disk) -> Self {
+        value.to_string()
     }
 }
 
