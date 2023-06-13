@@ -108,8 +108,7 @@ impl AdvancedBootdiskOptionsView {
     fn fstype_on_submit(siv: &mut Cursive, disks: &[Disk], fstype: &FsType) {
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
             if let Some(AdvancedBootdiskOptionsView { view }) =
-                view.get_content_mut()
-                    .downcast_mut::<AdvancedBootdiskOptionsView>()
+                view.get_content_mut().downcast_mut()
             {
                 view.remove_child(3);
                 match fstype {
@@ -417,7 +416,7 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
             let options = siv
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
                     view.get_content_mut()
-                        .downcast_mut::<AdvancedBootdiskOptionsView>()
+                        .downcast_mut()
                         .and_then(AdvancedBootdiskOptionsView::get_values)
                 })
                 .flatten();
