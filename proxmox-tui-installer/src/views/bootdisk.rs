@@ -1,4 +1,4 @@
-use super::{DiskSizeEditView, FormView, FormInputView, FormInputViewGetValue, IntegerEditView};
+use super::{DiskSizeEditView, FormView, IntegerEditView};
 use crate::options::{
     AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
     LvmBootdiskOptions, ZfsBootdiskOptions, FS_TYPES, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
@@ -18,13 +18,10 @@ pub struct BootdiskOptionsView {
 
 impl BootdiskOptionsView {
     pub fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
-        let bootdisk_select = FormInputView::new(
-            "Target harddisk",
-            SelectView::new()
-                .popup()
-                .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
-        )
-        .with_name("bootdisk-options-target-disk");
+        let bootdisk_select = SelectView::new()
+            .popup()
+            .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
+            .with_name("bootdisk-options-target-disk");
 
         let advanced_options = Rc::new(RefCell::new(options.clone()));
 
@@ -39,7 +36,7 @@ impl BootdiskOptionsView {
             }));
 
         let view = LinearLayout::vertical()
-            .child(bootdisk_select)
+            .child(FormView::new().child("Target harddisk", bootdisk_select))
             .child(DummyView)
             .child(advanced_button);
 
@@ -55,10 +52,9 @@ impl BootdiskOptionsView {
         if [FsType::Ext4, FsType::Xfs].contains(&options.fstype) {
             let disk = self
                 .view
-                .get_child_mut(0)?
-                .downcast_mut::<NamedView<FormInputView<SelectView<Disk>>>>()?
-                .get_mut()
-                .get_value()?;
+                .get_child(0)?
+                .downcast_ref::<FormView>()?
+                .get_value::<NamedView<SelectView<Disk>>, _>(0)?;
 
             options.disks = vec![disk];
         }
@@ -77,26 +73,23 @@ struct AdvancedBootdiskOptionsView {
 
 impl AdvancedBootdiskOptionsView {
     fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
-        let fstype_select = FormInputView::new(
-            "Filesystem",
-            SelectView::new()
-                .popup()
-                .with_all(FS_TYPES.iter().map(|t| (t.to_string(), *t)))
-                .selected(
-                    FS_TYPES
-                        .iter()
-                        .position(|t| *t == options.fstype)
-                        .unwrap_or_default(),
-                )
-                .on_submit({
-                    let disks = disks.to_owned();
-                    move |siv, fstype| Self::fstype_on_submit(siv, &disks, fstype)
-                }),
-        );
+        let fstype_select = SelectView::new()
+            .popup()
+            .with_all(FS_TYPES.iter().map(|t| (t.to_string(), *t)))
+            .selected(
+                FS_TYPES
+                    .iter()
+                    .position(|t| *t == options.fstype)
+                    .unwrap_or_default(),
+            )
+            .on_submit({
+                let disks = disks.to_owned();
+                move |siv, fstype| Self::fstype_on_submit(siv, &disks, fstype)
+            });
 
         let mut view = LinearLayout::vertical()
             .child(DummyView.full_width())
-            .child(fstype_select)
+            .child(FormView::new().child("Filesystem", fstype_select))
             .child(DummyView.full_width());
 
         match &options.advanced {
@@ -137,13 +130,16 @@ impl AdvancedBootdiskOptionsView {
 
         siv.call_on_name(
             "bootdisk-options-target-disk",
-            |view: &mut FormInputView<SelectView<Disk>>| match fstype {
-                FsType::Ext4 | FsType::Xfs => view.replace_inner(
-                    SelectView::new()
-                        .popup()
-                        .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
-                ),
-                other => view.replace_inner(TextView::new(other.to_string())),
+            |view: &mut FormView| match fstype {
+                FsType::Ext4 | FsType::Xfs => {
+                    view.replace_child(
+                        0,
+                        SelectView::new()
+                            .popup()
+                            .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
+                    );
+                }
+                other => view.replace_child(0, TextView::new(other.to_string())),
             },
         );
     }
@@ -152,8 +148,8 @@ impl AdvancedBootdiskOptionsView {
         let fstype = self
             .view
             .get_child(1)?
-            .downcast_ref::<FormInputView<SelectView<FsType>>>()?
-            .get_value()?;
+            .downcast_ref::<FormView>()?
+            .get_value::<SelectView<FsType>, _>(0)?;
 
         let advanced = self.view.get_child_mut(3)?;
 
