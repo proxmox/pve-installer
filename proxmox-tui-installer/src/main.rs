@@ -264,28 +264,54 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
     let inner = LinearLayout::vertical()
         .child(FormInputView::new(
             "Root password",
-            EditView::new()
-                .secret()
-                .with_name("password-dialog-root-pw"),
+            EditView::new().secret(),
         ))
         .child(FormInputView::new(
             "Confirm root password",
-            EditView::new()
-                .secret()
-                .with_name("password-dialog-root-pw-confirm"),
+            EditView::new().secret(),
         ))
         .child(FormInputView::new(
             "Administator email",
-            EditView::new()
-                .content(options.email)
-                .with_name("password-dialog-email"),
-        ));
+            EditView::new().content(options.email),
+        ))
+        .with_name("password-options");
 
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            // TODO: password validation and saving to installer options
-            add_next_screen(siv, &network_dialog);
+            let options = siv.call_on_name("password-options", |view: &mut LinearLayout| {
+                fn get_val(view: &LinearLayout, index: usize) -> Option<String> {
+                    view.get_child(index)?
+                        .downcast_ref::<FormInputView<EditView>>()?
+                        .get_value()
+                }
+
+                let root_password = get_val(view, 0).ok_or("failed to retrieve password")?;
+                let confirm_password =
+                    get_val(view, 1).ok_or("failed to retrieve password confirmation")?;
+
+                // TODO: proper validation
+                if root_password != confirm_password {
+                    Err("passwords do not match")
+                } else {
+                    Ok(PasswordOptions {
+                        root_password,
+                        email: get_val(view, 2).ok_or("failed to retrieve email")?,
+                    })
+                }
+            });
+
+            match options {
+                Some(Ok(options)) => {
+                    siv.with_user_data(|data: &mut InstallerData| {
+                        data.options.password = options;
+                    });
+
+                    add_next_screen(siv, &network_dialog);
+                }
+                Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
+                _ => siv.add_layer(Dialog::info("Invalid values")),
+            }
         }),
     )
 }
