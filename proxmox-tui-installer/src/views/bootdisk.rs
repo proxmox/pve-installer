@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
 use super::{DiskSizeFormInputView, FormInputView, FormInputViewGetValue, IntegerEditView};
 use crate::options::{
@@ -238,13 +238,13 @@ impl ViewWrapper for LvmBootdiskOptionsView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
-struct BtrfsBootdiskOptionsView {
+struct MultiDiskOptionsView<T> {
     view: LinearLayout,
+    phantom: PhantomData<T>,
 }
 
-impl BtrfsBootdiskOptionsView {
-    // TODO: Re-apply previous disk selection from `options` correctly
-    fn new(disks: &[Disk], options: &BtrfsBootdiskOptions) -> Self {
+impl<T: View> MultiDiskOptionsView<T> {
+    fn new(avail_disks: &[Disk], options_view: T) -> Self {
         let mut disk_select_view = LinearLayout::vertical()
             .child(
                 TextView::new("Disk setup")
@@ -253,12 +253,12 @@ impl BtrfsBootdiskOptionsView {
             )
             .child(DummyView);
 
-        for i in 0..disks.len() {
+        for i in 0..avail_disks.len() {
             disk_select_view.add_child(FormInputView::new(
                 &format!("Harddisk {i}"),
                 SelectView::new()
                     .popup()
-                    .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
+                    .with_all(avail_disks.iter().map(|d| (d.to_string(), d.clone())))
                     .selected(i),
             ));
         }
@@ -270,19 +270,21 @@ impl BtrfsBootdiskOptionsView {
                     .style(Effect::Underline),
             )
             .child(DummyView)
-            .child(DiskSizeFormInputView::new("hdsize").content(options.disk_size));
+            .child(options_view);
 
         let view = LinearLayout::horizontal()
             .child(disk_select_view)
             .child(DummyView.fixed_width(3))
             .child(options_view);
 
-        Self { view }
+        Self {
+            view,
+            phantom: PhantomData,
+        }
     }
 
-    fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
+    fn get_values(&mut self) -> Option<Vec<Disk>> {
         let mut disks = vec![];
-
         let disk_select_view = self.view.get_child(0)?.downcast_ref::<LinearLayout>()?;
 
         for i in 2..disk_select_view.len() {
@@ -294,53 +296,57 @@ impl BtrfsBootdiskOptionsView {
             disks.push(disk);
         }
 
-        let options_view = self.view.get_child_mut(2)?.downcast_mut::<LinearLayout>()?;
+        Some(disks)
+    }
 
-        let disk_size = options_view
+    fn inner_mut(&mut self) -> Option<&mut T> {
+        self.view
             .get_child_mut(2)?
-            .downcast_mut::<DiskSizeFormInputView>()?
-            .get_content()?;
+            .downcast_mut::<LinearLayout>()?
+            .get_child_mut(2)?
+            .downcast_mut::<T>()
+    }
+}
+
+impl<T: 'static> ViewWrapper for MultiDiskOptionsView<T> {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
+struct BtrfsBootdiskOptionsView {
+    view: MultiDiskOptionsView<DiskSizeFormInputView>,
+}
+
+impl BtrfsBootdiskOptionsView {
+    // TODO: Re-apply previous disk selection from `options` correctly
+    fn new(disks: &[Disk], options: &BtrfsBootdiskOptions) -> Self {
+        let view = MultiDiskOptionsView::new(
+            disks,
+            DiskSizeFormInputView::new("hdsize").content(options.disk_size),
+        );
+
+        Self { view }
+    }
+
+    fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
+        let disks = self.view.get_values()?;
+        let disk_size = self.view.inner_mut()?.get_content()?;
 
         Some((disks, BtrfsBootdiskOptions { disk_size }))
     }
 }
 
 impl ViewWrapper for BtrfsBootdiskOptionsView {
-    cursive::wrap_impl!(self.view: LinearLayout);
+    cursive::wrap_impl!(self.view: MultiDiskOptionsView<DiskSizeFormInputView>);
 }
 
 struct ZfsBootdiskOptionsView {
-    view: LinearLayout,
+    view: MultiDiskOptionsView<LinearLayout>,
 }
 
 impl ZfsBootdiskOptionsView {
     // TODO: Re-apply previous disk selection from `options` correctly
     fn new(disks: &[Disk], options: &ZfsBootdiskOptions) -> Self {
-        let mut disk_select_view = LinearLayout::vertical()
-            .child(
-                TextView::new("Disk setup")
-                    .center()
-                    .style(Effect::Underline),
-            )
-            .child(DummyView);
-
-        for i in 0..disks.len() {
-            disk_select_view.add_child(FormInputView::new(
-                &format!("Harddisk {i}"),
-                SelectView::new()
-                    .popup()
-                    .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
-                    .selected(i),
-            ));
-        }
-
-        let options_view = LinearLayout::vertical()
-            .child(
-                TextView::new("Advanced options")
-                    .center()
-                    .style(Effect::Underline),
-            )
-            .child(DummyView)
+        let inner = LinearLayout::vertical()
             .child(FormInputView::new(
                 "ashift",
                 IntegerEditView::new().content(options.ashift),
@@ -375,52 +381,37 @@ impl ZfsBootdiskOptionsView {
             ))
             .child(DiskSizeFormInputView::new("hdsize").content(options.disk_size));
 
-        let view = LinearLayout::horizontal()
-            .child(disk_select_view)
-            .child(DummyView.fixed_width(3))
-            .child(options_view);
-
-        Self { view }
+        Self {
+            view: MultiDiskOptionsView::new(disks, inner),
+        }
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
-        let mut disks = vec![];
-
-        let disk_select_view = self.view.get_child(0)?.downcast_ref::<LinearLayout>()?;
-
-        for i in 2..disk_select_view.len() {
-            let disk = disk_select_view
-                .get_child(i)?
-                .downcast_ref::<FormInputView<SelectView<Disk>>>()?
-                .get_value()?;
-
-            disks.push(disk);
-        }
-
-        let options_view = self.view.get_child_mut(2)?.downcast_mut::<LinearLayout>()?;
+        let disks = self.view.get_values()?;
+        let options_view = self.view.inner_mut()?;
 
         let ashift = options_view
-            .get_child(2)?
+            .get_child(0)?
             .downcast_ref::<FormInputView<IntegerEditView>>()?
             .get_value()?;
 
         let compress = options_view
-            .get_child(3)?
+            .get_child(1)?
             .downcast_ref::<FormInputView<SelectView<ZfsCompressOption>>>()?
             .get_value()?;
 
         let checksum = options_view
-            .get_child(4)?
+            .get_child(2)?
             .downcast_ref::<FormInputView<SelectView<ZfsChecksumOption>>>()?
             .get_value()?;
 
         let copies = options_view
-            .get_child(5)?
+            .get_child(3)?
             .downcast_ref::<FormInputView<IntegerEditView>>()?
             .get_value()?;
 
         let disk_size = options_view
-            .get_child_mut(6)?
+            .get_child_mut(4)?
             .downcast_mut::<DiskSizeFormInputView>()?
             .get_content()?;
 
@@ -438,7 +429,7 @@ impl ZfsBootdiskOptionsView {
 }
 
 impl ViewWrapper for ZfsBootdiskOptionsView {
-    cursive::wrap_impl!(self.view: LinearLayout);
+    cursive::wrap_impl!(self.view: MultiDiskOptionsView<LinearLayout>);
 }
 
 fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) -> impl View {
