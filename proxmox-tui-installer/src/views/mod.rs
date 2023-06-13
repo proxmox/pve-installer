@@ -142,6 +142,47 @@ impl ViewWrapper for DiskSizeFormInputView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
+pub struct DiskSizeEditView {
+    view: LinearLayout,
+}
+
+impl DiskSizeEditView {
+    pub fn new() -> Self {
+        let view = LinearLayout::horizontal()
+            .child(FloatEditView::new().full_width())
+            .child(TextView::new(" GB"));
+
+        Self { view }
+    }
+
+    pub fn content(mut self, content: u64) -> Self {
+        let val = (content as f64) / 1024. / 1024. / 1024.;
+
+        if let Some(view) = self.view.get_child_mut(0).and_then(|v| v.downcast_mut()) {
+            *view = FloatEditView::new().content(val).full_width();
+        }
+
+        self
+    }
+
+    pub fn get_content(&self) -> Option<u64> {
+        self.with_view(|v| {
+            v.get_child(0)?
+                .downcast_ref::<ResizedView<FloatEditView>>()?
+                .with_view(|v| {
+                    v.get_content()
+                        .ok()
+                        .map(|val| (val * 1024. * 1024. * 1024.) as u64)
+                })?
+        })
+        .flatten()
+    }
+}
+
+impl ViewWrapper for DiskSizeEditView {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
 pub trait FormInputViewGetValue<R> {
     fn get_value(&self) -> Option<R>;
 }
@@ -252,6 +293,12 @@ where
 {
     fn get_value(&self) -> Option<R> {
         self.with_view(|v| v.get_value()).flatten()
+    }
+}
+
+impl FormViewGetValue<u64> for DiskSizeEditView {
+    fn get_value(&self) -> Option<u64> {
+        self.get_content()
     }
 }
 

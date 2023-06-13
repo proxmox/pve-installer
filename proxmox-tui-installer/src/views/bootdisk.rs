@@ -1,6 +1,9 @@
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-use super::{DiskSizeFormInputView, FormInputView, FormInputViewGetValue, IntegerEditView};
+use super::{
+    DiskSizeEditView, DiskSizeFormInputView, FormView, FormInputView, FormInputViewGetValue,
+    IntegerEditView,
+};
 use crate::options::{
     AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
     LvmBootdiskOptions, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption, FS_TYPES,
@@ -192,50 +195,50 @@ impl ViewWrapper for AdvancedBootdiskOptionsView {
 }
 
 struct LvmBootdiskOptionsView {
-    view: LinearLayout,
+    view: FormView,
 }
 
 impl LvmBootdiskOptionsView {
     fn new(options: &LvmBootdiskOptions) -> Self {
         // TODO: Set maximum accordingly to disk size
-        let view = LinearLayout::vertical()
-            .child(DiskSizeFormInputView::new("Total size").content(options.total_size))
-            .child(DiskSizeFormInputView::new("Swap size").content(options.swap_size))
+        let view = FormView::new()
             .child(
-                DiskSizeFormInputView::new("Maximum root volume size")
-                    .content(options.max_root_size),
+                "Total size",
+                DiskSizeEditView::new().content(options.total_size),
             )
             .child(
-                DiskSizeFormInputView::new("Maximum data volume size")
-                    .content(options.max_data_size),
+                "Swap size",
+                DiskSizeEditView::new().content(options.swap_size),
             )
             .child(
-                DiskSizeFormInputView::new("Minimum free LVM space").content(options.min_lvm_free),
+                "Maximum root volume size",
+                DiskSizeEditView::new().content(options.max_root_size),
+            )
+            .child(
+                "Maximum data volume size",
+                DiskSizeEditView::new().content(options.max_data_size),
+            )
+            .child(
+                "Minimum free LVM space",
+                DiskSizeEditView::new().content(options.min_lvm_free),
             );
 
         Self { view }
     }
 
     fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
-        let mut get_disksize_value = |i| {
-            self.view
-                .get_child_mut(i)?
-                .downcast_mut::<DiskSizeFormInputView>()?
-                .get_content()
-        };
-
         Some(LvmBootdiskOptions {
-            total_size: get_disksize_value(0)?,
-            swap_size: get_disksize_value(1)?,
-            max_root_size: get_disksize_value(2)?,
-            max_data_size: get_disksize_value(3)?,
-            min_lvm_free: get_disksize_value(4)?,
+            total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
+            swap_size: self.view.get_value::<DiskSizeEditView, _>(1)?,
+            max_root_size: self.view.get_value::<DiskSizeEditView, _>(2)?,
+            max_data_size: self.view.get_value::<DiskSizeEditView, _>(3)?,
+            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(4)?,
         })
     }
 }
 
 impl ViewWrapper for LvmBootdiskOptionsView {
-    cursive::wrap_impl!(self.view: LinearLayout);
+    cursive::wrap_impl!(self.view: FormView);
 }
 
 struct MultiDiskOptionsView<T> {
