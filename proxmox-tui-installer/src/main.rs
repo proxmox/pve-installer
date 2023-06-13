@@ -14,10 +14,8 @@ use cursive::{
     },
     Cursive, View,
 };
-use views::{
-    BootdiskOptionsView, CidrAddressEditView, FormView, FormInputView, FormInputViewGetValue,
-    TableView, TableViewItem,
-};
+use std::net::IpAddr;
+use views::{BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO: &str = r#"
@@ -313,60 +311,79 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         .map(|data| data.options.network.clone())
         .unwrap_or_default();
 
-    let inner = LinearLayout::vertical()
-        .child(FormInputView::new(
+    let inner = FormView::new()
+        .child(
             "Management interface",
             SelectView::new().popup().with_all_str(vec!["eth0"]),
-        ))
-        .child(FormInputView::new(
-            "Hostname (FQDN)",
-            EditView::new().content(options.fqdn),
-        ))
-        .child(FormInputView::new(
+        )
+        .child("Hostname (FQDN)", EditView::new().content(options.fqdn))
+        .child(
             "IP address (CIDR)",
             CidrAddressEditView::new().content(options.address),
-        ))
-        .child(FormInputView::new(
+        )
+        .child(
             "Gateway address",
             EditView::new().content(options.gateway.to_string()),
-        ))
-        .child(FormInputView::new(
+        )
+        .child(
             "DNS server address",
             EditView::new().content(options.dns_server.to_string()),
-        ))
+        )
         .with_name("network-options");
 
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            let options = siv.call_on_name("network-options", |view: &mut LinearLayout| {
-                fn get_val<T, R>(view: &LinearLayout, index: usize) -> Option<R>
-                where
-                    T: View,
-                    FormInputView<T>: FormInputViewGetValue<R>,
-                {
-                    view.get_child(index)?
-                        .downcast_ref::<FormInputView<T>>()?
-                        .get_value()
-                }
+            let options = siv.call_on_name("network-options", |view: &mut FormView| {
+                let ifname = view
+                    .get_value::<SelectView, _>(0)
+                    .ok_or("failed to retrieve management interface name")?;
 
-                Some(NetworkOptions {
-                    ifname: get_val::<SelectView, _>(view, 0)?,
-                    fqdn: get_val::<EditView, _>(view, 1)?,
-                    address: get_val::<CidrAddressEditView, _>(view, 2)?,
-                    gateway: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
-                    dns_server: get_val::<EditView, _>(view, 3).and_then(|s| s.parse().ok())?,
-                })
+                let fqdn = view
+                    .get_value::<EditView, _>(1)
+                    .ok_or("failed to retrieve host FQDN")?;
+
+                let address = view
+                    .get_value::<CidrAddressEditView, _>(2)
+                    .ok_or("failed to retrieve host address")?;
+
+                let gateway = view
+                    .get_value::<EditView, _>(3)
+                    .ok_or("failed to retrieve gateway address")?
+                    .parse::<IpAddr>()
+                    .map_err(|err| err.to_string())?;
+
+                let dns_server = view
+                    .get_value::<EditView, _>(3)
+                    .ok_or("failed to retrieve DNS server address")?
+                    .parse::<IpAddr>()
+                    .map_err(|err| err.to_string())?;
+
+                if address.addr().is_ipv4() != gateway.is_ipv4() {
+                    Err("host and gateway IP address version must not differ".to_owned())
+                } else if address.addr().is_ipv4() != dns_server.is_ipv4() {
+                    Err("host and DNS IP address version must not differ".to_owned())
+                } else {
+                    Ok(NetworkOptions {
+                        ifname,
+                        fqdn,
+                        address,
+                        gateway,
+                        dns_server,
+                    })
+                }
             });
 
-            if let Some(options) = options.flatten() {
-                siv.with_user_data(|data: &mut InstallerData| {
-                    data.options.network = options;
-                });
+            match options {
+                Some(Ok(options)) => {
+                    siv.with_user_data(|data: &mut InstallerData| {
+                        data.options.network = options;
+                    });
 
-                add_next_screen(siv, &summary_dialog);
-            } else {
-                siv.add_layer(Dialog::info("Invalid values"));
+                    add_next_screen(siv, &summary_dialog);
+                }
+                Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
+                _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
     )
