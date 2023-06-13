@@ -5,10 +5,10 @@ use crate::utils::CidrAddress;
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
-    views::{DummyView, EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
+    views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
     View,
 };
-use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
+use std::{net::IpAddr, rc::Rc, str::FromStr};
 
 pub use self::bootdisk::*;
 pub use self::table_view::*;
@@ -99,49 +99,6 @@ impl ViewWrapper for IntegerEditView {
     }
 }
 
-pub struct DiskSizeFormInputView {
-    view: LinearLayout,
-}
-
-impl DiskSizeFormInputView {
-    pub fn new(label: &str) -> Self {
-        let view = LinearLayout::horizontal()
-            .child(TextView::new(format!("{label}: ")))
-            .child(DummyView.full_width())
-            .child(FloatEditView::new().full_width())
-            .child(TextView::new(" GB"));
-
-        Self { view }
-    }
-
-    pub fn content(mut self, content: u64) -> Self {
-        let val = (content as f64) / 1024. / 1024. / 1024.;
-
-        if let Some(view) = self.view.get_child_mut(2).and_then(|v| v.downcast_mut()) {
-            *view = FloatEditView::new().content(val).full_width();
-        }
-
-        self
-    }
-
-    pub fn get_content(&mut self) -> Option<u64> {
-        self.with_view_mut(|v| {
-            v.get_child_mut(2)?
-                .downcast_mut::<ResizedView<FloatEditView>>()?
-                .with_view_mut(|v| {
-                    v.get_content()
-                        .ok()
-                        .map(|val| (val * 1024. * 1024. * 1024.) as u64)
-                })?
-        })
-        .flatten()
-    }
-}
-
-impl ViewWrapper for DiskSizeFormInputView {
-    cursive::wrap_impl!(self.view: LinearLayout);
-}
-
 pub struct DiskSizeEditView {
     view: LinearLayout,
 }
@@ -180,76 +137,6 @@ impl DiskSizeEditView {
 }
 
 impl ViewWrapper for DiskSizeEditView {
-    cursive::wrap_impl!(self.view: LinearLayout);
-}
-
-pub trait FormInputViewGetValue<R> {
-    fn get_value(&self) -> Option<R>;
-}
-
-pub struct FormInputView<T: View> {
-    view: LinearLayout,
-    panthom: PhantomData<T>,
-}
-
-impl<T: View> FormInputView<T> {
-    pub fn new(label: &str, input: T) -> Self {
-        let view = LinearLayout::horizontal()
-            .child(TextView::new(format!("{label}: ")))
-            .child(DummyView.full_width())
-            .child(input.full_width());
-
-        Self {
-            view,
-            panthom: PhantomData,
-        }
-    }
-
-    fn inner_input(&self) -> Option<&T> {
-        self.view
-            .get_child(2)?
-            .downcast_ref::<ResizedView<T>>()
-            .map(|v| v.get_inner())
-    }
-
-    fn replace_inner(&mut self, view: impl View) -> Option<Box<dyn View + 'static>> {
-        let old = self.view.remove_child(2);
-        self.view.add_child(view.full_width());
-        old
-    }
-}
-
-impl FormInputViewGetValue<String> for FormInputView<EditView> {
-    fn get_value(&self) -> Option<String> {
-        self.inner_input().map(|v| (*v.get_content()).clone())
-    }
-}
-
-impl<T: 'static + Clone> FormInputViewGetValue<T> for FormInputView<SelectView<T>> {
-    fn get_value(&self) -> Option<T> {
-        self.inner_input()
-            .and_then(|v| v.selection())
-            .map(|v| (*v).clone())
-    }
-}
-
-impl<T> FormInputViewGetValue<T> for FormInputView<NumericEditView<T>>
-where
-    T: Copy + ToString + FromStr + PartialOrd,
-    NumericEditView<T>: ViewWrapper,
-{
-    fn get_value(&self) -> Option<T> {
-        self.inner_input().and_then(|v| v.get_content().ok())
-    }
-}
-
-impl FormInputViewGetValue<CidrAddress> for FormInputView<CidrAddressEditView> {
-    fn get_value(&self) -> Option<CidrAddress> {
-        self.inner_input().and_then(|v| v.get_values())
-    }
-}
-
-impl<T: View> ViewWrapper for FormInputView<T> {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
