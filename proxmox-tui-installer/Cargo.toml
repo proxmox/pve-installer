@@ -9,3 +9,4 @@ homepage = "https://www.proxmox.com"
 
 [dependencies]
 cursive = { version = "0.20.0", default-features = false, features = ["termion-backend"] }
+proxmox-sys = "0.5.0"

@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod options;
+mod system;
 mod utils;
 mod views;
 
@@ -77,6 +78,12 @@ struct InstallerData {
 
 fn main() {
     let mut siv = cursive::termion();
+
+    if let Err(err) = system::has_min_requirements() {
+        siv.add_layer(Dialog::around(TextView::new(err)).button("Ok", Cursive::quit));
+        siv.run();
+        return;
+    }
 
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
