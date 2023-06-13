@@ -5,6 +5,24 @@ use std::{
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum BtrfsRaidLevel {
+    Single,
+    Mirror,
+    Raid10,
+}
+
+impl fmt::Display for BtrfsRaidLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BtrfsRaidLevel::*;
+        match self {
+            Single => write!(f, "single disk"),
+            Mirror => write!(f, "mirrored"),
+            Raid10 => write!(f, "RAID10"),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ZfsRaidLevel {
     Single,
     Mirror,
@@ -33,6 +51,7 @@ pub enum FsType {
     Ext4,
     Xfs,
     Zfs(ZfsRaidLevel),
+    Btrfs(BtrfsRaidLevel),
 }
 
 impl fmt::Display for FsType {
@@ -42,6 +61,7 @@ impl fmt::Display for FsType {
             Ext4 => write!(f, "ext4"),
             Xfs => write!(f, "XFS"),
             Zfs(level) => write!(f, "ZFS ({level})"),
+            Btrfs(level) => write!(f, "Btrfs ({level})"),
         }
     }
 }
@@ -57,6 +77,9 @@ pub const FS_TYPES: &[FsType] = {
         Zfs(ZfsRaidLevel::RaidZ),
         Zfs(ZfsRaidLevel::RaidZ2),
         Zfs(ZfsRaidLevel::RaidZ3),
+        Btrfs(BtrfsRaidLevel::Single),
+        Btrfs(BtrfsRaidLevel::Mirror),
+        Btrfs(BtrfsRaidLevel::Raid10),
     ]
 };
 
@@ -83,6 +106,19 @@ impl LvmBootdiskOptions {
             max_root_size: 0,
             max_data_size: 0,
             min_lvm_free,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BtrfsBootdiskOptions {
+    pub disk_size: u64,
+}
+
+impl BtrfsBootdiskOptions {
+    pub fn defaults_from(disk: &Disk) -> Self {
+        Self {
+            disk_size: disk.size,
         }
     }
 }
@@ -168,6 +204,7 @@ impl ZfsBootdiskOptions {
 pub enum AdvancedBootdiskOptions {
     Lvm(LvmBootdiskOptions),
     Zfs(ZfsBootdiskOptions),
+    Btrfs(BtrfsBootdiskOptions),
 }
 
 #[derive(Clone, Debug)]
