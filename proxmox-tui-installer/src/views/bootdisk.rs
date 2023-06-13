@@ -18,9 +18,13 @@ pub struct BootdiskOptionsView {
 
 impl BootdiskOptionsView {
     pub fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
-        let bootdisk_select = SelectView::new()
-            .popup()
-            .with_all(disks.iter().map(|d| (d.to_string(), d.clone())))
+        let bootdisk_form = FormView::new()
+            .child(
+                "Target harddisk",
+                SelectView::new()
+                    .popup()
+                    .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
+            )
             .with_name("bootdisk-options-target-disk");
 
         let advanced_options = Rc::new(RefCell::new(options.clone()));
@@ -36,7 +40,7 @@ impl BootdiskOptionsView {
             }));
 
         let view = LinearLayout::vertical()
-            .child(FormView::new().child("Target harddisk", bootdisk_select))
+            .child(bootdisk_form)
             .child(DummyView)
             .child(advanced_button);
 
@@ -52,9 +56,10 @@ impl BootdiskOptionsView {
         if [FsType::Ext4, FsType::Xfs].contains(&options.fstype) {
             let disk = self
                 .view
-                .get_child(0)?
-                .downcast_ref::<FormView>()?
-                .get_value::<NamedView<SelectView<Disk>>, _>(0)?;
+                .get_child_mut(0)?
+                .downcast_mut::<NamedView<FormView>>()?
+                .get_mut()
+                .get_value::<SelectView<Disk>, _>(0)?;
 
             options.disks = vec![disk];
         }
