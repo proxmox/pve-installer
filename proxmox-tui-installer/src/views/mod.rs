@@ -182,6 +182,16 @@ impl<T: 'static + Clone> FormInputViewGetValue<T> for FormInputView<SelectView<T
     }
 }
 
+impl<T> FormInputViewGetValue<T> for FormInputView<NumericEditView<T>>
+where
+    T: Copy + ToString + FromStr + PartialOrd,
+    NumericEditView<T>: ViewWrapper,
+{
+    fn get_value(&self) -> Option<T> {
+        self.inner_input().and_then(|v| v.get_content().ok())
+    }
+}
+
 impl FormInputViewGetValue<CidrAddress> for FormInputView<CidrAddressEditView> {
     fn get_value(&self) -> Option<CidrAddress> {
         self.inner_input().and_then(|v| v.get_values())
