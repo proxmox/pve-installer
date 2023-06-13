@@ -1268,13 +1268,11 @@ _EOD
 			    push @$bootloader_err_list, $@ if $@;
 			}
 
-		    eval {
 			if (my $esp = $di->{esp}) {
-				prepare_grub_efi_boot_esp($dev, $esp, $targetdir);
-			    }
+			    eval { prepare_grub_efi_boot_esp($dev, $esp, $targetdir) };
+			    push @$bootloader_err_list, $@ if $@;
 			}
-		    };
-		    push @$bootloader_err_list, $@ if $@;
+		    }
 		}
 
 		syscmd("chroot $targetdir /usr/sbin/update-grub") == 0 ||
