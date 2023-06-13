@@ -5,7 +5,7 @@ use crate::utils::CidrAddress;
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
-    views::{DummyView, EditView, LinearLayout, ResizedView, SelectView, TextView},
+    views::{DummyView, EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
     View,
 };
 use std::{marker::PhantomData, net::IpAddr, rc::Rc, str::FromStr};
@@ -209,6 +209,124 @@ impl FormInputViewGetValue<CidrAddress> for FormInputView<CidrAddressEditView> {
 }
 
 impl<T: View> ViewWrapper for FormInputView<T> {
+    cursive::wrap_impl!(self.view: LinearLayout);
+}
+
+pub trait FormViewGetValue<R> {
+    fn get_value(&self) -> Option<R>;
+}
+
+impl FormViewGetValue<String> for EditView {
+    fn get_value(&self) -> Option<String> {
+        Some((*self.get_content()).clone())
+    }
+}
+
+impl<T: 'static + Clone> FormViewGetValue<T> for SelectView<T> {
+    fn get_value(&self) -> Option<T> {
+        self.selection().map(|v| (*v).clone())
+    }
+}
+
+impl<T> FormViewGetValue<T> for NumericEditView<T>
+where
+    T: Copy + ToString + FromStr + PartialOrd,
+    NumericEditView<T>: ViewWrapper,
+{
+    fn get_value(&self) -> Option<T> {
+        self.get_content().ok()
+    }
+}
+
+impl FormViewGetValue<CidrAddress> for CidrAddressEditView {
+    fn get_value(&self) -> Option<CidrAddress> {
+        self.get_values()
+    }
+}
+
+impl<T, R> FormViewGetValue<R> for NamedView<T>
+where
+    T: 'static + FormViewGetValue<R>,
+    NamedView<T>: ViewWrapper,
+    <NamedView<T> as ViewWrapper>::V: FormViewGetValue<R>,
+{
+    fn get_value(&self) -> Option<R> {
+        self.with_view(|v| v.get_value()).flatten()
+    }
+}
+
+pub struct FormView {
+    view: LinearLayout,
+}
+
+impl FormView {
+    pub fn new() -> Self {
+        let view = LinearLayout::horizontal()
+            .child(LinearLayout::vertical().full_width())
+            .child(LinearLayout::vertical().full_width());
+
+        Self { view }
+    }
+
+    pub fn add_child(&mut self, label: &str, view: impl View) {
+        self.add_to_column(0, TextView::new(format!("{label}: ")));
+        self.add_to_column(1, view);
+    }
+
+    pub fn child(mut self, label: &str, view: impl View) -> Self {
+        self.add_child(label, view);
+        self
+    }
+
+    pub fn get_child<T: View>(&self, index: usize) -> Option<&T> {
+        self.view
+            .get_child(1)?
+            .downcast_ref::<ResizedView<LinearLayout>>()?
+            .get_inner()
+            .get_child(index)?
+            .downcast_ref::<T>()
+    }
+
+    pub fn get_value<T, R>(&self, index: usize) -> Option<R>
+    where
+        T: View + FormViewGetValue<R>,
+    {
+        self.get_child::<T>(index)?.get_value()
+    }
+
+    pub fn replace_child(&mut self, index: usize, view: impl View) {
+        let parent = self
+            .view
+            .get_child_mut(1)
+            .and_then(|v| v.downcast_mut())
+            .map(ResizedView::<LinearLayout>::get_inner_mut);
+
+        if let Some(parent) = parent {
+            parent.remove_child(index);
+            parent.insert_child(index, view);
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.view
+            .get_child(1)
+            .and_then(|v| v.downcast_ref::<ResizedView<LinearLayout>>())
+            .unwrap()
+            .get_inner()
+            .len()
+    }
+
+    fn add_to_column(&mut self, index: usize, view: impl View) {
+        self.view
+            .get_child_mut(index)
+            .and_then(|v| v.downcast_mut::<ResizedView<LinearLayout>>())
+            .unwrap()
+            .get_inner_mut()
+            .add_child(view);
+    }
+}
+
+impl ViewWrapper for FormView {
     cursive::wrap_impl!(self.view: LinearLayout);
 }
 
