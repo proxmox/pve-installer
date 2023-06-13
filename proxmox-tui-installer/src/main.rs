@@ -259,34 +259,27 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
         .map(|data| data.options.password.clone())
         .unwrap_or_default();
 
-    let inner = LinearLayout::vertical()
-        .child(FormInputView::new(
-            "Root password",
-            EditView::new().secret(),
-        ))
-        .child(FormInputView::new(
-            "Confirm root password",
-            EditView::new().secret(),
-        ))
-        .child(FormInputView::new(
-            "Administator email",
-            EditView::new().content(options.email),
-        ))
+    let inner = FormView::new()
+        .child("Root password", EditView::new().secret())
+        .child("Confirm root password", EditView::new().secret())
+        .child("Administator email", EditView::new().content(options.email))
         .with_name("password-options");
 
     InstallerView::new(
         inner,
         Box::new(|siv| {
-            let options = siv.call_on_name("password-options", |view: &mut LinearLayout| {
-                fn get_val(view: &LinearLayout, index: usize) -> Option<String> {
-                    view.get_child(index)?
-                        .downcast_ref::<FormInputView<EditView>>()?
-                        .get_value()
-                }
+            let options = siv.call_on_name("password-options", |view: &mut FormView| {
+                let root_password = view
+                    .get_value::<EditView, _>(0)
+                    .ok_or("failed to retrieve password")?;
 
-                let root_password = get_val(view, 0).ok_or("failed to retrieve password")?;
-                let confirm_password =
-                    get_val(view, 1).ok_or("failed to retrieve password confirmation")?;
+                let confirm_password = view
+                    .get_value::<EditView, _>(1)
+                    .ok_or("failed to retrieve password confirmation")?;
+
+                let email = view
+                    .get_value::<EditView, _>(2)
+                    .ok_or("failed to retrieve email")?;
 
                 // TODO: proper validation
                 if root_password != confirm_password {
@@ -294,7 +287,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                 } else {
                     Ok(PasswordOptions {
                         root_password,
-                        email: get_val(view, 2).ok_or("failed to retrieve email")?,
+                        email,
                     })
                 }
             });
