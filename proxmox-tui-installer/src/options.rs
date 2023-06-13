@@ -180,7 +180,12 @@ impl fmt::Display for Disk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Format sizes properly with `proxmox-human-byte` once merged
         // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
-        write!(f, "{} ({} B)", self.path, self.size)
+        write!(
+            f,
+            "{} ({} GiB)",
+            self.path,
+            (self.size as f64) / 1024. / 1024. / 1024.
+        )
     }
 }
 
