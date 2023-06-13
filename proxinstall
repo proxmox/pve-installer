@@ -705,12 +705,8 @@ sub extract_data {
 
     my $bootdevinfo = [];
 
-    my $swapfile;
-    my $rootdev;
-    my $datadev;
-
-    my $use_zfs = 0;
-    my $use_btrfs = 0;
+    my ($swapfile, $rootdev, $datadev);
+    my ($use_zfs, $use_btrfs) = (0, 0);
 
     my $filesys = $config_options->{filesys};
 
