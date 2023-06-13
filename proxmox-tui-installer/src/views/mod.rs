@@ -115,7 +115,7 @@ impl DiskSizeFormInputView {
     }
 
     pub fn content(mut self, content: u64) -> Self {
-        let val = (content as f64) / 1024. / 1024.;
+        let val = (content as f64) / 1024. / 1024. / 1024.;
 
         if let Some(view) = self.view.get_child_mut(2).and_then(|v| v.downcast_mut()) {
             *view = FloatEditView::new().content(val).full_width();
@@ -128,7 +128,11 @@ impl DiskSizeFormInputView {
         self.with_view_mut(|v| {
             v.get_child_mut(2)?
                 .downcast_mut::<ResizedView<FloatEditView>>()?
-                .with_view_mut(|v| v.get_content().ok().map(|val| (val * 1024. * 1024.) as u64))?
+                .with_view_mut(|v| {
+                    v.get_content()
+                        .ok()
+                        .map(|val| (val * 1024. * 1024. * 1024.) as u64)
+                })?
         })
         .flatten()
     }
