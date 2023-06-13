@@ -374,6 +374,8 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                 });
 
                 add_next_screen(siv, &summary_dialog);
+            } else {
+                siv.add_layer(Dialog::info("Invalid values"));
             }
         }),
     )
