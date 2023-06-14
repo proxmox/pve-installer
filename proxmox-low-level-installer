@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use lib '.'; # FIXME
+
+use File::Path qw(make_path);
+use Getopt::Long;
+use JSON;
+
+use Proxmox::Sys::File qw(file_write_all);
+
+use Proxmox::Install::Env;
+
+
+{
+    my $test_mode;
+    GetOptions(
+	'test-mode|t' => \$test_mode
+    ) or die "usage error\n";
+
+    # FIXME: use cleaner approach for setting tet mode?
+    Proxmox::Install::Env::set_test_image('/dev/null') if $test_mode;
+}
+
+my $commands = {
+    'dump-env' => 'Dump the current ISO and Hardware environment to base the installer UI on.',
+    'start-session' => 'Start an installation session, with command and result transmitted via stdin/out',
+    'help' => 'Output this usage help.',
+};
+
+sub usage {
+    my ($cmd) = @_;
+
+    if (!$cmd) {
+	printf("ERROR: missing command\n\n");
+    } elsif (!exists($commands->{$cmd})) {
+	printf("ERROR: unknown command '$cmd'\n\n");
+    }
+
+    print "USAGE: $0 <cmd>\n";
+    for my $cmd (sort keys $commands->%*) {
+	printf("  %-20s - %s\n", $cmd, $commands->{$cmd});
+    }
+
+    exit($cmd ne 'help' ? 1 : 0);
+}
+
+my $cmd = shift;
+if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
+    usage($cmd // '');
+}
+
+if ($cmd eq 'dump-env') {
+    my $env = Proxmox::Install::Env::setup();
+
+    my $out_dir = $env->{locations}->{run};
+    make_path($out_dir);
+    die "failed to create output directory '$out_dir'\n" if !-d $out_dir;
+
+    my $locales_serialized = to_json($env->{locales}, {canonical => 1, utf8 => 1}) ."\n";
+    file_write_all("$out_dir/locales.json", $locales_serialized);
+
+    my $iso_info = {
+	'iso-info' => $env->{iso},
+	'product' => $env->{product},
+	'product-cfg' => $env->{cfg},
+	'locations' => $env->{locations},
+    };
+    my $iso_serialized = to_json($iso_info, {canonical => 1, utf8 => 1}) ."\n";
+    file_write_all("$out_dir/iso-info.json", $iso_serialized);
+
+    #print "" . to_json($env, {canonical => 1, utf8 => 1, pretty => 1}) ."\n";
+    # TODO HARDWARE
+} else {
+    die "TODO";
+}
+
+exit(0);
