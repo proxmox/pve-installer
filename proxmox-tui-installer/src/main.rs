@@ -16,13 +16,13 @@ use cursive::{
     },
     Cursive, CursiveRunnable, View,
 };
-use setup::{LocaleInfo, SetupInfo};
+use setup::{LocaleInfo, ProxmoxProduct, SetupInfo};
 use std::{env, net::IpAddr};
 use utils::Fqdn;
 use views::{BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
-const LOGO: &str = r#"
+const LOGO_PVE: &str = r#"
        ____                                          _    __ _____
       / __ \_________  _  ______ ___  ____  _  __   | |  / / ____/
   / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/   | | / / __/
@@ -30,14 +30,32 @@ const LOGO: &str = r#"
 /_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|     |___/_____/
 "#;
 
-const TITLE: &str = "Proxmox VE Installer";
+const LOGO_PBS: &str = r#"
+      ____                                          ____ _____
+     / __ \_________  _  ______ ___  ____  _  __   / __ ) ___/
+   / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/  / __  \__ \
+  / ____/ /  / /_/ />  </ / / / / / /_/ />  <   / /_/ /__/ /
+/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  /_____/____/
+"#;
+
+const LOGO_PMG: &str = r#"
+       ____                                          __  _________
+      / __ \_________  _  ______ ___  ____  _  __   /  |/  / ____/
+   / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/  / /|_/ / / __
+  / ____/ /  / /_/ />  </ / / / / / /_/ />  <   / /  / / /_/ /
+/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  /_/  /_/\____/
+"#;
 
 struct InstallerView {
     view: ResizedView<LinearLayout>,
 }
 
 impl InstallerView {
-    pub fn new<T: View>(view: T, next_cb: Box<dyn Fn(&mut Cursive)>) -> Self {
+    pub fn new<T: View>(
+        state: &InstallerState,
+        view: T,
+        next_cb: Box<dyn Fn(&mut Cursive)>,
+    ) -> Self {
         let inner = LinearLayout::vertical()
             .child(PaddedView::lrtb(0, 0, 1, 1, view))
             .child(PaddedView::lrtb(
@@ -53,13 +71,26 @@ impl InstallerView {
                     .child(Button::new("Next", next_cb)),
             ));
 
-        Self::with_raw(inner)
+        Self::with_raw(state, inner)
     }
 
-    pub fn with_raw<T: View>(view: T) -> Self {
+    pub fn with_raw(state: &InstallerState, view: impl View) -> Self {
+        let setup = &state.setup_info;
+
+        let logo = match setup.product_cfg.product {
+            ProxmoxProduct::PVE => LOGO_PVE,
+            ProxmoxProduct::PBS => LOGO_PBS,
+            ProxmoxProduct::PMG => LOGO_PMG,
+        };
+
+        let title = format!(
+            "{} ({}-{}) Installer",
+            setup.product_cfg.fullname, setup.iso_info.release, setup.iso_info.isorelease
+        );
+
         let inner = LinearLayout::vertical()
-            .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(LOGO).center()))
-            .child(Dialog::around(view).title(TITLE));
+            .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(logo).center()))
+            .child(Dialog::around(view).title(title));
 
         Self {
             // Limit the maximum to something reasonable, such that it won't get spread out much
@@ -216,7 +247,9 @@ fn get_eula() -> String {
         .unwrap_or_else(|_| "< Debug build - ignoring non-existing EULA >".to_owned())
 }
 
-fn license_dialog(_: &mut Cursive) -> InstallerView {
+fn license_dialog(siv: &mut Cursive) -> InstallerView {
+    let state = siv.user_data::<InstallerState>().unwrap();
+
     let inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
             0,
@@ -241,13 +274,14 @@ fn license_dialog(_: &mut Cursive) -> InstallerView {
                 })),
         ));
 
-    InstallerView::with_raw(inner)
+    InstallerView::with_raw(state, inner)
 }
 
 fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().cloned().unwrap();
 
     InstallerView::new(
+        &state,
         BootdiskOptionsView::new(&state.available_disks, &state.options.bootdisk)
             .with_name("bootdisk-options"),
         Box::new(|siv| {
@@ -269,21 +303,20 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
 }
 
 fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
-    let options = siv
-        .user_data::<InstallerState>()
-        .map(|state| state.options.timezone.clone())
-        .unwrap_or_default();
+    let state = siv.user_data::<InstallerState>().unwrap();
+    let options = &state.options.timezone;
 
     let inner = FormView::new()
         .child("Country", EditView::new().content("Austria"))
-        .child("Timezone", EditView::new().content(options.timezone))
+        .child("Timezone", EditView::new().content(&options.timezone))
         .child(
             "Keyboard layout",
-            EditView::new().content(options.kb_layout),
+            EditView::new().content(&options.kb_layout),
         )
         .with_name("timezone-options");
 
     InstallerView::new(
+        state,
         inner,
         Box::new(|siv| {
             let options: Option<Result<TimezoneOptions, String>> =
@@ -318,18 +351,20 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
 }
 
 fn password_dialog(siv: &mut Cursive) -> InstallerView {
-    let options = siv
-        .user_data::<InstallerState>()
-        .map(|state| state.options.password.clone())
-        .unwrap_or_default();
+    let state = siv.user_data::<InstallerState>().unwrap();
+    let options = &state.options.password;
 
     let inner = FormView::new()
         .child("Root password", EditView::new().secret())
         .child("Confirm root password", EditView::new().secret())
-        .child("Administator email", EditView::new().content(options.email))
+        .child(
+            "Administator email",
+            EditView::new().content(&options.email),
+        )
         .with_name("password-options");
 
     InstallerView::new(
+        state,
         inner,
         Box::new(|siv| {
             let options = siv.call_on_name("password-options", |view: &mut FormView| {
@@ -375,10 +410,8 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
 }
 
 fn network_dialog(siv: &mut Cursive) -> InstallerView {
-    let options = siv
-        .user_data::<InstallerState>()
-        .map(|state| state.options.network.clone())
-        .unwrap_or_default();
+    let state = siv.user_data::<InstallerState>().unwrap();
+    let options = &state.options.network;
 
     let inner = FormView::new()
         .child(
@@ -391,7 +424,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         )
         .child(
             "IP address (CIDR)",
-            CidrAddressEditView::new().content(options.address),
+            CidrAddressEditView::new().content(options.address.clone()),
         )
         .child(
             "Gateway address",
@@ -404,6 +437,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         .with_name("network-options");
 
     InstallerView::new(
+        state,
         inner,
         Box::new(|siv| {
             let options = siv.call_on_name("network-options", |view: &mut FormView| {
@@ -493,10 +527,7 @@ impl TableViewItem for SummaryOption {
 }
 
 fn summary_dialog(siv: &mut Cursive) -> InstallerView {
-    let options = siv
-        .user_data::<InstallerState>()
-        .map(|d| d.options.clone())
-        .unwrap();
+    let state = siv.user_data::<InstallerState>().unwrap();
 
     let inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
@@ -509,7 +540,7 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                     ("name".to_owned(), "Option".to_owned()),
                     ("value".to_owned(), "Selected value".to_owned()),
                 ])
-                .items(options.to_summary()),
+                .items(state.options.to_summary()),
         ))
         .child(
             LinearLayout::horizontal()
@@ -533,5 +564,5 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                 .child(Button::new("Install", |_| {})),
         ));
 
-    InstallerView::with_raw(inner)
+    InstallerView::with_raw(state, inner)
 }
