@@ -1,4 +1,4 @@
-package Proxmox::Install::Env;
+package Proxmox::Install::ISOEnv;
 
 use strict;
 use warnings;

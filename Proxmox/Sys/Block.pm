@@ -7,7 +7,7 @@ use File::Basename;
 use IO::File;
 use List::Util qw(first);
 
-use Proxmox::Install::Env;
+use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
 
@@ -51,7 +51,7 @@ sub get_dev_uuid {
 
 my sub hd_list {
     if (is_test_mode()) {
-	my $disks = Proxmox::Install::Env::get_test_images();
+	my $disks = Proxmox::Install::ISOEnv::get_test_images();
 
 	return [
 	    map { [ -1, $_, int((-s $_)/512), "TESTDISK", 512] } $disks->@*

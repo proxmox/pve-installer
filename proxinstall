@@ -19,7 +19,7 @@ use File::Path;
 use Time::HiRes;
 use POSIX ":sys_wait_h";
 
-use Proxmox::Install::Env;
+use Proxmox::Install::ISOEnv;
 use Proxmox::Log;
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
@@ -36,12 +36,12 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
 	'test-image|t=s' => \$test_image
     ) or die "usage error\n";
 
-    Proxmox::Install::Env::set_test_image($test_image) if $test_image;
+    Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
 }
 
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
-my $env = Proxmox::Install::Env::setup();
+my $env = Proxmox::Install::ISOEnv::setup();
 
 my $zfstestpool = "test_rpool";
 my $zfspoolname = is_test_mode() ? $zfstestpool : 'rpool';
@@ -741,7 +741,7 @@ sub extract_data {
 
 	if (is_test_mode()) {
 
-	    my $test_images = Proxmox::Install::Env::get_test_images();
+	    my $test_images = Proxmox::Install::ISOEnv::get_test_images();
 	    $rootdev = abs_path($test_images->[0]); # FIXME: use all selected for test too!
 	    syscmd("umount $rootdev");
 

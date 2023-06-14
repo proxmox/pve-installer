@@ -11,8 +11,7 @@ use JSON;
 
 use Proxmox::Sys::File qw(file_write_all);
 
-use Proxmox::Install::Env;
-
+use Proxmox::Install::ISOEnv;
 
 {
     my $test_mode;
@@ -21,7 +20,7 @@ use Proxmox::Install::Env;
     ) or die "usage error\n";
 
     # FIXME: use cleaner approach for setting tet mode?
-    Proxmox::Install::Env::set_test_image('/dev/null') if $test_mode;
+    Proxmox::Install::ISOEnv::set_test_image('/dev/null') if $test_mode;
 }
 
 my $commands = {
@@ -53,7 +52,7 @@ if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
 }
 
 if ($cmd eq 'dump-env') {
-    my $env = Proxmox::Install::Env::setup();
+    my $env = Proxmox::Install::ISOEnv::setup();
 
     my $out_dir = $env->{locations}->{run};
     make_path($out_dir);
