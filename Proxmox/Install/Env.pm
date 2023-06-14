@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Cwd ();
 
 use base qw(Exporter);
 our @EXPORT = qw(is_test_mode);
