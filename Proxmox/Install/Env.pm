@@ -118,6 +118,7 @@ my sub get_locations {
 	iso => $iso_dir,
 	lib => $is_test ? Cwd::cwd() . "/testdir/${base_lib_dir}" : $base_lib_dir,
 	pkg => "${iso_dir}/proxmox/packages/",
+	run => $is_test ? Cwd::cwd() . "/testdir/run/proxmox-installer" : '/run/proxmox-installer',
     };
 }
 
