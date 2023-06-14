@@ -16,6 +16,7 @@ use cursive::{
     Cursive, View,
 };
 use std::net::IpAddr;
+use utils::Fqdn;
 use views::{BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
@@ -326,7 +327,10 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
             "Management interface",
             SelectView::new().popup().with_all_str(vec!["eth0"]),
         )
-        .child("Hostname (FQDN)", EditView::new().content(options.fqdn))
+        .child(
+            "Hostname (FQDN)",
+            EditView::new().content(options.fqdn.to_string()),
+        )
         .child(
             "IP address (CIDR)",
             CidrAddressEditView::new().content(options.address),
@@ -351,7 +355,9 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
 
                 let fqdn = view
                     .get_value::<EditView, _>(1)
-                    .ok_or("failed to retrieve host FQDN")?;
+                    .ok_or("failed to retrieve host FQDN")?
+                    .parse::<Fqdn>()
+                    .map_err(|_| "failed to parse hostname".to_owned())?;
 
                 let address = view
                     .get_value::<CidrAddressEditView, _>(2)
@@ -373,9 +379,11 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     Err("host and gateway IP address version must not differ".to_owned())
                 } else if address.addr().is_ipv4() != dns_server.is_ipv4() {
                     Err("host and DNS IP address version must not differ".to_owned())
-                } else if fqdn.chars().all(|c| c.is_ascii_digit()) {
+                } else if fqdn.to_string().chars().all(|c| c.is_ascii_digit()) {
                     // Not supported/allowed on Debian
                     Err("hostname cannot be purely numeric".to_owned())
+                } else if fqdn.to_string().ends_with(".invalid") {
+                    Err("hostname does not look valid".to_owned())
                 } else {
                     Ok(NetworkOptions {
                         ifname,

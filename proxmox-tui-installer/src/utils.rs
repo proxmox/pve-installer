@@ -97,3 +97,98 @@ fn mask_limit(addr: &IpAddr) -> usize {
         128
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct Fqdn {
+    host: String,
+    domain: String,
+}
+
+impl Fqdn {
+    pub fn from(fqdn: &str) -> Result<Self, ()> {
+        let (host, domain) = fqdn.split_once('.').ok_or(())?;
+
+        if !Self::validate_single(host) || !domain.split('.').all(Self::validate_single) {
+            Err(())
+        } else {
+            Ok(Self {
+                host: host.to_owned(),
+                domain: domain.to_owned(),
+            })
+        }
+    }
+
+    #[cfg(test)]
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+
+    #[cfg(test)]
+    pub fn domain(&self) -> &str {
+        &self.domain
+    }
+
+    fn validate_single(s: &str) -> bool {
+        !s.is_empty()
+            && s.chars()
+                .next()
+                .map(|c| c.is_ascii_alphanumeric())
+                .unwrap_or_default()
+            && s.chars()
+                .last()
+                .map(|c| c.is_ascii_alphanumeric())
+                .unwrap_or_default()
+            && s.chars()
+                .skip(1)
+                .take(s.len().saturating_sub(2))
+                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    }
+}
+
+impl FromStr for Fqdn {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::from(value)
+    }
+}
+
+impl fmt::Display for Fqdn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}.{}", self.host, self.domain)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fqdn_validate_single() {
+        assert!(Fqdn::from("foo.example.com").is_ok());
+        assert!(Fqdn::from("1.example.com").is_ok());
+        assert!(Fqdn::from("foo-bar.com").is_ok());
+        assert!(Fqdn::from("a-b.com").is_ok());
+
+        assert!(Fqdn::from("foo").is_err());
+        assert!(Fqdn::from("-foo.com").is_err());
+        assert!(Fqdn::from("foo-.com").is_err());
+        assert!(Fqdn::from("foo.com-").is_err());
+        assert!(Fqdn::from("-o-.com").is_err());
+    }
+
+    #[test]
+    fn fqdn_parts() {
+        let fqdn = Fqdn::from("pve.example.com").unwrap();
+        assert_eq!(fqdn.host(), "pve");
+        assert_eq!(fqdn.domain(), "example.com");
+    }
+
+    #[test]
+    fn fqdn_display() {
+        assert_eq!(
+            Fqdn::from("foo.example.com").unwrap().to_string(),
+            "foo.example.com"
+        );
+    }
+}
