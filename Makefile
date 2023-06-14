@@ -55,20 +55,25 @@ prepare-check-env: $(DEB)
 	rm -rf testdir
 	dpkg -X $(DEB) testdir
 
+cd-info.test: PRODUCT ?= pve
+cd-info.test:
+	printf '%s\n' "PRODUCT='$(PRODUCT)'" >$@.tmp
+	mv $@.tmp $@
+
 check-pve: prepare-check-env test.img
-	printf '%s\n' "PRODUCT='pve'" >cd-info.test
+	rm -f cd-info.test; $(MAKE) PRODUCT=pve cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img test5.big.img
-	printf '%s\n' "PRODUCT='pve'" >cd-info.test
+	rm -f cd-info.test; $(MAKE) PRODUCT=pve cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
 check-pmg: prepare-check-env test.img
-	printf '%s\n' "PRODUCT='pmg'" >cd-info.test
+	rm -f cd-info.test; $(MAKE) PRODUCT=pmg cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs: prepare-check-env test.img
-	printf '%s\n' "PRODUCT='pbs'" >cd-info.test
+	rm -f cd-info.test; $(MAKE) PRODUCT=pbs cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 
