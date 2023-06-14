@@ -6,7 +6,7 @@ use crate::options::{
 use cursive::{
     theme::Effect,
     view::{Nameable, Resizable, ViewWrapper},
-    views::{Button, Dialog, DummyView, LinearLayout, NamedView, SelectView, TextView},
+    views::{Button, Dialog, DummyView, LinearLayout, NamedView, Panel, SelectView, TextView},
     Cursive, View,
 };
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
@@ -283,6 +283,14 @@ impl<T: View> MultiDiskOptionsView<T> {
         }
     }
 
+    fn top_panel(mut self, view: impl View) -> Self {
+        self.view = LinearLayout::vertical()
+            .child(Panel::new(view))
+            .child(self.view);
+
+        self
+    }
+
     fn get_disks(&mut self) -> Option<Vec<Disk>> {
         let mut disks = vec![];
         let disk_form = self
@@ -324,7 +332,8 @@ impl BtrfsBootdiskOptionsView {
         let view = MultiDiskOptionsView::new(
             disks,
             FormView::new().child("hdsize", DiskSizeEditView::new().content(options.disk_size)),
-        );
+        )
+        .top_panel(TextView::new("Btrfs integration is a technology preview!").center());
 
         Self { view }
     }
@@ -377,9 +386,12 @@ impl ZfsBootdiskOptionsView {
             .child("copies", IntegerEditView::new().content(options.copies))
             .child("hdsize", DiskSizeEditView::new().content(options.disk_size));
 
-        Self {
-            view: MultiDiskOptionsView::new(disks, inner),
-        }
+        let view = MultiDiskOptionsView::new(disks, inner)
+            .top_panel(TextView::new(
+                "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
+            ).center());
+
+        Self { view }
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
