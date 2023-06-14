@@ -74,7 +74,7 @@ impl ViewWrapper for InstallerView {
 }
 
 #[derive(Clone)]
-struct InstallerData {
+struct InstallerState {
     options: InstallerOptions,
     available_disks: Vec<Disk>,
     setup_info: SetupInfo,
@@ -98,7 +98,7 @@ fn main() {
         size: 17179869184,
     }];
 
-    siv.set_user_data(InstallerData {
+    siv.set_user_data(InstallerState {
         options: InstallerOptions {
             bootdisk: BootdiskOptions::defaults_from(&available_disks[0]),
             timezone: TimezoneOptions::default(),
@@ -245,10 +245,10 @@ fn license_dialog(_: &mut Cursive) -> InstallerView {
 }
 
 fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
-    let data = siv.user_data::<InstallerData>().cloned().unwrap();
+    let state = siv.user_data::<InstallerState>().cloned().unwrap();
 
     InstallerView::new(
-        BootdiskOptionsView::new(&data.available_disks, &data.options.bootdisk)
+        BootdiskOptionsView::new(&state.available_disks, &state.options.bootdisk)
             .with_name("bootdisk-options"),
         Box::new(|siv| {
             let options = siv
@@ -256,8 +256,8 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                 .flatten();
 
             if let Some(options) = options {
-                siv.with_user_data(|data: &mut InstallerData| {
-                    data.options.bootdisk = options;
+                siv.with_user_data(|state: &mut InstallerState| {
+                    state.options.bootdisk = options;
                 });
 
                 add_next_screen(siv, &timezone_dialog);
@@ -270,8 +270,8 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerData>()
-        .map(|data| data.options.timezone.clone())
+        .user_data::<InstallerState>()
+        .map(|state| state.options.timezone.clone())
         .unwrap_or_default();
 
     let inner = FormView::new()
@@ -304,8 +304,8 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
 
             match options {
                 Some(Ok(options)) => {
-                    siv.with_user_data(|data: &mut InstallerData| {
-                        data.options.timezone = options;
+                    siv.with_user_data(|state: &mut InstallerState| {
+                        state.options.timezone = options;
                     });
 
                     add_next_screen(siv, &password_dialog);
@@ -319,8 +319,8 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn password_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerData>()
-        .map(|data| data.options.password.clone())
+        .user_data::<InstallerState>()
+        .map(|state| state.options.password.clone())
         .unwrap_or_default();
 
     let inner = FormView::new()
@@ -361,8 +361,8 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
 
             match options {
                 Some(Ok(options)) => {
-                    siv.with_user_data(|data: &mut InstallerData| {
-                        data.options.password = options;
+                    siv.with_user_data(|state: &mut InstallerState| {
+                        state.options.password = options;
                     });
 
                     add_next_screen(siv, &network_dialog);
@@ -376,8 +376,8 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
 
 fn network_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerData>()
-        .map(|data| data.options.network.clone())
+        .user_data::<InstallerState>()
+        .map(|state| state.options.network.clone())
         .unwrap_or_default();
 
     let inner = FormView::new()
@@ -455,8 +455,8 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
 
             match options {
                 Some(Ok(options)) => {
-                    siv.with_user_data(|data: &mut InstallerData| {
-                        data.options.network = options;
+                    siv.with_user_data(|state: &mut InstallerState| {
+                        state.options.network = options;
                     });
 
                     add_next_screen(siv, &summary_dialog);
@@ -494,7 +494,7 @@ impl TableViewItem for SummaryOption {
 
 fn summary_dialog(siv: &mut Cursive) -> InstallerView {
     let options = siv
-        .user_data::<InstallerData>()
+        .user_data::<InstallerState>()
         .map(|d| d.options.clone())
         .unwrap();
 
