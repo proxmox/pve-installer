@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod options;
+mod setup;
 mod system;
 mod utils;
 mod views;
@@ -13,9 +14,10 @@ use cursive::{
         Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
         ResizedView, ScrollView, SelectView, TextView,
     },
-    Cursive, View,
+    Cursive, CursiveRunnable, View,
 };
-use std::net::IpAddr;
+use setup::{LocaleInfo, SetupInfo};
+use std::{env, net::IpAddr};
 use utils::Fqdn;
 use views::{BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem};
 
@@ -75,16 +77,17 @@ impl ViewWrapper for InstallerView {
 struct InstallerData {
     options: InstallerOptions,
     available_disks: Vec<Disk>,
+    setup_info: SetupInfo,
+    locales: LocaleInfo,
 }
 
 fn main() {
     let mut siv = cursive::termion();
 
-    if let Err(err) = system::has_min_requirements() {
-        siv.add_layer(Dialog::around(TextView::new(err)).button("Ok", Cursive::quit));
-        siv.run();
-        return;
-    }
+    let (setup_info, locales) = match installer_setup() {
+        Ok(result) => result,
+        Err(err) => initial_setup_error(&mut siv, &err),
+    };
 
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
@@ -103,10 +106,65 @@ fn main() {
             network: NetworkOptions::default(),
         },
         available_disks,
+        setup_info,
+        locales,
     });
 
     add_next_screen(&mut siv, &license_dialog);
     siv.run();
+}
+
+fn installer_setup() -> Result<(SetupInfo, LocaleInfo), String> {
+    system::has_min_requirements()?;
+
+    let testdir = || {
+        env::current_dir()
+            .map(|mut p| {
+                p.push("testdir");
+                p
+            })
+            .map_err(|err| err.to_string())
+    };
+
+    let mut path = match env::args().nth(1).as_deref() {
+        Some("-t") => testdir(),
+
+        #[cfg(debug_assertions)]
+        _ => testdir(),
+
+        #[cfg(not(debug_assertions))]
+        _ => Ok(std::path::PathBuf::from("/run")),
+    }?;
+
+    path.push("run");
+    path.push("proxmox-installer");
+
+    let installer_info = {
+        let mut path = path.clone();
+        path.push("iso-info.json");
+
+        setup::read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
+    };
+
+    let locale_info = {
+        let mut path = path.clone();
+        path.push("locales.json");
+
+        setup::read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
+    };
+
+    Ok((installer_info, locale_info))
+}
+
+fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
+    siv.add_layer(
+        Dialog::around(TextView::new(message))
+            .title("Installer setup error")
+            .button("Ok", Cursive::quit),
+    );
+    siv.run();
+
+    std::process::exit(1);
 }
 
 fn add_next_screen(siv: &mut Cursive, constructor: &dyn Fn(&mut Cursive) -> InstallerView) {
