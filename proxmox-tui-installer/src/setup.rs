@@ -41,7 +41,7 @@ pub struct CountryInfo {
     pub kmap: String,
 }
 
-#[derive(Clone, Deserialize, Eq, PartialEq, Ord)]
+#[derive(Clone, Deserialize, Eq, PartialEq)]
 pub struct KeyboardMapping {
     pub name: String,
     #[serde(rename = "kvm")]
@@ -55,6 +55,12 @@ pub struct KeyboardMapping {
 impl cmp::PartialOrd for KeyboardMapping {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         self.name.partial_cmp(&other.name)
+    }
+}
+
+impl cmp::Ord for KeyboardMapping {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.name.cmp(&other.name)
     }
 }
 
