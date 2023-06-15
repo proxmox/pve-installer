@@ -12,7 +12,7 @@ use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
-        ResizedView, ScrollView, SelectView, TextView,
+        ProgressBar, ResizedView, ScrollView, SelectView, TextContent, TextView,
     },
     Cursive, CursiveRunnable, ScreenId, View,
 };
@@ -115,6 +115,7 @@ enum InstallerStep {
     Password,
     Network,
     Summary,
+    Install,
 }
 
 #[derive(Clone)]
@@ -575,8 +576,41 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                 .child(DummyView.full_width())
                 .child(Button::new("Previous", switch_to_prev_screen))
                 .child(DummyView)
-                .child(Button::new("Install", |_| {})),
+                .child(Button::new("Install", |siv| {
+                    switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
+                })),
         ));
+
+    InstallerView::with_raw(state, inner)
+}
+
+fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
+    // Ensure the screen is updated independently of keyboard events and such
+    siv.set_autorefresh(true);
+
+    let state = siv.user_data::<InstallerState>().unwrap();
+    let progress_text = TextContent::new("extracting ..");
+    let progress_bar = ProgressBar::new()
+        .with_task({
+            move |counter| {
+                for _ in 0..100 {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    counter.tick(1);
+                }
+            }
+        })
+        .full_width();
+
+    let inner = PaddedView::lrtb(
+        1,
+        1,
+        1,
+        1,
+        LinearLayout::vertical()
+            .child(PaddedView::lrtb(1, 1, 0, 0, progress_bar))
+            .child(DummyView)
+            .child(TextView::new_with_content(progress_text).center()),
+    );
 
     InstallerView::with_raw(state, inner)
 }
