@@ -14,10 +14,10 @@ use cursive::{
         Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
         ResizedView, ScrollView, SelectView, TextView,
     },
-    Cursive, CursiveRunnable, View,
+    Cursive, CursiveRunnable, ScreenId, View,
 };
 use setup::{LocaleInfo, ProxmoxProduct, SetupInfo};
-use std::{env, net::IpAddr};
+use std::{collections::HashMap, env, net::IpAddr};
 use utils::Fqdn;
 use views::{
     BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem,
@@ -107,12 +107,23 @@ impl ViewWrapper for InstallerView {
     cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
 }
 
+#[derive(Clone, Eq, Hash, PartialEq)]
+enum InstallerStep {
+    Licence,
+    Bootdisk,
+    Timezone,
+    Password,
+    Network,
+    Summary,
+}
+
 #[derive(Clone)]
 struct InstallerState {
     options: InstallerOptions,
     available_disks: Vec<Disk>,
     setup_info: SetupInfo,
     locales: LocaleInfo,
+    steps: HashMap<InstallerStep, ScreenId>,
 }
 
 fn main() {
@@ -142,9 +153,10 @@ fn main() {
         available_disks,
         setup_info,
         locales,
+        steps: HashMap::new(),
     });
 
-    add_next_screen(&mut siv, &license_dialog);
+    switch_to_next_screen(&mut siv, InstallerStep::Licence, &license_dialog);
     siv.run();
 }
 
@@ -201,9 +213,22 @@ fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
     std::process::exit(1);
 }
 
-fn add_next_screen(siv: &mut Cursive, constructor: &dyn Fn(&mut Cursive) -> InstallerView) {
+fn switch_to_next_screen(
+    siv: &mut Cursive,
+    step: InstallerStep,
+    constructor: &dyn Fn(&mut Cursive) -> InstallerView,
+) {
+    // Check if the screen already exists; if yes, then simply switch to it.
+    if let Some(state) = siv.user_data::<InstallerState>().cloned() {
+        if let Some(screen_id) = state.steps.get(&step) {
+            siv.set_screen(*screen_id);
+            return;
+        }
+    }
+
     let v = constructor(siv);
-    siv.add_active_screen();
+    let screen = siv.add_active_screen();
+    siv.with_user_data(|state: &mut InstallerState| state.steps.insert(step, screen));
     siv.screen_mut().add_layer(v);
 }
 
@@ -273,7 +298,7 @@ fn license_dialog(siv: &mut Cursive) -> InstallerView {
                 .child(abort_install_button())
                 .child(DummyView.full_width())
                 .child(Button::new("I agree", |siv| {
-                    add_next_screen(siv, &bootdisk_dialog)
+                    switch_to_next_screen(siv, InstallerStep::Bootdisk, &bootdisk_dialog)
                 })),
         ));
 
@@ -297,7 +322,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                     state.options.bootdisk = options;
                 });
 
-                add_next_screen(siv, &timezone_dialog);
+                switch_to_next_screen(siv, InstallerStep::Timezone, &timezone_dialog);
             } else {
                 siv.add_layer(Dialog::info("Invalid values"));
             }
@@ -321,7 +346,7 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
                         state.options.timezone = options;
                     });
 
-                    add_next_screen(siv, &password_dialog);
+                    switch_to_next_screen(siv, InstallerStep::Password, &password_dialog);
                 }
                 Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
                 _ => siv.add_layer(Dialog::info("Invalid values")),
@@ -380,7 +405,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                         state.options.password = options;
                     });
 
-                    add_next_screen(siv, &network_dialog);
+                    switch_to_next_screen(siv, InstallerStep::Network, &network_dialog);
                 }
                 Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
                 _ => siv.add_layer(Dialog::info("Invalid values")),
@@ -473,7 +498,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                         state.options.network = options;
                     });
 
-                    add_next_screen(siv, &summary_dialog);
+                    switch_to_next_screen(siv, InstallerStep::Summary, &summary_dialog);
                 }
                 Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
                 _ => siv.add_layer(Dialog::info("Invalid values")),
