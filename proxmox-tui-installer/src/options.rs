@@ -1,4 +1,5 @@
 use crate::{
+    setup::LocaleInfo,
     utils::{CidrAddress, Fqdn},
     SummaryOption,
 };
@@ -316,7 +317,13 @@ pub struct InstallerOptions {
 }
 
 impl InstallerOptions {
-    pub fn to_summary(&self) -> Vec<SummaryOption> {
+    pub fn to_summary(&self, locales: &LocaleInfo) -> Vec<SummaryOption> {
+        let kb_layout = locales
+            .kmap
+            .get(&self.timezone.kb_layout)
+            .map(|l| &l.name)
+            .unwrap_or(&self.timezone.kb_layout);
+
         vec![
             SummaryOption::new("Bootdisk filesystem", self.bootdisk.fstype.to_string()),
             SummaryOption::new(
@@ -329,7 +336,7 @@ impl InstallerOptions {
                     .join(", "),
             ),
             SummaryOption::new("Timezone", &self.timezone.timezone),
-            SummaryOption::new("Keyboard layout", &self.timezone.kb_layout),
+            SummaryOption::new("Keyboard layout", kb_layout),
             SummaryOption::new("Administator email", &self.password.email),
             SummaryOption::new("Management interface", &self.network.ifname),
             SummaryOption::new("Hostname", self.network.fqdn.to_string()),
