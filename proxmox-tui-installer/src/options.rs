@@ -254,6 +254,7 @@ impl BootdiskOptions {
 
 #[derive(Clone, Debug)]
 pub struct TimezoneOptions {
+    pub country: String,
     pub timezone: String,
     pub kb_layout: String,
 }
@@ -261,6 +262,7 @@ pub struct TimezoneOptions {
 impl Default for TimezoneOptions {
     fn default() -> Self {
         Self {
+            country: "at".to_owned(),
             timezone: "Europe/Vienna".to_owned(),
             kb_layout: "en_US".to_owned(),
         }

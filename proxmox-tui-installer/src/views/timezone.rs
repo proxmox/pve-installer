@@ -20,11 +20,17 @@ impl TimezoneOptionsView {
             .collect::<Vec<(String, String)>>();
         countries.sort();
 
-        let timezones = locales.cczones.get(&countries[0].1);
+        let country_selection_pos = countries
+            .iter()
+            .position(|c| c.1 == options.country)
+            .unwrap_or_default();
+
+        let timezones = locales.cczones.get(&options.country);
 
         let country_selectview = SelectView::new()
             .popup()
             .with_all(countries.clone())
+            .selected(country_selection_pos)
             .on_submit({
                 let cczones = locales.cczones.clone();
                 move |siv: &mut Cursive, selected: &String| {
@@ -54,6 +60,11 @@ impl TimezoneOptionsView {
     }
 
     pub fn get_values(&mut self) -> Result<TimezoneOptions, String> {
+        let country = self
+            .view
+            .get_value::<SelectView, _>(0)
+            .ok_or("failed to retrieve timezone")?;
+
         let timezone = self
             .view
             .get_value::<NamedView<SelectView>, _>(1)
@@ -65,6 +76,7 @@ impl TimezoneOptionsView {
             .ok_or("failed to retrieve keyboard layout")?;
 
         Ok(TimezoneOptions {
+            country,
             timezone,
             kb_layout,
         })
