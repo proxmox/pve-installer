@@ -124,12 +124,24 @@ struct InstallerState {
     setup_info: SetupInfo,
     locales: LocaleInfo,
     steps: HashMap<InstallerStep, ScreenId>,
+    in_test_mode: bool,
 }
 
 fn main() {
     let mut siv = cursive::termion();
 
-    let (setup_info, locales) = match installer_setup() {
+    let in_test_mode = match env::args().nth(1).as_deref() {
+        Some("-t") => true,
+
+        // Always force the test directory in debug builds
+        #[cfg(debug_assertions)]
+        _ => true,
+
+        #[cfg(not(debug_assertions))]
+        _ => false,
+    };
+
+    let (setup_info, locales) = match installer_setup(in_test_mode) {
         Ok(result) => result,
         Err(err) => initial_setup_error(&mut siv, &err),
     };
@@ -154,13 +166,14 @@ fn main() {
         setup_info,
         locales,
         steps: HashMap::new(),
+        in_test_mode,
     });
 
     switch_to_next_screen(&mut siv, InstallerStep::Licence, &license_dialog);
     siv.run();
 }
 
-fn installer_setup() -> Result<(SetupInfo, LocaleInfo), String> {
+fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo), String> {
     system::has_min_requirements()?;
 
     let testdir = || {
@@ -172,15 +185,11 @@ fn installer_setup() -> Result<(SetupInfo, LocaleInfo), String> {
             .map_err(|err| err.to_string())
     };
 
-    let mut path = match env::args().nth(1).as_deref() {
-        Some("-t") => testdir(),
-
-        #[cfg(debug_assertions)]
-        _ => testdir(),
-
-        #[cfg(not(debug_assertions))]
-        _ => Ok(std::path::PathBuf::from("/run")),
-    }?;
+    let mut path = if in_test_mode {
+        testdir()?
+    } else {
+        std::path::PathBuf::from("/")
+    };
 
     path.push("run");
     path.push("proxmox-installer");
