@@ -278,23 +278,28 @@ impl<T: View> MultiDiskOptionsView<T> {
             .child(options_view);
 
         Self {
-            view,
+            view: LinearLayout::vertical().child(view),
             phantom: PhantomData,
         }
     }
 
     fn top_panel(mut self, view: impl View) -> Self {
-        self.view = LinearLayout::vertical()
-            .child(Panel::new(view))
-            .child(self.view);
+        if self.has_top_panel() {
+            self.view.remove_child(0);
+        }
 
+        self.view.insert_child(0, Panel::new(view));
         self
     }
 
     fn get_disks(&mut self) -> Option<Vec<Disk>> {
         let mut disks = vec![];
+        let view_top_index = usize::from(self.has_top_panel());
+
         let disk_form = self
             .view
+            .get_child(view_top_index)?
+            .downcast_ref::<LinearLayout>()?
             .get_child(0)?
             .downcast_ref::<LinearLayout>()?
             .get_child(2)?
@@ -310,11 +315,22 @@ impl<T: View> MultiDiskOptionsView<T> {
     }
 
     fn inner_mut(&mut self) -> Option<&mut T> {
+        let view_top_index = usize::from(self.has_top_panel());
+
         self.view
+            .get_child_mut(view_top_index)?
+            .downcast_mut::<LinearLayout>()?
             .get_child_mut(2)?
             .downcast_mut::<LinearLayout>()?
             .get_child_mut(2)?
             .downcast_mut::<T>()
+    }
+
+    fn has_top_panel(&self) -> bool {
+        // The root view should only ever have one or two children
+        assert!([1, 2].contains(&self.view.len()));
+
+        self.view.len() == 2
     }
 }
 
