@@ -54,7 +54,8 @@ pub struct KeyboardMapping {
 pub struct LocaleInfo {
     #[serde(deserialize_with = "deserialize_cczones_map")]
     pub cczones: HashMap<String, Vec<String>>,
-    pub country: HashMap<String, CountryInfo>,
+    #[serde(rename = "country")]
+    pub countries: HashMap<String, CountryInfo>,
     pub kmap: HashMap<String, KeyboardMapping>,
 }
 
