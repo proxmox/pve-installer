@@ -1,5 +1,6 @@
 mod bootdisk;
 mod table_view;
+mod timezone;
 
 use crate::utils::CidrAddress;
 use cursive::{
@@ -12,6 +13,7 @@ use std::{net::IpAddr, rc::Rc, str::FromStr};
 
 pub use self::bootdisk::*;
 pub use self::table_view::*;
+pub use self::timezone::*;
 
 pub struct NumericEditView<T> {
     view: EditView,

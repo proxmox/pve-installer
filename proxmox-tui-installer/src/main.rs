@@ -19,7 +19,10 @@ use cursive::{
 use setup::{LocaleInfo, ProxmoxProduct, SetupInfo};
 use std::{env, net::IpAddr};
 use utils::Fqdn;
-use views::{BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem};
+use views::{
+    BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem,
+    TimezoneOptionsView,
+};
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const LOGO_PVE: &str = r#"
@@ -306,34 +309,11 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
     let options = &state.options.timezone;
 
-    let inner = FormView::new()
-        .child("Country", EditView::new().content("Austria"))
-        .child("Timezone", EditView::new().content(&options.timezone))
-        .child(
-            "Keyboard layout",
-            EditView::new().content(&options.kb_layout),
-        )
-        .with_name("timezone-options");
-
     InstallerView::new(
         state,
-        inner,
+        TimezoneOptionsView::new(&state.locales, options).with_name("timezone-options"),
         Box::new(|siv| {
-            let options: Option<Result<TimezoneOptions, String>> =
-                siv.call_on_name("timezone-options", |view: &mut FormView| {
-                    let timezone = view
-                        .get_value::<EditView, _>(1)
-                        .ok_or("failed to retrieve timezone")?;
-
-                    let kb_layout = view
-                        .get_value::<EditView, _>(2)
-                        .ok_or("failed to retrieve keyboard layout")?;
-
-                    Ok(TimezoneOptions {
-                        timezone,
-                        kb_layout,
-                    })
-                });
+            let options = siv.call_on_name("timezone-options", TimezoneOptionsView::get_values);
 
             match options {
                 Some(Ok(options)) => {
