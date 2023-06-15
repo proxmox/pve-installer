@@ -2,10 +2,11 @@ use super::FormView;
 use crate::{
     options::TimezoneOptions,
     setup::{KeyboardMapping, LocaleInfo},
+    system, InstallerState,
 };
 use cursive::{
     view::{Nameable, ViewWrapper},
-    views::{NamedView, SelectView},
+    views::{Dialog, NamedView, SelectView},
     Cursive,
 };
 
@@ -72,7 +73,23 @@ impl TimezoneOptionsView {
                 SelectView::new()
                     .popup()
                     .with_all(kb_layouts)
-                    .selected(kb_layout_selected_pos),
+                    .selected(kb_layout_selected_pos)
+                    .on_submit(|siv, selected| {
+                        if siv
+                            .user_data::<InstallerState>()
+                            .map(|state| state.in_test_mode)
+                            // In doubt, don't override the layout
+                            .unwrap_or(true)
+                        {
+                            return;
+                        }
+
+                        if let Err(err) = system::set_keyboard_layout(selected) {
+                            siv.add_layer(Dialog::info(format!(
+                                "Failed to apply keyboard layout: {err}"
+                            )));
+                        }
+                    }),
             );
 
         Self { view }

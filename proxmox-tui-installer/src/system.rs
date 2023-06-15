@@ -1,4 +1,6 @@
+use crate::setup::KeyboardMapping;
 use proxmox_sys::linux::procfs;
+use std::{fs::OpenOptions, io::Write, process::Command};
 
 pub fn has_min_requirements() -> Result<(), String> {
     let meminfo = procfs::read_meminfo().map_err(|err| err.to_string())?;
@@ -20,6 +22,35 @@ pub fn has_min_requirements() -> Result<(), String> {
         )
         .to_owned());
     }
+
+    Ok(())
+}
+
+pub fn set_keyboard_layout(kmap: &KeyboardMapping) -> Result<(), String> {
+    Command::new("setxkbmap")
+        .args([&kmap.xkb_layout, &kmap.xkb_variant])
+        .output()
+        .map_err(|err| err.to_string())?;
+
+    let mut f = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("/etc/default/keyboard")
+        .map_err(|err| err.to_string())?;
+
+    write!(
+        f,
+        r#"XKBLAYOUT="{}"
+XKBVARIANT="{}"
+BACKSPACE="guess"
+"#,
+        kmap.xkb_layout, kmap.xkb_variant
+    )
+    .map_err(|err| err.to_string())?;
+
+    Command::new("setupcon")
+        .output()
+        .map_err(|err| err.to_string())?;
 
     Ok(())
 }
