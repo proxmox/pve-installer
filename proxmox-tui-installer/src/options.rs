@@ -314,6 +314,7 @@ pub struct InstallerOptions {
     pub timezone: TimezoneOptions,
     pub password: PasswordOptions,
     pub network: NetworkOptions,
+    pub reboot: bool,
 }
 
 impl InstallerOptions {

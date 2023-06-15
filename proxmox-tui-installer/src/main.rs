@@ -12,7 +12,7 @@ use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
-        ProgressBar, ResizedView, ScrollView, SelectView, TextContent, TextView,
+        ProgressBar, ResizedView, ScrollView, SelectView, TextContent, TextView, ViewRef,
     },
     Cursive, CursiveRunnable, ScreenId, View,
 };
@@ -162,6 +162,7 @@ fn main() {
             timezone: TimezoneOptions::default(),
             password: PasswordOptions::default(),
             network: NetworkOptions::default(),
+            reboot: false,
         },
         available_disks,
         setup_info,
@@ -577,6 +578,15 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                 .child(Button::new("Previous", switch_to_prev_screen))
                 .child(DummyView)
                 .child(Button::new("Install", |siv| {
+                    let reboot = siv
+                        .find_name("reboot-after-install")
+                        .map(|v: ViewRef<Checkbox>| v.is_checked())
+                        .unwrap_or_default();
+
+                    siv.with_user_data(|state: &mut InstallerState| {
+                        state.options.reboot = reboot;
+                    });
+
                     switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
                 })),
         ));
