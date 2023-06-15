@@ -28,7 +28,7 @@ pub struct IsoInfo {
 #[derive(Clone, Deserialize)]
 pub struct SetupInfo {
     #[serde(rename = "product-cfg")]
-    pub product_cfg: ProductConfig,
+    pub config: ProductConfig,
     #[serde(rename = "iso-info")]
     pub iso_info: IsoInfo,
 }

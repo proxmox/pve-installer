@@ -80,7 +80,7 @@ impl InstallerView {
     pub fn with_raw(state: &InstallerState, view: impl View) -> Self {
         let setup = &state.setup_info;
 
-        let logo = match setup.product_cfg.product {
+        let logo = match setup.config.product {
             ProxmoxProduct::PVE => LOGO_PVE,
             ProxmoxProduct::PBS => LOGO_PBS,
             ProxmoxProduct::PMG => LOGO_PMG,
@@ -88,7 +88,7 @@ impl InstallerView {
 
         let title = format!(
             "{} ({}-{}) Installer",
-            setup.product_cfg.fullname, setup.iso_info.release, setup.iso_info.isorelease
+            setup.config.fullname, setup.iso_info.release, setup.iso_info.isorelease
         );
 
         let inner = LinearLayout::vertical()
