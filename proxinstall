@@ -1609,7 +1609,7 @@ sub create_text_input {
 
     my $label = Gtk3::Label->new($text);
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox->pack_start($label, 0, 0, 10);
     my $e1 = Gtk3::Entry->new();
     $e1->set_width_chars(35);
@@ -1625,7 +1625,7 @@ sub create_cidr_inputs {
 
     my $label = Gtk3::Label->new('IP Address (CIDR)');
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox->pack_start($label, 0, 0, 10);
 
     my $ip_el = Gtk3::Entry->new();
@@ -1635,7 +1635,6 @@ sub create_cidr_inputs {
 
     $label = Gtk3::Label->new('/');
     $label->set_size_request(10, -1);
-    $label->set_alignment(0.5, 0.5);
     $hbox->pack_start($label, 0, 0, 2);
 
     my $cidr_el = Gtk3::Entry->new();
@@ -1742,7 +1741,7 @@ sub create_ipconf_view {
     my $devicebox = Gtk3::HBox->new(0, 0);
     my $label = Gtk3::Label->new("Management Interface:");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $devicebox->pack_start($label, 0, 0, 10);
     $devicebox->pack_start($device_cb, 0, 0, 0);
 
@@ -2006,7 +2005,7 @@ sub create_password_view {
     my $hbox1 = Gtk3::HBox->new(0, 0);
     my $label = Gtk3::Label->new("Password");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox1->pack_start($label, 0, 0, 10);
     my $pwe1 = Gtk3::Entry->new();
     $pwe1->set_visibility(0);
@@ -2017,7 +2016,7 @@ sub create_password_view {
     my $hbox2 = Gtk3::HBox->new(0, 0);
     $label = Gtk3::Label->new("Confirm");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox2->pack_start($label, 0, 0, 10);
     my $pwe2 = Gtk3::Entry->new();
     $pwe2->set_visibility(0);
@@ -2028,7 +2027,7 @@ sub create_password_view {
     my $hbox3 = Gtk3::HBox->new(0, 0);
     $label = Gtk3::Label->new("Email");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox3->pack_start($label, 0, 0, 10);
     my $eme = Gtk3::Entry->new();
     $eme->set_size_request(200, -1);
@@ -2110,14 +2109,14 @@ sub create_country_view {
     my $hbox2 = Gtk3::HBox->new(0, 0);
     my $label = Gtk3::Label->new("Time zone");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox2->pack_start($label, 0, 0, 10);
     update_zonelist ($hbox2);
 
     my $hbox3 = Gtk3::HBox->new(0, 0);
     $label = Gtk3::Label->new("Keyboard Layout");
     $label->set_size_request(150, -1);
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $hbox3->pack_start($label, 0, 0, 10);
 
     my $kmapcb = Gtk3::ComboBoxText->new();
@@ -2228,7 +2227,7 @@ sub create_country_view {
     my $hbox =  Gtk3::HBox->new(0, 0);
 
     $label = Gtk3::Label->new("Country");
-    $label->set_alignment(1, 0.5);
+    $label->set_xalign(1.0);
     $label->set_size_request(150, -1);
     $hbox->pack_start($label, 0, 0, 10);
     $hbox->pack_start($w, 0, 0, 0);
@@ -2292,7 +2291,7 @@ my $create_label_widget_grid = sub {
 	my $widget = @$labeled_widgets[$i+1];
 	my $label = Gtk3::Label->new(@$labeled_widgets[$i]);
 	$label->set_visible(1);
-	$label->set_alignment (1, 0.5);
+	$label->set_xalign(1.0);
 	$grid->attach($label, 0, $row, 1, 1);
 	$widget->set_visible(1);
 	$grid->attach($widget, 1, $row, 1, 1);
@@ -2520,7 +2519,7 @@ sub create_hdoption_view {
 
     # Filesystem type
     my $label0 = Gtk3::Label->new("Filesystem");
-    $label0->set_alignment (1, 0.5);
+    $label0->set_xalign(1.0);
     $grid->attach($label0, 0, $row, 1, 1);
 
     my $fstypecb = Gtk3::ComboBoxText->new();
