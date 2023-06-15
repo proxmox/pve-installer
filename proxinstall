@@ -1510,7 +1510,7 @@ sub create_main_window {
  #  $f1->set_shadow_type ('none');
  #  $hbox->pack_start ($f1, 1, 1, 0);
 
-    my $sep1 = Gtk3::HSeparator->new();
+    my $sep1 = Gtk3::Separator->new('horizontal');
     $vbox->pack_start($sep1, 0, 0, 0);
 
     $cmdbox = Gtk3::Box->new('horizontal', 0);
@@ -1547,7 +1547,7 @@ sub create_main_window {
     my $vbox3 = Gtk3::Box->new('vertical', 0);
     $vbox2->pack_start($vbox3, 0, 0, 0);
 
-    my $sep2 = Gtk3::HSeparator->new;
+    my $sep2 = Gtk3::Separator->new('horizontal');
     $vbox3->pack_start($sep2, 0, 0, 0);
 
     $inbox = Gtk3::Box->new('horizontal', 0);
@@ -2550,7 +2550,7 @@ sub create_hdoption_view {
 
     $row++;
 
-    my $sep = Gtk3::HSeparator->new();
+    my $sep = Gtk3::Separator->new('horizontal');
     $sep->set_visible(1);
     $grid->attach($sep, 0, $row, 2, 1);
     $row++;
@@ -2671,7 +2671,7 @@ sub create_hdoption_view {
 	&$switch_view();
     });
 
-    my $sep2 = Gtk3::HSeparator->new();
+    my $sep2 = Gtk3::Separator->new('horizontal');
     $sep2->set_visible(1);
     $contarea->pack_end($sep2, 1, 1, 10);
 
