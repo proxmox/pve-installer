@@ -118,12 +118,10 @@ impl Fqdn {
         }
     }
 
-    #[cfg(test)]
     pub fn host(&self) -> &str {
         &self.host
     }
 
-    #[cfg(test)]
     pub fn domain(&self) -> &str {
         &self.domain
     }

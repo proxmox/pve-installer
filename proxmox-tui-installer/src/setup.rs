@@ -1,6 +1,9 @@
-use std::{cmp, collections::HashMap, fs::File, io::BufReader, path::Path};
-
-use serde::{Deserialize, Deserializer};
+use crate::{
+    options::{BtrfsRaidLevel, Disk, FsType, InstallerOptions, ZfsRaidLevel},
+    utils::CidrAddress,
+};
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Deserialize)]
@@ -73,6 +76,50 @@ pub struct LocaleInfo {
     pub kmap: HashMap<String, KeyboardMapping>,
 }
 
+#[derive(Serialize)]
+pub struct InstallConfig {
+    #[serde(serialize_with = "serialize_target_disk_list")]
+    target_hd: Vec<Disk>,
+    #[serde(serialize_with = "serialize_fstype")]
+    target_fs: FsType,
+    country: String,
+    timezone: String,
+    keymap: String,
+    mailto: String,
+    password: String,
+    interface: String,
+    hostname: String,
+    domain: String,
+    ip: IpAddr,
+    netmask: String,
+    #[serde(serialize_with = "serialize_as_display")]
+    cidr: CidrAddress,
+    gateway: IpAddr,
+    dnsserver: IpAddr,
+}
+
+impl From<InstallerOptions> for InstallConfig {
+    fn from(options: InstallerOptions) -> Self {
+        Self {
+            target_hd: options.bootdisk.disks,
+            target_fs: options.bootdisk.fstype,
+            country: options.timezone.country,
+            timezone: options.timezone.timezone,
+            keymap: options.timezone.kb_layout,
+            mailto: options.password.email,
+            password: options.password.root_password,
+            interface: options.network.ifname,
+            hostname: options.network.fqdn.host().to_owned(),
+            domain: options.network.fqdn.domain().to_owned(),
+            ip: options.network.address.addr(),
+            netmask: options.network.address.mask().to_string(),
+            cidr: options.network.address,
+            gateway: options.network.gateway,
+            dnsserver: options.network.dns_server,
+        }
+    }
+}
+
 pub fn read_json<T: for<'de> Deserialize<'de>, P: AsRef<Path>>(path: P) -> Result<T, String> {
     let file = File::open(path).map_err(|err| err.to_string())?;
     let reader = BufReader::new(file);
@@ -102,4 +149,48 @@ where
     }
 
     Ok(result)
+}
+
+fn serialize_target_disk_list<S>(value: &[Disk], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(value.len()))?;
+    for disk in value {
+        seq.serialize_element(&disk.path)?;
+    }
+    seq.end()
+}
+
+fn serialize_fstype<S>(value: &FsType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use FsType::*;
+    let value = match value {
+        // proxinstall::$fssetup
+        Ext4 => "ext4",
+        Xfs => "xfs",
+        // proxinstall::get_zfs_raid_setup()
+        Zfs(ZfsRaidLevel::Single) => "zfs (RAID0)",
+        Zfs(ZfsRaidLevel::Mirror) => "zfs (RAID1)",
+        Zfs(ZfsRaidLevel::Raid10) => "zfs (RAID10)",
+        Zfs(ZfsRaidLevel::RaidZ) => "zfs (RAIDZ-1)",
+        Zfs(ZfsRaidLevel::RaidZ2) => "zfs (RAIDZ-2)",
+        Zfs(ZfsRaidLevel::RaidZ3) => "zfs (RAIDZ-3)",
+        // proxinstall::get_btrfs_raid_setup()
+        Btrfs(BtrfsRaidLevel::Single) => "btrfs (RAID0)",
+        Btrfs(BtrfsRaidLevel::Mirror) => "btrfs (RAID1)",
+        Btrfs(BtrfsRaidLevel::Raid10) => "btrfs (RAID10)",
+    };
+
+    serializer.collect_str(value)
+}
+
+fn serialize_as_display<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: fmt::Display,
+{
+    serializer.collect_str(value)
 }
