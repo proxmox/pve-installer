@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
+use std::{cmp, collections::HashMap, fs::File, io::BufReader, path::Path};
 
 use serde::{Deserialize, Deserializer};
 
@@ -41,15 +41,21 @@ pub struct CountryInfo {
     pub kmap: String,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Ord)]
 pub struct KeyboardMapping {
     pub name: String,
     #[serde(rename = "kvm")]
     pub id: String,
     #[serde(rename = "x11")]
-    pub layout: String,
+    pub xkb_layout: String,
     #[serde(rename = "x11var")]
-    pub variant: String,
+    pub xkb_variant: String,
+}
+
+impl cmp::PartialOrd for KeyboardMapping {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
 }
 
 #[derive(Clone, Deserialize)]

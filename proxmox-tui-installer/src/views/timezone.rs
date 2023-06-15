@@ -1,5 +1,8 @@
 use super::FormView;
-use crate::{options::TimezoneOptions, setup::LocaleInfo};
+use crate::{
+    options::TimezoneOptions,
+    setup::{KeyboardMapping, LocaleInfo},
+};
 use cursive::{
     view::{Nameable, ViewWrapper},
     views::{NamedView, SelectView},
@@ -48,13 +51,13 @@ impl TimezoneOptionsView {
             .kmap
             .clone()
             .into_values()
-            .map(|l| (l.name, l.id))
-            .collect::<Vec<(String, String)>>();
+            .map(|l| (l.name.clone(), l))
+            .collect::<Vec<(String, KeyboardMapping)>>();
         kb_layouts.sort();
 
         let kb_layout_selected_pos = kb_layouts
             .iter()
-            .position(|l| l.1 == options.kb_layout)
+            .position(|l| l.1.id == options.kb_layout)
             .unwrap_or_default();
 
         let view = FormView::new()
@@ -86,15 +89,15 @@ impl TimezoneOptionsView {
             .get_value::<NamedView<SelectView>, _>(1)
             .ok_or("failed to retrieve timezone")?;
 
-        let kb_layout = self
+        let kmap = self
             .view
-            .get_value::<SelectView, _>(2)
+            .get_value::<SelectView<KeyboardMapping>, _>(2)
             .ok_or("failed to retrieve keyboard layout")?;
 
         Ok(TimezoneOptions {
             country,
             timezone,
-            kb_layout,
+            kb_layout: kmap.id,
         })
     }
 
