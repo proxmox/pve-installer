@@ -44,6 +44,8 @@ pub struct CountryInfo {
 #[derive(Clone, Deserialize)]
 pub struct KeyboardMapping {
     pub name: String,
+    #[serde(rename = "kvm")]
+    pub id: String,
     #[serde(rename = "x11")]
     pub layout: String,
     #[serde(rename = "x11var")]

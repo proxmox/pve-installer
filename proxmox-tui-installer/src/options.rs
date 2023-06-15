@@ -264,7 +264,7 @@ impl Default for TimezoneOptions {
         Self {
             country: "at".to_owned(),
             timezone: "Europe/Vienna".to_owned(),
-            kb_layout: "en_US".to_owned(),
+            kb_layout: "en-us".to_owned(),
         }
     }
 }

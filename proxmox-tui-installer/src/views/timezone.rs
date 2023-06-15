@@ -2,7 +2,7 @@ use super::FormView;
 use crate::{options::TimezoneOptions, setup::LocaleInfo};
 use cursive::{
     view::{Nameable, ViewWrapper},
-    views::{EditView, NamedView, SelectView},
+    views::{NamedView, SelectView},
     Cursive,
 };
 
@@ -44,6 +44,19 @@ impl TimezoneOptionsView {
                 }
             });
 
+        let mut kb_layouts = locales
+            .kmap
+            .clone()
+            .into_values()
+            .map(|l| (l.name, l.id))
+            .collect::<Vec<(String, String)>>();
+        kb_layouts.sort();
+
+        let kb_layout_selected_pos = kb_layouts
+            .iter()
+            .position(|l| l.1 == options.kb_layout)
+            .unwrap_or_default();
+
         let view = FormView::new()
             .child("Country", country_selectview)
             .child(
@@ -53,7 +66,10 @@ impl TimezoneOptionsView {
             )
             .child(
                 "Keyboard layout",
-                EditView::new().content(&options.kb_layout),
+                SelectView::new()
+                    .popup()
+                    .with_all(kb_layouts)
+                    .selected(kb_layout_selected_pos),
             );
 
         Self { view }
@@ -72,7 +88,7 @@ impl TimezoneOptionsView {
 
         let kb_layout = self
             .view
-            .get_value::<EditView, _>(2)
+            .get_value::<SelectView, _>(2)
             .ok_or("failed to retrieve keyboard layout")?;
 
         Ok(TimezoneOptions {
