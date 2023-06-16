@@ -1,9 +1,11 @@
+use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
+
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::{
     options::{BtrfsRaidLevel, Disk, FsType, InstallerOptions, ZfsRaidLevel},
     utils::CidrAddress,
 };
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
-use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Deserialize)]

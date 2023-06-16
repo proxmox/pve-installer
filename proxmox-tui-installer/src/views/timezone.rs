@@ -1,13 +1,14 @@
+use cursive::{
+    view::{Nameable, ViewWrapper},
+    views::{Dialog, NamedView, SelectView},
+    Cursive,
+};
+
 use super::FormView;
 use crate::{
     options::TimezoneOptions,
     setup::{KeyboardMapping, LocaleInfo},
     system, InstallerState,
-};
-use cursive::{
-    view::{Nameable, ViewWrapper},
-    views::{Dialog, NamedView, SelectView},
-    Cursive,
 };
 
 pub struct TimezoneOptionsView {

@@ -1,15 +1,17 @@
-use super::{DiskSizeEditView, FormView, IntegerEditView};
-use crate::options::{
-    AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
-    LvmBootdiskOptions, ZfsBootdiskOptions, FS_TYPES, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
-};
+use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+
 use cursive::{
     theme::Effect,
     view::{Nameable, Resizable, ViewWrapper},
     views::{Button, Dialog, DummyView, LinearLayout, NamedView, Panel, SelectView, TextView},
     Cursive, View,
 };
-use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+
+use super::{DiskSizeEditView, FormView, IntegerEditView};
+use crate::options::{
+    AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
+    LvmBootdiskOptions, ZfsBootdiskOptions, FS_TYPES, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+};
 
 pub struct BootdiskOptionsView {
     view: LinearLayout,

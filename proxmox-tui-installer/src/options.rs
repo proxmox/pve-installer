@@ -1,11 +1,10 @@
+use std::fmt;
+use std::net::{IpAddr, Ipv4Addr};
+
 use crate::{
     setup::LocaleInfo,
     utils::{CidrAddress, Fqdn},
     SummaryOption,
-};
-use std::{
-    fmt,
-    net::{IpAddr, Ipv4Addr},
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

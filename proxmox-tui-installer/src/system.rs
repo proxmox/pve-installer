@@ -1,6 +1,8 @@
-use crate::setup::KeyboardMapping;
-use proxmox_sys::linux::procfs;
 use std::{fs::OpenOptions, io::Write, process::Command};
+
+use proxmox_sys::linux::procfs;
+
+use crate::setup::KeyboardMapping;
 
 pub fn has_min_requirements() -> Result<(), String> {
     let meminfo = procfs::read_meminfo().map_err(|err| err.to_string())?;

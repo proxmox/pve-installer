@@ -1,19 +1,22 @@
-mod bootdisk;
-mod table_view;
-mod timezone;
+use std::{net::IpAddr, rc::Rc, str::FromStr};
 
-use crate::utils::CidrAddress;
 use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
     views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
     View,
 };
-use std::{net::IpAddr, rc::Rc, str::FromStr};
 
-pub use self::bootdisk::*;
-pub use self::table_view::*;
-pub use self::timezone::*;
+use crate::utils::CidrAddress;
+
+mod bootdisk;
+pub use bootdisk::*;
+
+mod table_view;
+pub use table_view::*;
+
+mod timezone;
+pub use timezone::*;
 
 pub struct NumericEditView<T> {
     view: EditView,

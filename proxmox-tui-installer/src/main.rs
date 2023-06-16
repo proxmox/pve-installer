@@ -1,12 +1,7 @@
 #![forbid(unsafe_code)]
 
-mod options;
-mod setup;
-mod system;
-mod utils;
-mod views;
+use std::{collections::HashMap, env, net::IpAddr};
 
-use crate::options::*;
 use cursive::{
     event::Event,
     view::{Nameable, Resizable, ViewWrapper},
@@ -16,9 +11,19 @@ use cursive::{
     },
     Cursive, CursiveRunnable, ScreenId, View,
 };
+
+mod options;
+use options::*;
+
+mod setup;
 use setup::{LocaleInfo, ProxmoxProduct, SetupInfo};
-use std::{collections::HashMap, env, net::IpAddr};
+
+mod system;
+
+mod utils;
 use utils::Fqdn;
+
+mod views;
 use views::{
     BootdiskOptionsView, CidrAddressEditView, FormView, TableView, TableViewItem,
     TimezoneOptionsView,
