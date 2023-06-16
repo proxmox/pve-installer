@@ -236,9 +236,8 @@ _EOD
 
 
 sub detect_country {
-
     print "trying to detect country...\n";
-    my $cpid = open2(\*TMP, undef, "traceroute -N 1 -q 1 -n 8.8.8.8");
+    my $cpid = open2(my $TRACEROUTE_FH, undef, "traceroute -N 1 -q 1 -n 8.8.8.8");
     return undef if !$cpid;
 
     my $country;
@@ -247,7 +246,7 @@ sub detect_country {
     eval  {
 	local $SIG{ALRM} = sub { die "timed out!\n" };
 	my $line;
-	while (defined ($line = <TMP>)) {
+	while (defined ($line = <$TRACEROUTE_FH>)) {
 	    log_debug("DC TRACEROUTE: $line");
 	    if ($line =~ m/\s*\d+\s+(\d+\.\d+\.\d+\.\d+)\s/) {
 		my $geoip = `geoiplookup $1`;
@@ -260,12 +259,10 @@ sub detect_country {
 	    }
 	}
     };
-
     my $err = $@;
-
     alarm ($previous_alarm);
 
-    close (TMP);
+    close($TRACEROUTE_FH);
 
     if ($err) {
 	print "unable to detect country - $err\n";

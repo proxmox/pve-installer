@@ -92,7 +92,7 @@ my sub get_cd_info {
 	$info_fn = "cd-info.test"; # use from CWD for test mode
     }
 
-    open(my $fh, '<', $info_fn) or die "Could not open CD info file '$info_fn' $!";
+    open(my $fh, '<', $info_fn) or die "could not open CD info file '$info_fn' - $!";
 
     my $cd_info = {};
     while (my $line = <$fh>) {
