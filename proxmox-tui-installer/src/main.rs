@@ -405,7 +405,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                     Err("password too short")
                 } else if root_password != confirm_password {
                     Err("passwords do not match")
-                } else if email.ends_with(".invalid") {
+                } else if email == "mail@example.invalid" {
                     Err("invalid email address")
                 } else {
                     Ok(PasswordOptions {
