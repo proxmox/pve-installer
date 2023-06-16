@@ -57,23 +57,35 @@ prepare-check-env: $(DEB)
 
 cd-info.test: PRODUCT ?= pve
 cd-info.test:
-	printf '%s\n' "PRODUCT='$(PRODUCT)'" >$@.tmp
+	printf '%s\n' "PRODUCT='$(or $(PRODUCT), pve)'" >$@.tmp
+	printf '%s\n' "PRODUCTLONG='$(or $(PRODUCTLONG), Proxmox VE)'" >>$@.tmp
+	printf '%s\n' "RELEASE='$(or $(RELEASE), 42.1)'" >>$@.tmp
+	printf '%s\n' "ISORELEASE='$(or $(ISORELEASE), 1)'" >>$@.tmp
+	printf '%s\n' "ISONAME='$(or $(ISONAME), proxmox-ve)'" >>$@.tmp
 	mv $@.tmp $@
 
 check-pve: prepare-check-env test.img
-	rm -f cd-info.test; $(MAKE) PRODUCT=pve cd-info.test
+	rm -f cd-info.test; $(MAKE) cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img test5.big.img
-	rm -f cd-info.test; $(MAKE) PRODUCT=pve cd-info.test
+	rm -f cd-info.test; $(MAKE) cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
 check-pmg: prepare-check-env test.img
-	rm -f cd-info.test; $(MAKE) PRODUCT=pmg cd-info.test
+	rm -f cd-info.test; $(MAKE) \
+	    PRODUCT=pmg \
+	    PRODUCTLONG="Proxmox Mail Gateway" \
+	    ISONAME='proxmox-mail-gateway' \
+	    cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs: prepare-check-env test.img
-	rm -f cd-info.test; $(MAKE) PRODUCT=pbs cd-info.test
+	rm -f cd-info.test; $(MAKE) \
+	    PRODUCT='pbs' \
+	    PRODUCTLONG='Proxmox Backup Server' \
+	    ISONAME='proxmox-backup-server' \
+	    cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 
