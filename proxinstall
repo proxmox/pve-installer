@@ -235,6 +235,18 @@ compatibility_level = 2
 _EOD
 
 
+sub app_quit {
+    my ($exit_code) = @_;
+
+    Gtk3->main_quit() if Gtk3->main_level() > 0;
+
+    # reap left over zombie processes
+    while ((my $child = waitpid(-1, POSIX::WNOHANG)) > 0) {
+	print "reaped child $child\n";
+    }
+    exit($exit_code);
+}
+
 sub detect_country {
     print "trying to detect country...\n";
     my $cpid = open2(my $TRACEROUTE_FH, undef, "traceroute -N 1 -q 1 -n 8.8.8.8");
@@ -491,7 +503,7 @@ sub ask_existing_vg_rename_or_abort {
 		die "could not rename VG from '$vg->{pvs}' ($vg_uuid) to '$new_vgname'!\n";
 	}
     } else {
-	set_next("_Reboot", sub { exit (0); } );
+	set_next("_Reboot", sub { app_quit(0); } );
 	display_html("fail.htm");
 	die "Cancled installation by user, due to already existing volume group '$vgname'\n";
     }
@@ -1529,7 +1541,7 @@ sub create_main_window {
     my $abort = Gtk3::Button->new('_Abort');
     $abort->set_can_focus(0);
     $cmdbox->pack_start($abort, 0, 0, 10);
-    $abort->signal_connect(clicked => sub { exit (-1); });
+    $abort->signal_connect(clicked => sub { app_quit(-1); });
 
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
@@ -2968,7 +2980,7 @@ sub create_extract_view {
 
     $next->set_sensitive(1);
 
-    set_next("_Reboot", sub { exit (0); } );
+    set_next("_Reboot", sub { app_quit(0); } );
 
     if ($err) {
 	display_html("fail.htm");
@@ -2983,7 +2995,7 @@ sub create_extract_view {
 		    $autoreboot_seconds--;
 		    display_html("success.htm");
 		} else {
-		    exit(0);
+		    app_quit(0);
 		}
 	    });
 	}
@@ -3038,7 +3050,7 @@ my $initial_error = 0;
 	print "no harddisks found\n";
 	$initial_error = 1;
 	display_html("nohds.htm");
-	set_next("Reboot", sub { exit(0); } );
+	set_next("Reboot", sub { app_quit(0); } );
     } else {
 	foreach my $hd (@$cached_disks) {
 	    my ($disk, $devname) = @$hd;
@@ -3052,16 +3064,11 @@ if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
     print "no network interfaces found\n";
     $initial_error = 1;
     display_html("nonics.htm");
-    set_next("Reboot", sub { exit(0); } );
+    set_next("Reboot", sub { app_quit(0); } );
 }
 
 create_intro_view () if !$initial_error;
 
 Gtk3->main;
 
-# reap left over zombie processes
-while ((my $child = waitpid(-1, POSIX::WNOHANG)) > 0) {
-    print "reaped child $child\n";
-}
-
-exit 0;
+app_quit(0);
