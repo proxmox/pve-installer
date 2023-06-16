@@ -183,17 +183,8 @@ fn main() {
 fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo), String> {
     system::has_min_requirements()?;
 
-    let testdir = || {
-        env::current_dir()
-            .map(|mut p| {
-                p.push("testdir");
-                p
-            })
-            .map_err(|err| err.to_string())
-    };
-
     let mut path = if in_test_mode {
-        testdir()?
+        std::path::PathBuf::from("./testdir")
     } else {
         std::path::PathBuf::from("/")
     };
