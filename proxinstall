@@ -1501,6 +1501,7 @@ sub create_main_window {
     $window->signal_connect(map => sub { $window->set_resizable(0); });
     $window->fullscreen() if !is_test_mode();
     $window->set_decorated(0) if !is_test_mode();
+    $window->signal_connect(destroy => sub { Gtk3->main_quit(); });
 
     my $vbox = Gtk3::Box->new('vertical', 0);
 
