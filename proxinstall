@@ -504,9 +504,8 @@ sub ask_existing_vg_rename_or_abort {
 		die "could not rename VG from '$vg->{pvs}' ($vg_uuid) to '$new_vgname'!\n";
 	}
     } else {
-	set_next("_Reboot", sub { app_quit(0); } );
-	display_html("fail.htm");
-	die "Cancled installation by user, due to already existing volume group '$vgname'\n";
+	warn "Canceled installation by user, due to already existing volume group '$vgname'\n";
+	die "\n"; # causes abort without re-showing an error dialogue
     }
 }
 
@@ -1358,7 +1357,7 @@ _EOD
 
     update_progress(1, 0, 1, "");
 
-    print $err if $err;
+    print $err if $err && $err ne "\n";
 
     if (is_test_mode()) {
 	my $elapsed = Time::HiRes::tv_interval($starttime);
@@ -1396,7 +1395,7 @@ _EOD
     }
 
     if ($bootloader_err) {
-	$err = $err ? "$err\n$bootloader_err" : $bootloader_err;
+	$err = $err && $err ne "\n" ? "$err\n$bootloader_err" : $bootloader_err;
     }
 
     die $err if $err;
@@ -2944,8 +2943,10 @@ sub create_extract_view {
     };
 
     if ($err) {
-	display_html("fail.htm");
-	Proxmox::UI::error($err);
+	Proxmox::UI::display_html("fail.htm");
+	# suppress "empty" error as we got some case where the user choose to abort on a prompt,
+	# there it doesn't make sense to show them an error again, they "caused" it after all.
+	Proxmox::UI::error($err) if $err ne "\n";
     } else {
 	cleanup_view();
 	display_html("success.htm", $success_transform);
