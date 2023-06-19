@@ -1569,7 +1569,7 @@ sub create_main_window {
 
     $window->add($vbox);
 
-    Proxmox::UI::init_gtk({ window => $window });
+    Proxmox::UI::init_gtk({ window => $window }, $env);
 
     $window->show_all;
     $window->present();

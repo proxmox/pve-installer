@@ -5,12 +5,17 @@ use warnings;
 
 use Carp;
 
+# state belongs fully to the UI
+# env is a reference to the return value of Proxmox::Install::ISOEnv
 sub new {
-    my ($this, $state) = @_;
+    my ($this, $state, $env) = @_;
 
     my $class = ref($this) || $this;
 
-    my $self = bless { state => $state }, $class;
+    my $self = bless {
+	state => $state,
+	env => $env,
+    }, $class;
 
     return $self;
 }

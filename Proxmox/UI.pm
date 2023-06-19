@@ -11,29 +11,37 @@ use Carp;
 use Proxmox::UI::Gtk3;
 use Proxmox::UI::StdIO;
 
-my $ui = undef;
+my ($_ui, $_env) = (undef, undef);
 
+# state belongs fully to the UI
+# env is a reference to the return value of Proxmox::Install::ISOEnv
 sub init_gtk {
-    my ($state) = @_;
+    my ($state, $env) = @_;
 
-    croak "overriding existing UI!" if defined($ui);
+    croak "overriding existing UI!" if defined($_ui);
 
-    $ui = Proxmox::UI::Gtk3->new($state);
+    $_ui = Proxmox::UI::Gtk3->new($state, $env);
+    $_env = $env;
 
-    return $ui;
+    return $_ui;
 }
 sub init_stdio {
-    my ($state) = @_;
+    my ($state, $env) = @_;
 
-    croak "overriding existing UI!" if defined($ui);
+    croak "overriding existing UI!" if defined($_ui);
 
-    $ui = Proxmox::UI::StdIO->new($state);
+    $_ui = Proxmox::UI::StdIO->new($state, $env);
+    $_env = $env;
 
-    return $ui;
+    return $_ui;
 }
 
 sub get_ui {
-    return $ui // croak "no UI initialized!";
+    return $_ui // croak "no UI initialized!";
+}
+
+my sub get_env {
+    return $_env // croak "env not initialized!";
 }
 
 sub message {
