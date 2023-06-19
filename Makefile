@@ -4,6 +4,7 @@ PACKAGE = proxmox-installer
 BUILDDIR ?= $(PACKAGE)-$(DEB_VERSION_UPSTREAM)
 
 DEB=$(PACKAGE)_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
+DSC=$(PACKAGE)_$(DEB_VERSION).dsc
 
 CARGO ?= cargo
 ifeq ($(BUILD_MODE), release)
@@ -61,6 +62,17 @@ test-$(DEB): $(INSTALLER_SOURCES)
 	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc -nc
 	mv $(DEB) test-$(DEB)
+
+dsc: $(DSC)
+	$(MAKE) clean
+	$(MAKE) $(DSC)
+	lintian $(DSC)
+
+$(DSC): $(BUILDDIR)
+	cd $(BUILDDIR); dpkg-buildpackage -S -us -uc -d
+
+sbuild: $(DSC)
+	sbuild $(DSC)
 
 DESTDIR=
 VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
