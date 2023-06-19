@@ -97,8 +97,9 @@ pub struct LvmBootdiskOptions {
 
 impl LvmBootdiskOptions {
     pub fn defaults_from(disk: &Disk) -> Self {
+        // If the disk size > 128 GiB use 16 GiB, else 1/8 of the disk
         let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
-            16 * 1024 * 1024
+            16 * 1024 * 1024 * 1024
         } else {
             disk.size / 8
         };
