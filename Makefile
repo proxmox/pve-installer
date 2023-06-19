@@ -1,7 +1,7 @@
-include /usr/share/dpkg/pkg-info.mk
+include /usr/share/dpkg/default.mk
 
 PACKAGE = proxmox-installer
-DEB=$(PACKAGE)_$(DEB_VERSION)_all.deb
+DEB=$(PACKAGE)_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
 
 CARGO ?= cargo
 ifeq ($(BUILD_MODE), release)
@@ -12,6 +12,13 @@ CARGO_COMPILEDIR := target/debug
 endif
 
 INSTALLER_SOURCES=$(shell git ls-files) country.dat
+
+PREFIX = /usr
+BINDIR = $(PREFIX)/bin
+USR_BIN := proxmox-tui-installer
+
+COMPILED_BINS := \
+	$(addprefix $(CARGO_COMPILEDIR)/,$(USR_BIN))
 
 all:
 
@@ -30,7 +37,7 @@ VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
 
 .PHONY: install
-install: ${INSTALLER_SOURCES}
+install: ${INSTALLER_SOURCES} $(CARGO_COMPILEDIR)/proxmox-tui-installer
 	$(MAKE) -C banner install
 	$(MAKE) -C Proxmox install
 	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
@@ -39,10 +46,15 @@ install: ${INSTALLER_SOURCES}
 	install -D -m 644 country.dat $(VARLIBDIR)/country.dat
 	install -D -m 755 unconfigured.sh ${DESTDIR}/sbin/unconfigured.sh
 	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
+	install -D -m 755 proxmox-low-level-installer $(DESTDIR)/$(BINDIR)/proxmox-low-level-installer
+	$(foreach i,$(USR_BIN), install -m755 $(CARGO_COMPILEDIR)/$(i) $(DESTDIR)$(BINDIR)/)
 	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
 	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
 	install -D -m 755 spice-vdagent.sh ${DESTDIR}/.spice-vdagent.sh
 	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
+
+$(COMPILED_BINS):
+	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<
