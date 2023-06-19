@@ -23,7 +23,7 @@ my sub fromjs : prototype($) {
 my sub query_blockdevs : prototype() {
     my $disks = {};
 
-    my $lsblk = fromjs(qx/lsblk --bytes --json/);
+    my $lsblk = fromjs(qx/lsblk -e 230 --bytes --json/);
     for my $disk ($lsblk->{blockdevices}->@*) {
 	my ($name, $ro, $size, $type, $mountpoints) = $disk->@{qw(name ro size type mountpoints)};
 
