@@ -41,11 +41,6 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         self
     }
 
-    pub fn content(mut self, content: T) -> Self {
-        self.view = self.view.content(content.to_string());
-        self
-    }
-
     pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
         self.view.get_content().parse()
     }
@@ -78,13 +73,30 @@ impl ViewWrapper for FloatEditView {
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
         let original = self.view.get_content();
 
+        let has_decimal_place = original.find('.').is_some();
+        let decimal_places = original
+            .split_once('.')
+            .map(|(_, s)| s.len())
+            .unwrap_or_default();
+
         let result = match event {
             // Drop all other characters than numbers; allow dots if not set to integer-only
-            Event::Char(c) if !(c.is_numeric() || c == '.') => EventResult::consumed(),
+            Event::Char(c)
+                if !(c.is_numeric() || (!has_decimal_place && c == '.')) || decimal_places >= 2 =>
+            {
+                EventResult::consumed()
+            }
             _ => self.view.on_event(event),
         };
 
         self.check_bounds(original, result)
+    }
+}
+
+impl FloatEditView {
+    pub fn content(mut self, content: f64) -> Self {
+        self.view = self.view.content(format!("{:.2}", content));
+        self
     }
 }
 
@@ -101,6 +113,13 @@ impl ViewWrapper for IntegerEditView {
         };
 
         self.check_bounds(original, result)
+    }
+}
+
+impl IntegerEditView {
+    pub fn content(mut self, content: usize) -> Self {
+        self.view = self.view.content(content.to_string());
+        self
     }
 }
 
