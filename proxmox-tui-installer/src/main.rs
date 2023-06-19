@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, env, net::IpAddr};
+use std::{collections::HashMap, env, net::IpAddr, path::PathBuf};
 
 use cursive::{
     event::Event,
@@ -188,11 +188,8 @@ fn main() {
 fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     system::has_min_requirements()?;
 
-    let mut path = if in_test_mode {
-        std::path::PathBuf::from("./testdir")
-    } else {
-        std::path::PathBuf::from("/")
-    };
+    let base_path = if in_test_mode { "./testdir" } else { "/" };
+    let mut path = PathBuf::from(base_path);
 
     path.push("run");
     path.push("proxmox-installer");
