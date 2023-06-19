@@ -95,7 +95,9 @@ install: $(INSTALLER_SOURCES) $(CARGO_COMPILEDIR)/proxmox-tui-installer
 	install -D -m 755 spice-vdagent.sh $(DESTDIR)/.spice-vdagent.sh
 	install -D -m 644 Xdefaults $(DESTDIR)/.Xdefaults
 
-$(COMPILED_BINS):
+$(COMPILED_BINS): cargo-build
+.PHONY: cargo-build
+cargo-build:
 	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
