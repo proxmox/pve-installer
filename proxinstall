@@ -40,7 +40,7 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
 }
 
-my $iso_env = Proxmox::Install::ISOEnv::setup();
+my $iso_env = Proxmox::Install::ISOEnv::get(); # init singleton
 my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
 
 my $zfstestpool = "test_rpool";

@@ -147,6 +147,12 @@ sub setup {
     return $env;
 }
 
+my $_env = undef;
+sub get {
+    $_env = setup() if !defined($_env);
+    return $_env;
+}
+
 my $test_images;
 # sets a test image to use as disk and enables the testmode
 sub set_test_image {
