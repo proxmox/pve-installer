@@ -21,6 +21,8 @@ Proxmox::Log::init("/tmp/install.log");
 
 use Proxmox::Install::ISOEnv;
 use Proxmox::Install::RunEnv;
+use Proxmox::Install::StorageConfig;
+
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
@@ -42,49 +44,6 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
 
 my $iso_env = Proxmox::Install::ISOEnv::get(); # init singleton
 my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
-
-my $zfstestpool = "test_rpool";
-my $zfspoolname = is_test_mode() ? $zfstestpool : 'rpool';
-my $zfsrootvolname = "$iso_env->{product}-1";
-
-my $storage_cfg_zfs = <<__EOD__;
-dir: local
-	path /var/lib/vz
-	content iso,vztmpl,backup
-
-zfspool: local-zfs
-	pool $zfspoolname/data
-	sparse
-	content images,rootdir
-__EOD__
-
-my $storage_cfg_btrfs = <<__EOD__;
-dir: local
-	path /var/lib/vz
-	content iso,vztmpl,backup
-	disable
-
-btrfs: local-btrfs
-	path /var/lib/pve/local-btrfs
-	content iso,vztmpl,backup,images,rootdir
-__EOD__
-
-my $storage_cfg_lvmthin = <<__EOD__;
-dir: local
-	path /var/lib/vz
-	content iso,vztmpl,backup
-
-lvmthin: local-lvm
-	thinpool data
-	vgname pve
-	content rootdir,images
-__EOD__
-
-my $storage_cfg_local = <<__EOD__;
-dir: local
-	path /var/lib/vz
-	content iso,vztmpl,backup,rootdir,images
-__EOD__
 
 my $proxmox_libdir = $iso_env->{locations}->{lib};
 my $proxmox_cddir = $iso_env->{locations}->{iso};
@@ -340,41 +299,41 @@ sub btrfs_create {
 }
 
 sub zfs_create_rpool {
-    my ($vdev) = @_;
+    my ($vdev, $pool_name, $root_volume_name) = @_;
 
     my $cmd = "zpool create -f -o cachefile=none";
 
     $cmd .= " -o ashift=$config_options->{ashift}"
         if defined($config_options->{ashift});
 
-    syscmd("$cmd $zfspoolname $vdev") == 0 ||
+    syscmd("$cmd $pool_name $vdev") == 0 ||
 	die "unable to create zfs root pool\n";
 
-    syscmd("zfs create $zfspoolname/ROOT")  == 0 ||
-        die "unable to create zfs $zfspoolname/ROOT volume\n";
+    syscmd("zfs create $pool_name/ROOT")  == 0 ||
+        die "unable to create zfs $pool_name/ROOT volume\n";
 
     if ($iso_env->{product} eq 'pve') {
-	syscmd("zfs create $zfspoolname/data")  == 0 ||
-	    die "unable to create zfs $zfspoolname/data volume\n";
+	syscmd("zfs create $pool_name/data")  == 0 ||
+	    die "unable to create zfs $pool_name/data volume\n";
     }
 
-    syscmd("zfs create $zfspoolname/ROOT/$zfsrootvolname")  == 0 ||
-	die "unable to create zfs $zfspoolname/ROOT/$zfsrootvolname volume\n";
+    syscmd("zfs create $pool_name/ROOT/$root_volume_name")  == 0 ||
+	die "unable to create zfs $pool_name/ROOT/$root_volume_name volume\n";
 
     # default to `relatime` on, fast enough for the installer and production
-    syscmd("zfs set atime=on relatime=on $zfspoolname") == 0 ||
+    syscmd("zfs set atime=on relatime=on $pool_name") == 0 ||
 	die "unable to set zfs properties\n";
 
     my $value = $config_options->{compress};
-    syscmd("zfs set compression=$value $zfspoolname")
+    syscmd("zfs set compression=$value $pool_name")
         if defined($value) && $value ne 'off';
 
     $value = $config_options->{checksum};
-    syscmd("zfs set checksum=$value $zfspoolname")
+    syscmd("zfs set checksum=$value $pool_name")
         if defined($value) && $value ne 'on';
 
     $value = $config_options->{copies};
-    syscmd("zfs set copies=$value $zfspoolname")
+    syscmd("zfs set copies=$value $pool_name")
         if defined($value) && $value != 1;
 }
 
@@ -650,10 +609,13 @@ sub extract_data {
 
     my $filesys = $config_options->{filesys};
 
+    my $zfs_pool_name = Proxmox::Install::StorageConfig::get_zfs_pool_name();
+    my $zfs_root_volume_name = Proxmox::Install::StorageConfig::get_zfs_root_volume_name();
+
     if ($filesys =~ m/zfs/) {
 	$target_hd = undef; # do not use this config
 	$use_zfs = 1;
-	$targetdir = "/$zfspoolname/ROOT/$zfsrootvolname";
+	$targetdir = "/$zfs_pool_name/ROOT/$zfs_root_volume_name";
     } elsif ($filesys =~ m/btrfs/) {
 	$target_hd = undef; # do not use this config
 	$use_btrfs = 1;
@@ -697,9 +659,9 @@ sub extract_data {
 		die "unsupported zfs mode (for testing environment)\n"
 		    if $filesys ne 'zfs (RAID0)';
 
-		syscmd("zpool destroy $zfstestpool");
+		syscmd("zpool destroy $zfs_pool_name");
 
-		zfs_create_rpool($rootdev);
+		zfs_create_rpool($rootdev, $zfs_pool_name, $zfs_root_volume_name);
 
 	    } else {
 
@@ -787,7 +749,7 @@ sub extract_data {
 
 	    update_progress(0, 0.03, $maxper, "create rpool");
 
-	    zfs_create_rpool($vdev);
+	    zfs_create_rpool($vdev, $zfs_pool_name);
 
 	} else {
 
@@ -825,7 +787,7 @@ sub extract_data {
 
 	if ($use_zfs) {
 	    # to be fast during installation
-	    syscmd("zfs set sync=disabled $zfspoolname") == 0 ||
+	    syscmd("zfs set sync=disabled $zfs_pool_name") == 0 ||
 		die "unable to set zfs properties\n";
 	}
 
@@ -1156,10 +1118,10 @@ _EOD
 
 	if ($use_zfs) {
 	    # add ZFS options while preserving existing kernel cmdline
-	    my $zfs_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\"";
+	    my $zfs_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs\"";
 	    file_write_all("$targetdir/etc/default/grub.d/zfs.cfg", $zfs_snippet);
 
-	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfspoolname/ROOT/$zfsrootvolname boot=zfs\n");
+	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs\n");
 
 	}
 
@@ -1257,13 +1219,13 @@ _EOD
 	    # write storage.cfg
 	    my $storage_cfg;
 	    if ($use_zfs) {
-		$storage_cfg = $storage_cfg_zfs;
+		$storage_cfg = Proxmox::Install::StorageConfig::get_zfs_config($iso_env);
 	    } elsif ($use_btrfs) {
-		$storage_cfg = $storage_cfg_btrfs;
+		$storage_cfg = Proxmox::Install::StorageConfig::get_btrfs_config();
 	    } elsif ($datadev) {
-		$storage_cfg = $storage_cfg_lvmthin;
+		$storage_cfg = Proxmox::Install::StorageConfig::get_lvm_thin_config();
 	    } else {
-		$storage_cfg = $storage_cfg_local;
+		$storage_cfg = Proxmox::Install::StorageConfig::get_local_config();
 	    }
 	    file_write_all("$tmpdir/storage.cfg", $storage_cfg);
 
@@ -1314,15 +1276,15 @@ _EOD
     }
 
     if (!$err && $use_zfs) {
-	syscmd("zfs set sync=standard $zfspoolname") == 0 ||
+	syscmd("zfs set sync=standard $zfs_pool_name") == 0 ||
 	    die "unable to set zfs properties\n";
 
-	syscmd("zfs set mountpoint=/ $zfspoolname/ROOT/$zfsrootvolname") == 0 ||
+	syscmd("zfs set mountpoint=/ $zfs_pool_name/ROOT/$zfs_root_volume_name") == 0 ||
 	    die "zfs set mountpoint failed\n";
 
-	syscmd("zpool set bootfs=$zfspoolname/ROOT/$zfsrootvolname $zfspoolname") == 0 ||
+	syscmd("zpool set bootfs=$zfs_pool_name/ROOT/$zfs_root_volume_name $zfs_pool_name") == 0 ||
 	    die "zpool set bootfs failed\n";
-	syscmd("zpool export $zfspoolname");
+	syscmd("zpool export $zfs_pool_name");
     }
 
     if ($bootloader_err) {

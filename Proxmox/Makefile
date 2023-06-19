@@ -6,8 +6,10 @@ PERL5DIR=$(DESTDIR)/usr/share/perl5/Proxmox
 
 #PERL_MODULES=$(shell git ls-files . | grep '.pm$')
 PERL_MODULES=\
+    Install.pm \
     Install/ISOEnv.pm \
     Install/RunEnv.pm \
+    Install/StorageConfig.pm \
     Log.pm \
     Sys/Block.pm \
     Sys/Command.pm \
