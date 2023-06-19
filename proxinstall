@@ -1423,17 +1423,7 @@ sub display_info {
     my $page = $display_info_items->[$display_info_counter % scalar(@$display_info_items)];
 
     $display_info_counter++;
-
-    display_html($page);
-}
-
-sub display_html {
-    my ($filename, $transform) = @_;
-
-    $filename = $steps[$step_number]->{html} if !$filename;
-
-    Proxmox::UI::display_html($filename, $transform);
-
+    Proxmox::UI::display_html($page);
     $last_display_change = time();
 }
 
@@ -1634,7 +1624,7 @@ my $ipconf_first_view = 1;
 sub create_ipconf_view {
 
     cleanup_view();
-    display_html();
+    Proxmox::UI::display_html('ipconf.htm');
 
     my $vcontainer = Gtk3::Box->new('vertical', 0);
     $inbox->pack_start($vcontainer, 1, 0, 0);
@@ -1853,7 +1843,7 @@ sub create_ack_view {
 
     file_write_all($ack_html, $html_data);
 
-    display_html();
+    Proxmox::UI::display_html('ack.htm');
 
     $inbox->show_all;
 
@@ -1999,7 +1989,7 @@ sub create_password_view {
 
     $inbox->show_all;
 
-    display_html();
+    Proxmox::UI::display_html('passwd.htm');
 
     set_next (undef,  sub {
 
@@ -2200,7 +2190,7 @@ sub create_country_view {
 
     $inbox->show_all;
 
-    display_html();
+    Proxmox::UI::display_html('country.htm');
     set_next (undef,  sub {
 
 	my $text = $w->get_text;
@@ -2852,7 +2842,7 @@ sub create_hdsel_view {
 
     $inbox->show_all;
 
-    display_html();
+    Proxmox::UI::display_html('page1.htm');
 
     set_next(undef, sub {
 
@@ -2891,7 +2881,7 @@ sub create_extract_view {
 
     cleanup_view();
 
-    display_info();
+    Proxmox::Install::display_info();
 
     $next->set_sensitive(0);
     $prev_btn->set_sensitive(0);
@@ -2949,13 +2939,13 @@ sub create_extract_view {
 	Proxmox::UI::error($err) if $err ne "\n";
     } else {
 	cleanup_view();
-	display_html("success.htm", $success_transform);
+	Proxmox::UI::display_html("success.htm", $success_transform);
 
         if ($config_options->{autoreboot}) {
 	    Glib::Timeout->add(1000, sub {
 		if ($autoreboot_seconds > 0) {
 		    $autoreboot_seconds--;
-		    display_html("success.htm", $success_transform);
+		    Proxmox::UI::display_html("success.htm", $success_transform);
 		} else {
 		    app_quit(0);
 		}
@@ -2985,7 +2975,7 @@ sub create_intro_view {
 	}
     }
 
-    display_html('license.htm', sub {
+    Proxmox::UI::display_html('license.htm', sub {
 	my ($raw_html, $env) = @_;
 
 	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
@@ -3024,7 +3014,7 @@ my $initial_error = 0;
     if (!defined($cached_disks) || (scalar (@$cached_disks) <= 0)) {
 	print "no harddisks found\n";
 	$initial_error = 1;
-	display_html("nohds.htm");
+	Proxmox::UI::display_html("nohds.htm");
 	set_next("Reboot", sub { app_quit(0); } );
     } else {
 	foreach my $hd (@$cached_disks) {
@@ -3038,7 +3028,7 @@ my $initial_error = 0;
 if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
     print "no network interfaces found\n";
     $initial_error = 1;
-    display_html("nonics.htm");
+    Proxmox::UI::display_html("nonics.htm");
     set_next("Reboot", sub { app_quit(0); } );
 }
 
