@@ -5,10 +5,8 @@ use warnings;
 
 use Carp;
 use JSON qw(from_json to_json);
-use Proxmox::Log;
 
-use base qw(Exporter);
-our @EXPORT = qw(is_test_mode);
+use Proxmox::Log;
 
 my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
