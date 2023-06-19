@@ -232,7 +232,7 @@ impl fmt::Display for Disk {
         // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
         write!(
             f,
-            "{} ({} GiB)",
+            "{} ({:.2} GiB)",
             self.path,
             (self.size as f64) / 1024. / 1024. / 1024.
         )
