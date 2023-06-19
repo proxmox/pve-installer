@@ -98,6 +98,11 @@ check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img t
 	rm -f cd-info.test; $(MAKE) cd-info.test
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
+check-pve-tui: prepare-check-env test.img
+	rm -f cd-info.test; $(MAKE) cd-info.test
+	./proxmox-low-level-installer dump-env -t
+	testdir/usr/bin/proxmox-tui-installer -t test.img
+
 check-pmg: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
 	    PRODUCT=pmg \
