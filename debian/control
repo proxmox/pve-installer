@@ -2,8 +2,8 @@ Source: proxmox-installer
 Section: perl
 Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
-Build-Depends: debhelper-compat (= 12),
-               cargo:native,
+Build-Depends: cargo:native,
+               debhelper-compat (= 12),
                iso-codes,
                libpve-common-perl,
                librsvg2-bin,
@@ -24,7 +24,9 @@ Depends: chrony,
          libgtk3-webkit2-perl,
          proxmox-kernel-helper,
          squashfs-tools,
+         ${misc:Depends},
          ${perl:Depends},
+         ${shlibs:Depends},
 Breaks: pbs-installer (<< 7~), pve-installer (<< 7~),
 Replaces: pbs-installer (<< 7~), pve-installer (<< 7~),
 Description: Installer for Proxmox Projects
