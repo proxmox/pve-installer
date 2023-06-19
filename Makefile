@@ -26,11 +26,11 @@ country.dat: country.pl
 	./country.pl > country.dat.tmp
 	mv country.dat.tmp country.dat
 
-deb: ${DEB}
-${DEB}: ${INSTALLER_SOURCES}
+deb: $(DEB)
+$(DEB): $(INSTALLER_SOURCES)
 	rsync --exclude='test*.img' -a * build
 	cd build; dpkg-buildpackage -b -us -uc
-	lintian ${DEB}
+	lintian $(DEB)
 
 test-$(DEB): $(INSTALLER_SOURCES)
 	rsync --exclude='test*.img' -a * build
@@ -42,21 +42,21 @@ VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
 
 .PHONY: install
-install: ${INSTALLER_SOURCES} $(CARGO_COMPILEDIR)/proxmox-tui-installer
+install: $(INSTALLER_SOURCES) $(CARGO_COMPILEDIR)/proxmox-tui-installer
 	$(MAKE) -C banner install
 	$(MAKE) -C Proxmox install
-	install -D -m 644 interfaces ${DESTDIR}/etc/network/interfaces
-	install -D -m 755 fake-start-stop-daemon ${VARLIBDIR}/fake-start-stop-daemon
+	install -D -m 644 interfaces $(DESTDIR)/etc/network/interfaces
+	install -D -m 755 fake-start-stop-daemon $(VARLIBDIR)/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d $(VARLIBDIR)/policy-disable-rc.d
 	install -D -m 644 country.dat $(VARLIBDIR)/country.dat
-	install -D -m 755 unconfigured.sh ${DESTDIR}/sbin/unconfigured.sh
-	install -D -m 755 proxinstall ${DESTDIR}/usr/bin/proxinstall
+	install -D -m 755 unconfigured.sh $(DESTDIR)/sbin/unconfigured.sh
+	install -D -m 755 proxinstall $(DESTDIR)/usr/bin/proxinstall
 	install -D -m 755 proxmox-low-level-installer $(DESTDIR)/$(BINDIR)/proxmox-low-level-installer
 	$(foreach i,$(USR_BIN), install -m755 $(CARGO_COMPILEDIR)/$(i) $(DESTDIR)$(BINDIR)/)
-	install -D -m 755 checktime ${DESTDIR}/usr/bin/checktime
-	install -D -m 644 xinitrc ${DESTDIR}/.xinitrc
-	install -D -m 755 spice-vdagent.sh ${DESTDIR}/.spice-vdagent.sh
-	install -D -m 644 Xdefaults ${DESTDIR}/.Xdefaults
+	install -D -m 755 checktime $(DESTDIR)/usr/bin/checktime
+	install -D -m 644 xinitrc $(DESTDIR)/.xinitrc
+	install -D -m 755 spice-vdagent.sh $(DESTDIR)/.spice-vdagent.sh
+	install -D -m 644 Xdefaults $(DESTDIR)/.Xdefaults
 
 $(COMPILED_BINS):
 	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer $(CARGO_BUILD_ARGS)
@@ -67,7 +67,7 @@ $(COMPILED_BINS):
 .PHONY: upload
 upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
 upload: $(DEB)
-	tar cf - ${DEB} | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
+	tar cf - $(DEB) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
 
 %.img:
 	truncate -s 2G $@
