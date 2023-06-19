@@ -23,6 +23,7 @@ use Proxmox::Log;
 Proxmox::Log::init("/tmp/install.log");
 
 use Proxmox::Install::ISOEnv;
+use Proxmox::Install::RunEnv;
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
@@ -45,6 +46,7 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
 $ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
 my $iso_env = Proxmox::Install::ISOEnv::setup();
+my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
 
 my $zfstestpool = "test_rpool";
 my $zfspoolname = is_test_mode() ? $zfstestpool : 'rpool';
@@ -286,24 +288,6 @@ sub detect_country {
 
     return $country;
 }
-
-sub get_memtotal {
-
-    open (my $MEMINFO, '<', '/proc/meminfo');
-
-    my $res = 512; # default to 512 if something goes wrong
-    while (my $line = <$MEMINFO>) {
-	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
-	    $res = int ($1 / 1024);
-	}
-    }
-
-    close($MEMINFO);
-
-    return $res;
-}
-
-my $total_memory = get_memtotal();
 
 sub update_progress {
     my ($frac, $start, $end, $text) = @_;
@@ -625,7 +609,7 @@ sub compute_swapsize {
     if (defined($config_options->{swapsize})) {
 	$swapsize_kb = $config_options->{swapsize} * 1024 * 1024;
     } else {
-	my $ss = int($total_memory);
+	my $ss = int($run_env->{total_memory});
 	$ss = 4096 if $ss < 4096 && $hdgb >= 64;
 	$ss = 2048 if $ss < 2048 && $hdgb >= 32;
 	$ss = 1024 if $ss >= 2048 && $hdgb <= 16;
@@ -2958,7 +2942,7 @@ sub create_intro_view {
 
     cleanup_view();
 
-    if (int($total_memory) < 1024) {
+    if (int($run_env->{total_memory}) < 1024) {
 	Proxmox::UI::error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
 	    "See 'System Requirements' in the $iso_env->{cfg}->{fullname} documentation.");
     }

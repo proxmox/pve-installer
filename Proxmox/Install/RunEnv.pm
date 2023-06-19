@@ -12,6 +12,24 @@ my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
 }
 
+my $mem_total = undef;
+sub query_total_memory : prototype() {
+    return $mem_total if defined($mem_total);
+
+    open (my $MEMINFO, '<', '/proc/meminfo');
+
+    my $res = 512; # default to 512 if something goes wrong
+    while (my $line = <$MEMINFO>) {
+	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
+	    $res = int ($1 / 1024);
+	}
+    }
+    close($MEMINFO);
+
+    $mem_total = $res;
+    return $mem_total;
+}
+
 # Returns a hash.
 # {
 #     name => {
@@ -222,6 +240,8 @@ sub query_installation_environment : prototype() {
 	routes => $routes,
 	dns => query_dns(),
     };
+
+    $output->{total_memory} = query_total_memory();
 
     my $err;
     my $country;
