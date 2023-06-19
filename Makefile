@@ -1,6 +1,8 @@
 include /usr/share/dpkg/default.mk
 
 PACKAGE = proxmox-installer
+BUILDDIR ?= $(PACKAGE)-$(DEB_VERSION_UPSTREAM)
+
 DEB=$(PACKAGE)_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
 
 CARGO ?= cargo
@@ -22,14 +24,37 @@ COMPILED_BINS := \
 
 all:
 
+$(BUILDDIR):
+	rm -rf $@ $@.tmp; mkdir $@.tmp
+	cp -a \
+	  Cargo.toml \
+	  Makefile \
+	  Proxmox/ \
+	  Xdefaults \
+	  banner/ \
+	  checktime \
+	  country.pl \
+	  fake-start-stop-daemon \
+	  html/ \
+	  interfaces \
+	  policy-disable-rc.d \
+	  proxinstall \
+	  proxmox-low-level-installer \
+	  proxmox-tui-installer/ \
+	  spice-vdagent.sh \
+	  unconfigured.sh \
+	  xinitrc \
+	  $@.tmp
+	cp -a debian $@.tmp/
+	mv $@.tmp $@
+
 country.dat: country.pl
 	./country.pl > country.dat.tmp
 	mv country.dat.tmp country.dat
 
 deb: $(DEB)
-$(DEB): $(INSTALLER_SOURCES)
-	rsync --exclude='test*.img' -a * build
-	cd build; dpkg-buildpackage -b -us -uc
+$(DEB): $(BUILDDIR)
+	cd $(BUILDDIR); dpkg-buildpackage -b -us -uc
 	lintian $(DEB)
 
 test-$(DEB): $(INSTALLER_SOURCES)
