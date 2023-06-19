@@ -245,13 +245,20 @@ struct MultiDiskOptionsView<T> {
 
 impl<T: View> MultiDiskOptionsView<T> {
     fn new(avail_disks: &[Disk], options_view: T) -> Self {
+        let mut selectable_disks = avail_disks
+            .iter()
+            .map(|d| (d.to_string(), Some(d.clone())))
+            .collect::<Vec<(String, Option<Disk>)>>();
+
+        selectable_disks.push(("-- do not use --".to_owned(), None));
+
         let mut disk_form = FormView::new();
         for i in 0..avail_disks.len() {
             disk_form.add_child(
                 &format!("Harddisk {i}"),
                 SelectView::new()
                     .popup()
-                    .with_all(avail_disks.iter().map(|d| (d.to_string(), d.clone())))
+                    .with_all(selectable_disks.clone())
                     .selected(i),
             );
         }
@@ -308,9 +315,12 @@ impl<T: View> MultiDiskOptionsView<T> {
             .downcast_ref::<FormView>()?;
 
         for i in 0..disk_form.len() {
-            let disk = disk_form.get_value::<SelectView<Disk>, _>(i)?;
+            let disk = disk_form.get_value::<SelectView<Option<Disk>>, _>(i)?;
 
-            disks.push(disk);
+            // `None` means no disk was selected for this slot
+            if let Some(disk) = disk {
+                disks.push(disk);
+            }
         }
 
         Some(disks)
