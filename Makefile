@@ -77,7 +77,6 @@ upload: $(DEB)
 
 .PHONY: prepare-check-env
 prepare-check-env: test-$(DEB)
-	umount -Rd testdir || true
 	rm -rf testdir
 	dpkg -X test-$(DEB) testdir
 
@@ -122,7 +121,7 @@ check-pbs: prepare-check-env test.img
 
 .phony: clean
 clean:
-	umount -Rd testdir || true
-	rm -rf *~ *.deb target build packages packages.tmp testdir test*.img pve-final.pkglist \
-	  *.buildinfo *.changes country.dat final.pkglist cd-info.test
+	rm -rf target build $(PACKAGE)-[0-9]*
+	rm -f $(PACKAGE)*.tar* *.deb packages packages.tmp *.build *.dsc *.buildinfo *.changes
+	rm -f testdir test*.img pve-final.pkglist country.dat final.pkglist cd-info.test
 	find . -name '*~' -exec rm {} ';'
