@@ -4,19 +4,21 @@ use std::{collections::HashMap, env, net::IpAddr, path::PathBuf};
 
 use cursive::{
     event::Event,
-    view::{Nameable, Resizable, ViewWrapper},
+    theme::{ColorStyle, Effect, PaletteColor, Style},
+    view::{Nameable, Offset, Resizable, ViewWrapper},
     views::{
-        Button, Checkbox, Dialog, DummyView, EditView, LinearLayout, PaddedView, Panel,
-        ProgressBar, ResizedView, ScrollView, SelectView, TextContent, TextView, ViewRef,
+        Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
+        ProgressBar, ResizedView, ScrollView, SelectView, StackView, TextContent, TextView,
+        ViewRef,
     },
-    Cursive, CursiveRunnable, ScreenId, View,
+    Cursive, CursiveRunnable, ScreenId, View, XY,
 };
 
 mod options;
 use options::*;
 
 mod setup;
-use setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo};
+use setup::{LocaleInfo, RuntimeInfo, SetupInfo};
 
 mod system;
 
@@ -30,32 +32,15 @@ use views::{
 };
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
-const LOGO_PVE: &str = r#"
-       ____                                          _    __ _____
-      / __ \_________  _  ______ ___  ____  _  __   | |  / / ____/
-  / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/   | | / / __/
- / ____/ /  / /_/ />  </ / / / / / /_/ />  <     | |/ / /___
-/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|     |___/_____/
-"#;
-
-const LOGO_PBS: &str = r#"
-      ____                                          ____ _____
-     / __ \_________  _  ______ ___  ____  _  __   / __ ) ___/
-   / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/  / __  \__ \
-  / ____/ /  / /_/ />  </ / / / / / /_/ />  <   / /_/ /__/ /
-/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  /_____/____/
-"#;
-
-const LOGO_PMG: &str = r#"
-       ____                                          __  _________
-      / __ \_________  _  ______ ___  ____  _  __   /  |/  / ____/
-   / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/  / /|_/ / / __
-  / ____/ /  / /_/ />  </ / / / / / /_/ />  <   / /  / / /_/ /
-/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  /_/  /_/\____/
-"#;
+const PROXMOX_LOGO: &str = r#"
+    ____
+   / __ \_________  _  ______ ___  ____  _  __
+  / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/
+ / ____/ /  / /_/ />  </ / / / / / /_/ />  <
+/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  "#;
 
 struct InstallerView {
-    view: ResizedView<LinearLayout>,
+    view: ResizedView<Dialog>,
 }
 
 impl InstallerView {
@@ -85,20 +70,12 @@ impl InstallerView {
     pub fn with_raw(state: &InstallerState, view: impl View) -> Self {
         let setup = &state.setup_info;
 
-        let logo = match setup.config.product {
-            ProxmoxProduct::PVE => LOGO_PVE,
-            ProxmoxProduct::PBS => LOGO_PBS,
-            ProxmoxProduct::PMG => LOGO_PMG,
-        };
-
         let title = format!(
             "{} ({}-{}) Installer",
             setup.config.fullname, setup.iso_info.release, setup.iso_info.isorelease
         );
 
-        let inner = LinearLayout::vertical()
-            .child(PaddedView::lrtb(1, 1, 0, 1, TextView::new(logo).center()))
-            .child(Dialog::around(view).title(title));
+        let inner = Dialog::around(view).title(title);
 
         Self {
             // Limit the maximum to something reasonable, such that it won't get spread out much
@@ -109,7 +86,48 @@ impl InstallerView {
 }
 
 impl ViewWrapper for InstallerView {
-    cursive::wrap_impl!(self.view: ResizedView<LinearLayout>);
+    cursive::wrap_impl!(self.view: ResizedView<Dialog>);
+}
+
+struct InstallerBackgroundView {
+    view: StackView,
+}
+
+impl InstallerBackgroundView {
+    pub fn new(state: &InstallerState) -> Self {
+        let product_name = state
+            .setup_info
+            .config
+            .fullname
+            .trim_start_matches("Proxmox ");
+
+        let logo = format!("{PROXMOX_LOGO} {product_name}");
+        let style = Style {
+            effects: Effect::Bold.into(),
+            color: ColorStyle::back(PaletteColor::View),
+        };
+
+        let mut view = StackView::new();
+        view.add_fullscreen_layer(Layer::with_color(
+            DummyView
+                .full_width()
+                .fixed_height(logo.lines().count() + 1),
+            ColorStyle::back(PaletteColor::View),
+        ));
+        view.add_transparent_layer_at(
+            XY {
+                x: Offset::Center,
+                y: Offset::Absolute(0),
+            },
+            TextView::new(logo).style(style),
+        );
+
+        Self { view }
+    }
+}
+
+impl ViewWrapper for InstallerBackgroundView {
+    cursive::wrap_impl!(self.view: StackView);
 }
 
 #[derive(Clone, Eq, Hash, PartialEq)]
@@ -239,17 +257,28 @@ fn switch_to_next_screen(
     step: InstallerStep,
     constructor: &dyn Fn(&mut Cursive) -> InstallerView,
 ) {
+    let state = siv.user_data::<InstallerState>().cloned().unwrap();
+
     // Check if the screen already exists; if yes, then simply switch to it.
-    if let Some(state) = siv.user_data::<InstallerState>().cloned() {
-        if let Some(screen_id) = state.steps.get(&step) {
-            siv.set_screen(*screen_id);
-            return;
-        }
+    if let Some(screen_id) = state.steps.get(&step) {
+        siv.set_screen(*screen_id);
+        return;
     }
 
     let v = constructor(siv);
     let screen = siv.add_active_screen();
     siv.with_user_data(|state: &mut InstallerState| state.steps.insert(step, screen));
+
+    if let Some(state) = siv.user_data::<InstallerState>().cloned() {
+        siv.screen_mut().add_transparent_layer_at(
+            XY {
+                x: Offset::Parent(0),
+                y: Offset::Parent(0),
+            },
+            InstallerBackgroundView::new(&state),
+        );
+    }
+
     siv.screen_mut().add_layer(v);
 }
 
