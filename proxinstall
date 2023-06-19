@@ -19,8 +19,10 @@ use File::Path;
 use Time::HiRes;
 use POSIX ":sys_wait_h";
 
-use Proxmox::Install::ISOEnv;
 use Proxmox::Log;
+Proxmox::Log::init("/tmp/install.log");
+
+use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
@@ -86,8 +88,6 @@ dir: local
 	path /var/lib/vz
 	content iso,vztmpl,backup,rootdir,images
 __EOD__
-
-Proxmox::Log::init("/tmp/install.log");
 
 my $proxmox_libdir = $iso_env->{locations}->{lib};
 my $proxmox_cddir = $iso_env->{locations}->{iso};
