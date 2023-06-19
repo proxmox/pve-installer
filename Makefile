@@ -1,17 +1,15 @@
 include /usr/share/dpkg/pkg-info.mk
 
+PACKAGE = proxmox-installer
+DEB=$(PACKAGE)_$(DEB_VERSION)_all.deb
+
 CARGO ?= cargo
-
-TUI_INSTALLER_BIN := proxmox-tui-installer
-
 ifeq ($(BUILD_MODE), release)
 CARGO_BUILD_ARGS += --release
 CARGO_COMPILEDIR := target/release
 else
 CARGO_COMPILEDIR := target/debug
 endif
-
-DEB=proxmox-installer_${DEB_VERSION_UPSTREAM_REVISION}_all.deb
 
 INSTALLER_SOURCES=$(shell git ls-files) country.dat
 
