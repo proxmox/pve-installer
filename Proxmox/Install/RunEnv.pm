@@ -242,6 +242,7 @@ sub query_installation_environment : prototype() {
     };
 
     $output->{total_memory} = query_total_memory();
+    $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
 
     my $err;
     my $country;
