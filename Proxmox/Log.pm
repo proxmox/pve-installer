@@ -1,4 +1,3 @@
-
 package Proxmox::Log;
 
 use strict;

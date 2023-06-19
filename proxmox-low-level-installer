@@ -11,6 +11,7 @@ use JSON;
 
 use Proxmox::Sys::File qw(file_write_all);
 
+use Proxmox::Log;
 use Proxmox::Install::ISOEnv;
 
 {
@@ -50,6 +51,8 @@ my $cmd = shift;
 if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
     usage($cmd // '');
 }
+
+Proxmox::Log::init("/tmp/install-low-level-${cmd}.log");
 
 if ($cmd eq 'dump-env') {
     my $env = Proxmox::Install::ISOEnv::setup();
