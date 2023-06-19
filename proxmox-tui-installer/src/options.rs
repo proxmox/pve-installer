@@ -3,11 +3,9 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use proxmox_sys::linux::procfs;
 
-use crate::{
-    setup::LocaleInfo,
-    utils::{CidrAddress, Fqdn},
-    SummaryOption,
-};
+use crate::setup::{AddrFamily, LocaleInfo};
+use crate::utils::{CidrAddress, Fqdn};
+use crate::SummaryOption;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum BtrfsRaidLevel {
@@ -316,6 +314,69 @@ impl Default for NetworkOptions {
             gateway: Ipv4Addr::UNSPECIFIED.into(),
             dns_server: Ipv4Addr::UNSPECIFIED.into(),
         }
+    }
+}
+
+impl From<&crate::setup::NetworkInfo> for NetworkOptions {
+    fn from(info: &crate::setup::NetworkInfo) -> Self {
+        let mut this = Self::default();
+
+        if let Some(ip) = info.dns.dns.first() {
+            if let Ok(ip) = ip.parse() {
+                this.dns_server = ip;
+            }
+        }
+
+        if let Some(domain) = info.dns.domain.as_deref() {
+            if let Ok(fqdn) = Fqdn::from(domain) {
+                this.fqdn = fqdn;
+            }
+        }
+
+        let mut filled = false;
+        if let Some(gw) = &info.routes.gateway4 {
+            if let Ok(gwip) = gw.gateway.parse() {
+                if let Some(iface) = info.interfaces.get(&gw.dev) {
+                    if let Some(addr) = iface
+                        .addresses
+                        .iter()
+                        .find(|addr| addr.family == AddrFamily::Ipv4)
+                    {
+                        if let Ok(ip) = addr.address.parse::<Ipv4Addr>() {
+                            if let Ok(address) = CidrAddress::new(ip, addr.prefix as usize) {
+                                this.ifname = iface.name.clone();
+                                this.gateway = gwip;
+                                this.address = address;
+                                filled = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !filled {
+            if let Some(gw) = &info.routes.gateway6 {
+                if let Ok(gwip) = gw.gateway.parse() {
+                    if let Some(iface) = info.interfaces.get(&gw.dev) {
+                        if let Some(addr) = iface
+                            .addresses
+                            .iter()
+                            .find(|addr| addr.family == AddrFamily::Ipv6)
+                        {
+                            if let Ok(ip) = addr.address.parse::<Ipv4Addr>() {
+                                if let Ok(address) = CidrAddress::new(ip, addr.prefix as usize) {
+                                    this.ifname = iface.name.clone();
+                                    this.gateway = gwip;
+                                    this.address = address;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        this
     }
 }
 

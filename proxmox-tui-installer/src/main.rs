@@ -170,7 +170,7 @@ fn main() {
             bootdisk: BootdiskOptions::defaults_from(&available_disks[0]),
             timezone: TimezoneOptions::default(),
             password: PasswordOptions::default(),
-            network: NetworkOptions::default(),
+            network: NetworkOptions::from(&runtime_info.network),
             reboot: false,
         },
         available_disks,
