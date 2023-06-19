@@ -493,7 +493,7 @@ sub ask_existing_vg_rename_or_abort {
     }
     $message .= "or cancel the installation?";
 
-    my $response = display_prompt($message);
+    my $response = Proxmox::UI::prompt($message);
 
     if ($response eq 'ok') {
 	for my $vg_uuid (keys %$duplicate_vgs) {
@@ -612,7 +612,7 @@ sub create_lvm_volumes {
 	    die "unable to create data thin-pool\n";
     } else {
 	if ($env->{product} eq 'pve' && !defined($config_options->{maxvz})) {
-	    display_message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
+	    Proxmox::UI::message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
 	}
 	$datadev = undef;
     }
@@ -1662,32 +1662,6 @@ sub create_cidr_inputs {
     return ($hbox, $ip_el, $cidr_el);
 }
 
-sub display_message {
-    my ($msg) = @_;
-
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'info', 'ok', $msg);
-    $dialog->run();
-    $dialog->destroy();
-}
-
-sub display_error {
-    my ($msg) = @_;
-
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'error', 'ok', $msg);
-    $dialog->run();
-    $dialog->destroy();
-}
-
-sub display_prompt {
-    my ($query) = @_;
-
-    my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'ok-cancel', $query);
-    my $response = $dialog->run();
-    $dialog->destroy();
-
-    return $response;
-}
-
 my $ipconf_first_view = 1;
 
 sub create_ipconf_view {
@@ -1803,7 +1777,7 @@ sub create_ipconf_view {
 
 	# Debian does not support purely numeric hostnames
 	if ($text && $text =~ /^[0-9]+(?:\.|$)/) {
-	    display_message("Purely numeric hostnames are not allowed.");
+	    Proxmox::UI::message("Purely numeric hostnames are not allowed.");
 	    $hostentry->grab_focus();
 	    return;
 	}
@@ -1813,7 +1787,7 @@ sub create_ipconf_view {
 	    $hostname = $1;
 	    $domain = $2;
 	} else {
-	    display_message("Hostname does not look like a fully qualified domain name.");
+	    Proxmox::UI::message("Hostname does not look like a fully qualified domain name.");
 	    $hostentry->grab_focus();
 	    return;
 	}
@@ -1822,7 +1796,7 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_addr->get_text();
 	($ipaddress, $ipversion) = parse_ip_address($text);
 	if (!defined($ipaddress)) {
-	    display_message("IP address is not valid.");
+	    Proxmox::UI::message("IP address is not valid.");
 	    $ipconf_entry_addr->grab_focus();
 	    return;
 	}
@@ -1831,7 +1805,7 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_mask->get_text();
 	$netmask = parse_ip_mask($text, $ipversion);
 	if (!defined($netmask)) {
-	    display_message("Netmask is not valid.");
+	    Proxmox::UI::message("Netmask is not valid.");
 	    $ipconf_entry_mask->grab_focus();
 	    return;
 	}
@@ -1844,7 +1818,7 @@ sub create_ipconf_view {
 	    my $msg = defined($gateway_ip)
 	        ? "Gateway and host IP version must not differ (IPv$gateway_ip_version != IPv$ipversion)."
 	        : "Gateway is not valid.";
-	    display_message($msg);
+	    Proxmox::UI::message($msg);
 	    $ipconf_entry_gw->grab_focus();
 	    return;
 	}
@@ -1856,7 +1830,7 @@ sub create_ipconf_view {
 	    my $msg = defined($gateway_ip)
 	        ? "DNS and host IP version must not differ (IPv$gateway_ip_version != IPv$ipversion)."
 	        : "DNS IP is not valid.";
-	    display_message($msg);
+	    Proxmox::UI::message($msg);
 	    $ipconf_entry_dns->grab_focus();
 	    return;
 	}
@@ -2066,27 +2040,27 @@ sub create_password_view {
 	my $t2 = $pwe2->get_text;
 
 	if (length ($t1) < 5) {
-	    display_message("Password is too short.");
+	    Proxmox::UI::message("Password is too short.");
 	    $pwe1->grab_focus();
 	    return;
 	}
 
 	if ($t1 ne $t2) {
-	    display_message("Password does not match.");
+	    Proxmox::UI::message("Password does not match.");
 	    $pwe1->grab_focus();
 	    return;
 	}
 
 	my $t3 = $eme->get_text;
 	if ($t3 !~ m/^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$/) {
-	    display_message("Email does not look like a valid address" .
+	    Proxmox::UI::message("Email does not look like a valid address" .
 			     " (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
 	}
 
 	if ($t3 eq 'mail@example.invalid') {
-	    display_message("Please enter a valid Email address");
+	    Proxmox::UI::message("Please enter a valid Email address");
 	    $eme->grab_focus();
 	    return;
 	}
@@ -2270,7 +2244,7 @@ sub create_country_view {
 	    create_password_view();
 	    return;
 	} else {
-	    display_message("Please select a country first.");
+	    Proxmox::UI::message("Please select a country first.");
 	    $w->grab_focus();
 	}
     });
@@ -2918,14 +2892,14 @@ sub create_hdsel_view {
 	if ($config_options->{filesys} =~ m/zfs/) {
 	    my ($devlist) = eval { get_zfs_raid_setup() };
 	    if (my $err = $@) {
-		display_message("Warning: $err\nPlease fix ZFS setup first.");
+		Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
 		return;
 	    }
 	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
 	} elsif ($config_options->{filesys} =~ m/btrfs/) {
 	    my ($devlist) = eval { get_btrfs_raid_setup() };
 	    if (my $err = $@) {
-		display_message("Warning: $err\nPlease fix BTRFS setup first.");
+		Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
 		return;
 	    }
 	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
@@ -2935,7 +2909,7 @@ sub create_hdsel_view {
 		legacy_bios_4k_check($target_block_size);
 	    };
 	    if (my $err = $@) {
-		display_message("Warning: $err\n");
+		Proxmox::UI::message("Warning: $err\n");
 		return;
 	    }
 	    $config_options->{target_hds} = [ $target_hd ];
@@ -2988,7 +2962,7 @@ sub create_extract_view {
 
     if ($err) {
 	display_html("fail.htm");
-	display_error($err);
+	Proxmox::UI::error($err);
     } else {
 	cleanup_view();
 	display_html("success.htm");
@@ -3013,14 +2987,14 @@ sub create_intro_view {
     cleanup_view();
 
     if (int($total_memory) < 1024) {
-	display_error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
+	Proxmox::UI::error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
 	    "See 'System Requirements' in the $env->{cfg}->{fullname} documentation.");
     }
 
     if ($env->{product} eq 'pve') {
 	my $cpuinfo = eval { file_read_all('/proc/cpuinfo') };
 	if (!$cpuinfo || $cpuinfo !~ /^flags\s*:.*(vmx|svm)/m) {
-	    display_error(
+	    Proxmox::UI::error(
 		"No support for hardware-accelerated KVM virtualization detected.\n\n"
 		."Check BIOS settings for Intel VT / AMD-V / SVM."
 	    );

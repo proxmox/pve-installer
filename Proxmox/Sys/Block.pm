@@ -10,6 +10,7 @@ use List::Util qw(first);
 use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
+use Proxmox::UI;
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(get_cached_disks wipe_disk partition_bootable_disk);
@@ -225,7 +226,7 @@ sub partition_bootable_disk {
 
     die "root disk '$target_dev' too small (${hdgb} GB < $hard_limit GB)\n" if $hdgb < $hard_limit;
     if ($hdgb < $soft_limit) {
-	my $response = display_prompt(
+	my $response = Proxmox::UI::prompt(
 	    "Root disk space ${hdgb} GB is below recommended minimum space of $soft_limit GB,"
 	    ." installation might not be successful! Continue?"
 	);
