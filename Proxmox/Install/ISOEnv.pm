@@ -122,6 +122,11 @@ my sub get_locations {
     };
 }
 
+# setup global environment already on module load
+$ENV{DEBIAN_FRONTEND} = 'noninteractive';
+$ENV{LC_ALL} = 'C';
+$ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
+
 sub setup {
     my $cd_info = get_cd_info();
     my $product = $cd_info->{product};

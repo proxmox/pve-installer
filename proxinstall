@@ -3,9 +3,6 @@
 use strict;
 use warnings;
 
-$ENV{DEBIAN_FRONTEND} = 'noninteractive';
-$ENV{LC_ALL} = 'C';
-
 use Getopt::Long;
 use IPC::Open2;
 use IO::File;
@@ -42,8 +39,6 @@ if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
 
     Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
 }
-
-$ENV{'LVM_SUPPRESS_FD_WARNINGS'} = '1';
 
 my $iso_env = Proxmox::Install::ISOEnv::setup();
 my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
