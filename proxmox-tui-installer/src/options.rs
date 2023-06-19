@@ -1,6 +1,8 @@
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
 
+use proxmox_sys::linux::procfs;
+
 use crate::{
     setup::LocaleInfo,
     utils::{CidrAddress, Fqdn},
@@ -96,7 +98,16 @@ pub struct LvmBootdiskOptions {
 }
 
 impl LvmBootdiskOptions {
+    /// Sets the default values as described in the documentation:
+    /// https://pve.proxmox.com/pve-docs/pve-admin-guide.html#advanced_lvm_options
     pub fn defaults_from(disk: &Disk) -> Self {
+        let mem_total = procfs::read_meminfo()
+            .map(|m| m.memtotal)
+            .unwrap_or(4 * 1024 * 1024 * 1024);
+
+        // Clamp to 4 GiB <= total system memory <= 8 GiB
+        let swap_size = mem_total.clamp(4 * 1024 * 1024 * 1024, 8 * 1024 * 1024 * 1024);
+
         // If the disk size > 128 GiB use 16 GiB, else 1/8 of the disk
         let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
             16 * 1024 * 1024 * 1024
@@ -106,7 +117,7 @@ impl LvmBootdiskOptions {
 
         Self {
             total_size: disk.size,
-            swap_size: 4 * 1024 * 1024, // TODO: value from installed memory
+            swap_size,
             max_root_size: 0,
             max_data_size: 0,
             min_lvm_free,
