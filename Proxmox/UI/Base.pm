@@ -44,4 +44,16 @@ sub display_html {
     croak "implement me in sub-class";
 }
 
+sub progress {
+    my ($self, $ratio, $text) = @_;
+
+    croak "implement me in sub-class";
+}
+
+sub process_events {
+    my ($self) = @_;
+
+    croak "implement me in sub-class";
+}
+
 1;

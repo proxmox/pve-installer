@@ -35,4 +35,16 @@ sub display_html {
     # ignore for now
 }
 
+sub progress {
+    my ($self, $ratio, $text) = @_;
+
+    print STDOUT "progress: $ratio $text\n";
+}
+
+sub process_events {
+    my ($self) = @_;
+
+    # nothing to do for now?
+}
+
 1;

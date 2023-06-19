@@ -45,4 +45,19 @@ sub display_html {
     $html_view->load_html($raw_html,  "file://$html_dir/");
 }
 
+sub progress {
+    my ($self, $ratio, $text) = @_;
+
+    my ($bar, $status) = $self->{state}->@{'progress_bar', 'progress_status'};
+
+    $bar->set_fraction($ratio);
+    $bar->set_text(sprintf ("%d%%", int ($ratio * 100)));
+    $status->set_text($text) if defined($text);
+}
+
+sub process_events {
+    my ($self) = @_;
+    Gtk3::main_iteration() while Gtk3::events_pending();
+}
+
 1;

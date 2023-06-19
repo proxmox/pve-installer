@@ -308,16 +308,11 @@ my $total_memory = get_memtotal();
 sub update_progress {
     my ($frac, $start, $end, $text) = @_;
 
-    my $part = $end - $start;
-    my $res = $start + $frac * $part;
-
-    $gtk_state->{progress_bar}->set_fraction ($res);
-    $gtk_state->{progress_bar}->set_text(sprintf ("%d%%", int ($res*100)));
-    $gtk_state->{progress_status}->set_text($text) if defined($text);
+    my $res = Proxmox::UI::progress($frac, $start, $end, $text);
 
     display_info() if $res < 0.9;
 
-    Gtk3::main_iteration() while Gtk3::events_pending();
+    Proxmox::UI::process_events();
 }
 
 my $fssetup = {

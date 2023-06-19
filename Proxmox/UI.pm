@@ -83,4 +83,19 @@ sub display_html {
     return get_ui()->display_html($raw_html, $html_dir);
 }
 
+sub progress {
+    my ($frac, $start, $end, $text) = @_;
+
+    my $part = $end - $start;
+    my $ratio = $start + $frac * $part;
+
+    get_ui()->progress($ratio, $text);
+
+    return $ratio;
+}
+
+sub process_events {
+    get_ui()->process_events();
+}
+
 1;
