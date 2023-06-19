@@ -32,6 +32,11 @@ ${DEB}: ${INSTALLER_SOURCES}
 	cd build; dpkg-buildpackage -b -us -uc
 	lintian ${DEB}
 
+test-$(DEB): $(INSTALLER_SOURCES)
+	rsync --exclude='test*.img' -a * build
+	cd build; dpkg-buildpackage -b -us -uc -nc
+	mv $(DEB) test-$(DEB)
+
 DESTDIR=
 VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
@@ -71,10 +76,10 @@ upload: $(DEB)
 	truncate -s 8G $@
 
 .PHONY: prepare-check-env
-prepare-check-env: $(DEB)
+prepare-check-env: test-$(DEB)
 	umount -Rd testdir || true
 	rm -rf testdir
-	dpkg -X $(DEB) testdir
+	dpkg -X test-$(DEB) testdir
 
 cd-info.test: PRODUCT ?= pve
 cd-info.test:
