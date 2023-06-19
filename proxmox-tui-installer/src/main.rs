@@ -16,7 +16,7 @@ mod options;
 use options::*;
 
 mod setup;
-use setup::{LocaleInfo, ProxmoxProduct, SetupInfo};
+use setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo};
 
 mod system;
 
@@ -128,6 +128,7 @@ struct InstallerState {
     options: InstallerOptions,
     available_disks: Vec<Disk>,
     setup_info: SetupInfo,
+    runtime_info: RuntimeInfo,
     locales: LocaleInfo,
     steps: HashMap<InstallerStep, ScreenId>,
     in_test_mode: bool,
@@ -147,7 +148,7 @@ fn main() {
         _ => false,
     };
 
-    let (setup_info, locales) = match installer_setup(in_test_mode) {
+    let (setup_info, locales, runtime_info) = match installer_setup(in_test_mode) {
         Ok(result) => result,
         Err(err) => initial_setup_error(&mut siv, &err),
     };
@@ -155,11 +156,14 @@ fn main() {
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
 
-    // TODO: retrieve actual disk info
-    let available_disks = vec![Disk {
-        path: "/dev/vda".to_owned(),
-        size: 17179869184,
-    }];
+    let available_disks: Vec<Disk> = runtime_info
+        .disks
+        .iter()
+        .map(|(name, info)| Disk {
+            path: format!("/dev/{name}"),
+            size: info.size,
+        })
+        .collect();
 
     siv.set_user_data(InstallerState {
         options: InstallerOptions {
@@ -171,6 +175,7 @@ fn main() {
         },
         available_disks,
         setup_info,
+        runtime_info,
         locales,
         steps: HashMap::new(),
         in_test_mode,
@@ -180,7 +185,7 @@ fn main() {
     siv.run();
 }
 
-fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo), String> {
+fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     system::has_min_requirements()?;
 
     let mut path = if in_test_mode {
@@ -206,7 +211,15 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo), String
         setup::read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
     };
 
-    Ok((installer_info, locale_info))
+    let runtime_info = {
+        let mut path = path.clone();
+        path.push("run-env-info.json");
+
+        setup::read_json(&path)
+            .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
+    };
+
+    Ok((installer_info, locale_info, runtime_info))
 }
 
 fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
