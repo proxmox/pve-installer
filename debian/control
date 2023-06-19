@@ -16,15 +16,15 @@ Homepage: https://www.proxmox.com
 
 Package: proxmox-installer
 Architecture: all
-Depends: geoip-bin,
-         chrony,
+Depends: chrony,
+         geoip-bin,
          libgtk3-perl,
          libgtk3-webkit2-perl,
          proxmox-kernel-helper,
          squashfs-tools,
          ${perl:Depends},
-Breaks: pve-installer (<< 7~), pbs-installer (<< 7~), pbs-installer (<< 7~)
-Replaces: pve-installer (<< 7~), pbs-installer (<< 7~), pbs-installer (<< 7~)
+Breaks: pbs-installer (<< 7~), pve-installer (<< 7~),
+Replaces: pbs-installer (<< 7~), pve-installer (<< 7~),
 Description: Installer for Proxmox Projects
  This package contains the graphical installer for:
   * Proxmox VE.
