@@ -196,3 +196,90 @@ where
 {
     serializer.collect_str(value)
 }
+
+#[derive(Clone, Deserialize)]
+pub struct RuntimeInfo {
+    /// Detected country if available.
+    pub country: Option<String>,
+
+    /// Maps devices to their information.
+    pub disks: HashMap<String, BlockdevInfo>,
+
+    /// Network addresses, gateways and DNS info.
+    pub network: NetworkInfo,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct BlockdevInfo {
+    /// Size in bytes.
+    pub size: u64,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct NetworkInfo {
+    pub dns: Dns,
+    pub routes: Routes,
+
+    /// Maps devices to their configuration, if it has a usable configuration.
+    /// (Contains no entries for devices with only link-local addresses.)
+    #[serde(default)]
+    pub interfaces: HashMap<String, Interface>,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Dns {
+    pub domain: Option<String>,
+
+    /// List of stringified IP addresses.
+    #[serde(default)]
+    pub dns: Vec<String>,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Routes {
+    /// Ipv4 gateway.
+    pub gateway4: Option<Gateway>,
+
+    /// Ipv6 gateway.
+    pub gateway6: Option<Gateway>,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Gateway {
+    /// Outgoing network device.
+    pub dev: String,
+
+    /// Stringified gateway IP address.
+    pub gateway: String,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Interface {
+    pub name: String,
+
+    pub index: usize,
+
+    pub mac: String,
+
+    /// This always has at least 1 usable address.
+    pub addresses: Vec<Address>,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Address {
+    pub family: AddrFamily,
+
+    pub prefix: u32,
+
+    /// Stringified IP address.
+    pub address: String,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize)]
+pub enum AddrFamily {
+    #[serde(rename = "inet")]
+    Ipv4,
+
+    #[serde(rename = "inet6")]
+    Ipv6,
+}
