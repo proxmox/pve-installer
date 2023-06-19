@@ -138,10 +138,9 @@ my @steps = (
 );
 
 # GUI global variables
-my ($window, $cmdbox, $inbox);
-my $prev_btn;
-my ($next, $next_fctn, $target_hd);
-my ($progress, $progress_status);
+my $gtk_state = {};
+
+my $target_hd;
 
 my ($ipversion, $ipaddress, $cidr, $ipconf_entry_addr);
 my ($netmask, $ipconf_entry_mask);
@@ -312,9 +311,9 @@ sub update_progress {
     my $part = $end - $start;
     my $res = $start + $frac * $part;
 
-    $progress->set_fraction ($res);
-    $progress->set_text (sprintf ("%d%%", int ($res*100)));
-    $progress_status->set_text ($text) if defined ($text);
+    $gtk_state->{progress_bar}->set_fraction ($res);
+    $gtk_state->{progress_bar}->set_text(sprintf ("%d%%", int ($res*100)));
+    $gtk_state->{progress_status}->set_text($text) if defined($text);
 
     display_info() if $res < 0.9;
 
@@ -1433,28 +1432,28 @@ sub prev_function {
 
     $fctn = $step_number if !$fctn;
     $text = "_Previous" if !$text;
-    $prev_btn->set_label ($text);
+    $gtk_state->{prev_btn}->set_label($text);
 
     $step_number--;
     $steps[$step_number]->{function}();
 
-    $prev_btn->grab_focus();
+    $gtk_state->{prev_btn}->grab_focus();
 }
 
 sub set_next {
     my ($text, $fctn) = @_;
 
-    $next_fctn = $fctn;
+    $gtk_state->{next_btn_callback} = $fctn;
     my $step = $steps[$step_number];
     $text //= $steps[$step_number]->{next_button} // '_Next';
-    $next->set_label($text);
+    $gtk_state->{next_btn}->set_label($text);
 
-    $next->grab_focus();
+    $gtk_state->{next_btn}->grab_focus();
 }
 
 sub create_main_window {
 
-    $window = Gtk3::Window->new();
+    my $window = Gtk3::Window->new();
     $window->set_default_size(1024, 768);
     $window->signal_connect(map => sub { $window->set_resizable(0); });
     $window->fullscreen() if !is_test_mode();
@@ -1484,15 +1483,14 @@ sub create_main_window {
     my $sep1 = Gtk3::Separator->new('horizontal');
     $vbox->pack_start($sep1, 0, 0, 0);
 
-    $cmdbox = Gtk3::Box->new('horizontal', 0);
+    my $cmdbox = Gtk3::Box->new('horizontal', 0);
     $vbox->pack_start($cmdbox, 0, 0, 10);
 
-    $next = Gtk3::Button->new('_Next');
-    $next->signal_connect(clicked => sub { $last_display_change = 0; &$next_fctn (); });
-    $cmdbox->pack_end($next, 0, 0, 10);
+    my $next_btn = Gtk3::Button->new('_Next');
+    $next_btn->signal_connect(clicked => sub { $last_display_change = 0; $gtk_state->{next_btn_callback}->(); });
+    $cmdbox->pack_end($next_btn, 0, 0, 10);
 
-
-    $prev_btn = Gtk3::Button->new('_Previous');
+    my $prev_btn = Gtk3::Button->new('_Previous');
     $prev_btn->signal_connect(clicked => sub { $last_display_change = 0; &prev_function (); });
     $cmdbox->pack_end($prev_btn, 0, 0, 10);
 
@@ -1505,10 +1503,10 @@ sub create_main_window {
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
 
-    my $htmlview = Gtk3::WebKit2::WebView->new();
-    $htmlview->set_hexpand(1);
+    my $html_view = Gtk3::WebKit2::WebView->new();
+    $html_view->set_hexpand(1);
     my $scrolls = Gtk3::ScrolledWindow->new();
-    $scrolls->add($htmlview);
+    $scrolls->add($html_view);
 
     my $hbox2 = Gtk3::Box->new('horizontal', 0);
     $hbox2->pack_start($scrolls, 1, 1, 0);
@@ -1521,21 +1519,29 @@ sub create_main_window {
     my $sep2 = Gtk3::Separator->new('horizontal');
     $vbox3->pack_start($sep2, 0, 0, 0);
 
-    $inbox = Gtk3::Box->new('horizontal', 0);
+    my $inbox = Gtk3::Box->new('horizontal', 0);
     $vbox3->pack_start($inbox, 0, 0, 0);
 
     $window->add($vbox);
 
-    Proxmox::UI::init_gtk({ window => $window, html_view => $htmlview }, $env);
+    $gtk_state->{window} = $window;
+    $gtk_state->{html_view} = $html_view;
+    $gtk_state->{inbox} = $inbox;
+    $gtk_state->{prev_btn} = $prev_btn;
+    $gtk_state->{next_btn} = $next_btn;
+    $gtk_state->{progress_bar} = Gtk3::ProgressBar->new();
+    $gtk_state->{progress_status} = Gtk3::Label->new('');
+
+    Proxmox::UI::init_gtk($gtk_state, $env);
 
     $window->show_all;
     $window->present();
 }
 
 sub cleanup_view {
-    $inbox->foreach(sub {
+    $gtk_state->{inbox}->foreach(sub {
 	my $child = shift;
-	$inbox->remove ($child);
+	$gtk_state->{inbox}->remove ($child);
     });
 }
 
@@ -1627,7 +1633,7 @@ sub create_ipconf_view {
     Proxmox::UI::display_html('ipconf.htm');
 
     my $vcontainer = Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start($vcontainer, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start($vcontainer, 1, 0, 0);
     my $hcontainer =  Gtk3::Box->new('horizontal', 0);
     $vcontainer->pack_start($hcontainer, 0, 0, 10);
     my $vbox =  Gtk3::Box->new('vertical', 0);
@@ -1718,7 +1724,7 @@ sub create_ipconf_view {
 
     $vbox->pack_start($dnsbox, 0, 0, 0);
 
-    $inbox->show_all;
+    $gtk_state->{inbox}->show_all;
     set_next(undef, sub {
 
 	# verify hostname
@@ -1807,7 +1813,7 @@ sub create_ack_view {
     cleanup_view();
 
     my $vbox =  Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start($vbox, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start($vbox, 1, 0, 0);
 
     my $reboot_checkbox = Gtk3::CheckButton->new('Automatically reboot after successful installation');
     $reboot_checkbox->set_active(1);
@@ -1845,7 +1851,7 @@ sub create_ack_view {
 
     Proxmox::UI::display_html('ack.htm');
 
-    $inbox->show_all;
+    $gtk_state->{inbox}->show_all;
 
     set_next(undef, sub {
 	$step_number++;
@@ -1946,7 +1952,7 @@ sub create_password_view {
     cleanup_view();
 
     my $vbox2 =  Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start($vbox2, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start($vbox2, 1, 0, 0);
     my $vbox =  Gtk3::Box->new('vertical', 0);
     $vbox2->pack_start($vbox, 0, 0, 10);
 
@@ -1987,7 +1993,7 @@ sub create_password_view {
     $vbox->pack_start($hbox2, 0, 0, 5);
     $vbox->pack_start($hbox3, 0, 0, 15);
 
-    $inbox->show_all;
+    $gtk_state->{inbox}->show_all;
 
     Proxmox::UI::display_html('passwd.htm');
 
@@ -2041,7 +2047,7 @@ sub create_country_view {
     my $locales = $env->{locales};
 
     my $vbox2 =  Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start($vbox2, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start($vbox2, 1, 0, 0);
     my $vbox =  Gtk3::Box->new('vertical', 0);
     $vbox2->pack_start($vbox, 0, 0, 10);
 
@@ -2188,7 +2194,7 @@ sub create_country_view {
 	$w->set_text($entry->{name});
     }
 
-    $inbox->show_all;
+    $gtk_state->{inbox}->show_all;
 
     Proxmox::UI::display_html('country.htm');
     set_next (undef,  sub {
@@ -2796,12 +2802,12 @@ sub get_btrfs_raid_setup {
 my $last_hd_selected = 0;
 sub create_hdsel_view {
 
-    $prev_btn->set_sensitive(1); # enable previous button at this point
+    $gtk_state->{prev_btn}->set_sensitive(1); # enable previous button at this point
 
     cleanup_view();
 
     my $vbox =  Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start($vbox, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start($vbox, 1, 0, 0);
     my $hbox =  Gtk3::Box->new('horizontal', 0);
     $vbox->pack_start($hbox, 0, 0, 10);
 
@@ -2840,7 +2846,7 @@ sub create_hdsel_view {
     $hbox->pack_start ($options, 0, 0, 0);
 
 
-    $inbox->show_all;
+    $gtk_state->{inbox}->show_all;
 
     Proxmox::UI::display_html('page1.htm');
 
@@ -2883,28 +2889,26 @@ sub create_extract_view {
 
     Proxmox::Install::display_info();
 
-    $next->set_sensitive(0);
-    $prev_btn->set_sensitive(0);
-    $prev_btn->hide();
+    $gtk_state->{next_btn}->set_sensitive(0);
+    $gtk_state->{prev_btn}->set_sensitive(0);
+    $gtk_state->{prev_btn}->hide();
 
     my $vbox =  Gtk3::Box->new('vertical', 0);
-    $inbox->pack_start ($vbox, 1, 0, 0);
+    $gtk_state->{inbox}->pack_start ($vbox, 1, 0, 0);
     my $hbox =  Gtk3::Box->new('horizontal', 0);
     $vbox->pack_start ($hbox, 0, 0, 10);
 
     my $vbox2 =  Gtk3::Box->new('vertical', 0);
     $hbox->pack_start ($vbox2, 0, 0, 0);
 
-    $progress_status = Gtk3::Label->new('');
-    $vbox2->pack_start ($progress_status, 1, 1, 0);
+    $vbox2->pack_start($gtk_state->{progress_status}, 1, 1, 0);
 
-    $progress = Gtk3::ProgressBar->new;
-    $progress->set_show_text(1);
-    $progress->set_size_request (600, -1);
+    $gtk_state->{progress_bar}->set_show_text(1);
+    $gtk_state->{progress_bar}->set_size_request (600, -1);
 
-    $vbox2->pack_start($progress, 0, 0, 0);
+    $vbox2->pack_start($gtk_state->{progress_bar}, 0, 0, 0);
 
-    $inbox->show_all();
+    $gtk_state->{inbox}->show_all();
 
     my $tdir = is_test_mode() ? "target" : "/target";
     mkdir $tdir;
@@ -2913,7 +2917,7 @@ sub create_extract_view {
     eval  { extract_data($base, $tdir); };
     my $err = $@;
 
-    $next->set_sensitive(1);
+    $gtk_state->{next_btn}->set_sensitive(1);
 
     set_next("_Reboot", sub { app_quit(0); } );
 
@@ -2956,7 +2960,7 @@ sub create_extract_view {
 
 sub create_intro_view {
 
-    $prev_btn->set_sensitive(0);
+    $gtk_state->{prev_btn}->set_sensitive(0);
 
     cleanup_view();
 
