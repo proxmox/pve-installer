@@ -242,13 +242,13 @@ sub app_quit {
 
     # reap left over zombie processes
     while ((my $child = waitpid(-1, POSIX::WNOHANG)) > 0) {
-	print "reaped child $child\n";
+	print STDERR "reaped child $child\n";
     }
     exit($exit_code);
 }
 
 sub detect_country {
-    print "trying to detect country...\n";
+    print STDERR "trying to detect country...\n";
     my $cpid = open2(my $TRACEROUTE_FH, undef, "traceroute -N 1 -q 1 -n 8.8.8.8");
     return undef if !$cpid;
 
@@ -277,11 +277,11 @@ sub detect_country {
     close($TRACEROUTE_FH);
 
     if ($err) {
-	print "unable to detect country - $err\n";
+	print STDERR "unable to detect country - $err\n";
     } elsif ($country) {
-	print "detected country: " . uc($country) . "\n";
+	print STDERR "detected country: " . uc($country) . "\n";
     } else {
-	print "unable to detect country\n";
+	print STDERR "unable to detect country\n";
     }
 
     return $country;
@@ -1149,7 +1149,7 @@ _EOD
 	    my $path = $_;
 	    my ($deb) = $path =~ m/${proxmox_pkgdir}\/(.*\.deb)/;
 	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
-	    print "extracting: $deb\n";
+	    print STDERR "extracting: $deb\n";
 	    syscmd("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/pkg/$deb") == 0
 		|| die "installation of package $deb failed\n";
 	    update_progress((++$count)/$pkg_count, 0.5, 0.75);
@@ -1351,11 +1351,11 @@ _EOD
 
     update_progress(1, 0, 1, "");
 
-    print $err if $err && $err ne "\n";
+    print STDERR $err if $err && $err ne "\n";
 
     if (is_test_mode()) {
 	my $elapsed = Time::HiRes::tv_interval($starttime);
-	print "Elapsed extract time: $elapsed\n";
+	print STDERR "Elapsed extract time: $elapsed\n";
 
 	syscmd("chroot $targetdir /usr/bin/dpkg-query -W --showformat='\${package}\n'> final.pkglist");
     }
@@ -1794,7 +1794,7 @@ sub create_ipconf_view {
 	}
 	$config->{dnsserver} = $dnsserver = $dns_ip;
 
-	#print "TEST $ipaddress $netmask $gateway $dnsserver\n";
+	#print STDERR "TEST $ipaddress $netmask $gateway $dnsserver\n";
 
 	$step_number++;
 	create_ack_view();
@@ -2148,8 +2148,7 @@ sub create_country_view {
 		$c->complete();
 		return undef;
 	    } else {
-		#Gtk3::Gdk::beep();
-		print chr(7); # beep ?
+		# beep ?
 	    }
 
 	    $c->complete();
@@ -3011,7 +3010,7 @@ my $initial_error = 0;
 {
     my $cached_disks = get_cached_disks();
     if (!defined($cached_disks) || (scalar (@$cached_disks) <= 0)) {
-	print "no harddisks found\n";
+	print STDERR "no harddisks found\n";
 	$initial_error = 1;
 	Proxmox::UI::display_html("nohds.htm");
 	set_next("Reboot", sub { app_quit(0); } );
@@ -3019,13 +3018,13 @@ my $initial_error = 0;
 	foreach my $hd (@$cached_disks) {
 	    my ($disk, $devname) = @$hd;
 	    next if $devname =~ m|^/dev/md\d+$|;
-	    print "found Disk$disk N:$devname\n";
+	    print STDERR "found Disk$disk N:$devname\n";
 	}
     }
 }
 
 if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
-    print "no network interfaces found\n";
+    print STDERR "no network interfaces found\n";
     $initial_error = 1;
     Proxmox::UI::display_html("nonics.htm");
     set_next("Reboot", sub { app_quit(0); } );
