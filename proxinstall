@@ -25,6 +25,7 @@ use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
+use Proxmox::UI;
 
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
@@ -1567,6 +1568,8 @@ sub create_main_window {
     $vbox3->pack_start($inbox, 0, 0, 0);
 
     $window->add($vbox);
+
+    Proxmox::UI::init_gtk({ window => $window });
 
     $window->show_all;
     $window->present();
