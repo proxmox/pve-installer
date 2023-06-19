@@ -208,8 +208,8 @@ my sub detect_country_tracing_to : prototype($$) {
 #     network => {
 #         interfaces => <see query_netdevs()>,
 #         routes => <see query_routes()>,
+#         dns => <see query_dns()>,
 #     },
-#     dns => <see query_dns()>,
 # }
 sub query_installation_environment : prototype() {
     my $output = {};
@@ -220,8 +220,8 @@ sub query_installation_environment : prototype() {
     $output->{network} = {
 	interfaces => query_netdevs(),
 	routes => $routes,
+	dns => query_dns(),
     };
-    $output->{dns} = query_dns();
 
     my $err;
     my $country;
