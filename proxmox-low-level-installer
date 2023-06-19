@@ -13,6 +13,7 @@ use Proxmox::Sys::File qw(file_write_all);
 
 use Proxmox::Log;
 use Proxmox::Install::ISOEnv;
+use Proxmox::Install::RunEnv;
 
 {
     my $test_mode;
@@ -75,6 +76,9 @@ if ($cmd eq 'dump-env') {
 
     #print "" . to_json($env, {canonical => 1, utf8 => 1, pretty => 1}) ."\n";
     # TODO HARDWARE
+    my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
+    my $run_env_serialized = to_json($run_env, {canonical => 1, utf8 => 1}) ."\n";
+    file_write_all("$out_dir/run-env-info.json", $run_env_serialized);
 } else {
     die "TODO";
 }
