@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum BtrfsRaidLevel {
-    Single,
-    Mirror,
+    Raid0,
+    Raid1,
     Raid10,
 }
 
@@ -18,8 +18,8 @@ impl fmt::Display for BtrfsRaidLevel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BtrfsRaidLevel::*;
         match self {
-            Single => write!(f, "single disk"),
-            Mirror => write!(f, "mirrored"),
+            Raid0 => write!(f, "RAID0"),
+            Raid1 => write!(f, "RAID1"),
             Raid10 => write!(f, "RAID10"),
         }
     }
@@ -27,8 +27,8 @@ impl fmt::Display for BtrfsRaidLevel {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ZfsRaidLevel {
-    Single,
-    Mirror,
+    Raid0,
+    Raid1,
     Raid10,
     RaidZ,
     RaidZ2,
@@ -39,8 +39,8 @@ impl fmt::Display for ZfsRaidLevel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use ZfsRaidLevel::*;
         match self {
-            Single => write!(f, "single disk"),
-            Mirror => write!(f, "mirrored"),
+            Raid0 => write!(f, "RAID0"),
+            Raid1 => write!(f, "RAID1"),
             Raid10 => write!(f, "RAID10"),
             RaidZ => write!(f, "RAIDZ-1"),
             RaidZ2 => write!(f, "RAIDZ-2"),
@@ -74,14 +74,14 @@ pub const FS_TYPES: &[FsType] = {
     &[
         Ext4,
         Xfs,
-        Zfs(ZfsRaidLevel::Single),
-        Zfs(ZfsRaidLevel::Mirror),
+        Zfs(ZfsRaidLevel::Raid0),
+        Zfs(ZfsRaidLevel::Raid1),
         Zfs(ZfsRaidLevel::Raid10),
         Zfs(ZfsRaidLevel::RaidZ),
         Zfs(ZfsRaidLevel::RaidZ2),
         Zfs(ZfsRaidLevel::RaidZ3),
-        Btrfs(BtrfsRaidLevel::Single),
-        Btrfs(BtrfsRaidLevel::Mirror),
+        Btrfs(BtrfsRaidLevel::Raid0),
+        Btrfs(BtrfsRaidLevel::Raid1),
         Btrfs(BtrfsRaidLevel::Raid10),
     ]
 };

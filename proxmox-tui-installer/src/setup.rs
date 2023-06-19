@@ -174,15 +174,15 @@ where
         Ext4 => "ext4",
         Xfs => "xfs",
         // proxinstall::get_zfs_raid_setup()
-        Zfs(ZfsRaidLevel::Single) => "zfs (RAID0)",
-        Zfs(ZfsRaidLevel::Mirror) => "zfs (RAID1)",
+        Zfs(ZfsRaidLevel::Raid0) => "zfs (RAID0)",
+        Zfs(ZfsRaidLevel::Raid1) => "zfs (RAID1)",
         Zfs(ZfsRaidLevel::Raid10) => "zfs (RAID10)",
         Zfs(ZfsRaidLevel::RaidZ) => "zfs (RAIDZ-1)",
         Zfs(ZfsRaidLevel::RaidZ2) => "zfs (RAIDZ-2)",
         Zfs(ZfsRaidLevel::RaidZ3) => "zfs (RAIDZ-3)",
         // proxinstall::get_btrfs_raid_setup()
-        Btrfs(BtrfsRaidLevel::Single) => "btrfs (RAID0)",
-        Btrfs(BtrfsRaidLevel::Mirror) => "btrfs (RAID1)",
+        Btrfs(BtrfsRaidLevel::Raid0) => "btrfs (RAID0)",
+        Btrfs(BtrfsRaidLevel::Raid1) => "btrfs (RAID1)",
         Btrfs(BtrfsRaidLevel::Raid10) => "btrfs (RAID10)",
     };
 
