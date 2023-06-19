@@ -51,7 +51,7 @@ impl<T: TableViewItem> TableView<T> {
         let mut start = Vec2::zero();
 
         for item in items {
-            p.print(start + ((width - item.len()) / 2, 0), &item);
+            p.print(start + (2, 0), &item);
 
             start.x += width;
             p.print(start, "┆");
