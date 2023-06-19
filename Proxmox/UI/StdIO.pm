@@ -29,4 +29,10 @@ sub prompt {
     return lc($response) eq 'ok';
 }
 
+sub display_html {
+    my ($raw_html, $html_dir) = @_;
+
+    # ignore for now
+}
+
 1;

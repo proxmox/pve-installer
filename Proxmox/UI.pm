@@ -8,6 +8,8 @@ use warnings;
 
 use Carp;
 
+use Proxmox::Sys::File qw(file_read_all);
+
 use Proxmox::UI::Gtk3;
 use Proxmox::UI::StdIO;
 
@@ -59,6 +61,26 @@ sub prompt {
     return get_ui()->prompt($query);
 }
 
+sub display_html {
+    my ($filename, $transform) = @_;
+
+    my $env = get_env();
+    my $html_dir = "$env->{locations}->{lib}/html";
+
+    my $path;
+    if (-f "$html_dir/$env->{product}/$filename") {
+	$path = "$html_dir/$env->{product}/$filename";
+    } else {
+	$path = "$html_dir/$filename";
+    }
+
+    my $raw_html = file_read_all($path);
+
+    $raw_html = $transform->($raw_html, $env) if $transform;
+
+    $raw_html =~ s/__FULL_PRODUCT_NAME__/$env->{cfg}->{fullname}/g;
+
+    return get_ui()->display_html($raw_html, $html_dir);
 }
 
 1;

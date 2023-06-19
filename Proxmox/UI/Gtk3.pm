@@ -36,4 +36,13 @@ sub prompt {
     return ($response // '') eq 'ok';
 }
 
+sub display_html {
+    my ($self, $raw_html, $html_dir) = @_;
+
+    my $html_view = $self->{state}->{html_view};
+
+    # always set base-path to common path, all resources are accesible from there.
+    $html_view->load_html($raw_html,  "file://$html_dir/");
+}
+
 1;

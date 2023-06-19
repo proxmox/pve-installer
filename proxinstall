@@ -138,7 +138,7 @@ my @steps = (
 );
 
 # GUI global variables
-my ($window, $cmdbox, $inbox, $htmlview);
+my ($window, $cmdbox, $inbox);
 my $prev_btn;
 my ($next, $next_fctn, $target_hd);
 my ($progress, $progress_status);
@@ -1429,43 +1429,11 @@ sub display_info {
 }
 
 sub display_html {
-    my ($filename) = @_;
+    my ($filename, $transform) = @_;
 
     $filename = $steps[$step_number]->{html} if !$filename;
 
-    my $htmldir = "${proxmox_libdir}/html";
-    my $path;
-    if (-f "$htmldir/$env->{product}/$filename") {
-	$path = "$htmldir/$env->{product}/$filename";
-    } else {
-	$path = "$htmldir/$filename";
-    }
-
-    my $data = file_read_all($path);
-
-    if ($filename eq 'license.htm') {
-	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
-	if (my $err = $@) {
-	    die $err if !is_test_mode();
-	    $license = "TESTMODE: Ignore non existent EULA...\n";
-	}
-	my $title = "END USER LICENSE AGREEMENT (EULA)";
-	$data =~ s/__LICENSE__/$license/;
-	$data =~ s/__LICENSE_TITLE__/$title/;
-    } elsif ($filename eq 'success.htm') {
-	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
-	$data =~ s/__IPADDR__/$addr/g;
-	$data =~ s/__PORT__/$env->{cfg}->{port}/g;
-
-	my $autoreboot_msg = $config_options->{autoreboot}
-	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
-	    : '';
-	$data =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
-    }
-    $data =~ s/__FULL_PRODUCT_NAME__/$env->{cfg}->{fullname}/g;
-
-    # always set base-path to common path, all resources are accesible from there.
-    $htmlview->load_html($data,  "file://$htmldir/");
+    Proxmox::UI::display_html($filename, $transform);
 
     $last_display_change = time();
 }
@@ -1548,7 +1516,7 @@ sub create_main_window {
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
 
-    $htmlview = Gtk3::WebKit2::WebView->new();
+    my $htmlview = Gtk3::WebKit2::WebView->new();
     $htmlview->set_hexpand(1);
     my $scrolls = Gtk3::ScrolledWindow->new();
     $scrolls->add($htmlview);
@@ -1569,7 +1537,7 @@ sub create_main_window {
 
     $window->add($vbox);
 
-    Proxmox::UI::init_gtk({ window => $window }, $env);
+    Proxmox::UI::init_gtk({ window => $window, html_view => $htmlview }, $env);
 
     $window->show_all;
     $window->present();
@@ -2960,18 +2928,33 @@ sub create_extract_view {
 
     set_next("_Reboot", sub { app_quit(0); } );
 
+    my $success_transform = sub {
+	my ($raw_html, $env) = @_;
+
+	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
+	$raw_html =~ s/__IPADDR__/$addr/g;
+	$raw_html =~ s/__PORT__/$env->{cfg}->{port}/g;
+
+	my $autoreboot_msg = $config_options->{autoreboot}
+	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
+	    : '';
+	$raw_html =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
+
+	return $raw_html;
+    };
+
     if ($err) {
 	display_html("fail.htm");
 	Proxmox::UI::error($err);
     } else {
 	cleanup_view();
-	display_html("success.htm");
+	display_html("success.htm", $success_transform);
 
         if ($config_options->{autoreboot}) {
 	    Glib::Timeout->add(1000, sub {
 		if ($autoreboot_seconds > 0) {
 		    $autoreboot_seconds--;
-		    display_html("success.htm");
+		    display_html("success.htm", $success_transform);
 		} else {
 		    app_quit(0);
 		}
@@ -3001,7 +2984,20 @@ sub create_intro_view {
 	}
     }
 
-    display_html();
+    display_html('license.htm', sub {
+	my ($raw_html, $env) = @_;
+
+	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
+	if (my $err = $@) {
+	    die $err if !is_test_mode();
+	    $license = "TESTMODE: Ignore non existent EULA...\n";
+	}
+	my $title = "END USER LICENSE AGREEMENT (EULA)";
+	$raw_html =~ s/__LICENSE__/$license/;
+	$raw_html =~ s/__LICENSE_TITLE__/$title/;
+
+	return $raw_html;
+    });
 
     $step_number++;
     set_next("I a_gree", \&create_hdsel_view);

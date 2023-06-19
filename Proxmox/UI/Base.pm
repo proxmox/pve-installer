@@ -38,4 +38,10 @@ sub prompt {
     croak "implement me in sub-class";
 }
 
+sub display_html {
+    my ($self, $raw_html, $html_dir) = @_;
+
+    croak "implement me in sub-class";
+}
+
 1;
