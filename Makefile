@@ -59,7 +59,7 @@ $(DEB): $(BUILDDIR)
 	lintian $(DEB)
 
 test-$(DEB): $(INSTALLER_SOURCES)
-	rsync --exclude='test*.img' -a * build
+	rsync --exclude='test*.img' --exclude='*.deb' --exclude='build' -a * build
 	cd build; dpkg-buildpackage -b -us -uc -nc
 	mv $(DEB) test-$(DEB)
 
