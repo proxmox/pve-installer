@@ -297,7 +297,7 @@ pub struct Gateway {
     pub dev: String,
 
     /// Stringified gateway IP address.
-    pub gateway: String,
+    pub gateway: IpAddr,
 }
 
 #[derive(Clone, Deserialize)]
