@@ -5,6 +5,8 @@ use warnings;
 
 use base qw(Proxmox::UI::Base);
 
+use Proxmox::Log;
+
 sub init {
     my ($self) = @_;
 
@@ -19,8 +21,16 @@ sub message {
 
 sub error {
     my ($self, $msg) = @_;
-
+    log_err("error: $msg\n");
     print STDOUT "error: $msg\n";
+}
+
+sub finished {
+    my ($self, $success, $msg) = @_;
+
+    my $state = $success ? 'ok' : 'err';
+    log_info("finished: $state, $msg\n");
+    print STDOUT "finished: $state, $msg\n";
 }
 
 sub prompt {

@@ -40,6 +40,12 @@ sub error {
     croak "implement me in sub-class";
 }
 
+sub finished {
+    my ($self, $success, $msg) = @_;
+
+    croak "implement me in sub-class";
+}
+
 sub prompt {
     my ($self, $query) = @_;
 

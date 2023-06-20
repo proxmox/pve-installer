@@ -102,20 +102,18 @@ if ($cmd eq 'dump-env') {
     if (my $err = $@) {
 	# suppress "empty" error as we got some case where the user choose to abort on a prompt,
 	# there it doesn't make sense to show them an error again, they "caused" it after all.
-	warn "installation failed - $err\n";
-	log_error("installation failed: $err");
-	Proxmox::UI::error($err) if $err ne "\n";
+	if ($err ne "\n") {
+	    warn "installation failed - $err\n";
+	    log_error("installation failed: $err");
+	    Proxmox::UI::finished(0, $err);
+	}
     } else {
 	if (Proxmox::Install::Config::get_autoreboot()) {
-	    Proxmox::UI::message("Installation finished - auto-rebooting in ~ 5 seconds");
-	    for (my $i = 5; $i > 0; $i--) {
-		sleep(1);
-		exit(0)
-	    }
+	    Proxmox::UI::finished(1, "Installation finished - auto-rebooting in ~ 5 seconds");
 	} else {
-	    while (!Proxmox::UI::prompt("Installation complete - reboot now?")) {}
-	    exit(0);
+	    Proxmox::UI::finished(1, "Installation complete - reboot now?");
 	}
+	exit(0);
     }
 } elsif ($cmd eq 'start-session-test') {
     Proxmox::UI::init_stdio({}, $env);

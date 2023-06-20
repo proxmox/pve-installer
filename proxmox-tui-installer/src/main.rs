@@ -746,15 +746,19 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
                             progress_text.set_content(s);
                             Ok(())
                         }
+                        UiMessage::Finished(success, msg) => {
+                            counter.set(100);
+                            progress_text.set_content(msg.to_owned());
+                            cb_sink.send(Box::new(move |siv| {
+                                let title = if success { "Success" } else { "Failure" };
+                                siv.add_layer(
+                                    Dialog::text(msg).title(title).button("Reboot", |s| s.quit()),
+                                );
+                            }))
+                        }
                     }
                     .unwrap();
                 }
-
-                cb_sink
-                    .send(Box::new(|siv| {
-                        siv.add_layer(Dialog::info("low-level install finished"));
-                    }))
-                    .unwrap();
 
                 Some(())
             };
@@ -799,6 +803,7 @@ enum UiMessage {
     Info(String),
     Error(String),
     Prompt(String),
+    Finished(bool, String),
     Progress(usize, String),
 }
 
@@ -812,12 +817,16 @@ impl FromStr for UiMessage {
             "message" => Ok(UiMessage::Info(rest.to_owned())),
             "error" => Ok(UiMessage::Error(rest.to_owned())),
             "prompt" => Ok(UiMessage::Prompt(rest.to_owned())),
+            "finished" => {
+                let (state, rest) = rest.split_once(", ").ok_or("invalid message: no state")?;
+                Ok(UiMessage::Finished(state == "ok", rest.to_owned()))
+            }
             "progress" => {
                 let (percent, rest) = rest.split_once(' ').ok_or("invalid progress message")?;
                 Ok(UiMessage::Progress(
                     percent
                         .parse::<f64>()
-                        .map(|v| v.round() as usize)
+                        .map(|v| (v * 100.).floor() as usize)
                         .map_err(|err| err.to_string())?,
                     rest.to_owned(),
                 ))

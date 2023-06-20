@@ -25,6 +25,11 @@ sub error {
     $dialog->destroy();
 }
 
+sub finished {
+    my ($self, $success, $msg) = @_;
+    # handled manually in proxinstall at the moment
+}
+
 sub prompt {
     my ($self, $query) = @_;
 

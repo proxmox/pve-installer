@@ -56,6 +56,11 @@ sub error {
     get_ui()->error($msg);
 }
 
+sub finished {
+    my ($success, $msg) = @_;
+    get_ui()->finished(!!$success, $msg);
+}
+
 sub prompt {
     my ($query) = @_;
     return get_ui()->prompt($query);
