@@ -352,18 +352,19 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
         BootdiskOptionsView::new(&state.runtime_info.disks, &state.options.bootdisk)
             .with_name("bootdisk-options"),
         Box::new(|siv| {
-            let options = siv
-                .call_on_name("bootdisk-options", BootdiskOptionsView::get_values)
-                .flatten();
+            let options = siv.call_on_name("bootdisk-options", BootdiskOptionsView::get_values);
 
-            if let Some(options) = options {
-                siv.with_user_data(|state: &mut InstallerState| {
-                    state.options.bootdisk = options;
-                });
+            match options {
+                Some(Ok(options)) => {
+                    siv.with_user_data(|state: &mut InstallerState| {
+                        state.options.bootdisk = options;
+                    });
 
-                switch_to_next_screen(siv, InstallerStep::Timezone, &timezone_dialog);
-            } else {
-                siv.add_layer(Dialog::info("Invalid values"));
+                    switch_to_next_screen(siv, InstallerStep::Timezone, &timezone_dialog);
+                }
+
+                Some(Err(err)) => siv.add_layer(Dialog::info(format!("Invalid values: {err}"))),
+                _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
     )

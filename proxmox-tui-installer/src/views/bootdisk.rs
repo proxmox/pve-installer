@@ -52,21 +52,22 @@ impl BootdiskOptionsView {
         }
     }
 
-    pub fn get_values(&mut self) -> Option<BootdiskOptions> {
+    pub fn get_values(&mut self) -> Result<BootdiskOptions, String> {
         let mut options = (*self.advanced_options).clone().into_inner();
 
         if [FsType::Ext4, FsType::Xfs].contains(&options.fstype) {
             let disk = self
                 .view
-                .get_child_mut(0)?
-                .downcast_mut::<NamedView<FormView>>()?
-                .get_mut()
-                .get_value::<SelectView<Disk>, _>(0)?;
+                .get_child_mut(0)
+                .and_then(|v| v.downcast_mut::<NamedView<FormView>>())
+                .map(NamedView::<FormView>::get_mut)
+                .and_then(|v| v.get_value::<SelectView<Disk>, _>(0))
+                .ok_or("failed to retrieve filesystem type")?;
 
             options.disks = vec![disk];
         }
 
-        Some(options)
+        Ok(options)
     }
 }
 
