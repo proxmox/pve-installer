@@ -100,17 +100,16 @@ impl LvmBootdiskOptions {
     /// https://pve.proxmox.com/pve-docs/pve-admin-guide.html#advanced_lvm_options
     pub fn defaults_from(disk: &Disk) -> Self {
         let mem_total = procfs::read_meminfo()
-            .map(|m| m.memtotal)
-            .unwrap_or(4 * 1024 * 1024 * 1024);
+            .map(|m| m.memtotal / 1024 / 1024 / 1024)
+            .unwrap_or(2);
 
-        // Clamp to 4 GiB <= total system memory <= 8 GiB
-        let swap_size = mem_total.clamp(4 * 1024 * 1024 * 1024, 8 * 1024 * 1024 * 1024);
+        let swap_size = mem_total.clamp(2, 8);
 
         // If the disk size > 128 GiB use 16 GiB, else 1/8 of the disk
         let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
-            16 * 1024 * 1024 * 1024
+            16
         } else {
-            disk.size / 8
+            disk.size / 8 / 1024 / 1024
         };
 
         Self {
