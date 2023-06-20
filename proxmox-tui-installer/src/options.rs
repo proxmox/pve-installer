@@ -1,5 +1,5 @@
-use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
+use std::{cmp, fmt};
 
 use proxmox_sys::linux::procfs;
 
@@ -220,7 +220,7 @@ pub enum AdvancedBootdiskOptions {
     Btrfs(BtrfsBootdiskOptions),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Disk {
     pub path: String,
     pub size: u64,
@@ -242,6 +242,18 @@ impl fmt::Display for Disk {
 impl From<&Disk> for String {
     fn from(value: &Disk) -> Self {
         value.to_string()
+    }
+}
+
+impl cmp::PartialOrd for Disk {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.path.partial_cmp(&other.path)
+    }
+}
+
+impl cmp::Ord for Disk {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.path.cmp(&other.path)
     }
 }
 

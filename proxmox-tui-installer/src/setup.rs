@@ -172,6 +172,7 @@ where
         });
     }
 
+    result.sort();
     Ok(result)
 }
 
