@@ -1,3 +1,15 @@
+proxmox-installer (8.0.3) bookworm; urgency=medium
+
+  * switch to native versioning
+
+  * Add Terminal User Interface (TUI) based installer written in Rust, using
+    the Cursive toolkit.
+
+  * A variety of fixes and refactoring to prepare for more flexible ways of
+    triggering an installation
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 20 Jun 2023 21:37:09 +0200
+
 proxmox-installer (8.0-2) bookworm; urgency=medium
 
   * fix call to logical_blocksize
