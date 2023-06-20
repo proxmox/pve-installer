@@ -231,10 +231,14 @@ impl fmt::Display for Disk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Format sizes properly with `proxmox-human-byte` once merged
         // https://lists.proxmox.com/pipermail/pbs-devel/2023-May/006125.html
+        f.write_str(&self.path)?;
+        if let Some(model) = &self.model {
+            // FIXME: ellipsize too-long names?
+            write!(f, " ({model})")?;
+        }
         write!(
             f,
-            "{} ({:.2} GiB)",
-            self.path,
+            " ({:.2} GiB)",
             (self.size as f64) / 1024. / 1024. / 1024.
         )
     }
