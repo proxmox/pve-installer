@@ -113,7 +113,6 @@ if ($cmd eq 'dump-env') {
 	} else {
 	    Proxmox::UI::finished(1, "Installation complete - reboot now?");
 	}
-	exit(0);
     }
 } elsif ($cmd eq 'start-session-test') {
     Proxmox::UI::init_stdio({}, $env);
