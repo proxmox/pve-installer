@@ -244,40 +244,33 @@ sub btrfs_create {
 sub zfs_create_rpool {
     my ($vdev, $pool_name, $root_volume_name) = @_;
 
+    my $zfs_opts = Proxmox::Install::Config::get_zfs_opt();
+
     my $cmd = "zpool create -f -o cachefile=none";
+    $cmd .= " -o ashift=$zfs_opts->{ashift}" if defined($zfs_opts->{ashift});
 
-    $cmd .= " -o ashift=$config_options->{ashift}"
-        if defined($config_options->{ashift});
+    syscmd("$cmd $pool_name $vdev") == 0 || die "unable to create zfs root pool\n";
 
-    syscmd("$cmd $pool_name $vdev") == 0 ||
-	die "unable to create zfs root pool\n";
-
-    syscmd("zfs create $pool_name/ROOT")  == 0 ||
-        die "unable to create zfs $pool_name/ROOT volume\n";
+    syscmd("zfs create $pool_name/ROOT")  == 0 || die "unable to create zfs $pool_name/ROOT volume\n";
 
     if ($iso_env->{product} eq 'pve') {
-	syscmd("zfs create $pool_name/data")  == 0 ||
-	    die "unable to create zfs $pool_name/data volume\n";
+	syscmd("zfs create $pool_name/data")  == 0 || die "unable to create zfs $pool_name/data volume\n";
     }
 
     syscmd("zfs create $pool_name/ROOT/$root_volume_name")  == 0 ||
 	die "unable to create zfs $pool_name/ROOT/$root_volume_name volume\n";
 
     # default to `relatime` on, fast enough for the installer and production
-    syscmd("zfs set atime=on relatime=on $pool_name") == 0 ||
-	die "unable to set zfs properties\n";
+    syscmd("zfs set atime=on relatime=on $pool_name") == 0 || die "unable to set zfs properties\n";
 
-    my $value = $config_options->{compress};
-    syscmd("zfs set compression=$value $pool_name")
-        if defined($value) && $value ne 'off';
+    my $value = $zfs_opts->{compress} // 'on';
+    syscmd("zfs set compression=$value $pool_name") if defined($value) && $value ne 'off';
 
-    $value = $config_options->{checksum};
-    syscmd("zfs set checksum=$value $pool_name")
-        if defined($value) && $value ne 'on';
+    $value = $zfs_opts->{checksum} // 'on';
+    syscmd("zfs set checksum=$value $pool_name") if defined($value) && $value ne 'on';
 
-    $value = $config_options->{copies};
-    syscmd("zfs set copies=$value $pool_name")
-        if defined($value) && $value != 1;
+    $value = $zfs_opts->{copies} // 1;
+    syscmd("zfs set copies=$value $pool_name") if defined($value) && $value != 1;
 }
 
 sub get_pv_list_from_vgname {
@@ -2236,10 +2229,10 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
     $spinbutton_ashift->signal_connect ("value-changed" => sub {
 	my $w = shift;
-	$config_options->{ashift} = $w->get_value_as_int();
+	Proxmox::Install::Config::set_zfs_opt('ashift', $w->get_value_as_int());
     });
-    $config_options->{ashift} = 12 if ! defined($config_options->{ashift});
-    $spinbutton_ashift->set_value($config_options->{ashift});
+    my $ashift = Proxmox::Install::Config::get_zfs_opt('ashift') // 12;
+    $spinbutton_ashift->set_value($ashift);
     push @$labeled_widgets, "ashift";
     push @$labeled_widgets, $spinbutton_ashift;
 
@@ -2249,11 +2242,11 @@ my $create_raid_advanced_grid = sub {
     foreach my $opt (@$comp_opts) {
 	$combo_compress->append($opt, $opt);
     }
-    $config_options->{compress} = "on" if !defined($config_options->{compress});
-    $combo_compress->set_active_id($config_options->{compress});
+    my $compress = Proxmox::Install::Config::get_zfs_opt('compress') // 'on';
+    $combo_compress->set_active_id($compress);
     $combo_compress->signal_connect (changed => sub {
 	my $w = shift;
-	$config_options->{compress} = $w->get_active_text();
+	Proxmox::Install::Config::set_zfs_opt('compress', $w->get_active_text());
     });
     push @$labeled_widgets, "compress";
     push @$labeled_widgets, $combo_compress;
@@ -2264,11 +2257,11 @@ my $create_raid_advanced_grid = sub {
     foreach my $opt (@$csum_opts) {
 	$combo_checksum->append($opt, $opt);
     }
-    $config_options->{checksum} = "on" if !($config_options->{checksum});
-    $combo_checksum->set_active_id($config_options->{checksum});
+    my $checksum = Proxmox::Install::Config::get_zfs_opt('checksum') // 'on';
+    $combo_checksum->set_active_id($checksum);
     $combo_checksum->signal_connect (changed => sub {
 	my $w = shift;
-	$config_options->{checksum} = $w->get_active_text();
+	Proxmox::Install::Config::set_zfs_opt('checksum', $w->get_active_text());
     });
     push @$labeled_widgets, "checksum";
     push @$labeled_widgets, $combo_checksum;
@@ -2277,10 +2270,10 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_copies->set_tooltip_text("zfs copies property for rpool dataset (in addition to RAID redundancy!)");
     $spinbutton_copies->signal_connect ("value-changed" => sub {
 	my $w = shift;
-	$config_options->{copies} = $w->get_value_as_int();
+	Proxmox::Install::Config::set_zfs_opt('copies', $w->get_value_as_int());
     });
-    $config_options->{copies} = 1 if !defined($config_options->{copies});
-    $spinbutton_copies->set_value($config_options->{copies});
+    my $copies = Proxmox::Install::Config::get_zfs_opt('copies') // 1;
+    $spinbutton_copies->set_value($copies);
     push @$labeled_widgets, "copies", $spinbutton_copies;
 
     push @$labeled_widgets, "hdsize", $hdsize_btn;

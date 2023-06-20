@@ -29,6 +29,12 @@ my sub init_cfg {
 	maxroot => undef,
 	minfree => undef,
 	maxvz => undef,
+	zfs_opts => {
+	    ashift => 12,
+	    compress => 'on',
+	    checksum => 'on',
+	    copies => 1,
+	},
 
 	# locale
 	country => $country,
@@ -137,6 +143,18 @@ sub get_minfree { return get('minfree'); }
 
 sub set_maxvz { set_key('maxvz', $_[0]); }
 sub get_maxvz { return get('maxvz'); }
+
+sub set_zfs_opt {
+    my ($k, $v) = @_;
+    my $zfs_opts = get('zfs_opts');
+    croak "unknown zfs opts key '$k'" if !exists($zfs_opts->{$k});
+    $zfs_opts->{$k} = $v;
+}
+sub get_zfs_opt {
+    my ($k) = @_;
+    my $zfs_opts = get('zfs_opts');
+    return defined($k) ? $zfs_opts->{$k} : $zfs_opts;
+}
 
 sub set_country { set_key('country', $_[0]); }
 sub get_country { return get('country'); }
