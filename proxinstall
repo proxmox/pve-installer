@@ -107,14 +107,12 @@ my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
 my $ipconf;
-my $password;
 my $mailto = 'mail@example.invalid';
 my $autoreboot_seconds = 5;
 
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    password => $password,
     mailto => $mailto,
 
     mngmt_nic => undef,
@@ -1163,9 +1161,8 @@ _EOD
 	diversion_remove($targetdir, "/sbin/start-stop-daemon");
 
 	# set root password
-	my $octets = encode("utf-8", $password);
-	run_command("chroot $targetdir /usr/sbin/chpasswd", undef,
-		    "root:$octets\n");
+	my $octets = encode("utf-8", Proxmox::Install::Config::get_password());
+	run_command("chroot $targetdir /usr/sbin/chpasswd", undef, "root:$octets\n");
 
 	if ($iso_env->{product} eq 'pmg') {
 	    # save admin email
@@ -1817,6 +1814,8 @@ sub create_password_view {
 
     cleanup_view();
 
+    my $password = Proxmox::Install::Config::get_password();
+
     my $vbox2 =  Gtk3::Box->new('vertical', 0);
     $gtk_state->{inbox}->pack_start($vbox2, 1, 0, 0);
     my $vbox =  Gtk3::Box->new('vertical', 0);
@@ -1894,7 +1893,7 @@ sub create_password_view {
 	    return;
 	}
 
-	$password = $t1;
+	Proxmox::Install::Config::set_password($t1);
 	$mailto = $t3;
 
 	$step_number++;

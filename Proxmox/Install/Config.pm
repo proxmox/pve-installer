@@ -33,6 +33,9 @@ my sub init_cfg {
 	country => $country,
 	timezone => 'Europe/Vienna',
 	keymap => 'en-us',
+
+	# root credentials & details
+	password => undef,
     };
 
     # TODO add disksel$i => undef entries
@@ -132,5 +135,8 @@ sub get_timezone { return get('timezone'); }
 
 sub set_keymap { set_key('keymap', $_[0]); }
 sub get_keymap { return get('keymap'); }
+
+sub set_password { set_key('password', $_[0]); }
+sub get_password { return get('password'); }
 
 1;
