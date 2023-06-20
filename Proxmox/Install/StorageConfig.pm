@@ -1,5 +1,8 @@
 package Proxmox::Install::StorageConfig;
 
+use strict;
+use warnings;
+
 use Proxmox::Install::ISOEnv;
 
 sub get_zfs_pool_name {
