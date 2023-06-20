@@ -36,6 +36,7 @@ use Proxmox::Install::RunEnv;
 my $iso_env = Proxmox::Install::ISOEnv::get();
 my $run_env = Proxmox::Install::RunEnv::get();
 
+use Proxmox::Install::Config;
 use Proxmox::Install::StorageConfig;
 
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
@@ -105,7 +106,6 @@ my ($gateway, $ipconf_entry_gw);
 my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
-my $cmdline = file_read_firstline("/proc/cmdline");
 my $ipconf;
 my $country = $run_env->{country};
 my $timezone = 'Europe/Vienna';
@@ -114,6 +114,7 @@ my $password;
 my $mailto = 'mail@example.invalid';
 my $autoreboot_seconds = 5;
 
+# TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
     country => $country,
@@ -131,39 +132,7 @@ my $config = {
     gateway => undef,
 };
 
-# parse command line args
-
-my $config_options = {
-    autoreboot => 1,
-};
-
-if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
-    $config_options->{filesys} = $1;
-} else {
-    $config_options->{filesys} = 'ext4';
-}
-
-if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
-    $config_options->{hdsize} = $1;
-}
-
-if ($cmdline =~ m/swapsize=(\d+(\.\d+)?)[\s\n]/i) {
-    $config_options->{swapsize} = $1;
-}
-
-if ($cmdline =~ m/maxroot=(\d+(\.\d+)?)[\s\n]/i) {
-    $config_options->{maxroot} = $1;
-}
-
-if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
-    $config_options->{minfree} = $1;
-}
-
-if ($iso_env->{product} eq 'pve') {
-    if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
-	$config_options->{maxvz} = $1;
-    }
-}
+my $config_options = Proxmox::Install::Config::parse_kernel_cmdline();
 
 my $postfix_main_cf = <<_EOD;
 # See /usr/share/postfix/main.cf.dist for a commented, more complete version
