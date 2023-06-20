@@ -3,7 +3,7 @@ use std::{cmp, fmt};
 
 use proxmox_sys::linux::procfs;
 
-use crate::setup::{LocaleInfo, NetworkInfo};
+use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo};
 use crate::utils::{CidrAddress, Fqdn};
 use crate::SummaryOption;
 
@@ -281,12 +281,33 @@ pub struct TimezoneOptions {
     pub kb_layout: String,
 }
 
-impl Default for TimezoneOptions {
-    fn default() -> Self {
+impl TimezoneOptions {
+    pub fn defaults_from(runtime: &RuntimeInfo, locales: &LocaleInfo) -> Self {
+        let country = runtime.country.clone().unwrap_or_else(|| "at".to_owned());
+
+        let timezone = locales
+            .cczones
+            .get(&country)
+            .and_then(|zones| zones.get(0))
+            .cloned()
+            .unwrap_or_else(|| "UTC".to_owned());
+
+        let kb_layout = locales
+            .countries
+            .get(&country)
+            .and_then(|c| {
+                if c.kmap.is_empty() {
+                    None
+                } else {
+                    Some(c.kmap.clone())
+                }
+            })
+            .unwrap_or_else(|| "en-us".to_owned());
+
         Self {
-            country: "at".to_owned(),
-            timezone: "Europe/Vienna".to_owned(),
-            kb_layout: "en-us".to_owned(),
+            country,
+            timezone,
+            kb_layout,
         }
     }
 }

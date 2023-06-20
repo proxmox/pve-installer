@@ -176,7 +176,7 @@ fn main() {
     siv.set_user_data(InstallerState {
         options: InstallerOptions {
             bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
-            timezone: TimezoneOptions::default(),
+            timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: PasswordOptions::default(),
             network: NetworkOptions::from(&runtime_info.network),
             reboot: false,
