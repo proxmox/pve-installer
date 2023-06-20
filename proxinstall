@@ -100,20 +100,8 @@ my $gtk_state = {};
 
 my $target_hd;
 
-my ($ipversion, $ipaddress, $cidr, $ipconf_entry_addr);
-my ($netmask, $ipconf_entry_mask);
-my ($gateway, $ipconf_entry_gw);
-my ($dnsserver, $ipconf_entry_dns);
 my $ipconf;
 my $autoreboot_seconds = 5;
-
-# TODO: single source of config state
-my $config = {
-    # TODO: add all the user-provided options for previous button
-    ipaddress => undef,
-    netmask => undef,
-    gateway => undef,
-};
 
 my $config_options = Proxmox::Install::Config::parse_kernel_cmdline();
 
@@ -846,10 +834,11 @@ sub extract_data {
 	# configure hosts
 	my $hostname = Proxmox::Install::Config::get_hostname();
 	my $domain = Proxmox::Install::Config::get_domain();
+	my $ip_addr = Proxmox::Install::Config::get_ip_addr();
 
 	my $hosts =
 	    "127.0.0.1 localhost.localdomain localhost\n" .
-	    "$ipaddress $hostname.$domain $hostname\n\n" .
+	    "$ip_addr $hostname.$domain $hostname\n\n" .
 	    "# The following lines are desirable for IPv6 capable hosts\n\n" .
 	    "::1     ip6-localhost ip6-loopback\n" .
 	    "fe00::0 ip6-localnet\n" .
@@ -868,9 +857,12 @@ sub extract_data {
 
 	my $ifaces = "auto lo\niface lo inet loopback\n\n";
 
-	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
+	my $ip_version = Proxmox::Install::Config::get_ip_version();
+	my $ntype = $ip_version == 4 ? 'inet' : 'inet6';
 
 	my $ethdev = Proxmox::Install::Config::get_mngmt_nic();
+	my $cidr = Proxmox::Install::Config::get_cidr();
+	my $gateway = Proxmox::Install::Config::get_gateway();
 
 	if ($iso_env->{cfg}->{bridged_network}) {
 	    $ifaces .= "iface $ethdev $ntype manual\n";
@@ -900,6 +892,7 @@ sub extract_data {
 
 	# configure dns
 
+	my $dnsserver = Proxmox::Install::Config::get_dns();
 	my $resolvconf = "search $domain\nnameserver $dnsserver\n";
 	file_write_all("$targetdir/etc/resolv.conf", $resolvconf);
 
@@ -1454,7 +1447,9 @@ sub create_text_input {
     return ($hbox, $e1);
 }
 sub create_cidr_inputs {
-    my ($default_ip, $default_mask) = @_;
+    my ($cidr) = @_;
+
+    my ($default_ip, $default_mask) = split('/', $cidr);
 
     my $hbox = Gtk3::Box->new('horizontal', 0);
 
@@ -1494,11 +1489,9 @@ sub create_ipconf_view {
     my $vbox =  Gtk3::Box->new('vertical', 0);
     $hcontainer->add($vbox);
 
-    my $ipaddr_text = $config->{ipaddress} // "192.168.100.2";
-    my $netmask_text = $config->{netmask} // "24";
-    my $cidr_box;
-    ($cidr_box, $ipconf_entry_addr, $ipconf_entry_mask) =
-	create_cidr_inputs($ipaddr_text, $netmask_text);
+    my $cidr = Proxmox::Install::Config::get_cidr() // '192.168.100.2/24';
+
+    my ($cidr_box, $ipconf_entry_addr, $ipconf_entry_mask) = create_cidr_inputs($cidr);
 
     my $device_cb = Gtk3::ComboBoxText->new();
     $device_cb->set_active(0);
@@ -1565,19 +1558,16 @@ sub create_ipconf_view {
 
     $vbox->pack_start($cidr_box, 0, 0, 2);
 
-    $gateway = $config->{gateway} // $ipconf->{gateway} || '192.168.100.1';
+    my $cfg_gateway = Proxmox::Install::Config::get_gateway();
+    my $gateway = $cfg_gateway // $ipconf->{gateway} || '192.168.100.1';
 
-    my $gwbox;
-    ($gwbox, $ipconf_entry_gw) =
-	create_text_input($gateway, 'Gateway:');
-
+    my ($gwbox, $ipconf_entry_gw) = create_text_input($gateway, 'Gateway:');
     $vbox->pack_start($gwbox, 0, 0, 2);
 
-    $dnsserver = $config->{dnsserver} // $ipconf->{dnsserver} || $gateway;
+    my $cfg_dns = Proxmox::Install::Config::get_dns();
+    my $dnsserver = $cfg_dns // $ipconf->{dnsserver} || $gateway;
 
-    my $dnsbox;
-    ($dnsbox, $ipconf_entry_dns) =
-	create_text_input($dnsserver, 'DNS Server:');
+    my ($dnsbox, $ipconf_entry_dns) = create_text_input($dnsserver, 'DNS Server:');
 
     $vbox->pack_start($dnsbox, 0, 0, 0);
 
@@ -1609,23 +1599,21 @@ sub create_ipconf_view {
 
 	# verify ip address
 	$text = $ipconf_entry_addr->get_text();
-	($ipaddress, $ipversion) = parse_ip_address($text);
+	my ($ipaddress, $ipversion) = parse_ip_address($text);
 	if (!defined($ipaddress)) {
 	    Proxmox::UI::message("IP address is not valid.");
 	    $ipconf_entry_addr->grab_focus();
 	    return;
 	}
-	$config->{ipaddress} = $ipaddress;
 
 	$text = $ipconf_entry_mask->get_text();
-	$netmask = parse_ip_mask($text, $ipversion);
+	my $netmask = parse_ip_mask($text, $ipversion);
 	if (!defined($netmask)) {
 	    Proxmox::UI::message("Netmask is not valid.");
 	    $ipconf_entry_mask->grab_focus();
 	    return;
 	}
-	$cidr = "$ipaddress/$netmask";
-	$config->{netmask} = $netmask;
+	Proxmox::Install::Config::set_cidr("$ipaddress/$netmask");
 
 	$text = $ipconf_entry_gw->get_text();
 	my ($gateway_ip, $gateway_ip_version) = parse_ip_address($text);
@@ -1637,7 +1625,7 @@ sub create_ipconf_view {
 	    $ipconf_entry_gw->grab_focus();
 	    return;
 	}
-	$config->{gateway} = $gateway = $gateway_ip;
+	Proxmox::Install::Config::set_gateway($gateway_ip);
 
 	$text = $ipconf_entry_dns->get_text();
 	my ($dns_ip, $dns_ip_version) = parse_ip_address($text);
@@ -1649,9 +1637,9 @@ sub create_ipconf_view {
 	    $ipconf_entry_dns->grab_focus();
 	    return;
 	}
-	$config->{dnsserver} = $dnsserver = $dns_ip;
+	Proxmox::Install::Config::set_dns($dns_ip);
 
-	#print STDERR "TEST $ipaddress $netmask $gateway $dnsserver\n";
+	#print STDERR "TEST $ipaddress/$netmask $gateway_ip $dns_ip\n";
 
 	$step_number++;
 	create_ack_view();
@@ -1690,11 +1678,9 @@ sub create_ack_view {
 	__mailto__ => Proxmox::Install::Config::get_mailto(),
 	__interface__ =>  Proxmox::Install::Config::get_mngmt_nic(),
 	__hostname__ => Proxmox::Install::Config::get_hostname(),
-	__ip__ => $ipaddress,
-	__cidr__ => $cidr,
-	__netmask__ => $netmask,
-	__gateway__ => $gateway,
-	__dnsserver__ => $dnsserver,
+	__cidr__ => Proxmox::Install::Config::get_cidr(),
+	__gateway__ => Proxmox::Install::Config::get_gateway(),
+	__dnsserver__ => Proxmox::Install::Config::get_dns(),
     );
 
     while (my ($k, $v) = each %config_values) {
@@ -2792,7 +2778,10 @@ sub create_extract_view {
     my $success_transform = sub {
 	my ($raw_html, $iso_env) = @_;
 
-	my $addr = $ipversion == 6 ? "[${ipaddress}]" : "$ipaddress";
+	my $ip_addr = Proxmox::Install::Config::get_ip_addr();
+	my $ip_version = Proxmox::Install::Config::get_ip_version();
+
+	my $addr = $ip_version == 6 ? "[${ip_addr}]" : "$ip_addr";
 	$raw_html =~ s/__IPADDR__/$addr/g;
 	$raw_html =~ s/__PORT__/$iso_env->{cfg}->{port}/g;
 

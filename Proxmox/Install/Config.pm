@@ -7,6 +7,7 @@ use Carp;
 use JSON qw(from_json to_json);
 
 use Proxmox::Install::ISOEnv;
+use Proxmox::Sys::Net;
 
 my sub init_cfg {
     my $iso_env = Proxmox::Install::ISOEnv::get();
@@ -43,6 +44,9 @@ my sub init_cfg {
 	mngmt_nic_id => undef,
 	hostname => 'proxmox',
 	domain => 'example.invalid',
+	cidr => undef,
+	gateway => undef,
+	dns => undef,
     };
 
     # TODO add disksel$i => undef entries
@@ -165,5 +169,24 @@ sub get_fqdn { # virtual config
     my ($hostname, $domain) = (get('hostname'), get('domain'));
     return defined($hostname) && defined($domain) ? "${hostname}.${domain}" : undef;
 }
+
+sub set_cidr { set_key('cidr', $_[0]); }
+sub get_cidr { return get('cidr'); }
+
+sub get_ip_addr { #'virtual config
+    my $cidr = get('cidr') // return;
+    my ($ip, $mask) = split('/', $cidr);
+    return $ip;
+}
+sub get_ip_version { # virtual config
+    my $ip = get_ip_addr() // return;
+    return Proxmox::Sys::Net::parse_ip_address($ip);
+}
+
+sub set_gateway { set_key('gateway', $_[0]); }
+sub get_gateway { return get('gateway'); }
+
+sub set_dns { set_key('dns', $_[0]); }
+sub get_dns { return get('dns'); }
 
 1;
