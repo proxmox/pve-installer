@@ -745,7 +745,7 @@ sub extract_data {
 
 	    update_progress(0, 0.03, $maxper, "create rpool");
 
-	    zfs_create_rpool($vdev, $zfs_pool_name);
+	    zfs_create_rpool($vdev, $zfs_pool_name, $zfs_root_volume_name);
 
 	} else {
 	    my $target_hd = Proxmox::Install::Config::get_target_hd();
