@@ -157,23 +157,17 @@ fn deserialize_disks_map<'de, D>(deserializer: D) -> Result<Vec<Disk>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    struct DiskDescriptor {
-        size: u64,
-    }
-
-    let map: HashMap<String, DiskDescriptor> = Deserialize::deserialize(deserializer)?;
-
-    let mut result = Vec::with_capacity(map.len());
-    for (path, desc) in map.into_iter() {
-        result.push(Disk {
-            path: format!("/dev/{path}"),
-            size: desc.size,
-        });
-    }
-
-    result.sort();
-    Ok(result)
+    let disks = <Vec<(usize, String, u64, String, u64, String)>>::deserialize(deserializer)?;
+    Ok(disks
+        .into_iter()
+        .map(
+            |(_index, device, size_mb, model, logical_bsize, _syspath)| Disk {
+                size: size_mb * logical_bsize,
+                path: device,
+                model: (!model.is_empty()).then_some(model),
+            },
+        )
+        .collect())
 }
 
 fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>

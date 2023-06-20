@@ -32,26 +32,58 @@ sub query_total_memory : prototype() {
 }
 
 # Returns a hash.
-# {
-#     name => {
-#         size => <bytes>,
-#     }
-# }
+# [
+#     [ <useless index>, "/dev/path", size_in_blocks, "model", logical_blocksize, <name as found in /sys/block> ]
+# ]
 my sub query_blockdevs : prototype() {
-    my $disks = {};
+    my $res = [];
+    my $count = 0;
+    foreach my $bd (</sys/block/*>) {
+	next if $bd =~ m|^/sys/block/ram\d+$|;
+	next if $bd =~ m|^/sys/block/loop\d+$|;
+	next if $bd =~ m|^/sys/block/md\d+$|;
+	next if $bd =~ m|^/sys/block/dm-.*$|;
+	next if $bd =~ m|^/sys/block/fd\d+$|;
+	next if $bd =~ m|^/sys/block/sr\d+$|;
 
-    # FIXME: not the same as the battle proven way we used in the installer for years!
-    my $lsblk = fromjs(qx/lsblk -e 230 --bytes --json/);
-    for my $disk ($lsblk->{blockdevices}->@*) {
-	my ($name, $ro, $size, $type, $mountpoints) = $disk->@{qw(name ro size type mountpoints)};
+	my $info = `udevadm info --path $bd --query all`;
+	next if !$info;
+	next if $info !~ m/^E: DEVTYPE=disk$/m;
+	next if $info =~ m/^E: ID_CDROM/m;
+	next if $info =~ m/^E: ID_FS_TYPE=iso9660/m;
 
-	next if $type ne 'disk' || $ro;
-	next if grep { defined($_) } @$mountpoints;
+	my ($name) = $info =~ m/^N: (\S+)$/m;
+	next if !$name;
 
-	$disks->{$name} = { size => $size };
+	my $dev_path;
+	if ($info =~ m/^E: DEVNAME=(\S+)$/m) {
+	    $dev_path = $1;
+	} else {
+	    $dev_path = "/dev/$name";
+	}
+
+	my $size = file_read_firstline("$bd/size");
+	chomp $size;
+	$size = undef if !($size && $size =~ m/^\d+$/);
+	$size = int($size);
+	next if !$size;
+
+	my $model = file_read_firstline("$bd/device/model") || '';
+	$model =~ s/^\s+//;
+	$model =~ s/\s+$//;
+	if (length ($model) > 30) {
+	    $model = substr ($model, 0, 30);
+	}
+
+	my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
+	chomp $logical_bsize;
+	$logical_bsize = undef if !($logical_bsize && $logical_bsize =~ m/^\d+$/);
+	$logical_bsize = int($logical_bsize);
+
+	push @$res, [$count++, $dev_path, $size, $model, $logical_bsize, "/sys/block/$name"];
     }
 
-    return $disks;
+    return $res;
 }
 
 # Returns a hash.

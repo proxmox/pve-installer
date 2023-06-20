@@ -223,6 +223,7 @@ pub enum AdvancedBootdiskOptions {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Disk {
     pub path: String,
+    pub model: Option<String>,
     pub size: u64,
 }
 
