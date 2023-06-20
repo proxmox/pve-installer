@@ -5,6 +5,8 @@ use std::{
     str::FromStr,
 };
 
+use serde::Deserialize;
+
 /// Possible errors that might occur when parsing CIDR addresses.
 #[derive(Debug)]
 pub enum CidrAddressParseError {
@@ -164,6 +166,17 @@ impl FromStr for Fqdn {
 impl fmt::Display for Fqdn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}.{}", self.host, self.domain)
+    }
+}
+
+impl<'de> Deserialize<'de> for Fqdn {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        s.parse()
+            .map_err(|_| serde::de::Error::custom("invalid FQDN"))
     }
 }
 

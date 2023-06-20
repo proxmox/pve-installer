@@ -325,10 +325,8 @@ impl From<&NetworkInfo> for NetworkOptions {
             this.dns_server = *ip;
         }
 
-        if let Some(domain) = info.dns.domain.as_deref() {
-            if let Ok(fqdn) = Fqdn::from(domain) {
-                this.fqdn = fqdn;
-            }
+        if let Some(domain) = &info.dns.domain {
+            this.fqdn = domain.clone();
         }
 
         let mut filled = false;

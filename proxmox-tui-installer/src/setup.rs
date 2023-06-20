@@ -4,7 +4,7 @@ use serde::{de, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Seriali
 
 use crate::{
     options::{BtrfsRaidLevel, Disk, FsType, InstallerOptions, ZfsRaidLevel},
-    utils::CidrAddress,
+    utils::{CidrAddress, Fqdn},
 };
 
 #[allow(clippy::upper_case_acronyms)]
@@ -257,7 +257,7 @@ pub struct NetworkInfo {
 
 #[derive(Clone, Deserialize)]
 pub struct Dns {
-    pub domain: Option<String>,
+    pub domain: Option<Fqdn>,
 
     /// List of stringified IP addresses.
     #[serde(default)]
