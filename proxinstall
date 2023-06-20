@@ -98,9 +98,8 @@ my @steps = (
 # GUI global variables
 my $gtk_state = {};
 
-my $target_hd;
-
 my $ipconf;
+my $target_hds; # only for the summary view
 my $autoreboot_seconds = 5;
 
 my $config_options = Proxmox::Install::Config::parse_kernel_cmdline();
@@ -552,11 +551,11 @@ sub extract_data {
     my $zfs_root_volume_name = Proxmox::Install::StorageConfig::get_zfs_root_volume_name();
 
     if ($filesys =~ m/zfs/) {
-	$target_hd = undef; # do not use this config
+	Proxmox::Install::Config::set_target_hd(undef); # do not use this config
 	$use_zfs = 1;
 	$targetdir = "/$zfs_pool_name/ROOT/$zfs_root_volume_name";
     } elsif ($filesys =~ m/btrfs/) {
-	$target_hd = undef; # do not use this config
+	Proxmox::Install::Config::set_target_hd(undef); # do not use this config
 	$use_btrfs = 1;
     }
 
@@ -689,7 +688,7 @@ sub extract_data {
 	    zfs_create_rpool($vdev, $zfs_pool_name);
 
 	} else {
-
+	    my $target_hd = Proxmox::Install::Config::get_target_hd();
 	    die "target '$target_hd' is not a valid block device\n" if ! -b $target_hd;
 
 	    wipe_disk($target_hd);
@@ -1663,7 +1662,7 @@ sub create_ack_view {
     my $country = Proxmox::Install::Config::get_country();
 
     my %config_values = (
-	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
+	__target_hd__ => join(' | ', $target_hds->@*),
 	__target_fs__ => Proxmox::Install::Config::get_filesys(),
 	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
 	__timezone__ => Proxmox::Install::Config::get_timezone(),
@@ -2099,7 +2098,8 @@ my $get_selected_hdsize = sub {
     my $cached_disks = get_cached_disks();
     my $disk_count = scalar(@$cached_disks);
     for (my $i = 0; $i < $disk_count; $i++) {
-	my $cur_hd = $config_options->{"disksel$i"} // next;
+	next if !Proxmox::Install::Config::get_disk_selection($i);
+	my $cur_hd = $cached_disks->[$i];
 	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
 	$hdsize //= $disksize;
 	$hdsize = $disksize if $disksize < $hdsize;
@@ -2164,7 +2164,7 @@ my $create_raid_disk_grid = sub {
 	    my $w = shift;
 	    my $diskid = $w->{pve_disk_id};
 	    my $a = $w->get_active - 1;
-	    $config_options->{"disksel${diskid}"} = ($a >= 0) ? $cached_disks->[$a] : undef;
+	    Proxmox::Install::Config::set_disk_selection($diskid, $a >= 0);
 	    for my $btn (@$hdsize_buttons) {
 		update_hdsize_adjustment($btn->get_adjustment());
 	    }
@@ -2174,7 +2174,8 @@ my $create_raid_disk_grid = sub {
 	    $disk_selector->set_active ($i+1) if $cached_disks->[$i];
 	} else {
 	    my $hdind = 0;
-	    if (my $cur_hd = $config_options->{"disksel$i"}) {
+	    if (Proxmox::Install::Config::get_disk_selection($i)) {
+		my $cur_hd = $cached_disks->[$i];
 		foreach my $hd (@$cached_disks) {
 		    if (@$hd[1] eq @$cur_hd[1]) {
 			$disk_selector->set_active($hdind+1);
@@ -2353,8 +2354,8 @@ sub create_hdoption_view {
 
     my $hdsize_labeled_widgets = [];
 
-    # size compute
-    my $hdsize = 0;
+    my $target_hd = Proxmox::Install::Config::get_target_hd();
+    my $hdsize = 0; # size compute
     if ( -b $target_hd) {
 	$hdsize = int(Proxmox::Sys::Block::hd_size($target_hd) / (1024 * 1024.0)); # size in GB
     } elsif ($target_hd) {
@@ -2534,13 +2535,13 @@ my $get_raid_devlist = sub {
     my $cached_disks = get_cached_disks();
     my $devlist = [];
     for (my $i = 0; $i < @$cached_disks; $i++) {
-	if (my $hd = $config_options->{"disksel$i"}) {
-	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	    die "device '$devname' is used more than once\n"
-		if $dev_name_hash->{$devname};
-	    $dev_name_hash->{$devname} = $hd;
-	    push @$devlist, $hd;
-	}
+	next if !Proxmox::Install::Config::get_disk_selection($i);
+
+	my $hd = $cached_disks->[$i];
+	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
+	die "device '$devname' is used more than once\n" if $dev_name_hash->{$devname};
+	$dev_name_hash->{$devname} = $hd;
+	push @$devlist, $hd;
     }
 
     return $devlist;
@@ -2658,7 +2659,9 @@ sub create_hdsel_view {
 
     my $cached_disks = get_cached_disks();
     my ($disk, $devname, $size, $model, $logical_bsize) = $cached_disks->[0]->@*;
-    $target_hd = $devname if !defined($target_hd);
+    if (!defined(Proxmox::Install::Config::get_target_hd())) {
+	Proxmox::Install::Config::set_target_hd($devname);
+    }
 
     $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
     $hbox->pack_start($target_hd_label, 0, 0, 0);
@@ -2682,7 +2685,7 @@ sub create_hdsel_view {
 	$a = shift->get_active;
 	my ($disk, $devname) = @{@$cached_disks[$a]};
 	$last_hd_selected = $a;
-	$target_hd = $devname;
+	Proxmox::Install::Config::set_target_hd($devname);
     });
 
     $hbox->pack_start($target_hd_combo, 0, 0, 10);
@@ -2704,15 +2707,16 @@ sub create_hdsel_view {
 		Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
 		return;
 	    }
-	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
+	    $target_hds = [ map { $_->[1] } @$devlist ];
 	} elsif ($filesys =~ m/btrfs/) {
 	    my ($devlist) = eval { get_btrfs_raid_setup() };
 	    if (my $err = $@) {
 		Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
 		return;
 	    }
-	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
+	    $target_hds = [ map { $_->[1] } @$devlist ];
 	} else {
+	    my $target_hd = Proxmox::Install::Config::get_target_hd();
 	    eval {
 		my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
 		legacy_bios_4k_check($target_block_size);
@@ -2721,7 +2725,7 @@ sub create_hdsel_view {
 		Proxmox::UI::message("Warning: $err\n");
 		return;
 	    }
-	    $config_options->{target_hds} = [ $target_hd ];
+	    $target_hds = [ $target_hd ];
 	}
 
 	$step_number++;

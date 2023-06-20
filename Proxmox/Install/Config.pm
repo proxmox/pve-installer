@@ -35,6 +35,9 @@ my sub init_cfg {
 	    checksum => 'on',
 	    copies => 1,
 	},
+	# TODO: single disk selection config
+	target_hd => undef,
+	disk_selection => {},
 
 	# locale
 	country => $country,
@@ -54,8 +57,6 @@ my sub init_cfg {
 	gateway => undef,
 	dns => undef,
     };
-
-    # TODO add disksel$i => undef entries
 
     return $initial;
 }
@@ -154,6 +155,20 @@ sub get_zfs_opt {
     my ($k) = @_;
     my $zfs_opts = get('zfs_opts');
     return defined($k) ? $zfs_opts->{$k} : $zfs_opts;
+}
+
+sub set_target_hd { set_key('target_hd', $_[0]); }
+sub get_target_hd { return get('target_hd'); }
+
+sub set_disk_selection {
+    my ($id, $v) = @_;
+    my $disk_selection = get('disk_selection');
+    $disk_selection->{$id} = $v;
+}
+sub get_disk_selection {
+    my ($id) = @_;
+    my $disk_selection = get('disk_selection');
+    return defined($id) ? $disk_selection->{$id} : $disk_selection;
 }
 
 sub set_country { set_key('country', $_[0]); }
