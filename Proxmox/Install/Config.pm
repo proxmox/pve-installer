@@ -89,4 +89,7 @@ sub parse_kernel_cmdline {
 sub set_autoreboot { set_key('autoreboot', $_[0]); }
 sub get_autoreboot { return get('autoreboot'); }
 
+sub set_filesys { set_key('filesys', $_[0]); }
+sub get_filesys { return get('filesys'); }
+
 1;

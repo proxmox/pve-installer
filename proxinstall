@@ -579,7 +579,7 @@ sub extract_data {
     my ($swapfile, $rootdev, $datadev);
     my ($use_zfs, $use_btrfs) = (0, 0);
 
-    my $filesys = $config_options->{filesys};
+    my $filesys = Proxmox::Install::Config::get_filesys();
 
     my $zfs_pool_name = Proxmox::Install::StorageConfig::get_zfs_pool_name();
     my $zfs_root_volume_name = Proxmox::Install::StorageConfig::get_zfs_root_volume_name();
@@ -1695,7 +1695,7 @@ sub create_ack_view {
 
     my %config_values = (
 	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
-	__target_fs__ => $config_options->{filesys},
+	__target_fs__ => Proxmox::Install::Config::get_filesys(),
 	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
 	__timezone__ => $timezone,
 	__keymap__ => $keymap,
@@ -2355,10 +2355,11 @@ sub create_hdoption_view {
     push @$fstype, 'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'
 	if $iso_env->{cfg}->{enable_btrfs};
 
+    my $filesys = Proxmox::Install::Config::get_filesys();
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
 	$fstypecb->append_text($tmp);
-	$fstypecb->set_active ($tcount) if $config_options->{filesys} eq $tmp;
+	$fstypecb->set_active ($tcount) if $filesys eq $tmp;
 	$tcount++;
     }
 
@@ -2445,8 +2446,9 @@ sub create_hdoption_view {
     $hdoption_first_setup = 0;
 
     my $switch_view = sub {
-	my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
-	my $is_zfs = $config_options->{filesys} =~ m/zfs/;
+	my $filesys = Proxmox::Install::Config::get_filesys();
+	my $raid = $filesys =~ m/zfs|btrfs/;
+	my $is_zfs = $filesys =~ m/zfs/;
 
 	$target_hd_combo->set_visible(!$raid);
 	$options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
@@ -2464,7 +2466,7 @@ sub create_hdoption_view {
 	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($is_zfs);
 	$options_stack->get_child_by_name("raidbtrfsadvanced")->set_visible(!$is_zfs);
 	if ($raid) {
-	    $target_hd_label->set_text("Target: $config_options->{filesys} ");
+	    $target_hd_label->set_text("Target: $filesys ");
 	    $options_stack->set_visible_child_name("raiddisk");
 	} else {
 	    $target_hd_label->set_text("Target Harddisk: ");
@@ -2485,7 +2487,8 @@ sub create_hdoption_view {
     &$switch_view();
 
     $fstypecb->signal_connect (changed => sub {
-	$config_options->{filesys} = $fstypecb->get_active_text();
+	my $new_filesys = $fstypecb->get_active_text();
+	Proxmox::Install::Config::set_filesys($new_filesys);
 	&$switch_view();
     });
 
@@ -2579,7 +2582,7 @@ sub legacy_bios_4k_check {
 }
 
 sub get_zfs_raid_setup {
-    my $filesys = $config_options->{filesys};
+    my $filesys = Proxmox::Install::Config::get_filesys();
 
     my $devlist = &$get_raid_devlist();
 
@@ -2635,8 +2638,7 @@ sub get_zfs_raid_setup {
 }
 
 sub get_btrfs_raid_setup {
-
-    my $filesys = $config_options->{filesys};
+    my $filesys = Proxmox::Install::Config::get_filesys();
 
     my $devlist = &$get_raid_devlist();
 
@@ -2690,9 +2692,10 @@ sub create_hdsel_view {
 	$target_hd_combo->append_text(get_device_desc($devname, $size, $model));
     }
 
-    my $raid = $config_options->{filesys} =~ m/zfs|btrfs/;
+    my $raid = Proxmox::Install::Config::get_filesys() =~ m/zfs|btrfs/;
     if ($raid) {
-	$target_hd_label->set_text("Target: $config_options->{filesys} ");
+	my $filesys = Proxmox::Install::Config::get_filesys();
+	$target_hd_label->set_text("Target: $filesys ");
 	$target_hd_combo->set_visible(0);
 	$target_hd_combo->set_no_show_all(1);
     }
@@ -2716,15 +2719,15 @@ sub create_hdsel_view {
     Proxmox::UI::display_html('page1.htm');
 
     set_next(undef, sub {
-
-	if ($config_options->{filesys} =~ m/zfs/) {
+	my $filesys = Proxmox::Install::Config::get_filesys();
+	if ($filesys =~ m/zfs/) {
 	    my ($devlist) = eval { get_zfs_raid_setup() };
 	    if (my $err = $@) {
 		Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
 		return;
 	    }
 	    $config_options->{target_hds} = [ map { $_->[1] } @$devlist ];
-	} elsif ($config_options->{filesys} =~ m/btrfs/) {
+	} elsif ($filesys =~ m/btrfs/) {
 	    my ($devlist) = eval { get_btrfs_raid_setup() };
 	    if (my $err = $@) {
 		Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
