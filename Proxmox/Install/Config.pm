@@ -32,6 +32,7 @@ my sub init_cfg {
 	# locale
 	country => $country,
 	timezone => 'Europe/Vienna',
+	keymap => 'en-us',
     };
 
     # TODO add disksel$i => undef entries
@@ -128,5 +129,8 @@ sub get_country { return get('country'); }
 
 sub set_timezone { set_key('timezone', $_[0]); }
 sub get_timezone { return get('timezone'); }
+
+sub set_keymap { set_key('keymap', $_[0]); }
+sub get_keymap { return get('keymap'); }
 
 1;

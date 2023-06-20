@@ -107,7 +107,6 @@ my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
 my $ipconf;
-my $keymap = 'en-us';
 my $password;
 my $mailto = 'mail@example.invalid';
 my $autoreboot_seconds = 5;
@@ -115,8 +114,6 @@ my $autoreboot_seconds = 5;
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    keymap => $keymap,
-
     password => $password,
     mailto => $mailto,
 
@@ -990,6 +987,7 @@ sub extract_data {
 	    $grub_install_devices_txt .= $di->{by_id} || $di->{devname};
 	}
 
+	my $keymap = Proxmox::Install::Config::get_keymap();
 	# Note: keyboard-configuration/xbkb-keymap is used by console-setup
 	my $xkmap = $iso_env->{locales}->{kmap}->{$keymap}->{x11} // 'us';
 
@@ -1699,7 +1697,7 @@ sub create_ack_view {
 	__target_fs__ => Proxmox::Install::Config::get_filesys(),
 	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
 	__timezone__ => Proxmox::Install::Config::get_timezone(),
-	__keymap__ => $keymap,
+	__keymap__ => Proxmox::Install::Config::get_keymap(),
 	__mailto__ => $mailto,
 	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
 	__hostname__ => $hostname,
@@ -1956,11 +1954,11 @@ sub create_country_view {
 	if (my $kmap = $locales->{kmaphash}->{$sel}) {
 	    my $xkmap = $locales->{kmap}->{$kmap}->{x11};
 	    my $xvar = $locales->{kmap}->{$kmap}->{x11var};
-	    $keymap = $kmap;
+
+	    Proxmox::Install::Config::set_keymap($kmap);
 
 	    return if (defined($installer_kmap) && $installer_kmap eq $kmap);
-
-	    $installer_kmap = $keymap;
+	    $installer_kmap = $kmap;
 
 	    if (!is_test_mode()) {
 		syscmd ("setxkbmap $xkmap $xvar");
