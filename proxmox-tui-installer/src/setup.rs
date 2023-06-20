@@ -1,9 +1,12 @@
 use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
 
-use serde::{de, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    options::{BtrfsRaidLevel, Disk, FsType, InstallerOptions, ZfsRaidLevel},
+    options::{
+        AdvancedBootdiskOptions, BtrfsRaidLevel, Disk, FsType, InstallerOptions,
+        ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel,
+    },
     utils::{CidrAddress, Fqdn},
 };
 
@@ -79,46 +82,120 @@ pub struct LocaleInfo {
 }
 
 #[derive(Serialize)]
+struct InstallZfsOption {
+    ashift: usize,
+    #[serde(serialize_with = "serialize_as_display")]
+    compress: ZfsCompressOption,
+    #[serde(serialize_with = "serialize_as_display")]
+    checksum: ZfsChecksumOption,
+    copies: usize,
+}
+
+impl From<ZfsBootdiskOptions> for InstallZfsOption {
+    fn from(opts: ZfsBootdiskOptions) -> Self {
+        InstallZfsOption {
+            ashift: opts.ashift,
+            compress: opts.compress,
+            checksum: opts.checksum,
+            copies: opts.copies,
+        }
+    }
+}
+
+/// See Proxmox::Install::Config
+#[derive(Serialize)]
 pub struct InstallConfig {
-    #[serde(serialize_with = "serialize_target_disk_list")]
-    target_hd: Vec<Disk>,
+    autoreboot: usize,
+
     #[serde(serialize_with = "serialize_fstype")]
-    target_fs: FsType,
+    filesys: FsType,
+    hdsize: u64,
+    swapsize: Option<u64>,
+    maxroot: Option<u64>,
+    minfree: Option<u64>,
+    maxvz: Option<u64>,
+
+    zfs_opts: Option<InstallZfsOption>,
+
+    #[serde(serialize_with = "serialize_disk_opt")]
+    target_hd: Option<Disk>,
+    disk_selection: HashMap<String, usize>,
+
     country: String,
     timezone: String,
     keymap: String,
-    mailto: String,
+
     password: String,
-    interface: String,
+    mailto: String,
+
+    mngmt_nic: String,
+
     hostname: String,
     domain: String,
-    ip: IpAddr,
-    netmask: String,
     #[serde(serialize_with = "serialize_as_display")]
     cidr: CidrAddress,
     gateway: IpAddr,
-    dnsserver: IpAddr,
+    dns: IpAddr,
 }
 
 impl From<InstallerOptions> for InstallConfig {
     fn from(options: InstallerOptions) -> Self {
-        Self {
-            target_hd: options.bootdisk.disks,
-            target_fs: options.bootdisk.fstype,
+        let mut config = Self {
+            autoreboot: options.reboot as usize,
+
+            filesys: options.bootdisk.fstype,
+            hdsize: 0,
+            swapsize: None,
+            maxroot: None,
+            minfree: None,
+            maxvz: None,
+            zfs_opts: None,
+            target_hd: None,
+            disk_selection: HashMap::new(),
+
             country: options.timezone.country,
             timezone: options.timezone.timezone,
             keymap: options.timezone.kb_layout,
-            mailto: options.password.email,
+
             password: options.password.root_password,
-            interface: options.network.ifname,
+            mailto: options.password.email,
+
+            mngmt_nic: options.network.ifname,
+
             hostname: options.network.fqdn.host().to_owned(),
             domain: options.network.fqdn.domain().to_owned(),
-            ip: options.network.address.addr(),
-            netmask: options.network.address.mask().to_string(),
             cidr: options.network.address,
             gateway: options.network.gateway,
-            dnsserver: options.network.dns_server,
+            dns: options.network.dns_server,
+        };
+
+        match &options.bootdisk.advanced {
+            AdvancedBootdiskOptions::Lvm(lvm) => {
+                config.hdsize = lvm.total_size;
+                config.target_hd = Some(options.bootdisk.disks[0].clone());
+                config.swapsize = Some(lvm.swap_size);
+                config.maxroot = Some(lvm.max_root_size);
+                config.minfree = Some(lvm.min_lvm_free);
+                config.maxvz = Some(lvm.max_data_size);
+            }
+            AdvancedBootdiskOptions::Zfs(zfs) => {
+                config.hdsize = zfs.disk_size;
+                config.zfs_opts = Some(zfs.clone().into());
+
+                for disk in &options.bootdisk.disks {
+                    config.disk_selection.insert(disk.path.clone(), 1);
+                }
+            }
+            AdvancedBootdiskOptions::Btrfs(btrfs) => {
+                config.hdsize = btrfs.disk_size;
+
+                for disk in &options.bootdisk.disks {
+                    config.disk_selection.insert(disk.path.clone(), 1);
+                }
+            }
         }
+
+        config
     }
 }
 
@@ -199,15 +276,15 @@ where
     Ok(result)
 }
 
-fn serialize_target_disk_list<S>(value: &[Disk], serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_disk_opt<S>(value: &Option<Disk>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let mut seq = serializer.serialize_seq(Some(value.len()))?;
-    for disk in value {
-        seq.serialize_element(&disk.path)?;
+    if let Some(disk) = value {
+        serializer.serialize_str(&disk.path)
+    } else {
+        serializer.serialize_none()
     }
-    seq.end()
 }
 
 fn serialize_fstype<S>(value: &FsType, serializer: S) -> Result<S::Ok, S::Error>
