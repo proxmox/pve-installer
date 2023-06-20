@@ -8,13 +8,7 @@ use lib '.'; # FIXME
 use File::Path qw(make_path);
 use Getopt::Long;
 use JSON;
-
-use Proxmox::Sys::File qw(file_write_all);
-
-use Proxmox::Log;
-use Proxmox::Install::ISOEnv;
-use Proxmox::Install::RunEnv;
-use Proxmox::UI;
+use Time::HiRes qw(usleep);
 
 {
     my $test_mode;
@@ -25,6 +19,14 @@ use Proxmox::UI;
     # FIXME: use cleaner approach for setting tet mode?
     Proxmox::Install::ISOEnv::set_test_image('/dev/null') if $test_mode;
 }
+use Proxmox::Install::ISOEnv;
+use Proxmox::Install::RunEnv;
+
+use Proxmox::Sys::File qw(file_write_all);
+
+use Proxmox::Log;
+use Proxmox::Install::Config;
+use Proxmox::UI;
 
 my $commands = {
     'dump-env' => 'Dump the current ISO and Hardware environment to base the installer UI on.',
@@ -80,7 +82,34 @@ if ($cmd eq 'dump-env') {
     file_write_all("$out_dir/run-env-info.json", $run_env_serialized);
 } elsif ($cmd eq 'start-session') {
     Proxmox::UI::init_stdio({}, $env);
-    die "TODO";
+
+    my $config_raw;
+    while(my $line = <>) {
+	if ($line =~ /^\s*{/) {
+	    $config_raw = $line;
+	    last;
+	}
+    }
+    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
+    die "failed to parse config from stdin - $@\n" if $@;
+
+    Proxmox::Install::Config::merge($config);
+
+    print STDERR "got config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n";
+
+    my $res = Proxmox::UI::prompt("Reply anything?") ? 'ok' : 'not ok';
+    Proxmox::UI::message("Test Message - got $res");
+
+    for (my $i = 1; $i <= 1000; $i += 3) {
+	Proxmox::UI::progress($i/1000, 0, 100, "foo $i");
+	if ($i > 500 && $i < 600) {
+	    usleep(50 * 1000);
+	} else {
+	    usleep(10 * 1000);
+	}
+    }
+
+    # Proxmox::Install::extract_data(); # TODO
 }
 
 exit(0);
