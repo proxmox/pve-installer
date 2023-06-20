@@ -1,10 +1,19 @@
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, env, net::IpAddr, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env,
+    io::{BufRead, BufReader, Write},
+    net::IpAddr,
+    path::PathBuf,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 use cursive::{
     event::Event,
     theme::{ColorStyle, Effect, PaletteColor, Style},
+    utils::Counter,
     view::{Nameable, Offset, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
@@ -18,7 +27,7 @@ mod options;
 use options::*;
 
 mod setup;
-use setup::{LocaleInfo, RuntimeInfo, SetupInfo};
+use setup::{InstallConfig, LocaleInfo, RuntimeInfo, SetupInfo};
 
 mod system;
 
@@ -277,7 +286,6 @@ fn switch_to_prev_screen(siv: &mut Cursive) {
     siv.set_screen(id);
 }
 
-#[cfg(not(debug_assertions))]
 fn yes_no_dialog(
     siv: &mut Cursive,
     title: &str,
@@ -640,19 +648,138 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
     // Ensure the screen is updated independently of keyboard events and such
     siv.set_autorefresh(true);
 
+    let cb_sink = siv.cb_sink().clone();
     let state = siv.user_data::<InstallerState>().unwrap();
-    let progress_text = TextContent::new("extracting ..");
-    let progress_bar = ProgressBar::new()
-        .with_task({
-            move |counter| {
-                for _ in 0..100 {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                    counter.tick(1);
-                }
-            }
-        })
-        .full_width();
+    let progress_text = TextContent::new("starting the installation ..");
 
+    let progress_task = {
+        let progress_text = progress_text.clone();
+        let options = state.options.clone();
+        move |counter: Counter| {
+            let child = {
+                use std::process::{Command, Stdio};
+
+                #[cfg(not(debug_assertions))]
+                let (path, args, envs): (&str, [&str; 1], [(&str, &str); 0]) =
+                    ("proxmox-low-level-installer", ["start-session"], []);
+
+                #[cfg(debug_assertions)]
+                let (path, args, envs) = (
+                    PathBuf::from("../proxmox-low-level-installer")
+                        .canonicalize()
+                        .unwrap(),
+                    ["-t", "start-session"],
+                    [("PERL5LIB", PathBuf::from("..").canonicalize().unwrap())],
+                );
+
+                Command::new(path)
+                    .args(args)
+                    .envs(envs)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+            };
+
+            let mut child = match child {
+                Ok(child) => child,
+                Err(err) => {
+                    let _ = cb_sink.send(Box::new(move |siv| {
+                        siv.add_layer(
+                            Dialog::text(err.to_string())
+                                .title("Error")
+                                .button("Ok", Cursive::quit),
+                        );
+                    }));
+                    return;
+                }
+            };
+
+            let inner = || {
+                let reader = child.stdout.take().map(BufReader::new)?;
+                let mut writer = child.stdin.take()?;
+
+                serde_json::to_writer(&mut writer, &InstallConfig::from(options)).unwrap();
+                writeln!(writer).unwrap();
+
+                let writer = Arc::new(Mutex::new(writer));
+
+                for line in reader.lines() {
+                    let line = match line {
+                        Ok(line) => line,
+                        Err(_) => break,
+                    };
+
+                    let msg = match line.parse::<UiMessage>() {
+                        Ok(msg) => msg,
+                        Err(_stray) => {
+                            // eprintln!("low-level installer: {stray}");
+                            continue;
+                        }
+                    };
+
+                    match msg {
+                        UiMessage::Info(s) => cb_sink.send(Box::new(|siv| {
+                            siv.add_layer(Dialog::info(s).title("Information"));
+                        })),
+                        UiMessage::Error(s) => cb_sink.send(Box::new(|siv| {
+                            siv.add_layer(Dialog::info(s).title("Error"));
+                        })),
+                        UiMessage::Prompt(s) => cb_sink.send({
+                            let writer = writer.clone();
+                            Box::new(move |siv| {
+                                yes_no_dialog(
+                                    siv,
+                                    "Prompt",
+                                    &s,
+                                    Box::new({
+                                        let writer = writer.clone();
+                                        move |_| {
+                                            if let Ok(mut writer) = writer.lock() {
+                                                let _ = writeln!(writer, "ok");
+                                            }
+                                        }
+                                    }),
+                                    Box::new(move |_| {
+                                        if let Ok(mut writer) = writer.lock() {
+                                            let _ = writeln!(writer);
+                                        }
+                                    }),
+                                );
+                            })
+                        }),
+                        UiMessage::Progress(ratio, s) => {
+                            counter.set(ratio);
+                            progress_text.set_content(s);
+                            Ok(())
+                        }
+                    }
+                    .unwrap();
+                }
+
+                cb_sink
+                    .send(Box::new(|siv| {
+                        siv.add_layer(Dialog::info("low-level install finished"));
+                    }))
+                    .unwrap();
+
+                Some(())
+            };
+
+            if inner().is_none() {
+                cb_sink
+                    .send(Box::new(|siv| {
+                        siv.add_layer(
+                            Dialog::text("low-level installer exited early")
+                                .title("Error")
+                                .button("Exit", Cursive::quit),
+                        );
+                    }))
+                    .unwrap();
+            }
+        }
+    };
+
+    let progress_bar = ProgressBar::new().with_task(progress_task).full_width();
     let inner = PaddedView::lrtb(
         1,
         1,
@@ -672,4 +799,36 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
     );
 
     InstallerView::with_raw(state, inner)
+}
+
+enum UiMessage {
+    Info(String),
+    Error(String),
+    Prompt(String),
+    Progress(usize, String),
+}
+
+impl FromStr for UiMessage {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (ty, rest) = s.split_once(": ").ok_or("invalid message: no type")?;
+
+        match ty {
+            "message" => Ok(UiMessage::Info(rest.to_owned())),
+            "error" => Ok(UiMessage::Error(rest.to_owned())),
+            "prompt" => Ok(UiMessage::Prompt(rest.to_owned())),
+            "progress" => {
+                let (percent, rest) = rest.split_once(' ').ok_or("invalid progress message")?;
+                Ok(UiMessage::Progress(
+                    percent
+                        .parse::<f64>()
+                        .map(|v| v.round() as usize)
+                        .map_err(|err| err.to_string())?,
+                    rest.to_owned(),
+                ))
+            }
+            _ => Err("invalid message type".to_owned()),
+        }
+    }
 }
