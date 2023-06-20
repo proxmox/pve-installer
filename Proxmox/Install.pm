@@ -202,6 +202,124 @@ sub zfs_create_rpool {
     syscmd("zfs set copies=$value $pool_name") if defined($value) && $value != 1;
 }
 
+my $get_raid_devlist = sub {
+
+    my $dev_name_hash = {};
+
+    my $cached_disks = get_cached_disks();
+    my $devlist = [];
+    for (my $i = 0; $i < @$cached_disks; $i++) {
+	next if !Proxmox::Install::Config::get_disk_selection($i);
+
+	my $hd = $cached_disks->[$i];
+	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
+	die "device '$devname' is used more than once\n" if $dev_name_hash->{$devname};
+	$dev_name_hash->{$devname} = $hd;
+	push @$devlist, $hd;
+    }
+
+    return $devlist;
+};
+
+sub zfs_mirror_size_check {
+    my ($expected, $actual) = @_;
+
+    die "mirrored disks must have same size\n"
+	if abs($expected - $actual) > $expected / 10;
+}
+
+sub legacy_bios_4k_check {
+    my ($lbs) = @_;
+    my $run_env = Proxmox::Install::RunEnv::get();
+    die "Booting from 4kn drive in legacy BIOS mode is not supported.\n"
+	if $run_env->{boot_type} ne 'efi' && $lbs == 4096;
+}
+
+sub get_zfs_raid_setup {
+    my $filesys = Proxmox::Install::Config::get_filesys();
+
+    my $devlist = &$get_raid_devlist();
+
+    my $diskcount = scalar(@$devlist);
+    die "$filesys needs at least one device\n" if $diskcount < 1;
+
+    my $cmd= '';
+    if ($filesys eq 'zfs (RAID0)') {
+	foreach my $hd (@$devlist) {
+	    legacy_bios_4k_check(@$hd[4]);
+	    $cmd .= " @$hd[1]";
+	}
+    } elsif ($filesys eq 'zfs (RAID1)') {
+	die "zfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
+	$cmd .= ' mirror ';
+	my $hd = @$devlist[0];
+	my $expected_size = @$hd[2]; # all disks need approximately same size
+	foreach my $hd (@$devlist) {
+	    zfs_mirror_size_check($expected_size, @$hd[2]);
+	    legacy_bios_4k_check(@$hd[4]);
+	    $cmd .= " @$hd[1]";
+	}
+    } elsif ($filesys eq 'zfs (RAID10)') {
+	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
+	die "zfs (RAID10) needs an even number of devices\n" if $diskcount & 1;
+
+	for (my $i = 0; $i < $diskcount; $i+=2) {
+	    my $hd1 = @$devlist[$i];
+	    my $hd2 = @$devlist[$i+1];
+	    zfs_mirror_size_check(@$hd1[2], @$hd2[2]); # pairs need approximately same size
+	    legacy_bios_4k_check(@$hd1[4]);
+	    legacy_bios_4k_check(@$hd2[4]);
+	    $cmd .= ' mirror ' . @$hd1[1] . ' ' . @$hd2[1];
+	}
+
+    } elsif ($filesys =~ m/^zfs \(RAIDZ-([123])\)$/) {
+	my $level = $1;
+	my $mindisks = 2 + $level;
+	die "zfs (RAIDZ-$level) needs at least $mindisks devices\n" if scalar(@$devlist) < $mindisks;
+	my $hd = @$devlist[0];
+	my $expected_size = @$hd[2]; # all disks need approximately same size
+	$cmd .= " raidz$level";
+	foreach my $hd (@$devlist) {
+	    zfs_mirror_size_check($expected_size, @$hd[2]);
+	    legacy_bios_4k_check(@$hd[4]);
+	    $cmd .= " @$hd[1]";
+	}
+    } else {
+	die "unknown zfs mode '$filesys'\n";
+    }
+
+    return ($devlist, $cmd);
+}
+
+sub get_btrfs_raid_setup {
+    my $filesys = Proxmox::Install::Config::get_filesys();
+
+    my $devlist = &$get_raid_devlist();
+
+    my $diskcount = scalar(@$devlist);
+    die "$filesys needs at least one device\n" if $diskcount < 1;
+
+    my $mode;
+
+    if ($diskcount == 1) {
+	$mode = 'single';
+    } else {
+	if ($filesys eq 'btrfs (RAID0)') {
+	    $mode = 'raid0';
+	} elsif ($filesys eq 'btrfs (RAID1)') {
+	    die "btrfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
+	    $mode = 'raid1';
+	} elsif ($filesys eq 'btrfs (RAID10)') {
+	    die "btrfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
+	    $mode = 'raid10';
+	} else {
+	    die "unknown btrfs mode '$filesys'\n";
+	}
+    }
+
+    return ($devlist, $mode);
+}
+
 sub get_pv_list_from_vgname {
     my ($vgname) = @_;
 
