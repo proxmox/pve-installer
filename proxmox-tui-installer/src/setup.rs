@@ -260,6 +260,9 @@ pub struct RuntimeInfo {
 
     /// Network addresses, gateways and DNS info.
     pub network: NetworkInfo,
+
+    /// Total memory of the system in MiB.
+    pub total_memory: usize,
 }
 
 #[derive(Clone, Deserialize)]

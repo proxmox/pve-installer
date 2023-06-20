@@ -193,8 +193,6 @@ fn main() {
 }
 
 fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
-    system::has_min_requirements()?;
-
     let base_path = if in_test_mode { "./testdir" } else { "/" };
     let mut path = PathBuf::from(base_path);
 
@@ -222,6 +220,8 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
         setup::read_json(&path)
             .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
     };
+
+    system::has_min_requirements(&runtime_info)?;
 
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
