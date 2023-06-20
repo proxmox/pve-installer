@@ -1685,7 +1685,7 @@ sub create_ack_view {
     $reboot_checkbox->set_active(1);
     $reboot_checkbox->signal_connect ("toggled" => sub {
 	my $cb = shift;
-	$config_options->{autoreboot} = $cb->get_active();
+	Proxmox::Install::Config::set_autoreboot(!!$cb->get_active());
     });
     $vbox->pack_start($reboot_checkbox, 0, 0, 2);
 
@@ -2786,6 +2786,7 @@ sub create_extract_view {
 
     set_next("_Reboot", sub { app_quit(0); } );
 
+    my $autoreboot = Proxmox::Install::Config::get_autoreboot();
     my $success_transform = sub {
 	my ($raw_html, $iso_env) = @_;
 
@@ -2793,9 +2794,7 @@ sub create_extract_view {
 	$raw_html =~ s/__IPADDR__/$addr/g;
 	$raw_html =~ s/__PORT__/$iso_env->{cfg}->{port}/g;
 
-	my $autoreboot_msg = $config_options->{autoreboot}
-	    ? "Automatic reboot scheduled in $autoreboot_seconds seconds."
-	    : '';
+	my $autoreboot_msg = $autoreboot ? "Automatic reboot scheduled in $autoreboot_seconds seconds." : '';
 	$raw_html =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
 
 	return $raw_html;
@@ -2810,7 +2809,7 @@ sub create_extract_view {
 	cleanup_view();
 	Proxmox::UI::display_html("success.htm", $success_transform);
 
-        if ($config_options->{autoreboot}) {
+        if ($autoreboot) {
 	    Glib::Timeout->add(1000, sub {
 		if ($autoreboot_seconds > 0) {
 		    $autoreboot_seconds--;

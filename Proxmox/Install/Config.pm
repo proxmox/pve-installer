@@ -86,4 +86,7 @@ sub parse_kernel_cmdline {
     return $cfg;
 }
 
+sub set_autoreboot { set_key('autoreboot', $_[0]); }
+sub get_autoreboot { return get('autoreboot'); }
+
 1;
