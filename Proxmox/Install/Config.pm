@@ -9,7 +9,15 @@ use JSON qw(from_json to_json);
 use Proxmox::Install::ISOEnv;
 
 my sub init_cfg {
-    return {
+    my $iso_env = Proxmox::Install::ISOEnv::get();
+
+    my $country = Proxmox::Install::RunEnv::get('country');
+    if (!defined($iso_env->{locales}->{country}->{$country})) {
+	log_warn("ignoring detected country '$country', invalid or unknown\n");
+	$country = undef;
+    }
+
+    my $initial = {
 	# installer behavior related
 	autoreboot => 1,
 
@@ -20,7 +28,14 @@ my sub init_cfg {
 	maxroot => undef,
 	minfree => undef,
 	maxvz => undef,
+
+	# locale
+	country => $country,
     };
+
+    # TODO add disksel$i => undef entries
+
+    return $initial;
 }
 
 # merge a $new hash into the current config, with $new taking precedence
@@ -106,5 +121,8 @@ sub get_minfree { return get('minfree'); }
 
 sub set_maxvz { set_key('maxvz', $_[0]); }
 sub get_maxvz { return get('maxvz'); }
+
+sub set_country { set_key('country', $_[0]); }
+sub get_country { return get('country'); }
 
 1;
