@@ -144,7 +144,6 @@ enum InstallerStep {
 #[derive(Clone)]
 struct InstallerState {
     options: InstallerOptions,
-    available_disks: Vec<Disk>,
     setup_info: SetupInfo,
     runtime_info: RuntimeInfo,
     locales: LocaleInfo,
@@ -174,24 +173,14 @@ fn main() {
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.set_on_pre_event(Event::CtrlChar('c'), trigger_abort_install_dialog);
 
-    let available_disks: Vec<Disk> = runtime_info
-        .disks
-        .iter()
-        .map(|(name, info)| Disk {
-            path: format!("/dev/{name}"),
-            size: info.size,
-        })
-        .collect();
-
     siv.set_user_data(InstallerState {
         options: InstallerOptions {
-            bootdisk: BootdiskOptions::defaults_from(&available_disks[0]),
+            bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
             timezone: TimezoneOptions::default(),
             password: PasswordOptions::default(),
             network: NetworkOptions::from(&runtime_info.network),
             reboot: false,
         },
-        available_disks,
         setup_info,
         runtime_info,
         locales,
@@ -360,7 +349,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
 
     InstallerView::new(
         &state,
-        BootdiskOptionsView::new(&state.available_disks, &state.options.bootdisk)
+        BootdiskOptionsView::new(&state.runtime_info.disks, &state.options.bootdisk)
             .with_name("bootdisk-options"),
         Box::new(|siv| {
             let options = siv

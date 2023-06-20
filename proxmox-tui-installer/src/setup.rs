@@ -153,6 +153,28 @@ where
     Ok(result)
 }
 
+fn deserialize_disks_map<'de, D>(deserializer: D) -> Result<Vec<Disk>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct DiskDescriptor {
+        size: u64,
+    }
+
+    let map: HashMap<String, DiskDescriptor> = Deserialize::deserialize(deserializer)?;
+
+    let mut result = Vec::with_capacity(map.len());
+    for (path, desc) in map.into_iter() {
+        result.push(Disk {
+            path: format!("/dev/{path}"),
+            size: desc.size,
+        });
+    }
+
+    Ok(result)
+}
+
 fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>
 where
     D: Deserializer<'de>,
@@ -232,16 +254,11 @@ pub struct RuntimeInfo {
     pub country: Option<String>,
 
     /// Maps devices to their information.
-    pub disks: HashMap<String, BlockdevInfo>,
+    #[serde(deserialize_with = "deserialize_disks_map")]
+    pub disks: Vec<Disk>,
 
     /// Network addresses, gateways and DNS info.
     pub network: NetworkInfo,
-}
-
-#[derive(Clone, Deserialize)]
-pub struct BlockdevInfo {
-    /// Size in bytes.
-    pub size: u64,
 }
 
 #[derive(Clone, Deserialize)]
