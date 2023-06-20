@@ -98,4 +98,7 @@ sub get_hdsize { return get('hdsize'); }
 sub set_swapsize { set_key('swapsize', $_[0]); }
 sub get_swapsize { return get('swapsize'); }
 
+sub set_maxroot { set_key('maxroot', $_[0]); }
+sub get_maxroot { return get('maxroot'); }
+
 1;

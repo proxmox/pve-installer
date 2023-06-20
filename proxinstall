@@ -401,8 +401,8 @@ sub create_lvm_volumes {
     if ($iso_env->{product} eq 'pve') {
 
 	my $maxroot_mb;
-	if ($config_options->{maxroot}) {
-	    $maxroot_mb = $config_options->{maxroot} * 1024;
+	if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
+	    $maxroot_mb = $maxroot * 1024;
 	} else {
 	    $maxroot_mb = 96 * 1024;
 	}
@@ -2404,7 +2404,9 @@ sub create_hdoption_view {
     if ($iso_env->{product} eq 'pve') {
 	$entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
 	$entry_maxroot->signal_connect (key_press_event => \&check_float);
-	$entry_maxroot->set_text($config_options->{maxroot}) if $config_options->{maxroot};
+	if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
+	    $entry_maxroot->set_text($maxroot);
+	}
 	push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
     }
 
@@ -2529,9 +2531,9 @@ sub create_hdoption_view {
     }
 
     if (defined($tmp = &$get_float($entry_maxroot))) {
-	$config_options->{maxroot} = $tmp;
+	Proxmox::Install::Config::set_maxroot($tmp);
     } else {
-	delete $config_options->{maxroot};
+	Proxmox::Install::Config::set_maxroot(undef);
     }
 
     if (defined($tmp = &$get_float($entry_minfree))) {
