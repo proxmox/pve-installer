@@ -103,14 +103,8 @@ struct InstallerBackgroundView {
 }
 
 impl InstallerBackgroundView {
-    pub fn new(state: &InstallerState) -> Self {
-        let product_name = state
-            .setup_info
-            .config
-            .fullname
-            .trim_start_matches("Proxmox ");
-
-        let logo = format!("{PROXMOX_LOGO} {product_name}");
+    pub fn new(_state: &InstallerState) -> Self {
+        let logo = format!("{PROXMOX_LOGO}");
         let style = Style {
             effects: Effect::Bold.into(),
             color: ColorStyle::back(PaletteColor::View),
