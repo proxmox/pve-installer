@@ -31,6 +31,7 @@ my sub init_cfg {
 
 	# locale
 	country => $country,
+	timezone => 'Europe/Vienna',
     };
 
     # TODO add disksel$i => undef entries
@@ -124,5 +125,8 @@ sub get_maxvz { return get('maxvz'); }
 
 sub set_country { set_key('country', $_[0]); }
 sub get_country { return get('country'); }
+
+sub set_timezone { set_key('timezone', $_[0]); }
+sub get_timezone { return get('timezone'); }
 
 1;

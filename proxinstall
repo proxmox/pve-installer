@@ -107,7 +107,6 @@ my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
 my $ipconf;
-my $timezone = 'Europe/Vienna';
 my $keymap = 'en-us';
 my $password;
 my $mailto = 'mail@example.invalid';
@@ -116,7 +115,6 @@ my $autoreboot_seconds = 5;
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    timezone => $timezone,
     keymap => $keymap,
 
     password => $password,
@@ -1050,6 +1048,7 @@ _EOD
 	unlink  "$targetdir/proxmox_install_mode";
 
 	my $country = Proxmox::Install::Config::get_country();
+	my $timezone = Proxmox::Install::Config::get_timezone();
 
 	# set timezone
 	unlink ("$targetdir/etc/localtime");
@@ -1699,7 +1698,7 @@ sub create_ack_view {
 	__target_hd__ => join(' | ', @{$config_options->{target_hds}}),
 	__target_fs__ => Proxmox::Install::Config::get_filesys(),
 	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
-	__timezone__ => $timezone,
+	__timezone__ => Proxmox::Install::Config::get_timezone(),
 	__keymap__ => $keymap,
 	__mailto__ => $mailto,
 	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
@@ -1784,7 +1783,7 @@ my $lastzonecb;
 sub update_zonelist {
     my ($box, $cc) = @_;
 
-    my $sel = $timezone; # initial default
+    my $sel = Proxmox::Install::Config::get_timezone(); # initial default
     if ($lastzonecb) {
 	$sel = $lastzonecb->get_active_text();
 	$box->remove($lastzonecb);
@@ -1793,7 +1792,8 @@ sub update_zonelist {
     my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
     $cb->set_size_request(200, -1);
     $cb->signal_connect('changed' => sub {
-	$timezone = $cb->get_active_text();
+	my $timezone = $cb->get_active_text();
+	Proxmox::Install::Config::set_timezone($timezone);
     });
 
     my ($cczones, $zones) = $iso_env->{locales}->@{'cczones', 'zones'};
