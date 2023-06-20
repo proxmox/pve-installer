@@ -7,6 +7,7 @@ use Carp;
 use JSON qw(from_json to_json);
 
 use Proxmox::Log;
+use Proxmox::Sys::File qw(file_read_firstline);
 
 my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
@@ -39,6 +40,7 @@ sub query_total_memory : prototype() {
 my sub query_blockdevs : prototype() {
     my $disks = {};
 
+    # FIXME: not the same as the battle proven way we used in the installer for years!
     my $lsblk = fromjs(qx/lsblk -e 230 --bytes --json/);
     for my $disk ($lsblk->{blockdevices}->@*) {
 	my ($name, $ro, $size, $type, $mountpoints) = $disk->@{qw(name ro size type mountpoints)};
@@ -70,6 +72,7 @@ my sub query_netdevs : prototype() {
     my $ifs = {};
     my $default;
 
+    # FIXME: not the same as the battle proven way we used in the installer for years?
     my $interfaces = fromjs(qx/ip --json address show/);
 
     for my $if (@$interfaces) {
@@ -241,6 +244,7 @@ sub query_installation_environment : prototype() {
 	dns => query_dns(),
     };
 
+    $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
 
