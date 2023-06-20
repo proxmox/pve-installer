@@ -460,7 +460,9 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
     let inner = FormView::new()
         .child(
             "Management interface",
-            SelectView::new().popup().with_all_str(vec!["eth0"]),
+            SelectView::new()
+                .popup()
+                .with_all_str(state.runtime_info.network.interfaces.keys()),
         )
         .child(
             "Hostname (FQDN)",
