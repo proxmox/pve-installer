@@ -19,8 +19,23 @@ use POSIX ":sys_wait_h";
 use Proxmox::Log;
 Proxmox::Log::init("/tmp/install.log");
 
+{ # NOTE: order is important here
+    my $test_image;
+    GetOptions(
+	'test-image|t=s' => \$test_image
+    ) or die "usage error\n";
+
+    Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
+}
+
+
 use Proxmox::Install::ISOEnv;
 use Proxmox::Install::RunEnv;
+
+# init singletons
+my $iso_env = Proxmox::Install::ISOEnv::get();
+my $run_env = Proxmox::Install::RunEnv::get();
+
 use Proxmox::Install::StorageConfig;
 
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
@@ -32,18 +47,6 @@ use Proxmox::UI;
 if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
-
-{
-    my $test_image;
-    GetOptions(
-	'test-image|t=s' => \$test_image
-    ) or die "usage error\n";
-
-    Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
-}
-
-my $iso_env = Proxmox::Install::ISOEnv::get(); # init singleton
-my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
 
 my $proxmox_libdir = $iso_env->{locations}->{lib};
 my $proxmox_cddir = $iso_env->{locations}->{iso};

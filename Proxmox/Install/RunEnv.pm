@@ -265,4 +265,11 @@ sub query_installation_environment : prototype() {
     return $output;
 }
 
+my $_env = undef;
+sub get {
+    my ($k) = @_;
+    $_env = query_installation_environment() if !defined($_env);
+    return defined($k) ? $_env->{$k} : $_env;
+}
+
 1;

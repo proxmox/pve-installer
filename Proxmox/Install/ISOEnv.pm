@@ -149,8 +149,9 @@ sub setup {
 
 my $_env = undef;
 sub get {
+    my ($k) = @_;
     $_env = setup() if !defined($_env);
-    return $_env;
+    return defined($k) ? $_env->{$k} : $_env;
 }
 
 my $test_images;
