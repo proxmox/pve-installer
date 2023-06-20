@@ -580,6 +580,7 @@ sub extract_data {
     my ($use_zfs, $use_btrfs) = (0, 0);
 
     my $filesys = Proxmox::Install::Config::get_filesys();
+    my $hdsize = Proxmox::Install::Config::get_hdsize();
 
     my $zfs_pool_name = Proxmox::Install::StorageConfig::get_zfs_pool_name();
     my $zfs_root_volume_name = Proxmox::Install::StorageConfig::get_zfs_root_volume_name();
@@ -655,8 +656,7 @@ sub extract_data {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
 
-		my ($size, $osdev, $efidev) = partition_bootable_disk(
-		    $devname, $config_options->{hdsize}, '8300');
+		my ($size, $osdev, $efidev) = partition_bootable_disk($devname, $hdsize, '8300');
 		$rootdev = $osdev if !defined($rootdev); # simply point to first disk
 		my $by_id = Proxmox::Sys::Block::get_disk_by_id_path($devname);
 		push @$bootdevinfo, {
@@ -690,8 +690,7 @@ sub extract_data {
 		my $devname = @$hd[1];
 		my $logical_bsize = @$hd[4];
 
-		my ($size, $osdev, $efidev) =
-		    partition_bootable_disk($devname, $config_options->{hdsize}, 'BF01');
+		my ($size, $osdev, $efidev) = partition_bootable_disk($devname, $hdsize, 'BF01');
 
 		push @$bootdevinfo, {
 		    esp => $efidev,
@@ -733,8 +732,7 @@ sub extract_data {
 
 	    my $logical_bsize = Proxmox::Sys::Block::logical_blocksize($target_hd);
 
-	    my ($os_size, $osdev, $efidev) =
-	        partition_bootable_disk($target_hd, $config_options->{hdsize}, '8E00');
+	    my ($os_size, $osdev, $efidev) = partition_bootable_disk($target_hd, $hdsize, '8E00');
 
 	    Proxmox::Sys::Block::udevadm_trigger_block();
 
@@ -2135,7 +2133,7 @@ my $get_selected_hdsize = sub {
 	$hdsize = $disksize if $disksize < $hdsize;
     }
 
-    if (my $cfg_hdsize = $config_options->{hdsize}) {
+    if (my $cfg_hdsize = Proxmox::Install::Config::get_hdsize()) {
 	# had the dialog open previously and set an even lower size than the disk selection allows
 	$hdsize = $cfg_hdsize if $cfg_hdsize < $hdsize;
     }
@@ -2154,8 +2152,9 @@ my sub update_hdsize_adjustment {
 my sub create_hdsize_adjustment {
     my ($hdsize) = @_;
     $hdsize = $get_selected_hdsize->($hdsize);
+    my $cfg_hdsize = Proxmox::Install::Config::get_hdsize();
     # params are: initial value, lower, upper, step increment, page increment, page size
-    return Gtk3::Adjustment->new($config_options->{hdsize} || $hdsize, 0, $hdsize+1, 1, 1, 1);
+    return Gtk3::Adjustment->new($cfg_hdsize || $hdsize, 0, $hdsize+1, 1, 1, 1);
 }
 
 my sub get_hdsize_spin_button {
@@ -2517,9 +2516,9 @@ sub create_hdoption_view {
     my $tmp;
 
     if (($tmp = &$get_float($spinbutton_hdsize)) && ($tmp != $hdsize)) {
-	$config_options->{hdsize} = $tmp;
+	Proxmox::Install::Config::set_hdsize($tmp);
     } else {
-	delete $config_options->{hdsize};
+	Proxmox::Install::Config::set_hdsize(undef);
     }
 
     if (defined($tmp = &$get_float($entry_swapsize))) {
