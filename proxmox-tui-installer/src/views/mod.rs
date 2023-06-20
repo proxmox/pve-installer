@@ -153,7 +153,7 @@ impl DiskSizeEditView {
                 .with_view(|v| {
                     v.get_content()
                         .ok()
-                        .map(|val| (val * 1024. * 1024. * 1024.) as u64)
+                        .map(|val| (val) as u64)
                 })?
         })
         .flatten()
