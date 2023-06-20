@@ -534,7 +534,9 @@ sub prepare_grub_efi_boot_esp {
 }
 
 sub extract_data {
-    my ($basefile, $targetdir) = @_;
+    my $targetdir = is_test_mode() ? "target" : "/target";
+    mkdir $targetdir;
+    my $basefile = "${proxmox_cddir}/$iso_env->{product}-base.squashfs";
 
     die "target '$targetdir' does not exist\n" if ! -d  $targetdir;
 
@@ -2770,11 +2772,7 @@ sub create_extract_view {
 
     $gtk_state->{inbox}->show_all();
 
-    my $tdir = is_test_mode() ? "target" : "/target";
-    mkdir $tdir;
-    my $base = "${proxmox_cddir}/$iso_env->{product}-base.squashfs";
-
-    eval  { extract_data($base, $tdir); };
+    eval  { extract_data() };
     my $err = $@;
 
     $gtk_state->{next_btn}->set_sensitive(1);
