@@ -27,13 +27,12 @@ Proxmox::Log::init("/tmp/install.log");
 use Proxmox::Install::ISOEnv;
 use Proxmox::Install::RunEnv;
 
-# init singletons
+# init singletons TODO: avoid all global initialization, use single "main" method
 my $iso_env = Proxmox::Install::ISOEnv::get();
 my $run_env = Proxmox::Install::RunEnv::get();
 
 use Proxmox::Install;
 use Proxmox::Install::Config;
-use Proxmox::Install::StorageConfig;
 
 use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(syscmd);
@@ -91,7 +90,6 @@ my @steps = (
 my $gtk_state = {};
 
 my $target_hds; # only for the summary view
-my $autoreboot_seconds = 5;
 
 sub app_quit {
     my ($exit_code) = @_;
@@ -1624,6 +1622,7 @@ sub create_extract_view {
     set_next("_Reboot", sub { app_quit(0); } );
 
     my $autoreboot = Proxmox::Install::Config::get_autoreboot();
+    my $autoreboot_seconds = 5;
     my $success_transform = sub {
 	my ($raw_html, $iso_env) = @_;
 
