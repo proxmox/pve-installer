@@ -112,7 +112,6 @@ my $autoreboot_seconds = 5;
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    mngmt_nic => undef,
     hostname => $hostname,
     fqdn => undef,
     ipaddress => undef,
@@ -873,7 +872,7 @@ sub extract_data {
 
 	my $ntype = $ipversion == 4 ? 'inet' : 'inet6';
 
-	my $ethdev = $ipconf->{ifaces}->{$ipconf->{selected}}->{name};
+	my $ethdev = Proxmox::Install::Config::get_mngmt_nic();
 
 	if ($iso_env->{cfg}->{bridged_network}) {
 	    $ifaces .= "iface $ethdev $ntype manual\n";
@@ -1519,11 +1518,12 @@ sub create_ipconf_view {
 	my $current = shift;
 
 	my $new = $device_active_map->{$current->get_active()};
-	return if defined($ipconf->{selected}) && $new eq $ipconf->{selected};
+	my $selected = Proxmox::Install::Config::get_mngmt_nic_id();
+	return if defined($selected) && $new eq $selected;
 
-	$ipconf->{selected} = $new;
-	my $iface = $ipconf->{ifaces}->{$ipconf->{selected}};
-	$config->{mngmt_nic} = $iface->{name};
+	Proxmox::Install::Config::set_mngmt_nic_id($new);
+	my $iface = $ipconf->{ifaces}->{$new};
+	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
 	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
 	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
 	$ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
@@ -1544,7 +1544,7 @@ sub create_ipconf_view {
 	$i++;
     }
 
-    if (my $nic = $config->{mngmt_nic}) {
+    if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
 	$device_cb->set_active($device_active_reverse_map->{$nic} // 0);
     } else {
 	$device_cb->set_active(0);
@@ -1694,7 +1694,7 @@ sub create_ack_view {
 	__timezone__ => Proxmox::Install::Config::get_timezone(),
 	__keymap__ => Proxmox::Install::Config::get_keymap(),
 	__mailto__ => Proxmox::Install::Config::get_mailto(),
-	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
+	__interface__ =>  Proxmox::Install::Config::get_mngmt_nic(),
 	__hostname__ => $hostname,
 	__ip__ => $ipaddress,
 	__cidr__ => $cidr,

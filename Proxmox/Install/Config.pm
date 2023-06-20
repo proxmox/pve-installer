@@ -37,6 +37,10 @@ my sub init_cfg {
 	# root credentials & details
 	password => undef,
 	mailto => 'mail@example.invalid',
+
+	# network related
+	mngmt_nic => undef,
+	mngmt_nic_id => undef,
     };
 
     # TODO add disksel$i => undef entries
@@ -142,5 +146,11 @@ sub get_password { return get('password'); }
 
 sub set_mailto { set_key('mailto', $_[0]); }
 sub get_mailto { return get('mailto'); }
+
+sub set_mngmt_nic { set_key('mngmt_nic', $_[0]); }
+sub get_mngmt_nic { return get('mngmt_nic'); }
+
+sub set_mngmt_nic_id { set_key('mngmt_nic_id', $_[0]); }
+sub get_mngmt_nic_id { return get('mngmt_nic_id'); }
 
 1;
