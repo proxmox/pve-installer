@@ -322,9 +322,7 @@ impl From<&NetworkInfo> for NetworkOptions {
         let mut this = Self::default();
 
         if let Some(ip) = info.dns.dns.first() {
-            if let Ok(ip) = ip.parse() {
-                this.dns_server = ip;
-            }
+            this.dns_server = *ip;
         }
 
         if let Some(domain) = info.dns.domain.as_deref() {

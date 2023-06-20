@@ -261,7 +261,7 @@ pub struct Dns {
 
     /// List of stringified IP addresses.
     #[serde(default)]
-    pub dns: Vec<String>,
+    pub dns: Vec<IpAddr>,
 }
 
 #[derive(Clone, Deserialize)]
