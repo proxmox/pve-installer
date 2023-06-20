@@ -5,6 +5,12 @@ use warnings;
 
 use base qw(Proxmox::UI::Base);
 
+sub init {
+    my ($self) = @_;
+
+    STDOUT->autoflush(1);
+}
+
 sub message {
     my ($self, $msg) = @_;
 

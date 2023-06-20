@@ -17,7 +17,15 @@ sub new {
 	env => $env,
     }, $class;
 
+    $self->init();
+
     return $self;
+}
+
+sub init {
+    my ($self) = @_;
+
+    # optional
 }
 
 sub message {
