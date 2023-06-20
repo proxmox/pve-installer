@@ -25,12 +25,14 @@ use Proxmox::Install::RunEnv;
 use Proxmox::Sys::File qw(file_write_all);
 
 use Proxmox::Log;
+use Proxmox::Install;
 use Proxmox::Install::Config;
 use Proxmox::UI;
 
 my $commands = {
     'dump-env' => 'Dump the current ISO and Hardware environment to base the installer UI on.',
     'start-session' => 'Start an installation session, with command and result transmitted via stdin/out',
+    'start-session-test' => 'Start an installation TEST session, with command and result transmitted via stdin/out',
     'help' => 'Output this usage help.',
 };
 
@@ -84,8 +86,25 @@ if ($cmd eq 'dump-env') {
     Proxmox::UI::init_stdio({}, $env);
 
     my $config_raw;
-    while(my $line = <>) {
-	if ($line =~ /^\s*{/) {
+    while (my $line = <>) {
+	if ($line =~ /^\s*\{/) {
+	    $config_raw = $line;
+	    last;
+	}
+    }
+    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
+    die "failed to parse config from stdin - $@\n" if $@;
+
+    Proxmox::Install::Config::merge($config);
+    log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
+
+    Proxmox::Install::extract_data();
+} elsif ($cmd eq 'start-session-test') {
+    Proxmox::UI::init_stdio({}, $env);
+
+    my $config_raw;
+    while (my $line = <>) {
+	if ($line =~ /^\s*\{/) {
 	    $config_raw = $line;
 	    last;
 	}
