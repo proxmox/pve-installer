@@ -372,7 +372,8 @@ impl From<&NetworkInfo> for NetworkOptions {
         }
 
         if let Some(domain) = &info.dns.domain {
-            this.fqdn = domain.clone();
+            // FIXME: make product agnostic - use a global (lazy static) for ISO/RUN env info?
+            this.fqdn = Fqdn::from(&format!("pve.{}", domain)).unwrap_or_else(|_| domain.clone());
         }
 
         let mut filled = false;
