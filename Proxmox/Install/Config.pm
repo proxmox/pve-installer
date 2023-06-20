@@ -101,4 +101,7 @@ sub get_swapsize { return get('swapsize'); }
 sub set_maxroot { set_key('maxroot', $_[0]); }
 sub get_maxroot { return get('maxroot'); }
 
+sub set_minfree { set_key('minfree', $_[0]); }
+sub get_minfree { return get('minfree'); }
+
 1;

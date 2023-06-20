@@ -427,7 +427,7 @@ sub create_lvm_volumes {
 	$rest -= $rootsize; # in KB
 
 	my $minfree = $space;
-	if (defined(my $cfg_minfree = $config_options->{minfree})) {
+	if (defined(my $cfg_minfree = Proxmox::Install::Config::get_minfree())) {
 	    $minfree = $cfg_minfree * 1024 * 1024 >= $rest ? $space : $cfg_minfree * 1024 * 1024;
 	}
 
@@ -440,7 +440,8 @@ sub create_lvm_volumes {
 	$datasize = $rest;
 
     } else {
-	my $minfree = defined($config_options->{minfree}) ? $config_options->{minfree}*1024*1024 : $space;
+	my $cfg_minfree = Proxmox::Install::Config::get_minfree();
+	my $minfree = defined($cfg_minfree) ? $cfg_minfree * 1024 * 1024 : $space;
 	$rootsize = int($os_size - $minfree - $swap_size); # in KB
 	$rootsize &= ~0xFFF; # align down to 4 MB boundaries
     }
@@ -2413,7 +2414,9 @@ sub create_hdoption_view {
     my $entry_minfree = Gtk3::Entry->new();
     $entry_minfree->set_tooltip_text("minimum free LVM space (GB, required for LVM snapshots)");
     $entry_minfree->signal_connect (key_press_event => \&check_float);
-    $entry_minfree->set_text($config_options->{minfree}) if defined($config_options->{minfree});
+    if (defined(my $minfree = Proxmox::Install::Config::get_minfree())) {
+	$entry_minfree->set_text($minfree);
+    }
     push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
 
     my $entry_maxvz;
@@ -2537,9 +2540,9 @@ sub create_hdoption_view {
     }
 
     if (defined($tmp = &$get_float($entry_minfree))) {
-	$config_options->{minfree} = $tmp;
+	Proxmox::Install::Config::set_minfree($tmp);
     } else {
-	delete $config_options->{minfree};
+	Proxmox::Install::Config::set_minfree(undef);
     }
 
     if ($entry_maxvz && defined($tmp = &$get_float($entry_maxvz))) {
