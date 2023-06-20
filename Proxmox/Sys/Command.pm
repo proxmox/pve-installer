@@ -4,14 +4,15 @@ use strict;
 use warnings;
 
 use Carp;
-use Gtk3 qw(); # FIXME: drop once possible (when (G)UI plugin approacg is there)
 use IO::File;
 use IPC::Open3;
 use IO::Select;
 use String::ShellQuote;
+use POSIX ":sys_wait_h";
 
 use Proxmox::Install::ISOEnv;
 use Proxmox::Log;
+use Proxmox::UI;
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(run_command syscmd);
@@ -94,7 +95,7 @@ sub run_command {
     while ($select->count) {
 	my @handles = $select->can_read (0.2);
 
-	Gtk3::main_iteration() while Gtk3::events_pending();
+	Proxmox::UI::process_events();
 
 	next if !scalar (@handles); # timeout
 
