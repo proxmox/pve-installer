@@ -104,4 +104,7 @@ sub get_maxroot { return get('maxroot'); }
 sub set_minfree { set_key('minfree', $_[0]); }
 sub get_minfree { return get('minfree'); }
 
+sub set_maxvz { set_key('maxvz', $_[0]); }
+sub get_maxvz { return get('maxvz'); }
+
 1;

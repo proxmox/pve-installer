@@ -433,7 +433,7 @@ sub create_lvm_volumes {
 
 	$rest = int($rest - $minfree) & ~0xFFF; # align down to 4 MB boundaries
 
-	if (defined(my $maxvz = $config_options->{maxvz})) {
+	if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
 	    $rest = $maxvz * 1024 * 1024 <= $rest ? $maxvz * 1024 * 1024 : $rest;
 	}
 
@@ -473,7 +473,8 @@ sub create_lvm_volumes {
 	syscmd("/sbin/lvconvert --yes --type thin-pool --poolmetadatasize ${metadatasize}K $vgname/data") == 0 ||
 	    die "unable to create data thin-pool\n";
     } else {
-	if ($iso_env->{product} eq 'pve' && !defined($config_options->{maxvz})) {
+	my $maxvz = Proxmox::Install::Config::get_maxvz();
+	if ($iso_env->{product} eq 'pve' && !defined($maxvz)) {
 	    Proxmox::UI::message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
 	}
 	$datadev = undef;
@@ -2424,7 +2425,9 @@ sub create_hdoption_view {
 	$entry_maxvz = Gtk3::Entry->new();
 	$entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
 	$entry_maxvz->signal_connect (key_press_event => \&check_float);
-	$entry_maxvz->set_text($config_options->{maxvz}) if defined($config_options->{maxvz});
+	if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
+	    $entry_maxvz->set_text($maxvz);
+	}
 	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
     }
 
@@ -2546,9 +2549,9 @@ sub create_hdoption_view {
     }
 
     if ($entry_maxvz && defined($tmp = &$get_float($entry_maxvz))) {
-	$config_options->{maxvz} = $tmp;
+	Proxmox::Install::Config::set_maxvz($tmp);
     } else {
-	delete $config_options->{maxvz};
+	Proxmox::Install::Config::set_maxvz(undef);
     }
 
     $dialog->destroy();
