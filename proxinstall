@@ -15,6 +15,7 @@ use File::Basename;
 use File::Path;
 use Time::HiRes;
 use POSIX ":sys_wait_h";
+use JSON;
 
 use Proxmox::Log;
 Proxmox::Log::init("/tmp/install.log");
@@ -1678,6 +1679,15 @@ sub create_ack_view {
     while (my ($k, $v) = each %config_values) {
 	$html_data =~ s/$k/$v/g;
     }
+
+    eval {
+	my $config = Proxmox::Install::Config::get();
+	file_write_all(
+	    "$iso_env->{locations}->{run}/config-ack.json",
+	    to_json($config, { utf8 => 1, canonical => 1 }) ."\n",
+	);
+    };
+    warn "failed to write config-for-ack -  $@" if $@;
 
     file_write_all($ack_html, $html_data);
 

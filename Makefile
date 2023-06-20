@@ -118,6 +118,7 @@ upload: $(DEB)
 prepare-check-env: test-$(DEB)
 	rm -rf testdir
 	dpkg -X test-$(DEB) testdir
+	mkdir -p testdir/run/proxmox-installer/
 
 cd-info.test: PRODUCT ?= pve
 cd-info.test:
