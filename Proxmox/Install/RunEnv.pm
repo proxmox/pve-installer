@@ -9,6 +9,7 @@ use JSON qw(from_json to_json);
 use Proxmox::Log;
 use Proxmox::Sys::File qw(file_read_firstline);
 use Proxmox::Sys::Block;
+use Proxmox::Sys::Net;
 
 my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
@@ -221,6 +222,10 @@ sub query_installation_environment : prototype() {
 	routes => $routes,
 	dns => query_dns(),
     };
+    # FIXME: move whatever makes sense over to Proxmox::Sys::Net:: and keep that as single source,
+    # it can then use some different structure just fine (after adapting the GTK GUI to that) but
+    # **never** to (slightly different!) things for the same stuff...
+    $output->{ipconf} = Proxmox::Sys::Net::get_ip_config();
 
     $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();

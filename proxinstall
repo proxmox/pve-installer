@@ -99,7 +99,6 @@ my @steps = (
 # GUI global variables
 my $gtk_state = {};
 
-my $ipconf;
 my $target_hds; # only for the summary view
 my $autoreboot_seconds = 5;
 
@@ -874,6 +873,7 @@ sub extract_data {
 		"\tgateway $gateway\n";
 	}
 
+	my $ipconf = $run_env->{ipconf};
 	foreach my $iface (sort keys %{$ipconf->{ifaces}}) {
 	    my $name = $ipconf->{ifaces}->{$iface}->{name};
 	    next if $name eq $ethdev;
@@ -1495,8 +1495,9 @@ sub create_ipconf_view {
 	return "$iface->{name} - $iface->{mac} ($iface->{driver})";
     };
 
-    my $device_active_map = {};
-    my $device_active_reverse_map = {};
+    my $ipconf = $run_env->{ipconf};
+
+    my ($device_active_map, $device_active_reverse_map) = ({}, {});
 
     my $device_change_handler = sub {
 	my $current = shift;
@@ -1515,10 +1516,11 @@ sub create_ipconf_view {
     };
 
     my $i = 0;
-    foreach my $index (sort keys %{$ipconf->{ifaces}}) {
-	$device_cb->append_text(&$get_device_desc($ipconf->{ifaces}->{$index}));
+    for my $index (sort keys $ipconf->{ifaces}->%*) {
+	my $iface = $ipconf->{ifaces}->{$index};
+	$device_cb->append_text($get_device_desc->($iface));
 	$device_active_map->{$i} = $index;
-	$device_active_reverse_map->{$ipconf->{ifaces}->{$index}->{name}} = $i;
+	$device_active_reverse_map->{$iface->{name}} = $i;
 	if ($ipconf_first_view && $index == $ipconf->{default}) {
 	    $device_cb->set_active($i);
 	    &$device_change_handler($device_cb);
@@ -2856,8 +2858,6 @@ sub create_intro_view {
     set_next("I a_gree", \&create_hdsel_view);
 }
 
-$ipconf = Proxmox::Sys::Net::get_ip_config();
-
 Gtk3::init();
 
 create_main_window ();
@@ -2880,7 +2880,7 @@ my $initial_error = 0;
     }
 }
 
-if (!$initial_error && (scalar keys %{ $ipconf->{ifaces} } == 0)) {
+if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
     print STDERR "no network interfaces found\n";
     $initial_error = 1;
     Proxmox::UI::display_html("nonics.htm");

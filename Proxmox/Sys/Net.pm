@@ -124,7 +124,6 @@ sub parse_ip_mask {
 }
 
 sub get_ip_config {
-
     my $ifaces = {};
     my $default;
 
