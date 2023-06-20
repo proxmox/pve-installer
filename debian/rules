@@ -3,6 +3,7 @@
 # output every command that modifies files on the build system.
 #DH_VERBOSE = 1
 
+export BUILD_MODE=release
 
 %:
 	dh $@
