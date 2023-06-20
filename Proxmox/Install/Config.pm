@@ -95,4 +95,7 @@ sub get_filesys { return get('filesys'); }
 sub set_hdsize { set_key('hdsize', $_[0]); }
 sub get_hdsize { return get('hdsize'); }
 
+sub set_swapsize { set_key('swapsize', $_[0]); }
+sub get_swapsize { return get('swapsize'); }
+
 1;

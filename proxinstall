@@ -490,8 +490,8 @@ sub compute_swapsize {
     my $hdgb = int($hdsize/(1024*1024));
 
     my $swapsize_kb;
-    if (defined($config_options->{swapsize})) {
-	$swapsize_kb = $config_options->{swapsize} * 1024 * 1024;
+    if (defined(my $swapsize = Proxmox::Install::Config::get_swapsize())) {
+	$swapsize_kb = $swapsize * 1024 * 1024;
     } else {
 	my $ss = int($run_env->{total_memory});
 	$ss = 4096 if $ss < 4096 && $hdgb >= 64;
@@ -2396,7 +2396,8 @@ sub create_hdoption_view {
     my $entry_swapsize = Gtk3::Entry->new();
     $entry_swapsize->set_tooltip_text("maximum SWAP size (GB)");
     $entry_swapsize->signal_connect (key_press_event => \&check_float);
-    $entry_swapsize->set_text($config_options->{swapsize}) if defined($config_options->{swapsize});
+    my $swapsize = Proxmox::Install::Config::get_swapsize();
+    $entry_swapsize->set_text($swapsize) if defined($swapsize);
     push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
 
     my $entry_maxroot = Gtk3::Entry->new();
@@ -2522,9 +2523,9 @@ sub create_hdoption_view {
     }
 
     if (defined($tmp = &$get_float($entry_swapsize))) {
-	$config_options->{swapsize} = $tmp;
+	Proxmox::Install::Config::set_swapsize($tmp);
     } else {
-	delete $config_options->{swapsize};
+	Proxmox::Install::Config::set_swapsize(undef);
     }
 
     if (defined($tmp = &$get_float($entry_maxroot))) {
