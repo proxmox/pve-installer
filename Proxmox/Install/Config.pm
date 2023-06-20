@@ -50,6 +50,8 @@ my sub init_cfg {
 
 	# network related
 	mngmt_nic => undef,
+	# FIXME: fix call sites and remove below, it's just an ugly relict of GTK GUI and time
+	# pressure on creating the single source of truth for installation config
 	mngmt_nic_id => undef,
 	hostname => 'proxmox',
 	domain => 'example.invalid',
