@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Encode;
 use Getopt::Long;
 use IO::File;
 use Glib;
