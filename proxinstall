@@ -107,14 +107,11 @@ my ($dnsserver, $ipconf_entry_dns);
 my $hostname = 'proxmox';
 my $domain = 'domain.tld';
 my $ipconf;
-my $mailto = 'mail@example.invalid';
 my $autoreboot_seconds = 5;
 
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    mailto => $mailto,
-
     mngmt_nic => undef,
     hostname => $hostname,
     fqdn => undef,
@@ -1164,6 +1161,7 @@ _EOD
 	my $octets = encode("utf-8", Proxmox::Install::Config::get_password());
 	run_command("chroot $targetdir /usr/sbin/chpasswd", undef, "root:$octets\n");
 
+	my $mailto = Proxmox::Install::Config::get_mailto();
 	if ($iso_env->{product} eq 'pmg') {
 	    # save admin email
 	    file_write_all("$targetdir/etc/pmg/pmg.conf", "section: admin\n\temail ${mailto}\n");
@@ -1695,7 +1693,7 @@ sub create_ack_view {
 	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
 	__timezone__ => Proxmox::Install::Config::get_timezone(),
 	__keymap__ => Proxmox::Install::Config::get_keymap(),
-	__mailto__ => $mailto,
+	__mailto__ => Proxmox::Install::Config::get_mailto(),
 	__interface__ => $ipconf->{ifaces}->{$ipconf->{selected}}->{name},
 	__hostname__ => $hostname,
 	__ip__ => $ipaddress,
@@ -1850,7 +1848,7 @@ sub create_password_view {
     $hbox3->pack_start($label, 0, 0, 10);
     my $eme = Gtk3::Entry->new();
     $eme->set_size_request(200, -1);
-    $eme->set_text($mailto);
+    $eme->set_text(Proxmox::Install::Config::get_mailto());
     $hbox3->pack_start($eme, 0, 0, 0);
 
 
@@ -1881,8 +1879,7 @@ sub create_password_view {
 
 	my $t3 = $eme->get_text;
 	if ($t3 !~ m/^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$/) {
-	    Proxmox::UI::message("Email does not look like a valid address" .
-			     " (user\@domain.tld)");
+	    Proxmox::UI::message("Email does not look like a valid address (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
 	}
@@ -1894,7 +1891,7 @@ sub create_password_view {
 	}
 
 	Proxmox::Install::Config::set_password($t1);
-	$mailto = $t3;
+	Proxmox::Install::Config::set_mailto($t3);
 
 	$step_number++;
 	create_ipconf_view();

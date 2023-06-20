@@ -36,6 +36,7 @@ my sub init_cfg {
 
 	# root credentials & details
 	password => undef,
+	mailto => 'mail@example.invalid',
     };
 
     # TODO add disksel$i => undef entries
@@ -138,5 +139,8 @@ sub get_keymap { return get('keymap'); }
 
 sub set_password { set_key('password', $_[0]); }
 sub get_password { return get('password'); }
+
+sub set_mailto { set_key('mailto', $_[0]); }
+sub get_mailto { return get('mailto'); }
 
 1;
