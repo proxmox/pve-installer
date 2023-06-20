@@ -103,8 +103,6 @@ my $ipconf;
 my $target_hds; # only for the summary view
 my $autoreboot_seconds = 5;
 
-my $config_options = Proxmox::Install::Config::parse_kernel_cmdline();
-
 my $postfix_main_cf = <<_EOD;
 # See /usr/share/postfix/main.cf.dist for a commented, more complete version
 

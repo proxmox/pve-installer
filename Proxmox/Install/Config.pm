@@ -9,6 +9,42 @@ use JSON qw(from_json to_json);
 use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Net;
 
+my sub parse_kernel_cmdline {
+    my ($cfg) = @_;
+
+    my $cmdline = Proxmox::Install::RunEnv::get('kernel_cmdline');
+
+    if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
+	$cfg->{filesys} = $1;
+    }
+
+    if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
+	$cfg->{hdsize} = $1;
+    }
+
+    if ($cmdline =~ m/swapsize=(\d+(\.\d+)?)[\s\n]/i) {
+	$cfg->{swapsize} = $1;
+    }
+
+    if ($cmdline =~ m/maxroot=(\d+(\.\d+)?)[\s\n]/i) {
+	$cfg->{maxroot} = $1;
+    }
+
+    if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
+	$cfg->{minfree} = $1;
+    }
+
+    my $iso_env = Proxmox::Install::ISOEnv::get();
+    if ($iso_env->{product} eq 'pve') {
+	if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
+	    $cfg->{maxvz} = $1;
+	}
+    }
+
+    return $cfg;
+}
+
+
 my sub init_cfg {
     my $iso_env = Proxmox::Install::ISOEnv::get();
 
@@ -60,6 +96,8 @@ my sub init_cfg {
 	dns => undef,
     };
 
+    $initial = parse_kernel_cmdline($initial);
+
     return $initial;
 }
 
@@ -89,41 +127,6 @@ sub set_key {
     my $cfg = get();
     croak "unknown key '$k'" if !exists($cfg->{$k});
     $cfg->{$k} = $v;
-}
-
-sub parse_kernel_cmdline {
-    my $cfg = get();
-
-    my $cmdline = Proxmox::Install::RunEnv::get('kernel_cmdline');
-
-    if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
-	$cfg->{filesys} = $1;
-    }
-
-    if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
-	$cfg->{hdsize} = $1;
-    }
-
-    if ($cmdline =~ m/swapsize=(\d+(\.\d+)?)[\s\n]/i) {
-	$cfg->{swapsize} = $1;
-    }
-
-    if ($cmdline =~ m/maxroot=(\d+(\.\d+)?)[\s\n]/i) {
-	$cfg->{maxroot} = $1;
-    }
-
-    if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
-	$cfg->{minfree} = $1;
-    }
-
-    my $iso_env = Proxmox::Install::ISOEnv::get();
-    if ($iso_env->{product} eq 'pve') {
-	if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
-	    $cfg->{maxvz} = $1;
-	}
-    }
-
-    return $cfg;
 }
 
 sub set_autoreboot { set_key('autoreboot', $_[0]); }
