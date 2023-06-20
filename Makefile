@@ -160,7 +160,7 @@ check-pbs: prepare-check-env test.img
 
 .phony: clean
 clean:
-	rm -rf target build $(PACKAGE)-[0-9]*
+	rm -rf target build $(PACKAGE)-[0-9]* testdir
 	rm -f $(PACKAGE)*.tar* *.deb packages packages.tmp *.build *.dsc *.buildinfo *.changes
-	rm -f testdir test*.img pve-final.pkglist country.dat final.pkglist cd-info.test
+	rm -f test*.img pve-final.pkglist country.dat final.pkglist cd-info.test
 	find . -name '*~' -exec rm {} ';'
