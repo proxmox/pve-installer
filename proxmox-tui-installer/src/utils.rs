@@ -56,6 +56,16 @@ impl CidrAddress {
         self.addr
     }
 
+    /// Returns `true` if this address is an IPv4 address, `false` otherwise.
+    pub fn is_ipv4(&self) -> bool {
+        self.addr.is_ipv4()
+    }
+
+    /// Returns `true` if this address is an IPv6 address, `false` otherwise.
+    pub fn is_ipv6(&self) -> bool {
+        self.addr.is_ipv4()
+    }
+
     /// Returns only the mask part of the address.
     pub fn mask(&self) -> usize {
         self.mask

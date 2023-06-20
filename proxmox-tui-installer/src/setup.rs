@@ -1,6 +1,6 @@
 use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
 
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     options::{BtrfsRaidLevel, Disk, FsType, InstallerOptions, ZfsRaidLevel},
@@ -153,6 +153,35 @@ where
     Ok(result)
 }
 
+fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct CidrDescriptor {
+        address: String,
+        prefix: usize,
+        // family is implied anyway by parsing the address
+    }
+
+    let list: Vec<CidrDescriptor> = Deserialize::deserialize(deserializer)?;
+
+    let mut result = Vec::with_capacity(list.len());
+    for desc in list {
+        let ip_addr = desc
+            .address
+            .parse::<IpAddr>()
+            .map_err(|err| de::Error::custom(format!("{:?}", err)))?;
+
+        result.push(
+            CidrAddress::new(ip_addr, desc.prefix)
+                .map_err(|err| de::Error::custom(format!("{:?}", err)))?,
+        );
+    }
+
+    Ok(result)
+}
+
 fn serialize_target_disk_list<S>(value: &[Disk], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -262,24 +291,6 @@ pub struct Interface {
     pub mac: String,
 
     /// This always has at least 1 usable address.
-    pub addresses: Vec<Address>,
-}
-
-#[derive(Clone, Deserialize)]
-pub struct Address {
-    pub family: AddrFamily,
-
-    pub prefix: u32,
-
-    /// Stringified IP address.
-    pub address: String,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Deserialize)]
-pub enum AddrFamily {
-    #[serde(rename = "inet")]
-    Ipv4,
-
-    #[serde(rename = "inet6")]
-    Ipv6,
+    #[serde(deserialize_with = "deserialize_cidr_list")]
+    pub addresses: Vec<CidrAddress>,
 }

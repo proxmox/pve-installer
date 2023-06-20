@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use proxmox_sys::linux::procfs;
 
-use crate::setup::{AddrFamily, LocaleInfo};
+use crate::setup::{LocaleInfo, NetworkInfo};
 use crate::utils::{CidrAddress, Fqdn};
 use crate::SummaryOption;
 
@@ -317,8 +317,8 @@ impl Default for NetworkOptions {
     }
 }
 
-impl From<&crate::setup::NetworkInfo> for NetworkOptions {
-    fn from(info: &crate::setup::NetworkInfo) -> Self {
+impl From<&NetworkInfo> for NetworkOptions {
+    fn from(info: &NetworkInfo) -> Self {
         let mut this = Self::default();
 
         if let Some(ip) = info.dns.dns.first() {
@@ -337,19 +337,11 @@ impl From<&crate::setup::NetworkInfo> for NetworkOptions {
         if let Some(gw) = &info.routes.gateway4 {
             if let Ok(gwip) = gw.gateway.parse() {
                 if let Some(iface) = info.interfaces.get(&gw.dev) {
-                    if let Some(addr) = iface
-                        .addresses
-                        .iter()
-                        .find(|addr| addr.family == AddrFamily::Ipv4)
-                    {
-                        if let Ok(ip) = addr.address.parse::<Ipv4Addr>() {
-                            if let Ok(address) = CidrAddress::new(ip, addr.prefix as usize) {
-                                this.ifname = iface.name.clone();
-                                this.gateway = gwip;
-                                this.address = address;
-                                filled = true;
-                            }
-                        }
+                    if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
+                        this.ifname = iface.name.clone();
+                        this.gateway = gwip;
+                        this.address = addr.clone();
+                        filled = true;
                     }
                 }
             }
@@ -358,18 +350,10 @@ impl From<&crate::setup::NetworkInfo> for NetworkOptions {
             if let Some(gw) = &info.routes.gateway6 {
                 if let Ok(gwip) = gw.gateway.parse() {
                     if let Some(iface) = info.interfaces.get(&gw.dev) {
-                        if let Some(addr) = iface
-                            .addresses
-                            .iter()
-                            .find(|addr| addr.family == AddrFamily::Ipv6)
-                        {
-                            if let Ok(ip) = addr.address.parse::<Ipv4Addr>() {
-                                if let Ok(address) = CidrAddress::new(ip, addr.prefix as usize) {
-                                    this.ifname = iface.name.clone();
-                                    this.gateway = gwip;
-                                    this.address = address;
-                                }
-                            }
+                        if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
+                            this.ifname = iface.name.clone();
+                            this.gateway = gwip;
+                            this.address = addr.clone();
                         }
                     }
                 }
