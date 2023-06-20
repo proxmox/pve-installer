@@ -1,3 +1,9 @@
+proxmox-installer (8.0.4) bookworm; urgency=medium
+
+  * re-add Encode module for decoding EULA in GTK installer
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 20 Jun 2023 22:02:57 +0200
+
 proxmox-installer (8.0.3) bookworm; urgency=medium
 
   * switch to native versioning
