@@ -4,16 +4,10 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use IPC::Open2;
 use IO::File;
-use Cwd 'abs_path';
 use Glib;
 use Gtk3;
 use Gtk3::WebKit2;
-use Encode;
-use File::Basename;
-use File::Path;
-use Time::HiRes;
 use POSIX ":sys_wait_h";
 use JSON;
 
@@ -41,9 +35,9 @@ use Proxmox::Install;
 use Proxmox::Install::Config;
 use Proxmox::Install::StorageConfig;
 
-use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
-use Proxmox::Sys::Command qw(run_command syscmd);
-use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
+use Proxmox::Sys::Block qw(get_cached_disks);
+use Proxmox::Sys::Command qw(syscmd);
+use Proxmox::Sys::File qw(file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
 use Proxmox::UI;
 
@@ -792,7 +786,7 @@ sub create_country_view {
 	    $installer_kmap = $kmap;
 
 	    if (!is_test_mode()) {
-		syscmd ("setxkbmap $xkmap $xvar");
+		syscmd("setxkbmap $xkmap $xvar");
 
 		my $kbd_config = qq{
 		    XKBLAYOUT="$xkmap"
