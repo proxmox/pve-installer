@@ -183,14 +183,14 @@ impl From<InstallerOptions> for InstallConfig {
                 config.zfs_opts = Some(zfs.clone().into());
 
                 for disk in &options.bootdisk.disks {
-                    config.disk_selection.insert(disk.path.clone(), 1);
+                    config.disk_selection.insert(disk.index.clone(), 1);
                 }
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
                 config.hdsize = btrfs.disk_size;
 
                 for disk in &options.bootdisk.disks {
-                    config.disk_selection.insert(disk.path.clone(), 1);
+                    config.disk_selection.insert(disk.index.clone(), 1);
                 }
             }
         }
@@ -238,7 +238,8 @@ where
     Ok(disks
         .into_iter()
         .map(
-            |(_index, device, size_mb, model, logical_bsize, _syspath)| Disk {
+            |(index, device, size_mb, model, logical_bsize, _syspath)| Disk {
+                index: index.to_string(),
                 size: size_mb * logical_bsize,
                 path: device,
                 model: (!model.is_empty()).then_some(model),

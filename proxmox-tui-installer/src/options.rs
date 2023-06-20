@@ -221,6 +221,7 @@ pub enum AdvancedBootdiskOptions {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Disk {
+    pub index: String,
     pub path: String,
     pub model: Option<String>,
     pub size: u64,
@@ -251,13 +252,13 @@ impl From<&Disk> for String {
 
 impl cmp::PartialOrd for Disk {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.path.partial_cmp(&other.path)
+        self.index.partial_cmp(&other.index)
     }
 }
 
 impl cmp::Ord for Disk {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.path.cmp(&other.path)
+        self.index.cmp(&other.index)
     }
 }
 
