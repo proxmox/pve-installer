@@ -650,7 +650,14 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
         LinearLayout::vertical()
             .child(PaddedView::lrtb(1, 1, 0, 0, progress_bar))
             .child(DummyView)
-            .child(TextView::new_with_content(progress_text).center()),
+            .child(TextView::new_with_content(progress_text).center())
+            .child(PaddedView::lrtb(
+                1,
+                1,
+                1,
+                0,
+                LinearLayout::horizontal().child(abort_install_button()),
+            )),
     );
 
     InstallerView::with_raw(state, inner)
