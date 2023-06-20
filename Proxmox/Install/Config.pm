@@ -41,6 +41,8 @@ my sub init_cfg {
 	# network related
 	mngmt_nic => undef,
 	mngmt_nic_id => undef,
+	hostname => 'proxmox',
+	domain => 'example.invalid',
     };
 
     # TODO add disksel$i => undef entries
@@ -152,5 +154,16 @@ sub get_mngmt_nic { return get('mngmt_nic'); }
 
 sub set_mngmt_nic_id { set_key('mngmt_nic_id', $_[0]); }
 sub get_mngmt_nic_id { return get('mngmt_nic_id'); }
+
+sub set_hostname { set_key('hostname', $_[0]); }
+sub get_hostname { return get('hostname'); }
+
+sub set_domain { set_key('domain', $_[0]); }
+sub get_domain { return get('domain'); }
+
+sub get_fqdn { # virtual config
+    my ($hostname, $domain) = (get('hostname'), get('domain'));
+    return defined($hostname) && defined($domain) ? "${hostname}.${domain}" : undef;
+}
 
 1;

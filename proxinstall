@@ -104,16 +104,12 @@ my ($ipversion, $ipaddress, $cidr, $ipconf_entry_addr);
 my ($netmask, $ipconf_entry_mask);
 my ($gateway, $ipconf_entry_gw);
 my ($dnsserver, $ipconf_entry_dns);
-my $hostname = 'proxmox';
-my $domain = 'domain.tld';
 my $ipconf;
 my $autoreboot_seconds = 5;
 
 # TODO: single source of config state
 my $config = {
     # TODO: add all the user-provided options for previous button
-    hostname => $hostname,
-    fqdn => undef,
     ipaddress => undef,
     netmask => undef,
     gateway => undef,
@@ -848,6 +844,8 @@ sub extract_data {
 	update_progress(1, $maxper, 0.5, "configuring base system");
 
 	# configure hosts
+	my $hostname = Proxmox::Install::Config::get_hostname();
+	my $domain = Proxmox::Install::Config::get_domain();
 
 	my $hosts =
 	    "127.0.0.1 localhost.localdomain localhost\n" .
@@ -1559,7 +1557,8 @@ sub create_ipconf_view {
 
     $vbox->pack_start($devicebox, 0, 0, 2);
 
-    my $hn = $config->{fqdn} // "$iso_env->{product}." . ($ipconf->{domain} // "example.invalid");
+    my $fqdn = Proxmox::Install::Config::get_fqdn();
+    my $hn = $fqdn // "$iso_env->{product}." . ($ipconf->{domain} // "example.invalid");
 
     my ($hostbox, $hostentry) = create_text_input($hn, 'Hostname (FQDN):');
     $vbox->pack_start($hostbox, 0, 0, 2);
@@ -1584,15 +1583,10 @@ sub create_ipconf_view {
 
     $gtk_state->{inbox}->show_all;
     set_next(undef, sub {
-
 	# verify hostname
-
 	my $text = $hostentry->get_text();
-
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
-
-	$config->{fqdn} = $text;
 
 	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
 
@@ -1605,8 +1599,8 @@ sub create_ipconf_view {
 
 	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.example.invalid$/ &&
 	    $text =~ m/^([^\.]+)\.(\S+)$/) {
-	    $hostname = $1;
-	    $domain = $2;
+	    Proxmox::Install::Config::set_hostname($1);
+	    Proxmox::Install::Config::set_domain($2);
 	} else {
 	    Proxmox::UI::message("Hostname does not look like a fully qualified domain name.");
 	    $hostentry->grab_focus();
@@ -1695,7 +1689,7 @@ sub create_ack_view {
 	__keymap__ => Proxmox::Install::Config::get_keymap(),
 	__mailto__ => Proxmox::Install::Config::get_mailto(),
 	__interface__ =>  Proxmox::Install::Config::get_mngmt_nic(),
-	__hostname__ => $hostname,
+	__hostname__ => Proxmox::Install::Config::get_hostname(),
 	__ip__ => $ipaddress,
 	__cidr__ => $cidr,
 	__netmask__ => $netmask,
