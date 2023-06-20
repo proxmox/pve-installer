@@ -473,4 +473,5 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
         }
     })
     .with_name("advanced-bootdisk-options-dialog")
+    .max_size((120, 40))
 }
