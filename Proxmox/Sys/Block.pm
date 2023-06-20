@@ -50,12 +50,15 @@ sub get_dev_uuid {
     return basename($by_uuid_path);
 }
 
+# [
+#     [ <index>, "/dev/path", size_in_blocks, "model", logical_blocksize, <name as found in /sys/block> ]
+# ]
 my sub hd_list {
     if (is_test_mode()) {
 	my $disks = Proxmox::Install::ISOEnv::get_test_images();
 
 	return [
-	    map { [ -1, $_, int((-s $_)/512), "TESTDISK", 512] } $disks->@*
+	    map { [ 0, $_, int((-s $_)/512), "TESTDISK", 512, "/sys/block/$_"] } $disks->@*
 	];
     }
 
@@ -69,43 +72,41 @@ my sub hd_list {
 	next if $bd =~ m|^/sys/block/fd\d+$|;
 	next if $bd =~ m|^/sys/block/sr\d+$|;
 
-	my $dev = file_read_firstline("$bd/dev");
-	chomp $dev;
-
-	next if !$dev;
-
 	my $info = `udevadm info --path $bd --query all`;
 	next if !$info;
-
 	next if $info !~ m/^E: DEVTYPE=disk$/m;
-
 	next if $info =~ m/^E: ID_CDROM/m;
 	next if $info =~ m/^E: ID_FS_TYPE=iso9660/m;
 
 	my ($name) = $info =~ m/^N: (\S+)$/m;
+	next if !$name;
 
-	if ($name) {
-	    my $real_name = "/dev/$name";
-
-	    my $size = file_read_firstline("$bd/size");
-	    chomp $size;
-	    $size = undef if !($size && $size =~ m/^\d+$/);
-
-	    my $model = file_read_firstline("$bd/device/model") || '';
-	    $model =~ s/^\s+//;
-	    $model =~ s/\s+$//;
-	    if (length ($model) > 30) {
-		$model = substr ($model, 0, 30);
-	    }
-
-	    my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
-	    chomp $logical_bsize;
-	    $logical_bsize = undef if !($logical_bsize && $logical_bsize =~ m/^\d+$/);
-
-	    push @$res, [$count++, $real_name, $size, $model, $logical_bsize] if $size;
+	my $dev_path;
+	if ($info =~ m/^E: DEVNAME=(\S+)$/m) {
+	    $dev_path = $1;
 	} else {
-	    print STDERR "ERROR: unable to map device $dev ($bd)\n";
+	    $dev_path = "/dev/$name";
 	}
+
+	my $size = file_read_firstline("$bd/size");
+	chomp $size;
+	$size = undef if !($size && $size =~ m/^\d+$/);
+	$size = int($size);
+	next if !$size;
+
+	my $model = file_read_firstline("$bd/device/model") || '';
+	$model =~ s/^\s+//;
+	$model =~ s/\s+$//;
+	if (length ($model) > 30) {
+	    $model = substr ($model, 0, 30);
+	}
+
+	my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
+	chomp $logical_bsize;
+	$logical_bsize = undef if !($logical_bsize && $logical_bsize =~ m/^\d+$/);
+	$logical_bsize = int($logical_bsize);
+
+	push @$res, [$count++, $dev_path, $size, $model, $logical_bsize, "/sys/block/$name"];
     }
 
     return $res;
