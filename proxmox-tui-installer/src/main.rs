@@ -213,7 +213,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
         setup::read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
     };
 
-    let runtime_info: RuntimeInfo = {
+    let mut runtime_info: RuntimeInfo = {
         let mut path = path.clone();
         path.push("run-env-info.json");
 
@@ -223,6 +223,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
 
     system::has_min_requirements(&runtime_info)?;
 
+    runtime_info.disks.sort();
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
     } else {
