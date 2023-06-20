@@ -282,13 +282,22 @@ fn yes_no_dialog(
     siv: &mut Cursive,
     title: &str,
     text: &str,
-    callback: &'static dyn Fn(&mut Cursive),
+    // callback_yes: &'static dyn Fn(&mut Cursive),
+    // callback_no: &'static dyn Fn(&mut Cursive),
+    callback_yes: Box<dyn Fn(&mut Cursive)>,
+    callback_no: Box<dyn Fn(&mut Cursive)>,
 ) {
     siv.add_layer(
         Dialog::around(TextView::new(text))
             .title(title)
-            .dismiss_button("No")
-            .button("Yes", callback),
+            .button("No", move |siv| {
+                siv.pop_layer();
+                callback_no(siv);
+            })
+            .button("Yes", move |siv| {
+                siv.pop_layer();
+                callback_yes(siv);
+            }),
     )
 }
 
@@ -301,7 +310,8 @@ fn trigger_abort_install_dialog(siv: &mut Cursive) {
         siv,
         "Abort installation?",
         "Are you sure you want to abort the installation?",
-        &Cursive::quit,
+        Box::new(Cursive::quit),
+        Box::new(|_| {}),
     )
 }
 
