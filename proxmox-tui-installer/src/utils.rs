@@ -174,7 +174,7 @@ impl<'de> Deserialize<'de> for Fqdn {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = Deserialize::deserialize(deserializer)?;
+        let s: String = Deserialize::deserialize(deserializer)?;
         s.parse()
             .map_err(|_| serde::de::Error::custom("invalid FQDN"))
     }
