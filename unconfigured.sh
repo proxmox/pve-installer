@@ -132,6 +132,7 @@ if [ -d /sys/firmware/efi ]; then
     mount -n -t efivarfs efivarfs /sys/firmware/efi/efivars
 fi
 mount -n -t tmpfs tmpfs /run
+mkdir -p /run/proxmox-installer
 
 parse_cmdline
 
@@ -202,6 +203,8 @@ chronyd || echo "starting chrony failed ($?)"
 
 echo "Starting a root shell on tty3."
 setsid /sbin/agetty -a root --noclear tty3 &
+
+/usr/bin/proxmox-low-level-installer dump-env
 
 echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
 xinit -- -dpi "$DPI" >/dev/tty2 2>&1
