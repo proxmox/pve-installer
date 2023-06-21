@@ -160,11 +160,7 @@ fn main() {
         Some("-t") => true,
 
         // Always force the test directory in debug builds
-        #[cfg(debug_assertions)]
-        _ => true,
-
-        #[cfg(not(debug_assertions))]
-        _ => false,
+        _ => cfg!(debug_assertions),
     };
 
     let (setup_info, locales, runtime_info) = match installer_setup(in_test_mode) {
