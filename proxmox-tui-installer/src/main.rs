@@ -283,6 +283,17 @@ fn switch_to_next_screen(
     // Check if the screen already exists; if yes, then simply switch to it.
     if let Some(screen_id) = state.steps.get(&step) {
         siv.set_screen(*screen_id);
+
+        // The summary view cannot be cached (otherwise it would display stale values). Thus
+        // replace it if the screen is switched to.
+        // TODO: Could be done by e.g. having all the main dialog views implement some sort of
+        // .refresh(), which can be called if the view is switched to.
+        if step == InstallerStep::Summary {
+            let view = constructor(siv);
+            siv.screen_mut().pop_layer();
+            siv.screen_mut().add_layer(view);
+        }
+
         return;
     }
 
