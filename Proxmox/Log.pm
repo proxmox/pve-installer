@@ -16,6 +16,7 @@ sub init {
     croak "log fd is already defined, refuse to reinitialize!" if defined($log_fd);
     $log_file = "/tmp/install.log" if !defined($log_file);
     $log_fd = IO::File->new(">${log_file}") or croak "could not open log file - $!\n";
+    log_info("initialized log");
 }
 
 my sub iso_like_date_time {
