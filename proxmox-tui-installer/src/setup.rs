@@ -359,6 +359,7 @@ pub struct NetworkInfo {
 
 #[derive(Clone, Deserialize)]
 pub struct Dns {
+    #[serde(deserialize_with = "deserialize_invalid_value_as_none")]
     pub domain: Option<Fqdn>,
 
     /// List of stringified IP addresses.
@@ -395,4 +396,12 @@ pub struct Interface {
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
     pub addresses: Option<Vec<CidrAddress>>,
+}
+
+fn deserialize_invalid_value_as_none<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Ok(Deserialize::deserialize(deserializer).ok())
 }
