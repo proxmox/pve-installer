@@ -6,6 +6,8 @@ use warnings;
 use Carp;
 use JSON qw(from_json to_json);
 
+use Proxmox::Log;
+
 use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Net;
 
