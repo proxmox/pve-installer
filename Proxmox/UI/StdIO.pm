@@ -54,6 +54,8 @@ sub display_html {
 sub progress {
     my ($self, $ratio, $text) = @_;
 
+    $text = '' if !defined($text);
+
     print STDOUT "progress: $ratio $text\n";
 }
 
