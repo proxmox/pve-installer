@@ -1,7 +1,6 @@
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
 use cursive::{
-    theme::Effect,
     view::{Nameable, Resizable, ViewWrapper},
     views::{Button, Dialog, DummyView, LinearLayout, NamedView, Panel, SelectView, TextView},
     Cursive, View,
@@ -265,20 +264,12 @@ impl<T: View> MultiDiskOptionsView<T> {
         }
 
         let disk_select_view = LinearLayout::vertical()
-            .child(
-                TextView::new("Disk setup")
-                    .center()
-                    .style(Effect::Underline),
-            )
+            .child(TextView::new("Disk setup").center())
             .child(DummyView)
             .child(disk_form);
 
         let options_view = LinearLayout::vertical()
-            .child(
-                TextView::new("Advanced options")
-                    .center()
-                    .style(Effect::Underline),
-            )
+            .child(TextView::new("Advanced options").center())
             .child(DummyView)
             .child(options_view);
 
