@@ -1536,6 +1536,7 @@ sub create_extract_view {
 		if ($autoreboot_seconds > 0) {
 		    $autoreboot_seconds--;
 		    Proxmox::UI::display_html("success.htm", $success_transform);
+		    return 1; # re-schedule, undef isn't enough anymore since Bookworm
 		} else {
 		    app_quit(0);
 		}
