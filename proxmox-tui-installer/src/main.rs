@@ -649,7 +649,7 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
         .child(
             LinearLayout::horizontal()
                 .child(DummyView.full_width())
-                .child(Checkbox::new().with_name("reboot-after-install"))
+                .child(Checkbox::new().checked().with_name("reboot-after-install"))
                 .child(
                     TextView::new(" Automatically reboot after successful installation").no_wrap(),
                 )
