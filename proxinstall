@@ -180,7 +180,19 @@ sub create_main_window {
     my $abort = Gtk3::Button->new('_Abort');
     $abort->set_can_focus(0);
     $cmdbox->pack_start($abort, 0, 0, 10);
-    $abort->signal_connect(clicked => sub { app_quit(-1); });
+    $abort->signal_connect(clicked => sub {
+	my $msg = 'Abort Installation';
+	my $secondary_text = 'Are you sure you want to abort the installation?';
+	my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'yes-no', $msg);
+	$dialog->format_secondary_text($secondary_text);
+	$dialog->signal_connect(response => sub {
+	    my ($dialog, $response) = @_;
+
+	    $dialog->close();
+	    app_quit(-1) if $response eq 'yes';
+	});
+	$dialog->present();
+    });
 
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
