@@ -110,15 +110,24 @@ pub struct InstallConfig {
     #[serde(serialize_with = "serialize_fstype")]
     filesys: FsType,
     hdsize: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     swapsize: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     maxroot: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     minfree: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     maxvz: Option<u64>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     zfs_opts: Option<InstallZfsOption>,
 
-    #[serde(serialize_with = "serialize_disk_opt")]
+    #[serde(
+        serialize_with = "serialize_disk_opt",
+        skip_serializing_if = "Option::is_none"
+    )]
     target_hd: Option<Disk>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     disk_selection: HashMap<String, usize>,
 
     country: String,
