@@ -44,11 +44,11 @@ use views::{
 
 // TextView::center() seems to garble the first two lines, so fix it manually here.
 const PROXMOX_LOGO: &str = r#"
-    ____
-   / __ \_________  _  ______ ___  ____  _  __
-  / /_/ / ___/ __ \| |/_/ __ `__ \/ __ \| |/_/
- / ____/ /  / /_/ />  </ / / / / / /_/ />  <
-/_/   /_/   \____/_/|_/_/ /_/ /_/\____/_/|_|  "#;
+ ____
+|  _ \ _ __ _____  ___ __ ___   _____  __
+| |_) | '__/ _ \ \/ / '_ ` _ \ / _ \ \/ /
+|  __/| | | (_) >  <| | | | | | (_) >  <
+|_|   |_|  \___/_/\_\_| |_| |_|\___/_/\_\ "#;
 
 struct InstallerView {
     view: ResizedView<Dialog>,
