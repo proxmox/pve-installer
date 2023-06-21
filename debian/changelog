@@ -1,3 +1,26 @@
+proxmox-installer (8.0.6) bookworm; urgency=medium
+
+  * tui: remove underline-effect from advanced disk setup titles
+
+  * tui: clamp max LVM disk size to size of selected disk
+
+  * tui: fix ability to type commas
+
+  * tui: do not fail completely on invalid domain names
+
+  * tui: always use mail@example.invalid as default email address
+
+  * run env: re-used cached version to speed up GUI installer start
+
+  * log: record when and that the log got initialized and add some more
+    logging, especially at start up
+
+  * tui: improve ipv6 handling
+
+  * tui: focus next button by default
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 21 Jun 2023 18:42:27 +0200
+
 proxmox-installer (8.0.5) bookworm; urgency=medium
 
   * various fixes for the TUI:
