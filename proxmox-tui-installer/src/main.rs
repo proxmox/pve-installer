@@ -801,7 +801,7 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
                                 siv.add_layer(
                                     Dialog::text(msg)
                                         .title(title)
-                                        .button("Reboot now", |s| s.quit()),
+                                        .button("Reboot now", Cursive::quit),
                                 );
 
                                 let autoreboot = siv
