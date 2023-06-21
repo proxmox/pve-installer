@@ -108,7 +108,7 @@ impl ViewWrapper for FloatEditView {
         let has_decimal_place = original.find('.').is_some();
 
         let result = match event {
-            Event::Char(c) if !c.is_numeric() => return EventResult::consumed(),
+            Event::Char(c) if !c.is_numeric() && c != '.' => return EventResult::consumed(),
             Event::Char('.') if has_decimal_place => return EventResult::consumed(),
             _ => self.view.on_event(event),
         };
