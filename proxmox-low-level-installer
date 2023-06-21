@@ -135,7 +135,7 @@ if ($cmd eq 'dump-env') {
     Proxmox::UI::message("Test Message - got $res");
 
     for (my $i = 1; $i <= 1000; $i += 3) {
-	Proxmox::UI::progress($i/1000, 0, 100, "foo $i");
+	Proxmox::UI::progress($i/100000, 0, 100, "foo $i");
 	if ($i > 500 && $i < 600) {
 	    usleep(50 * 1000);
 	} else {
