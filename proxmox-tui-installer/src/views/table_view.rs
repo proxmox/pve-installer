@@ -129,7 +129,12 @@ impl<T: TableViewItem + 'static> View for TableView<T> {
     }
 
     fn take_focus(&mut self, _: Direction) -> Result<EventResult, CannotFocus> {
-        Ok(EventResult::consumed())
+        // Only take the focus if scrollbars are visible
+        if self.scroller.is_scrolling().any() {
+            Ok(EventResult::consumed())
+        } else {
+            Err(CannotFocus)
+        }
     }
 
     fn important_area(&self, size: Vec2) -> Rect {
