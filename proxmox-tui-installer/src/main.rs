@@ -677,11 +677,9 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
 
                 #[cfg(debug_assertions)]
                 let (path, args, envs) = (
-                    PathBuf::from("../proxmox-low-level-installer")
-                        .canonicalize()
-                        .unwrap(),
-                    ["-t", "start-session"],
-                    [("PERL5LIB", PathBuf::from("..").canonicalize().unwrap())],
+                    PathBuf::from("./proxmox-low-level-installer"),
+                    ["-t", "start-session-test"],
+                    [("PERL5LIB", ".")],
                 );
 
                 Command::new(path)
