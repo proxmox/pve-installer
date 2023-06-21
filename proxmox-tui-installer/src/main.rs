@@ -749,8 +749,8 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
 
                     let msg = match line.parse::<UiMessage>() {
                         Ok(msg) => msg,
-                        Err(_stray) => {
-                            // eprintln!("low-level installer: {stray}");
+                        Err(stray) => {
+                            eprintln!("low-level installer: {stray}");
                             continue;
                         }
                     };
