@@ -105,6 +105,7 @@ my sub query_netdevs : prototype() {
 my sub query_routes : prototype() {
     my ($gateway4, $gateway6);
 
+    log_info("query routes");
     my $route4 = fromjs(qx/ip -4 --json route show/);
     for my $route (@$route4) {
 	if ($route->{dst} eq 'default') {
@@ -140,6 +141,7 @@ my sub query_routes : prototype() {
 #     dns => <first dns entry>,
 #
 my sub query_dns : prototype() {
+    log_info("query DNS from resolv.conf (managed by DHCP client)");
     open my $fh , '<', '/etc/resolv.conf' or return;
 
     my @dns;
@@ -163,9 +165,8 @@ my sub query_dns : prototype() {
 my sub detect_country_tracing_to : prototype($$) {
     my ($ipver, $destination) = @_;
 
-    print "trying to detect country...\n";
-    open(my $TRACEROUTE_FH, '-|',
-	'traceroute', "-$ipver", '-N', '1', '-q', '1', '-n', $destination)
+    print STDERR "trying to detect country...\n";
+    open(my $TRACEROUTE_FH, '-|', 'traceroute', "-$ipver", '-N', '1', '-q', '1', '-n', $destination)
 	or return undef;
 
     my $geoip_bin = ($ipver == 6) ? 'geoiplookup6' : 'geoiplookup';
@@ -197,7 +198,7 @@ my sub detect_country_tracing_to : prototype($$) {
     if ($err) {
 	die "unable to detect country - $err\n";
     } elsif ($country) {
-	print "detected country: " . uc($country) . "\n";
+	print STDERR "detected country: " . uc($country) . "\n";
     }
 
     return $country;
@@ -231,6 +232,7 @@ sub query_installation_environment : prototype() {
 
     my $routes = query_routes();
 
+    log_info("query block devices");
     $output->{disks} = Proxmox::Sys::Block::get_cached_disks();
     $output->{network} = {
 	interfaces => query_netdevs(),
@@ -249,11 +251,13 @@ sub query_installation_environment : prototype() {
     my $err;
     my $country;
     if ($routes->{gateway4}) {
+	log_info("trace country via IPv4");
 	$country = eval { detect_country_tracing_to(4 => '8.8.8.8') };
 	$err = $@ if !$country;
     }
 
     if (!$country && $routes->{gateway6}) {
+	log_info("trace country via IPv6");
 	$country = eval { detect_country_tracing_to(6 => '2001:4860:4860::8888') };
 	$err = $@ if !$country;
     }

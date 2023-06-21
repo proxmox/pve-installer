@@ -1604,9 +1604,10 @@ sub create_intro_view {
     set_next("I a_gree", \&create_hdsel_view);
 }
 
+log_info("initializing GTK and creating main window...");
 Gtk3::init();
 
-create_main_window ();
+create_main_window();
 
 my $initial_error = 0;
 
