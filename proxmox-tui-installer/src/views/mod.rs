@@ -404,10 +404,10 @@ impl CidrAddressEditView {
 
     fn mask_edit_view(content: usize) -> ResizedView<IntegerEditView> {
         IntegerEditView::new()
-            .max_value(32)
-            .max_content_width(2)
+            .max_value(128)
+            .max_content_width(3)
             .content(content)
-            .fixed_width(3)
+            .fixed_width(4)
     }
 
     fn get_values(&self) -> Option<CidrAddress> {
