@@ -3,5 +3,7 @@
 /*.buildinfo
 /build/
 /testdir/
+/target/
 /test*.img
 country.dat
+Cargo.lock
