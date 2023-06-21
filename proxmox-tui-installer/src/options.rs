@@ -359,24 +359,26 @@ impl From<&NetworkInfo> for NetworkOptions {
             this.fqdn = Fqdn::from(&format!("pve.{}", domain)).unwrap_or_else(|_| domain.clone());
         }
 
-        let mut filled = false;
-        if let Some(gw) = &info.routes.gateway4 {
-            if let Some(iface) = info.interfaces.get(&gw.dev) {
-                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
-                    this.ifname = iface.name.clone();
-                    this.gateway = gw.gateway;
-                    this.address = addr.clone();
-                    filled = true;
-                }
-            }
-        }
-        if !filled {
-            if let Some(gw) = &info.routes.gateway6 {
+        if let Some(routes) = &info.routes {
+            let mut filled = false;
+            if let Some(gw) = &routes.gateway4 {
                 if let Some(iface) = info.interfaces.get(&gw.dev) {
-                    if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
+                    if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
                         this.ifname = iface.name.clone();
                         this.gateway = gw.gateway;
                         this.address = addr.clone();
+                        filled = true;
+                    }
+                }
+            }
+            if !filled {
+                if let Some(gw) = &routes.gateway6 {
+                    if let Some(iface) = info.interfaces.get(&gw.dev) {
+                        if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
+                            this.ifname = iface.name.clone();
+                            this.gateway = gw.gateway;
+                            this.address = addr.clone();
+                        }
                     }
                 }
             }
