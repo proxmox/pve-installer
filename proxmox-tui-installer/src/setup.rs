@@ -405,3 +405,11 @@ where
 {
     Ok(Deserialize::deserialize(deserializer).ok())
 }
+
+fn deserialize_invalid_value_as_none<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Ok(Deserialize::deserialize(deserializer).ok())
+}
