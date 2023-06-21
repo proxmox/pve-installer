@@ -103,8 +103,7 @@ struct InstallerBackgroundView {
 }
 
 impl InstallerBackgroundView {
-    pub fn new(_state: &InstallerState) -> Self {
-        let logo = format!("{PROXMOX_LOGO}");
+    pub fn new() -> Self {
         let style = Style {
             effects: Effect::Bold.into(),
             color: ColorStyle::back(PaletteColor::View),
@@ -114,7 +113,7 @@ impl InstallerBackgroundView {
         view.add_fullscreen_layer(Layer::with_color(
             DummyView
                 .full_width()
-                .fixed_height(logo.lines().count() + 1),
+                .fixed_height(PROXMOX_LOGO.lines().count() + 1),
             ColorStyle::back(PaletteColor::View),
         ));
         view.add_transparent_layer_at(
@@ -122,7 +121,7 @@ impl InstallerBackgroundView {
                 x: Offset::Center,
                 y: Offset::Absolute(0),
             },
-            TextView::new(logo).style(style),
+            TextView::new(PROXMOX_LOGO).style(style),
         );
 
         Self { view }
@@ -262,15 +261,13 @@ fn switch_to_next_screen(
     let screen = siv.add_active_screen();
     siv.with_user_data(|state: &mut InstallerState| state.steps.insert(step, screen));
 
-    if let Some(state) = siv.user_data::<InstallerState>().cloned() {
-        siv.screen_mut().add_transparent_layer_at(
-            XY {
-                x: Offset::Parent(0),
-                y: Offset::Parent(0),
-            },
-            InstallerBackgroundView::new(&state),
-        );
-    }
+    siv.screen_mut().add_transparent_layer_at(
+        XY {
+            x: Offset::Parent(0),
+            y: Offset::Parent(0),
+        },
+        InstallerBackgroundView::new(),
+    );
 
     siv.screen_mut().add_layer(v);
 }
