@@ -225,6 +225,7 @@ sub create_main_window {
     $gtk_state->{next_btn} = $next_btn;
     $gtk_state->{progress_bar} = Gtk3::ProgressBar->new();
     $gtk_state->{progress_status} = Gtk3::Label->new('');
+    $gtk_state->{abort_btn} = $abort;
 
     Proxmox::UI::init_gtk($gtk_state, $iso_env);
 
@@ -1533,6 +1534,10 @@ sub create_extract_view {
 
 	return $raw_html;
     };
+
+    # It does not make sense to Abort the install at this point, whether it
+    # succeded or failed makes no difference.
+    $gtk_state->{abort_btn}->set_sensitive(0);
 
     if ($err) {
 	Proxmox::UI::display_html("fail.htm");
