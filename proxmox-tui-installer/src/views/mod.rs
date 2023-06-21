@@ -150,11 +150,7 @@ impl DiskSizeEditView {
         self.with_view(|v| {
             v.get_child(0)?
                 .downcast_ref::<ResizedView<FloatEditView>>()?
-                .with_view(|v| {
-                    v.get_content()
-                        .ok()
-                        .map(|val| (val) as u64)
-                })?
+                .with_view(|v| v.get_content().ok().map(|val| val as u64))?
         })
         .flatten()
     }

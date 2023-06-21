@@ -745,7 +745,9 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
                             cb_sink.send(Box::new(move |siv| {
                                 let title = if success { "Success" } else { "Failure" };
                                 siv.add_layer(
-                                    Dialog::text(msg).title(title).button("Reboot", |s| s.quit()),
+                                    Dialog::text(msg)
+                                        .title(title)
+                                        .button("Reboot", |s| s.quit()),
                                 );
                             }))
                         }
