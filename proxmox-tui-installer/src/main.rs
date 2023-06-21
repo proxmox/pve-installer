@@ -229,6 +229,23 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
     }
 }
 
+/// Anything that can be done late in the setup and will not result in fatal errors.
+fn installer_setup_late(siv: &mut Cursive) {
+    let state = siv.user_data::<InstallerState>().unwrap();
+
+    if !state.in_test_mode {
+        let kmap_id = &state.options.timezone.kb_layout;
+        if let Some(kmap) = state.locales.kmap.get(kmap_id) {
+            if let Err(err) = system::set_keyboard_layout(kmap) {
+                siv.add_layer(
+                    Dialog::info(format!("Failed to apply keyboard layout: {err}"))
+                        .title("Warning"),
+                );
+            }
+        }
+    }
+}
+
 fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
     siv.add_layer(
         Dialog::around(TextView::new(message))
@@ -246,6 +263,7 @@ fn switch_to_next_screen(
     constructor: &dyn Fn(&mut Cursive) -> InstallerView,
 ) {
     let state = siv.user_data::<InstallerState>().cloned().unwrap();
+    let is_first_screen = state.steps.is_empty();
 
     // Check if the screen already exists; if yes, then simply switch to it.
     if let Some(screen_id) = state.steps.get(&step) {
@@ -266,6 +284,13 @@ fn switch_to_next_screen(
     );
 
     siv.screen_mut().add_layer(v);
+
+    // If this is the first screen to be added, execute our late setup first.
+    // Needs to be done here, at the end, to ensure that any potential layers get added to
+    // the right screen and are on top.
+    if is_first_screen {
+        installer_setup_late(siv);
+    }
 }
 
 fn switch_to_prev_screen(siv: &mut Cursive) {
