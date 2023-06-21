@@ -143,7 +143,11 @@ if ($cmd eq 'dump-env') {
 	}
     }
 
-    # Proxmox::Install::extract_data(); # TODO
+    if (Proxmox::Install::Config::get_autoreboot()) {
+	Proxmox::UI::finished(1, "Installation finished - auto-rebooting in ~ 5 seconds");
+    } else {
+	Proxmox::UI::finished(1, "Installation complete - reboot now?");
+    }
 }
 
 exit(0);
