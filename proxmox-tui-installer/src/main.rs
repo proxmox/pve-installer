@@ -63,21 +63,21 @@ impl InstallerView {
         state: &InstallerState,
         view: T,
         next_cb: Box<dyn Fn(&mut Cursive)>,
+        focus_next: bool,
     ) -> Self {
-        let inner = LinearLayout::vertical()
+        let mut bbar = LinearLayout::horizontal()
+            .child(abort_install_button())
+            .child(DummyView.full_width())
+            .child(Button::new("Previous", switch_to_prev_screen))
+            .child(DummyView)
+            .child(Button::new("Next", next_cb));
+        let _ = bbar.set_focus_index(4); // ignore errors
+        let mut inner = LinearLayout::vertical()
             .child(PaddedView::lrtb(0, 0, 1, 1, view))
-            .child(PaddedView::lrtb(
-                1,
-                1,
-                0,
-                0,
-                LinearLayout::horizontal()
-                    .child(abort_install_button())
-                    .child(DummyView.full_width())
-                    .child(Button::new("Previous", switch_to_prev_screen))
-                    .child(DummyView)
-                    .child(Button::new("Next", next_cb)),
-            ));
+            .child(PaddedView::lrtb(1, 1, 0, 0, bbar));
+        if focus_next {
+            let _ = inner.set_focus_index(1); // ignore errors
+        }
 
         Self::with_raw(state, inner)
     }
@@ -378,7 +378,15 @@ fn get_eula() -> String {
 fn license_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
 
-    let inner = LinearLayout::vertical()
+    let mut bbar = LinearLayout::horizontal()
+        .child(abort_install_button())
+        .child(DummyView.full_width())
+        .child(Button::new("I agree", |siv| {
+            switch_to_next_screen(siv, InstallerStep::Bootdisk, &bootdisk_dialog)
+        }));
+    let _ = bbar.set_focus_index(2); // ignore errors
+
+    let mut inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
             0,
             0,
@@ -389,18 +397,9 @@ fn license_dialog(siv: &mut Cursive) -> InstallerView {
         .child(Panel::new(ScrollView::new(
             TextView::new(get_eula()).center(),
         )))
-        .child(PaddedView::lrtb(
-            1,
-            1,
-            1,
-            0,
-            LinearLayout::horizontal()
-                .child(abort_install_button())
-                .child(DummyView.full_width())
-                .child(Button::new("I agree", |siv| {
-                    switch_to_next_screen(siv, InstallerStep::Bootdisk, &bootdisk_dialog)
-                })),
-        ));
+        .child(PaddedView::lrtb(1, 1, 1, 0, bbar));
+
+    let _ = inner.set_focus_index(2); // ignore errors
 
     InstallerView::with_raw(state, inner)
 }
@@ -428,6 +427,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
                 _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
+        true,
     )
 }
 
@@ -453,6 +453,7 @@ fn timezone_dialog(siv: &mut Cursive) -> InstallerView {
                 _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
+        true,
     )
 }
 
@@ -518,6 +519,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                 _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
+        false,
     )
 }
 
@@ -613,6 +615,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                 _ => siv.add_layer(Dialog::info("Invalid values")),
             }
         }),
+        true,
     )
 }
 
@@ -643,7 +646,27 @@ impl TableViewItem for SummaryOption {
 fn summary_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
 
-    let inner = LinearLayout::vertical()
+    let mut bbar = LinearLayout::horizontal()
+        .child(abort_install_button())
+        .child(DummyView.full_width())
+        .child(Button::new("Previous", switch_to_prev_screen))
+        .child(DummyView)
+        .child(Button::new("Install", |siv| {
+            let autoreboot = siv
+                .find_name("reboot-after-install")
+                .map(|v: ViewRef<Checkbox>| v.is_checked())
+                .unwrap_or_default();
+
+            siv.with_user_data(|state: &mut InstallerState| {
+                state.options.autoreboot = autoreboot;
+            });
+
+            switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
+        }));
+
+    let _ = bbar.set_focus_index(4); // ignore errors
+
+    let mut inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
             0,
             0,
@@ -665,29 +688,9 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                 )
                 .child(DummyView.full_width()),
         )
-        .child(PaddedView::lrtb(
-            1,
-            1,
-            1,
-            0,
-            LinearLayout::horizontal()
-                .child(abort_install_button())
-                .child(DummyView.full_width())
-                .child(Button::new("Previous", switch_to_prev_screen))
-                .child(DummyView)
-                .child(Button::new("Install", |siv| {
-                    let autoreboot = siv
-                        .find_name("reboot-after-install")
-                        .map(|v: ViewRef<Checkbox>| v.is_checked())
-                        .unwrap_or_default();
+        .child(PaddedView::lrtb(1, 1, 1, 0, bbar));
 
-                    siv.with_user_data(|state: &mut InstallerState| {
-                        state.options.autoreboot = autoreboot;
-                    });
-
-                    switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
-                })),
-        ));
+    let _ = inner.set_focus_index(2); // ignore errors
 
     InstallerView::with_raw(state, inner)
 }
