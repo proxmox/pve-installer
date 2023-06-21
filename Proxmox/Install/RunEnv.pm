@@ -11,6 +11,8 @@ use Proxmox::Sys::File qw(file_read_firstline);
 use Proxmox::Sys::Block;
 use Proxmox::Sys::Net;
 
+use Proxmox::Install::ISOEnv;
+
 my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
 }
@@ -212,6 +214,19 @@ my sub detect_country_tracing_to : prototype($$) {
 #     },
 # }
 sub query_installation_environment : prototype() {
+    # check first if somebody already cached this for us and re-use that
+    my $run_env_file = Proxmox::Install::ISOEnv::get('run-env-cache-file');
+    if (-f "$run_env_file") {
+	log_info("re-using cached runtime env from $run_env_file");
+	my $cached_env = eval {
+	    my $run_env_raw = Proxmox::Sys::File::file_read_all($run_env_file);
+	    return fromjs($run_env_raw); # returns from eval
+	};
+	log_error("failed to parse cached runtime env - $@") if $@;
+	return $cached_env if defined($cached_env) && scalar keys $cached_env->%*;
+	log_warn("cached runtime env seems empty, query everything (again)");
+    }
+    # else re-query everything
     my $output = {};
 
     my $routes = query_routes();
