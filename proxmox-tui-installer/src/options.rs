@@ -363,21 +363,25 @@ impl From<&NetworkInfo> for NetworkOptions {
             let mut filled = false;
             if let Some(gw) = &routes.gateway4 {
                 if let Some(iface) = info.interfaces.get(&gw.dev) {
-                    if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
-                        this.ifname = iface.name.clone();
-                        this.gateway = gw.gateway;
-                        this.address = addr.clone();
-                        filled = true;
+                    this.ifname = iface.name.clone();
+                    if let Some(addresses) = &iface.addresses {
+                        if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
+                            this.gateway = gw.gateway;
+                            this.address = addr.clone();
+                            filled = true;
+                        }
                     }
                 }
             }
             if !filled {
                 if let Some(gw) = &routes.gateway6 {
                     if let Some(iface) = info.interfaces.get(&gw.dev) {
-                        if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
-                            this.ifname = iface.name.clone();
-                            this.gateway = gw.gateway;
-                            this.address = addr.clone();
+                        if let Some(addresses) = &iface.addresses {
+                            if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
+                                this.ifname = iface.name.clone();
+                                this.gateway = gw.gateway;
+                                this.address = addr.clone();
+                            }
                         }
                     }
                 }

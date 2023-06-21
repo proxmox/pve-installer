@@ -257,7 +257,7 @@ where
         .collect())
 }
 
-fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>
+fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Option<Vec<CidrAddress>>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -283,7 +283,7 @@ where
         );
     }
 
-    Ok(result)
+    Ok(Some(result))
 }
 
 fn serialize_disk_opt<S>(value: &Option<Disk>, serializer: S) -> Result<S::Ok, S::Error>
@@ -392,7 +392,7 @@ pub struct Interface {
 
     pub mac: String,
 
-    /// This always has at least 1 usable address.
+    #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
-    pub addresses: Vec<CidrAddress>,
+    pub addresses: Option<Vec<CidrAddress>>,
 }

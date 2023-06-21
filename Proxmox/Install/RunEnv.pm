@@ -58,29 +58,29 @@ my sub query_netdevs : prototype() {
 	my ($index, $name, $state, $mac, $addresses) =
 	    $if->@{qw(ifindex ifname operstate address addr_info)};
 
-	next if $state ne 'UP';
+	next if !$name || $name eq 'lo'; # could also check flags for LOOPBACK..
 
 	my @valid_addrs;
-	for my $addr (@$addresses) {
-	    next if $addr->{scope} eq 'link';
+	if (uc($state) eq 'UP') {
+	    for my $addr (@$addresses) {
+		next if $addr->{scope} eq 'link';
 
-	    my ($family, $addr, $prefix) = $addr->@{qw(family local prefixlen)};
+		my ($family, $addr, $prefix) = $addr->@{qw(family local prefixlen)};
 
-	    push @valid_addrs, {
-		family => $family,
-		address => $addr,
-		prefix => $prefix,
-	    };
+		push @valid_addrs, {
+		    family => $family,
+		    address => $addr,
+		    prefix => $prefix,
+		};
+	    }
 	}
 
-	if (@valid_addrs) {
-	    $ifs->{$name} = {
-		index => $index,
-		name => $name,
-		mac => $mac,
-		addresses => \@valid_addrs,
-	    };
-	}
+	$ifs->{$name} = {
+	    index => $index,
+	    name => $name,
+	    mac => $mac,
+	};
+	$ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
     }
 
     return $ifs;
