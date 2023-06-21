@@ -112,33 +112,42 @@ fn mask_limit(addr: &IpAddr) -> usize {
 
 #[derive(Clone, Debug)]
 pub struct Fqdn {
-    host: String,
-    domain: String,
+    parts: Vec<String>,
 }
 
 impl Fqdn {
     pub fn from(fqdn: &str) -> Result<Self, ()> {
-        let (host, domain) = fqdn.split_once('.').ok_or(())?;
+        let parts = fqdn
+            .split('.')
+            .map(ToOwned::to_owned)
+            .collect::<Vec<String>>();
 
-        if !Self::validate_single(host) || !domain.split('.').all(Self::validate_single) {
+        if !parts.iter().all(&Self::validate_single) {
             Err(())
         } else {
-            Ok(Self {
-                host: host.to_owned(),
-                domain: domain.to_owned(),
-            })
+            Ok(Self { parts })
         }
     }
 
-    pub fn host(&self) -> &str {
-        &self.host
+    pub fn host(&self) -> Option<&str> {
+        self.has_host().then_some(&self.parts[0])
     }
 
-    pub fn domain(&self) -> &str {
-        &self.domain
+    pub fn domain(&self) -> String {
+        let parts = if self.has_host() {
+            &self.parts[1..]
+        } else {
+            &self.parts
+        };
+
+        parts.join(".")
     }
 
-    fn validate_single(s: &str) -> bool {
+    fn has_host(&self) -> bool {
+        self.parts.len() > 1
+    }
+
+    fn validate_single(s: &String) -> bool {
         !s.is_empty()
             && s.chars()
                 .next()
@@ -165,7 +174,7 @@ impl FromStr for Fqdn {
 
 impl fmt::Display for Fqdn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}.{}", self.host, self.domain)
+        write!(f, "{}", self.parts.join("."))
     }
 }
 
@@ -201,7 +210,7 @@ mod tests {
     #[test]
     fn fqdn_parts() {
         let fqdn = Fqdn::from("pve.example.com").unwrap();
-        assert_eq!(fqdn.host(), "pve");
+        assert_eq!(fqdn.host().unwrap(), "pve");
         assert_eq!(fqdn.domain(), "example.com");
     }
 

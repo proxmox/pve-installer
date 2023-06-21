@@ -171,8 +171,8 @@ impl From<InstallerOptions> for InstallConfig {
 
             mngmt_nic: options.network.ifname,
 
-            hostname: options.network.fqdn.host().to_owned(),
-            domain: options.network.fqdn.domain().to_owned(),
+            hostname: options.network.fqdn.host().unwrap_or("pve").to_owned(),
+            domain: options.network.fqdn.domain(),
             cidr: options.network.address,
             gateway: options.network.gateway,
             dns: options.network.dns_server,
