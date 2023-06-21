@@ -8,6 +8,8 @@ use std::{
     path::PathBuf,
     str::FromStr,
     sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 use cursive::{
@@ -793,11 +795,30 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
                             progress_text.set_content(msg.to_owned());
                             cb_sink.send(Box::new(move |siv| {
                                 let title = if success { "Success" } else { "Failure" };
+
+                                // For rebooting, we just need to quit the installer,
+                                // our caller does the actual reboot.
                                 siv.add_layer(
                                     Dialog::text(msg)
                                         .title(title)
-                                        .button("Reboot", |s| s.quit()),
+                                        .button("Reboot now", |s| s.quit()),
                                 );
+
+                                let autoreboot = siv
+                                    .user_data::<InstallerState>()
+                                    .map(|state| state.options.autoreboot)
+                                    .unwrap_or_default();
+
+                                if autoreboot {
+                                    let cb_sink = siv.cb_sink();
+                                    thread::spawn({
+                                        let cb_sink = cb_sink.clone();
+                                        move || {
+                                            thread::sleep(Duration::from_secs(5));
+                                            let _ = cb_sink.send(Box::new(Cursive::quit));
+                                        }
+                                    });
+                                }
                             }))
                         }
                     }
