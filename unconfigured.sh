@@ -212,7 +212,7 @@ setsid /sbin/agetty -a root --noclear tty3 &
 
 if [ $proxtui -ne 0 ]; then
     echo "Starting the TUI installer"
-    /usr/bin/proxmox-tui-installer
+    /usr/bin/proxmox-tui-installer 2>/dev/tty2
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
     xinit -- -dpi "$DPI" >/dev/tty2 2>&1
