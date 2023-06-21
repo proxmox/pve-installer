@@ -1,8 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr};
 use std::{cmp, fmt};
 
-use proxmox_sys::linux::procfs;
-
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo};
 use crate::utils::{CidrAddress, Fqdn};
 use crate::SummaryOption;
@@ -89,35 +87,20 @@ pub const FS_TYPES: &[FsType] = {
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
     pub total_size: u64,
-    pub swap_size: u64,
-    pub max_root_size: u64,
-    pub max_data_size: u64,
-    pub min_lvm_free: u64,
+    pub swap_size: Option<u64>,
+    pub max_root_size: Option<u64>,
+    pub max_data_size: Option<u64>,
+    pub min_lvm_free: Option<u64>,
 }
 
 impl LvmBootdiskOptions {
-    /// Sets the default values as described in the documentation:
-    /// https://pve.proxmox.com/pve-docs/pve-admin-guide.html#advanced_lvm_options
     pub fn defaults_from(disk: &Disk) -> Self {
-        let mem_total = procfs::read_meminfo()
-            .map(|m| m.memtotal / 1024 / 1024 / 1024)
-            .unwrap_or(2);
-
-        let swap_size = mem_total.clamp(2, 8);
-
-        // If the disk size > 128 GiB use 16 GiB, else 1/8 of the disk
-        let min_lvm_free = if disk.size > 128 * 1024 * 1024 {
-            16
-        } else {
-            disk.size / 8 / 1024 / 1024
-        };
-
         Self {
             total_size: disk.size,
-            swap_size,
-            max_root_size: 0,
-            max_data_size: 0,
-            min_lvm_free,
+            swap_size: None,
+            max_root_size: None,
+            max_data_size: None,
+            min_lvm_free: None,
         }
     }
 }

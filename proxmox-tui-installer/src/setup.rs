@@ -173,10 +173,10 @@ impl From<InstallerOptions> for InstallConfig {
             AdvancedBootdiskOptions::Lvm(lvm) => {
                 config.hdsize = lvm.total_size;
                 config.target_hd = Some(options.bootdisk.disks[0].clone());
-                config.swapsize = Some(lvm.swap_size);
-                config.maxroot = Some(lvm.max_root_size);
-                config.minfree = Some(lvm.min_lvm_free);
-                config.maxvz = Some(lvm.max_data_size);
+                config.swapsize = lvm.swap_size;
+                config.maxroot = lvm.max_root_size;
+                config.minfree = lvm.min_lvm_free;
+                config.maxvz = lvm.max_data_size;
             }
             AdvancedBootdiskOptions::Zfs(zfs) => {
                 config.hdsize = zfs.disk_size;

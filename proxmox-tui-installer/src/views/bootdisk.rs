@@ -206,19 +206,19 @@ impl LvmBootdiskOptionsView {
             )
             .child(
                 "Swap size",
-                DiskSizeEditView::new().content(options.swap_size),
+                DiskSizeEditView::new_emptyable().content_maybe(options.swap_size),
             )
             .child(
                 "Maximum root volume size",
-                DiskSizeEditView::new().content(options.max_root_size),
+                DiskSizeEditView::new_emptyable().content_maybe(options.max_root_size),
             )
             .child(
                 "Maximum data volume size",
-                DiskSizeEditView::new().content(options.max_data_size),
+                DiskSizeEditView::new_emptyable().content_maybe(options.max_data_size),
             )
             .child(
                 "Minimum free LVM space",
-                DiskSizeEditView::new().content(options.min_lvm_free),
+                DiskSizeEditView::new_emptyable().content_maybe(options.min_lvm_free),
             );
 
         Self { view }
@@ -227,10 +227,10 @@ impl LvmBootdiskOptionsView {
     fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
         Some(LvmBootdiskOptions {
             total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
-            swap_size: self.view.get_value::<DiskSizeEditView, _>(1)?,
-            max_root_size: self.view.get_value::<DiskSizeEditView, _>(2)?,
-            max_data_size: self.view.get_value::<DiskSizeEditView, _>(3)?,
-            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(4)?,
+            swap_size: self.view.get_value::<DiskSizeEditView, _>(1),
+            max_root_size: self.view.get_value::<DiskSizeEditView, _>(2),
+            max_data_size: self.view.get_value::<DiskSizeEditView, _>(3),
+            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(4),
         })
     }
 }
