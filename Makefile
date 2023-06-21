@@ -131,10 +131,12 @@ cd-info.test:
 
 check-pve: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
+	./proxmox-low-level-installer dump-env -t
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img test5.big.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
+	./proxmox-low-level-installer dump-env -t
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
 check-pve-tui: prepare-check-env test.img
@@ -148,6 +150,7 @@ check-pmg: prepare-check-env test.img
 	    PRODUCTLONG="Proxmox Mail Gateway" \
 	    ISONAME='proxmox-mail-gateway' \
 	    cd-info.test
+	./proxmox-low-level-installer dump-env -t
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs: prepare-check-env test.img
@@ -156,6 +159,7 @@ check-pbs: prepare-check-env test.img
 	    PRODUCTLONG='Proxmox Backup Server' \
 	    ISONAME='proxmox-backup-server' \
 	    cd-info.test
+	./proxmox-low-level-installer dump-env -t
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 
