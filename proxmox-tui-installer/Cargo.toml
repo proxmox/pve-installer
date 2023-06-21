@@ -11,5 +11,6 @@ homepage = "https://www.proxmox.com"
 cursive = { version = "0.20.0", default-features = false, features = ["termion-backend"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+regex = "1.7"
 
 proxmox-sys = "0.5.0"
