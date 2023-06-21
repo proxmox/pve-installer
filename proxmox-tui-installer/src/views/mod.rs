@@ -21,6 +21,8 @@ pub use timezone::*;
 pub struct NumericEditView<T> {
     view: EditView,
     max_value: Option<T>,
+    max_content_width: Option<usize>,
+    allow_empty: bool,
 }
 
 impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
@@ -28,6 +30,8 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         Self {
             view: EditView::new().content("0"),
             max_value: None,
+            max_content_width: None,
+            allow_empty: false,
         }
     }
 
@@ -37,12 +41,36 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     }
 
     pub fn max_content_width(mut self, width: usize) -> Self {
-        self.view = self.view.max_content_width(width);
+        self.max_content_width = Some(width);
+        self.view.set_max_content_width(self.max_content_width);
+        self
+    }
+
+    pub fn allow_empty(mut self, value: bool) -> Self {
+        self.allow_empty = value;
+
+        if value {
+            self.view = EditView::new();
+        } else {
+            self.view = EditView::new().content("0");
+        }
+
+        self.view.set_max_content_width(self.max_content_width);
         self
     }
 
     pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
+        assert!(!self.allow_empty);
         self.view.get_content().parse()
+    }
+
+    pub fn get_content_maybe(&self) -> Option<Result<T, <T as FromStr>::Err>> {
+        let content = self.view.get_content();
+        if !content.is_empty() {
+            Some(self.view.get_content().parse())
+        } else {
+            None
+        }
     }
 
     fn check_bounds(&mut self, original: Rc<String>, result: EventResult) -> EventResult {
@@ -125,6 +153,7 @@ impl IntegerEditView {
 
 pub struct DiskSizeEditView {
     view: LinearLayout,
+    allow_empty: bool,
 }
 
 impl DiskSizeEditView {
@@ -133,7 +162,21 @@ impl DiskSizeEditView {
             .child(FloatEditView::new().full_width())
             .child(TextView::new(" GB"));
 
-        Self { view }
+        Self {
+            view,
+            allow_empty: false,
+        }
+    }
+
+    pub fn new_emptyable() -> Self {
+        let view = LinearLayout::horizontal()
+            .child(FloatEditView::new().allow_empty(true).full_width())
+            .child(TextView::new(" GB"));
+
+        Self {
+            view,
+            allow_empty: true,
+        }
     }
 
     pub fn content(mut self, content: u64) -> Self {
@@ -146,13 +189,29 @@ impl DiskSizeEditView {
         self
     }
 
+    pub fn content_maybe(self, content: Option<u64>) -> Self {
+        if let Some(value) = content {
+            self.content(value)
+        } else {
+            self
+        }
+    }
+
     pub fn get_content(&self) -> Option<u64> {
         self.with_view(|v| {
             v.get_child(0)?
                 .downcast_ref::<ResizedView<FloatEditView>>()?
-                .with_view(|v| v.get_content().ok().map(|val| val as u64))?
+                .with_view(|v| {
+                    if self.allow_empty {
+                        v.get_content_maybe().and_then(Result::ok)
+                    } else {
+                        v.get_content().ok()
+                    }
+                })
+                .flatten()
         })
         .flatten()
+        .map(|val| val as u64)
     }
 }
 
