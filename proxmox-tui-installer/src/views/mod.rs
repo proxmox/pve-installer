@@ -102,20 +102,26 @@ impl ViewWrapper for FloatEditView {
         let original = self.view.get_content();
 
         let has_decimal_place = original.find('.').is_some();
-        let decimal_places = original
+
+        let result = match event {
+            Event::Char(c) if !c.is_numeric() => return EventResult::consumed(),
+            Event::Char('.') if has_decimal_place => return EventResult::consumed(),
+            _ => self.view.on_event(event),
+        };
+
+        let decimal_places = self
+            .view
+            .get_content()
             .split_once('.')
             .map(|(_, s)| s.len())
             .unwrap_or_default();
-
-        let result = match event {
-            // Drop all other characters than numbers; allow dots if not set to integer-only
-            Event::Char(c)
-                if !(c.is_numeric() || (!has_decimal_place && c == '.')) || decimal_places >= 2 =>
-            {
-                EventResult::consumed()
-            }
-            _ => self.view.on_event(event),
-        };
+        if decimal_places > 2 {
+            let cb = self.view.set_content((*original).clone());
+            return EventResult::with_cb_once(move |siv| {
+                result.process(siv);
+                cb(siv);
+            });
+        }
 
         self.check_bounds(original, result)
     }
