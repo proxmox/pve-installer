@@ -60,7 +60,7 @@ if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
 
 Proxmox::Log::init("/tmp/install-low-level-${cmd}.log");
 
-my $env = Proxmox::Install::ISOEnv::setup();
+my $env = Proxmox::Install::ISOEnv::get();
 if ($cmd eq 'dump-env') {
 
     my $out_dir = $env->{locations}->{run};
@@ -74,14 +74,17 @@ if ($cmd eq 'dump-env') {
 	'iso-info' => $env->{iso},
 	'product' => $env->{product},
 	'product-cfg' => $env->{cfg},
+	'run-env-cache-file' => $env->{'run-env-cache-file'},
 	'locations' => $env->{locations},
     };
     my $iso_serialized = to_json($iso_info, {canonical => 1, utf8 => 1}) ."\n";
     file_write_all("$out_dir/iso-info.json", $iso_serialized);
 
+    my $run_env_file = Proxmox::Install::ISOEnv::get('run-env-cache-file');
+
     my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
     my $run_env_serialized = to_json($run_env, {canonical => 1, utf8 => 1}) ."\n";
-    file_write_all("$out_dir/run-env-info.json", $run_env_serialized);
+    file_write_all($run_env_file, $run_env_serialized);
 } elsif ($cmd eq 'start-session') {
     Proxmox::UI::init_stdio({}, $env);
 

@@ -141,6 +141,7 @@ sub setup {
 	cfg => $cfg,
 	iso => $cd_info,
 	locations => $locations,
+	'run-env-cache-file' => "$locations->{run}/run-env-info.json",
 	locales => read_locale_info($locations->{lib}),
     };
 
