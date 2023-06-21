@@ -23,6 +23,8 @@ use cursive::{
     Cursive, CursiveRunnable, ScreenId, View, XY,
 };
 
+use proxmox_sys::linux::procfs;
+
 mod options;
 use options::*;
 
@@ -237,11 +239,20 @@ fn installer_setup_late(siv: &mut Cursive) {
         let kmap_id = &state.options.timezone.kb_layout;
         if let Some(kmap) = state.locales.kmap.get(kmap_id) {
             if let Err(err) = system::set_keyboard_layout(kmap) {
-                siv.add_layer(
-                    Dialog::info(format!("Failed to apply keyboard layout: {err}"))
-                        .title("Warning"),
-                );
+                display_setup_warning(siv, &format!("Failed to apply keyboard layout: {err}"));
             }
+        }
+    }
+
+    if let Ok(cpuinfo) = procfs::read_cpuinfo().map_err(|err| err.to_string()) {
+        if !cpuinfo.hvm {
+            display_setup_warning(
+                siv,
+                concat!(
+                    "No support for hardware-accelerated KVM virtualization detected.\n\n",
+                    "Check BIOS settings for Intel VT / AMD-V / SVM."
+                ),
+            );
         }
     }
 }
@@ -255,6 +266,10 @@ fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
     siv.run();
 
     std::process::exit(1);
+}
+
+fn display_setup_warning(siv: &mut Cursive, message: &str) {
+    siv.add_layer(Dialog::info(message).title("Warning"));
 }
 
 fn switch_to_next_screen(

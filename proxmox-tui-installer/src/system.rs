@@ -1,7 +1,5 @@
 use std::{fs::OpenOptions, io::Write, process::Command};
 
-use proxmox_sys::linux::procfs;
-
 use crate::setup::{KeyboardMapping, RuntimeInfo};
 
 pub fn has_min_requirements(info: &RuntimeInfo) -> Result<(), String> {
@@ -9,16 +7,6 @@ pub fn has_min_requirements(info: &RuntimeInfo) -> Result<(), String> {
         return Err(concat!(
             "Less than 1 GiB of usable memory detected, installation will probably fail.\n\n",
             "See 'System Requirements' in the documentation."
-        )
-        .to_owned());
-    }
-
-    let cpuinfo = procfs::read_cpuinfo().map_err(|err| err.to_string())?;
-
-    if !cpuinfo.hvm {
-        return Err(concat!(
-            "No support for hardware-accelerated KVM virtualization detected.\n\n",
-            "Check BIOS settings for Intel VT / AMD-V / SVM."
         )
         .to_owned());
     }
