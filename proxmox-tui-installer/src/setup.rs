@@ -150,7 +150,7 @@ pub struct InstallConfig {
 impl From<InstallerOptions> for InstallConfig {
     fn from(options: InstallerOptions) -> Self {
         let mut config = Self {
-            autoreboot: options.reboot as usize,
+            autoreboot: options.autoreboot as usize,
 
             filesys: options.bootdisk.fstype,
             hdsize: 0,

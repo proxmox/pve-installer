@@ -179,7 +179,7 @@ fn main() {
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: PasswordOptions::defaults_from(&runtime_info),
             network: NetworkOptions::from(&runtime_info.network),
-            reboot: false,
+            autoreboot: false,
         },
         setup_info,
         runtime_info,
@@ -666,13 +666,13 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
                 .child(Button::new("Previous", switch_to_prev_screen))
                 .child(DummyView)
                 .child(Button::new("Install", |siv| {
-                    let reboot = siv
+                    let autoreboot = siv
                         .find_name("reboot-after-install")
                         .map(|v: ViewRef<Checkbox>| v.is_checked())
                         .unwrap_or_default();
 
                     siv.with_user_data(|state: &mut InstallerState| {
-                        state.options.reboot = reboot;
+                        state.options.autoreboot = autoreboot;
                     });
 
                     switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
