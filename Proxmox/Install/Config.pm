@@ -51,7 +51,7 @@ my sub init_cfg {
     my $iso_env = Proxmox::Install::ISOEnv::get();
 
     my $country = Proxmox::Install::RunEnv::get('country');
-    if (!defined($iso_env->{locales}->{country}->{$country})) {
+    if (defined($country) && !defined($iso_env->{locales}->{country}->{$country})) {
 	log_warn("ignoring detected country '$country', invalid or unknown\n");
 	$country = undef;
     }
