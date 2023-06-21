@@ -179,7 +179,7 @@ fn main() {
         options: InstallerOptions {
             bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
-            password: PasswordOptions::defaults_from(&runtime_info),
+            password: Default::default(),
             network: NetworkOptions::from(&runtime_info.network),
             autoreboot: false,
         },

@@ -306,18 +306,10 @@ pub struct PasswordOptions {
     pub root_password: String,
 }
 
-impl PasswordOptions {
-    pub fn defaults_from(info: &RuntimeInfo) -> Self {
-        let domain = info
-            .network
-            .dns
-            .domain
-            .clone()
-            // Safety: The provided default domain will always be valid.
-            .unwrap_or_else(|| Fqdn::from("example.invalid").unwrap());
-
+impl Default for PasswordOptions {
+    fn default() -> Self {
         Self {
-            email: format!("mail@{domain}"),
+            email: "mail@example.invalid".to_string(),
             root_password: String::new(),
         }
     }
