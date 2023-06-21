@@ -73,6 +73,10 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         }
     }
 
+    pub fn set_max_value(&mut self, max: T) {
+        self.max_value = Some(max);
+    }
+
     fn check_bounds(&mut self, original: Rc<String>, result: EventResult) -> EventResult {
         // Check if the new value is actually valid according to the max value, if set
         if let Some(max) = self.max_value {
@@ -201,6 +205,19 @@ impl DiskSizeEditView {
         } else {
             self
         }
+    }
+
+    pub fn max_value(mut self, max: u64) -> Self {
+        if let Some(view) = self
+            .view
+            .get_child_mut(0)
+            .and_then(|v| v.downcast_mut::<ResizedView<FloatEditView>>())
+        {
+            let max = (max as f64) / 1024. / 1024. / 1024.;
+            view.get_inner_mut().set_max_value(max);
+        }
+
+        self
     }
 
     pub fn get_content(&self) -> Option<u64> {

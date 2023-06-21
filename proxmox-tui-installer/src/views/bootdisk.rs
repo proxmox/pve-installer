@@ -201,7 +201,9 @@ impl LvmBootdiskOptionsView {
         let view = FormView::new()
             .child(
                 "Total size",
-                DiskSizeEditView::new().content(options.total_size),
+                DiskSizeEditView::new()
+                    .content(options.total_size)
+                    .max_value(options.total_size),
             )
             .child(
                 "Swap size",
