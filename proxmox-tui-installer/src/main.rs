@@ -566,7 +566,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     .map_err(|err| err.to_string())?;
 
                 let dns_server = view
-                    .get_value::<EditView, _>(3)
+                    .get_value::<EditView, _>(4)
                     .ok_or("failed to retrieve DNS server address")?
                     .parse::<IpAddr>()
                     .map_err(|err| err.to_string())?;
