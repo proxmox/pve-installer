@@ -1,3 +1,29 @@
+proxmox-installer (8.0.5) bookworm; urgency=medium
+
+  * various fixes for the TUI:
+    - make HVM extension not being present a non-fatal warning
+    - do not fail completely on invalid domain names
+    -  make disk swap-, max-root-, max-data- and min-lvm-free-size optional
+      falling back to the proxinstall automatic smart defaults in that case.
+    - make auto-deteced network routes optional
+    - skip serializing empty fields for install config
+    - set detected keyboard layout at installer launch
+    - only focus summary table if it can be scrolled
+    - refresh summary view if it is switched back to
+    - make reboot-after-install checkbox default to enabled
+    - redirect TUI stderr output to tty2
+    - use non-slanted logo
+    - implement auto-reboot after installation
+
+  * config: fix missing include of Log module and avoid warning if no country
+    was detected
+
+  * run env: make addresses optional, include all interfaces
+
+  * fix #4643: show a confirmation dialog when clicking abort
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 21 Jun 2023 13:22:38 +0200
+
 proxmox-installer (8.0.4) bookworm; urgency=medium
 
   * re-add Encode module for decoding EULA in GTK installer
