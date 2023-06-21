@@ -664,7 +664,7 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
             switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
         }));
 
-    let _ = bbar.set_focus_index(4); // ignore errors
+    let _ = bbar.set_focus_index(2); // ignore errors
 
     let mut inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
