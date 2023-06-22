@@ -967,7 +967,6 @@ my $get_selected_hdsize = sub {
     my $cached_disks = get_cached_disks();
     my $disk_count = scalar(@$cached_disks);
     for (my $i = 0; $i < $disk_count; $i++) {
-	next if !Proxmox::Install::Config::get_disk_selection($i);
 	my $cur_hd = $gtk_state->{disk_selection}->{$i} // next;
 	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
 	$hdsize //= $disksize;
@@ -1398,9 +1397,9 @@ sub create_hdoption_view {
 
 sub apply_raid_disk_selection {
     Proxmox::Install::Config::set_key('disk_selection', {}); # reset
-    for my $selector (keys $gtk_state->{disk_selection}->%*) {
-	my $disk = $gtk_state->{disk_selection}->{$selector} // next;
-	Proxmox::Install::Config::set_disk_selection($disk->[0], 1);
+    for my $order (sort keys $gtk_state->{disk_selection}->%*) {
+	my $disk = $gtk_state->{disk_selection}->{$order} // next;
+	Proxmox::Install::Config::set_disk_selection($order, $disk->[0]);
     }
 }
 

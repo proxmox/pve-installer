@@ -209,9 +209,9 @@ my $get_raid_devlist = sub {
     my $cached_disks = get_cached_disks();
     my $devlist = [];
     for (my $i = 0; $i < @$cached_disks; $i++) {
-	next if !Proxmox::Install::Config::get_disk_selection($i);
+	my $disk_id = Proxmox::Install::Config::get_disk_selection($i) // next;
 
-	my $hd = $cached_disks->[$i];
+	my $hd = $cached_disks->[$disk_id];
 	my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
 	die "device '$devname' is used more than once\n" if $dev_name_hash->{$devname};
 	$dev_name_hash->{$devname} = $hd;
