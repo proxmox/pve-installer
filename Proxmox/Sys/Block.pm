@@ -16,10 +16,10 @@ use base qw(Exporter);
 our @EXPORT_OK = qw(get_cached_disks wipe_disk partition_bootable_disk);
 
 my sub is_same_file {
-    my ($a, $b) = @_;
+    my ($file_a, $file_b) = @_;
 
-    my ($dev_a ,$ino_a) = stat($a);
-    my ($dev_b, $ino_b) = stat($b);
+    my ($dev_a ,$ino_a) = stat($file_a);
+    my ($dev_b, $ino_b) = stat($file_b);
 
     return 0 if !($dev_a && $dev_b && $ino_a && $ino_b);
 

@@ -144,10 +144,10 @@ sub get_ip_config {
 	};
 
 	my $addresses = `ip -o a s $name`;
-	foreach my $a (split /\n/,$addresses) {
-	    my ($family, $ip, $prefix) = $a =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
+	for my $addr_line (split /\n/,$addresses) {
+	    my ($family, $ip, $prefix) = $addr_line =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
 	    next if !$ip;
-	    next if $a =~ /scope\s+link/; # ignore link local
+	    next if $addr_line =~ /scope\s+link/; # ignore link local
 
 	    my $mask = $prefix;
 
