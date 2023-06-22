@@ -435,6 +435,7 @@ sub create_lvm_volumes {
 
 	$rootsize_mb = $maxroot_mb if $rootsize_mb > $maxroot_mb;
 	$rootsize = int($rootsize_mb * 1024);
+	$rootsize &= ~0xFFF; # align down to 4 MB boundaries
 
 	$rest -= $rootsize; # in KB
 
