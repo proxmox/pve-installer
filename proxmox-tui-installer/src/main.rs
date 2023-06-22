@@ -820,7 +820,7 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
                                     .map(|state| state.options.autoreboot)
                                     .unwrap_or_default();
 
-                                if autoreboot {
+                                if autoreboot && success {
                                     let cb_sink = siv.cb_sink();
                                     thread::spawn({
                                         let cb_sink = cb_sink.clone();
