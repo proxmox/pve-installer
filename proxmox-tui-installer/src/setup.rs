@@ -109,15 +109,15 @@ pub struct InstallConfig {
 
     #[serde(serialize_with = "serialize_fstype")]
     filesys: FsType,
-    hdsize: u64,
+    hdsize: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    swapsize: Option<u64>,
+    swapsize: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    maxroot: Option<u64>,
+    maxroot: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    minfree: Option<u64>,
+    minfree: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    maxvz: Option<u64>,
+    maxvz: Option<f64>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     zfs_opts: Option<InstallZfsOption>,
@@ -153,7 +153,7 @@ impl From<InstallerOptions> for InstallConfig {
             autoreboot: options.autoreboot as usize,
 
             filesys: options.bootdisk.fstype,
-            hdsize: 0,
+            hdsize: 0.,
             swapsize: None,
             maxroot: None,
             minfree: None,
@@ -243,13 +243,13 @@ fn deserialize_disks_map<'de, D>(deserializer: D) -> Result<Vec<Disk>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let disks = <Vec<(usize, String, u64, String, u64, String)>>::deserialize(deserializer)?;
+    let disks = <Vec<(usize, String, f64, String, f64, String)>>::deserialize(deserializer)?;
     Ok(disks
         .into_iter()
         .map(
             |(index, device, size_mb, model, logical_bsize, _syspath)| Disk {
                 index: index.to_string(),
-                size: size_mb * logical_bsize,
+                size: (size_mb * logical_bsize) / 1024. / 1024. / 1024.,
                 path: device,
                 model: (!model.is_empty()).then_some(model),
             },

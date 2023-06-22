@@ -189,17 +189,15 @@ impl DiskSizeEditView {
         }
     }
 
-    pub fn content(mut self, content: u64) -> Self {
-        let val = (content as f64) / 1024. / 1024. / 1024.;
-
+    pub fn content(mut self, content: f64) -> Self {
         if let Some(view) = self.view.get_child_mut(0).and_then(|v| v.downcast_mut()) {
-            *view = FloatEditView::new().content(val).full_width();
+            *view = FloatEditView::new().content(content).full_width();
         }
 
         self
     }
 
-    pub fn content_maybe(self, content: Option<u64>) -> Self {
+    pub fn content_maybe(self, content: Option<f64>) -> Self {
         if let Some(value) = content {
             self.content(value)
         } else {
@@ -207,20 +205,19 @@ impl DiskSizeEditView {
         }
     }
 
-    pub fn max_value(mut self, max: u64) -> Self {
+    pub fn max_value(mut self, max: f64) -> Self {
         if let Some(view) = self
             .view
             .get_child_mut(0)
             .and_then(|v| v.downcast_mut::<ResizedView<FloatEditView>>())
         {
-            let max = (max as f64) / 1024. / 1024. / 1024.;
             view.get_inner_mut().set_max_value(max);
         }
 
         self
     }
 
-    pub fn get_content(&self) -> Option<u64> {
+    pub fn get_content(&self) -> Option<f64> {
         self.with_view(|v| {
             v.get_child(0)?
                 .downcast_ref::<ResizedView<FloatEditView>>()?
@@ -234,7 +231,6 @@ impl DiskSizeEditView {
                 .flatten()
         })
         .flatten()
-        .map(|val| val as u64)
     }
 }
 
@@ -285,8 +281,8 @@ where
     }
 }
 
-impl FormViewGetValue<u64> for DiskSizeEditView {
-    fn get_value(&self) -> Option<u64> {
+impl FormViewGetValue<f64> for DiskSizeEditView {
+    fn get_value(&self) -> Option<f64> {
         self.get_content()
     }
 }

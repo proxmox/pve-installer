@@ -86,11 +86,11 @@ pub const FS_TYPES: &[FsType] = {
 
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
-    pub total_size: u64,
-    pub swap_size: Option<u64>,
-    pub max_root_size: Option<u64>,
-    pub max_data_size: Option<u64>,
-    pub min_lvm_free: Option<u64>,
+    pub total_size: f64,
+    pub swap_size: Option<f64>,
+    pub max_root_size: Option<f64>,
+    pub max_data_size: Option<f64>,
+    pub min_lvm_free: Option<f64>,
 }
 
 impl LvmBootdiskOptions {
@@ -107,7 +107,7 @@ impl LvmBootdiskOptions {
 
 #[derive(Clone, Debug)]
 pub struct BtrfsBootdiskOptions {
-    pub disk_size: u64,
+    pub disk_size: f64,
 }
 
 impl BtrfsBootdiskOptions {
@@ -180,7 +180,7 @@ pub struct ZfsBootdiskOptions {
     pub compress: ZfsCompressOption,
     pub checksum: ZfsChecksumOption,
     pub copies: usize,
-    pub disk_size: u64,
+    pub disk_size: f64,
 }
 
 impl ZfsBootdiskOptions {
@@ -202,12 +202,12 @@ pub enum AdvancedBootdiskOptions {
     Btrfs(BtrfsBootdiskOptions),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Disk {
     pub index: String,
     pub path: String,
     pub model: Option<String>,
-    pub size: u64,
+    pub size: f64,
 }
 
 impl fmt::Display for Disk {
@@ -219,11 +219,7 @@ impl fmt::Display for Disk {
             // FIXME: ellipsize too-long names?
             write!(f, " ({model})")?;
         }
-        write!(
-            f,
-            " ({:.2} GiB)",
-            (self.size as f64) / 1024. / 1024. / 1024.
-        )
+        write!(f, " ({:.2} GiB)", self.size)
     }
 }
 
@@ -232,6 +228,8 @@ impl From<&Disk> for String {
         value.to_string()
     }
 }
+
+impl cmp::Eq for Disk {}
 
 impl cmp::PartialOrd for Disk {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
