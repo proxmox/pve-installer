@@ -43,6 +43,10 @@ my sub parse_kernel_cmdline {
 	}
     }
 
+    if ($cmdline =~ m/console=(\S+)[\s\n]/i) {
+	    $cfg->{console} = $1;
+    }
+
     return $cfg;
 }
 
@@ -97,6 +101,7 @@ my sub init_cfg {
 	cidr => undef,
 	gateway => undef,
 	dns => undef,
+	console => undef,
     };
 
     $initial = parse_kernel_cmdline($initial);
@@ -229,5 +234,9 @@ sub get_gateway { return get('gateway'); }
 
 sub set_dns { set_key('dns', $_[0]); }
 sub get_dns { return get('dns'); }
+
+sub set_console { set_key('console', $_[0]); }
+sub get_console { return get('console'); }
+
 
 1;

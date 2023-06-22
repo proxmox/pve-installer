@@ -1152,13 +1152,19 @@ _EOD
 	}
 
 	update_progress(0.8, 0.95, 1, "make system bootable");
+	my $console_param='';
+	if (my $console = Proxmox::Install::Config::get_console()) {
+	    my $console_param="console=$console";;
+	    my $console_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX $console_param\"";
+	    file_write_all("$targetdir/etc/default/grub.d/console.cfg", $console_snippet);
+	}
 
 	if ($use_zfs) {
 	    # add ZFS options while preserving existing kernel cmdline
 	    my $zfs_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs\"";
 	    file_write_all("$targetdir/etc/default/grub.d/zfs.cfg", $zfs_snippet);
 
-	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs\n");
+	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs $console_param\n");
 
 	    zfs_setup_module_conf($targetdir);
 	}
