@@ -469,9 +469,10 @@ sub create_lvm_volumes {
 	die "unable to create root volume\n";
 
     if ($datasize > 4 * 1024 * 1024) {
-	my $metadatasize = $datasize/100; # default 1% of data
+	my $metadatasize = int($datasize/100); # default 1% of data
 	$metadatasize = 1024*1024 if $metadatasize < 1024*1024; # but at least 1G
 	$metadatasize = 16*1024*1024 if $metadatasize > 16*1024*1024; # but at most 16G
+	$metadatasize &= ~0xFFF; # align down to 4 MB boundaries
 
 	# otherwise the metadata is taken out of $minfree
 	$datasize -= 2 * $metadatasize;
