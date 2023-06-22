@@ -366,9 +366,9 @@ sub ask_existing_vg_rename_or_abort {
     }
     $message .= "or cancel the installation?";
 
-    my $response = Proxmox::UI::prompt($message);
+    my $response_ok = Proxmox::UI::prompt($message);
 
-    if ($response eq 'ok') {
+    if ($response_ok) {
 	for my $vg_uuid (keys %$duplicate_vgs) {
 	    my $vg = $duplicate_vgs->{$vg_uuid};
 	    my $new_vgname = $vg->{new_vgname};

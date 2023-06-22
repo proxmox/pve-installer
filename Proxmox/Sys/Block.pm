@@ -227,12 +227,12 @@ sub partition_bootable_disk {
 
     die "root disk '$target_dev' too small (${hdgb} GB < $hard_limit GB)\n" if $hdgb < $hard_limit;
     if ($hdgb < $soft_limit) {
-	my $response = Proxmox::UI::prompt(
+	my $response_ok = Proxmox::UI::prompt(
 	    "Root disk space ${hdgb} GB is below recommended minimum space of $soft_limit GB,"
 	    ." installation might not be successful! Continue?"
 	);
 	die "root disk '$target_dev' too small (${hdgb} GB < $soft_limit GB), and warning not accepted.\n"
-	    if $response ne 'ok';
+	    if $response_ok;
     }
 
     syscmd("sgdisk -Z ${target_dev}");
