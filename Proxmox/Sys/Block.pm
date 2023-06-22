@@ -57,8 +57,9 @@ my sub hd_list {
     if (is_test_mode()) {
 	my $disks = Proxmox::Install::ISOEnv::get_test_images();
 
+	my $i = 0;
 	return [
-	    map { [ 0, $_, int((-s $_)/512), "TESTDISK", 512, "/sys/block/$_"] } $disks->@*
+	    map { [ $i++, $_, int((-s $_)/512), "TESTDISK", 512, "/sys/block/$_"] } $disks->@*
 	];
     }
 
