@@ -226,6 +226,7 @@ sub create_main_window {
     $gtk_state->{progress_bar} = Gtk3::ProgressBar->new();
     $gtk_state->{progress_status} = Gtk3::Label->new('');
     $gtk_state->{abort_btn} = $abort;
+    $gtk_state->{disk_selection} = {};
 
     Proxmox::UI::init_gtk($gtk_state, $iso_env);
 
@@ -967,7 +968,7 @@ my $get_selected_hdsize = sub {
     my $disk_count = scalar(@$cached_disks);
     for (my $i = 0; $i < $disk_count; $i++) {
 	next if !Proxmox::Install::Config::get_disk_selection($i);
-	my $cur_hd = $cached_disks->[$i];
+	my $cur_hd = $gtk_state->{disk_selection}->{$i} // next;
 	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
 	$hdsize //= $disksize;
 	$hdsize = $disksize if $disksize < $hdsize;
@@ -1032,7 +1033,7 @@ my $create_raid_disk_grid = sub {
 	    my $w = shift;
 	    my $diskid = $w->{pve_disk_id};
 	    my $a = $w->get_active - 1;
-	    Proxmox::Install::Config::set_disk_selection($diskid, $a >= 0);
+	    $gtk_state->{disk_selection}->{$diskid} = ($a >= 0) ? $cached_disks->[$a] : undef;
 	    for my $btn (@$hdsize_buttons) {
 		update_hdsize_adjustment($btn->get_adjustment());
 	    }
@@ -1042,8 +1043,7 @@ my $create_raid_disk_grid = sub {
 	    $disk_selector->set_active ($i+1) if $cached_disks->[$i];
 	} else {
 	    my $hdind = 0;
-	    if (Proxmox::Install::Config::get_disk_selection($i)) {
-		my $cur_hd = $cached_disks->[$i];
+	    if (my $cur_hd = $gtk_state->{disk_selection}->{$i}) {
 		foreach my $hd (@$cached_disks) {
 		    if (@$hd[1] eq @$cur_hd[1]) {
 			$disk_selector->set_active($hdind+1);
@@ -1396,6 +1396,14 @@ sub create_hdoption_view {
     $dialog->destroy();
 }
 
+sub apply_raid_disk_selection {
+    Proxmox::Install::Config::set_key('disk_selection', {}); # reset
+    for my $selector (keys $gtk_state->{disk_selection}->%*) {
+	my $disk = $gtk_state->{disk_selection}->{$selector} // next;
+	Proxmox::Install::Config::set_disk_selection($disk->[0], 1);
+    }
+}
+
 my $last_hd_selected = 0;
 sub create_hdsel_view {
 
@@ -1453,6 +1461,7 @@ sub create_hdsel_view {
     set_next(undef, sub {
 	my $filesys = Proxmox::Install::Config::get_filesys();
 	if ($filesys =~ m/zfs/) {
+	    apply_raid_disk_selection();
 	    my ($devlist) = eval { Proxmox::Install::get_zfs_raid_setup() };
 	    if (my $err = $@) {
 		Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
@@ -1460,6 +1469,7 @@ sub create_hdsel_view {
 	    }
 	    $target_hds = [ map { $_->[1] } @$devlist ];
 	} elsif ($filesys =~ m/btrfs/) {
+	    apply_raid_disk_selection();
 	    my ($devlist) = eval { Proxmox::Install::get_btrfs_raid_setup() };
 	    if (my $err = $@) {
 		Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
