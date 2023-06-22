@@ -907,7 +907,7 @@ impl FromStr for UiMessage {
                     rest.to_owned(),
                 ))
             }
-            _ => Err("invalid message type".to_owned()),
+            unknown => Err(format!("invalid message type {unknown}, rest: {rest}")),
         }
     }
 }
