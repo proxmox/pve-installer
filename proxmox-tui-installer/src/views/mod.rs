@@ -301,7 +301,7 @@ impl FormView {
     }
 
     pub fn add_child(&mut self, label: &str, view: impl View) {
-        self.add_to_column(0, TextView::new(format!("{label}: ")));
+        self.add_to_column(0, TextView::new(format!("{label}: ")).no_wrap());
         self.add_to_column(1, view);
     }
 
