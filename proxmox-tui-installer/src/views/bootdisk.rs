@@ -2,7 +2,9 @@ use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
 use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
-    views::{Button, Dialog, DummyView, LinearLayout, NamedView, Panel, SelectView, TextView},
+    views::{
+        Button, Dialog, DummyView, LinearLayout, NamedView, Panel, ScrollView, SelectView, TextView,
+    },
     Cursive, View,
 };
 
@@ -268,7 +270,7 @@ impl<T: View> MultiDiskOptionsView<T> {
         let disk_select_view = LinearLayout::vertical()
             .child(TextView::new("Disk setup").center())
             .child(DummyView)
-            .child(disk_form);
+            .child(ScrollView::new(disk_form));
 
         let options_view = LinearLayout::vertical()
             .child(TextView::new("Advanced options").center())
@@ -306,7 +308,8 @@ impl<T: View> MultiDiskOptionsView<T> {
             .get_child(0)?
             .downcast_ref::<LinearLayout>()?
             .get_child(2)?
-            .downcast_ref::<FormView>()?;
+            .downcast_ref::<ScrollView<FormView>>()?
+            .get_inner();
 
         for i in 0..disk_form.len() {
             let disk = disk_form.get_value::<SelectView<Option<Disk>>, _>(i)?;
