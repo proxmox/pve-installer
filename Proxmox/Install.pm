@@ -425,7 +425,7 @@ sub create_lvm_volumes {
 	my $rootsize_mb;
 	if ($rest_mb < 12 * 1024) {
 	    # no point in wasting space, try to get us actually installed and align down to 4 MB
-	    $rootsize_mb = ($rest_mb - 0.1) & ~3;
+	    $rootsize_mb = ($rest_mb - 4) & ~3;
 	} elsif ($rest_mb < 48 * 1024) {
 	    my $masked = int($rest_mb / 2) & ~3; # align down to 4 MB
 	    $rootsize_mb = $masked;
