@@ -29,7 +29,7 @@ my sub is_same_file {
 my sub find_stable_path {
     my ($stabledir, $bdev) = @_;
 
-    while(my $path = <$stabledir/*>) {
+    foreach my $path (<$stabledir/*>) {
 	if (is_same_file($path, $bdev)) {
 	    return $path;
 	}
@@ -64,7 +64,7 @@ my sub hd_list {
 
     my $res = [];
     my $count = 0;
-    while(my $bd = </sys/block/*>) {
+    foreach my $bd (</sys/block/*>) {
 	next if $bd =~ m|^/sys/block/ram\d+$|;
 	next if $bd =~ m|^/sys/block/loop\d+$|;
 	next if $bd =~ m|^/sys/block/md\d+$|;
