@@ -1,3 +1,24 @@
+proxmox-installer (8.0.9) bookworm; urgency=medium
+
+  * tui: switch to `f64` for disk sizes for full range of values
+
+  * tui: wrap multi-disk selection in scrollable view
+
+  * tui: disable automatic text wrapping for form labels
+
+  * tui: add some info to unknown UI messages
+
+  * tui: do not auto reboot on failures
+
+  * gtk: raid disk selector: separate UI state from config state to avoid
+    messing with the order of selection
+
+  * align metadata size and rootdisk size to 4 MiB
+
+  * fix space calculation for small disks for pve product
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 22 Jun 2023 16:48:18 +0200
+
 proxmox-installer (8.0.8) bookworm; urgency=medium
 
   * Revert "critic: lazily read directories via <> glob"
