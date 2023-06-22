@@ -1,3 +1,11 @@
+proxmox-installer (8.0.7) bookworm; urgency=medium
+
+  * fix checking the response of the prompt, which is now returning a boolean.
+    This fixes an issue where the user was prompted for small root disk space
+    or if renaming the PVE VG is ok, but the installer always aborted.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 22 Jun 2023 07:38:24 +0200
+
 proxmox-installer (8.0.6) bookworm; urgency=medium
 
   * tui: remove underline-effect from advanced disk setup titles
