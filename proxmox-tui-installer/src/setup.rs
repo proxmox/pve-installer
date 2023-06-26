@@ -19,6 +19,16 @@ pub enum ProxmoxProduct {
     PMG,
 }
 
+impl ProxmoxProduct {
+    pub fn default_hostname(self) -> &'static str {
+        match self {
+            Self::PVE => "pve",
+            Self::PMG => "pmg",
+            Self::PBS => "pbs",
+        }
+    }
+}
+
 #[derive(Clone, Deserialize)]
 pub struct ProductConfig {
     pub fullname: String,
@@ -171,7 +181,12 @@ impl From<InstallerOptions> for InstallConfig {
 
             mngmt_nic: options.network.ifname,
 
-            hostname: options.network.fqdn.host().unwrap_or("pve").to_owned(),
+            hostname: options
+                .network
+                .fqdn
+                .host()
+                .unwrap_or_else(|| crate::current_product().default_hostname())
+                .to_owned(),
             domain: options.network.fqdn.domain(),
             cidr: options.network.address,
             gateway: options.network.gateway,

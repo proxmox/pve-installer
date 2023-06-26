@@ -324,10 +324,14 @@ pub struct NetworkOptions {
 
 impl Default for NetworkOptions {
     fn default() -> Self {
+        let fqdn = format!(
+            "{}.example.invalid",
+            crate::current_product().default_hostname()
+        );
         // TODO: Retrieve automatically
         Self {
             ifname: String::new(),
-            fqdn: "pve.example.invalid".parse().unwrap(),
+            fqdn: fqdn.parse().unwrap(),
             // Safety: The provided mask will always be valid.
             address: CidrAddress::new(Ipv4Addr::UNSPECIFIED, 0).unwrap(),
             gateway: Ipv4Addr::UNSPECIFIED.into(),
@@ -345,8 +349,9 @@ impl From<&NetworkInfo> for NetworkOptions {
         }
 
         if let Some(domain) = &info.dns.domain {
-            // FIXME: make product agnostic - use a global (lazy static) for ISO/RUN env info?
-            this.fqdn = Fqdn::from(&format!("pve.{}", domain)).unwrap_or_else(|_| domain.clone());
+            let hostname = crate::current_product().default_hostname();
+            this.fqdn =
+                Fqdn::from(&format!("{hostname}.{domain}")).unwrap_or_else(|_| domain.clone());
         }
 
         if let Some(routes) = &info.routes {

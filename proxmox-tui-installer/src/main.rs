@@ -65,6 +65,11 @@ fn init_setup_info(info: SetupInfo) {
     }
 }
 
+#[inline]
+pub fn current_product() -> setup::ProxmoxProduct {
+    setup_info().config.product
+}
+
 struct InstallerView {
     view: ResizedView<Dialog>,
 }
