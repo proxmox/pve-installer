@@ -1,3 +1,10 @@
+proxmox-installer (8.0.11) bookworm; urgency=medium
+
+  * tui: hide max-vz and max-root inputs if product isn't PVE to be consistent
+    with the GTK based installer.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 26 Jun 2023 21:39:45 +0200
+
 proxmox-installer (8.0.10) bookworm; urgency=medium
 
   * tui: use product for default hostname
