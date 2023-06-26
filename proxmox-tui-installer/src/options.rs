@@ -55,6 +55,16 @@ pub enum FsType {
     Btrfs(BtrfsRaidLevel),
 }
 
+impl FsType {
+    pub fn is_btrfs(&self) -> bool {
+        use FsType::Btrfs;
+        match self {
+            Btrfs(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for FsType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use FsType::*;

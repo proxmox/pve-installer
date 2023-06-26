@@ -82,12 +82,22 @@ struct AdvancedBootdiskOptionsView {
 
 impl AdvancedBootdiskOptionsView {
     fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
+        let enable_btrfs = crate::setup_info().config.enable_btrfs;
+
+        let filter_btrfs = |fstype: &&FsType| -> bool { enable_btrfs || !fstype.is_btrfs() };
+
         let fstype_select = SelectView::new()
             .popup()
-            .with_all(FS_TYPES.iter().map(|t| (t.to_string(), *t)))
+            .with_all(
+                FS_TYPES
+                    .iter()
+                    .filter(filter_btrfs)
+                    .map(|t| (t.to_string(), *t)),
+            )
             .selected(
                 FS_TYPES
                     .iter()
+                    .filter(filter_btrfs)
                     .position(|t| *t == options.fstype)
                     .unwrap_or_default(),
             )
