@@ -158,15 +158,19 @@ check-pmg: prepare-check-pmg
 check-pmg-tui: prepare-check-pmg
 	testdir/usr/bin/proxmox-tui-installer -t test.img
 
-check-pbs: prepare-check-env test.img
+prepare-check-pbs: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
 	    PRODUCT='pbs' \
 	    PRODUCTLONG='Proxmox Backup Server' \
 	    ISONAME='proxmox-backup-server' \
 	    cd-info.test
 	./proxmox-low-level-installer dump-env -t
+
+check-pbs: prepare-check-pbs
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
+check-pbs-tui: prepare-check-pbs
+	testdir/usr/bin/proxmox-tui-installer -t test.img
 
 .phony: clean
 clean:
