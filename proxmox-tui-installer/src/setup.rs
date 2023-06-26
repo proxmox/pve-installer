@@ -208,7 +208,9 @@ impl From<InstallerOptions> for InstallConfig {
 
                 let mut i = 0;
                 for disk in &options.bootdisk.disks {
-                    config.disk_selection.insert(i.to_string(), disk.index.clone());
+                    config
+                        .disk_selection
+                        .insert(i.to_string(), disk.index.clone());
                     i = i + 1;
                 }
             }
@@ -217,7 +219,9 @@ impl From<InstallerOptions> for InstallConfig {
 
                 let mut i = 0;
                 for disk in &options.bootdisk.disks {
-                    config.disk_selection.insert(i.to_string(), disk.index.clone());
+                    config
+                        .disk_selection
+                        .insert(i.to_string(), disk.index.clone());
                     i = i + 1;
                 }
             }
