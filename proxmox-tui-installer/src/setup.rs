@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ProxmoxProduct {
     PVE,
