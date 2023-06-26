@@ -144,14 +144,19 @@ check-pve-tui: prepare-check-env test.img
 	./proxmox-low-level-installer dump-env -t
 	testdir/usr/bin/proxmox-tui-installer -t test.img
 
-check-pmg: prepare-check-env test.img
+prepare-check-pmg: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
 	    PRODUCT=pmg \
 	    PRODUCTLONG="Proxmox Mail Gateway" \
 	    ISONAME='proxmox-mail-gateway' \
 	    cd-info.test
 	./proxmox-low-level-installer dump-env -t
+
+check-pmg: prepare-check-pmg
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
+check-pmg-tui: prepare-check-pmg
+	testdir/usr/bin/proxmox-tui-installer -t test.img
 
 check-pbs: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
