@@ -310,6 +310,13 @@ impl FormView {
         self
     }
 
+    pub fn child_conditional(mut self, condition: bool, label: &str, view: impl View) -> Self {
+        if condition {
+            self.add_child(label, view);
+        }
+        self
+    }
+
     pub fn get_child<T: View>(&self, index: usize) -> Option<&T> {
         self.view
             .get_child(1)?

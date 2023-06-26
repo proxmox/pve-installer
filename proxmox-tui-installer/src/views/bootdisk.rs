@@ -13,6 +13,7 @@ use crate::options::{
     AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
     LvmBootdiskOptions, ZfsBootdiskOptions, FS_TYPES, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
 };
+use crate::setup::ProxmoxProduct;
 
 pub struct BootdiskOptionsView {
     view: LinearLayout,
@@ -209,6 +210,7 @@ struct LvmBootdiskOptionsView {
 
 impl LvmBootdiskOptionsView {
     fn new(options: &LvmBootdiskOptions) -> Self {
+        let is_pve = crate::setup_info().config.product == ProxmoxProduct::PVE;
         // TODO: Set maximum accordingly to disk size
         let view = FormView::new()
             .child(
@@ -221,11 +223,13 @@ impl LvmBootdiskOptionsView {
                 "Swap size",
                 DiskSizeEditView::new_emptyable().content_maybe(options.swap_size),
             )
-            .child(
+            .child_conditional(
+                is_pve,
                 "Maximum root volume size",
                 DiskSizeEditView::new_emptyable().content_maybe(options.max_root_size),
             )
-            .child(
+            .child_conditional(
+                is_pve,
                 "Maximum data volume size",
                 DiskSizeEditView::new_emptyable().content_maybe(options.max_data_size),
             )
@@ -238,12 +242,24 @@ impl LvmBootdiskOptionsView {
     }
 
     fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
+        let is_pve = crate::setup_info().config.product == ProxmoxProduct::PVE;
+        let min_lvm_free_id = if is_pve { 4 } else { 2 };
+        let max_root_size = if is_pve {
+            self.view.get_value::<DiskSizeEditView, _>(2)
+        } else {
+            None
+        };
+        let max_data_size = if is_pve {
+            self.view.get_value::<DiskSizeEditView, _>(3)
+        } else {
+            None
+        };
         Some(LvmBootdiskOptions {
             total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
             swap_size: self.view.get_value::<DiskSizeEditView, _>(1),
-            max_root_size: self.view.get_value::<DiskSizeEditView, _>(2),
-            max_data_size: self.view.get_value::<DiskSizeEditView, _>(3),
-            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(4),
+            max_root_size,
+            max_data_size,
+            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(min_lvm_free_id),
         })
     }
 }
