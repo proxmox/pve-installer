@@ -1,3 +1,12 @@
+proxmox-installer (8.0.10) bookworm; urgency=medium
+
+  * tui: use product for default hostname
+
+  * tui: boot disks: filter out Btrfs if setup-info disallows it, like for
+    Proxmox Mail Gateway or Proxmox Backup Server currently.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 26 Jun 2023 19:09:07 +0200
+
 proxmox-installer (8.0.9) bookworm; urgency=medium
 
   * tui: switch to `f64` for disk sizes for full range of values
