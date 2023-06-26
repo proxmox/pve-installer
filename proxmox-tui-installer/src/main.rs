@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 use std::{
     collections::HashMap,
     env,
@@ -53,6 +51,19 @@ const PROXMOX_LOGO: &str = r#"
 | |_) | '__/ _ \ \/ / '_ ` _ \ / _ \ \/ /
 |  __/| | | (_) >  <| | | | | | (_) >  <
 |_|   |_|  \___/_/\_\_| |_| |_|\___/_/\_\ "#;
+
+/// ISO information is available globally.
+static mut SETUP_INFO: Option<SetupInfo> = None;
+
+pub fn setup_info() -> &'static SetupInfo {
+    unsafe { SETUP_INFO.as_ref().unwrap() }
+}
+
+fn init_setup_info(info: SetupInfo) {
+    unsafe {
+        SETUP_INFO = Some(info);
+    }
+}
 
 struct InstallerView {
     view: ResizedView<Dialog>,
@@ -152,6 +163,7 @@ enum InstallerStep {
 #[derive(Clone)]
 struct InstallerState {
     options: InstallerOptions,
+    /// FIXME: Remove:
     setup_info: SetupInfo,
     runtime_info: RuntimeInfo,
     locales: LocaleInfo,
@@ -169,7 +181,7 @@ fn main() {
         _ => cfg!(debug_assertions),
     };
 
-    let (setup_info, locales, runtime_info) = match installer_setup(in_test_mode) {
+    let (locales, runtime_info) = match installer_setup(in_test_mode) {
         Ok(result) => result,
         Err(err) => initial_setup_error(&mut siv, &err),
     };
@@ -185,7 +197,7 @@ fn main() {
             network: NetworkOptions::from(&runtime_info.network),
             autoreboot: false,
         },
-        setup_info,
+        setup_info: setup_info().clone(), // FIXME: REMOVE
         runtime_info,
         locales,
         steps: HashMap::new(),
@@ -196,7 +208,7 @@ fn main() {
     siv.run();
 }
 
-fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
+fn installer_setup(in_test_mode: bool) -> Result<(LocaleInfo, RuntimeInfo), String> {
     let base_path = if in_test_mode { "./testdir" } else { "/" };
     let mut path = PathBuf::from(base_path);
 
@@ -209,6 +221,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
 
         setup::read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
     };
+    init_setup_info(installer_info);
 
     let locale_info = {
         let mut path = path.clone();
@@ -231,7 +244,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Runtime
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
     } else {
-        Ok((installer_info, locale_info, runtime_info))
+        Ok((locale_info, runtime_info))
     }
 }
 
