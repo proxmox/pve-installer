@@ -28,6 +28,7 @@ all:
 $(BUILDDIR):
 	rm -rf $@ $@.tmp; mkdir $@.tmp
 	cp -a \
+	  .cargo \
 	  Cargo.toml \
 	  Makefile \
 	  Proxmox/ \
