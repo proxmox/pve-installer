@@ -266,8 +266,9 @@ fn installer_setup_late(siv: &mut Cursive) {
         }
     }
 
-    if let Ok(cpuinfo) = procfs::read_cpuinfo().map_err(|err| err.to_string()) {
-        if !cpuinfo.hvm {
+    if setup_info().config.product == setup::ProxmoxProduct::PVE {
+        let cpu_hvm = procfs::read_cpuinfo().map(|info| info.hvm).unwrap_or(false);
+        if !cpu_hvm {
             display_setup_warning(
                 siv,
                 concat!(
