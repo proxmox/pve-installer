@@ -489,6 +489,23 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
                 })
                 .flatten();
 
+            if let Some(disks) = options.as_ref().map(|opts| &opts.disks) {
+                if disks.len() > 1 {
+                    for i in 0..(disks.len() - 1) {
+                        let check_disk = &disks[i];
+                        for disk in &disks[(i + 1)..] {
+                            if disk.index == check_disk.index {
+                                siv.add_layer(Dialog::info(format!(
+                                    "cannot select same disk ({}) twice",
+                                    disk.path
+                                )));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             siv.pop_layer();
             if let Some(options) = options {
                 *(*options_ref).borrow_mut() = options;
