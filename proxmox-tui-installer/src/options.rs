@@ -118,12 +118,16 @@ impl LvmBootdiskOptions {
 #[derive(Clone, Debug)]
 pub struct BtrfsBootdiskOptions {
     pub disk_size: f64,
+    pub selected_disks: Vec<usize>,
 }
 
 impl BtrfsBootdiskOptions {
-    pub fn defaults_from(disk: &Disk) -> Self {
+    /// This panics if the provided slice is empty.
+    pub fn defaults_from(disks: &[Disk]) -> Self {
+        let disk = &disks[0];
         Self {
             disk_size: disk.size,
+            selected_disks: (0..disks.len()).collect(),
         }
     }
 }
@@ -191,16 +195,20 @@ pub struct ZfsBootdiskOptions {
     pub checksum: ZfsChecksumOption,
     pub copies: usize,
     pub disk_size: f64,
+    pub selected_disks: Vec<usize>,
 }
 
 impl ZfsBootdiskOptions {
-    pub fn defaults_from(disk: &Disk) -> Self {
+    /// This panics if the provided slice is empty.
+    pub fn defaults_from(disks: &[Disk]) -> Self {
+        let disk = &disks[0];
         Self {
             ashift: 12,
             compress: ZfsCompressOption::default(),
             checksum: ZfsChecksumOption::default(),
             copies: 1,
             disk_size: disk.size,
+            selected_disks: (0..disks.len()).collect(),
         }
     }
 }

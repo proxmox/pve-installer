@@ -137,11 +137,11 @@ impl AdvancedBootdiskOptionsView {
                     )),
                     FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new(
                         disks,
-                        &ZfsBootdiskOptions::defaults_from(&disks[0]),
+                        &ZfsBootdiskOptions::defaults_from(disks),
                     )),
                     FsType::Btrfs(_) => view.add_child(BtrfsBootdiskOptionsView::new(
                         disks,
-                        &BtrfsBootdiskOptions::defaults_from(&disks[0]),
+                        &BtrfsBootdiskOptions::defaults_from(disks),
                     )),
                 }
             }
@@ -274,7 +274,7 @@ struct MultiDiskOptionsView<T> {
 }
 
 impl<T: View> MultiDiskOptionsView<T> {
-    fn new(avail_disks: &[Disk], options_view: T) -> Self {
+    fn new(avail_disks: &[Disk], selected_disks: &Vec<usize>, options_view: T) -> Self {
         let mut selectable_disks = avail_disks
             .iter()
             .map(|d| (d.to_string(), Some(d.clone())))
@@ -289,7 +289,7 @@ impl<T: View> MultiDiskOptionsView<T> {
                 SelectView::new()
                     .popup()
                     .with_all(selectable_disks.clone())
-                    .selected(i),
+                    .selected(selected_disks[i]),
             );
         }
 
@@ -323,7 +323,13 @@ impl<T: View> MultiDiskOptionsView<T> {
         self
     }
 
-    fn get_disks(&mut self) -> Option<Vec<Disk>> {
+    ///
+    /// This function returns a tuple of vectors. The first vector contains the currently selected
+    /// disks in order of their selection slot. Empty slots are filtered out. The second vector
+    /// contains indices of each slot's selection, which enables us to restore the selection even
+    /// for empty slots.
+    ///
+    fn get_disks_and_selection(&mut self) -> Option<(Vec<Disk>, Vec<usize>)> {
         let mut disks = vec![];
         let view_top_index = usize::from(self.has_top_panel());
 
@@ -337,6 +343,8 @@ impl<T: View> MultiDiskOptionsView<T> {
             .downcast_ref::<ScrollView<FormView>>()?
             .get_inner();
 
+        let mut selected_disks = Vec::new();
+
         for i in 0..disk_form.len() {
             let disk = disk_form.get_value::<SelectView<Option<Disk>>, _>(i)?;
 
@@ -344,9 +352,15 @@ impl<T: View> MultiDiskOptionsView<T> {
             if let Some(disk) = disk {
                 disks.push(disk);
             }
+
+            selected_disks.push(
+                disk_form
+                    .get_child::<SelectView<Option<Disk>>>(i)?
+                    .selected_id()?,
+            );
         }
 
-        Some(disks)
+        Some((disks, selected_disks))
     }
 
     fn inner_mut(&mut self) -> Option<&mut T> {
@@ -378,10 +392,10 @@ struct BtrfsBootdiskOptionsView {
 }
 
 impl BtrfsBootdiskOptionsView {
-    // TODO: Re-apply previous disk selection from `options` correctly
     fn new(disks: &[Disk], options: &BtrfsBootdiskOptions) -> Self {
         let view = MultiDiskOptionsView::new(
             disks,
+            &options.selected_disks,
             FormView::new().child("hdsize", DiskSizeEditView::new().content(options.disk_size)),
         )
         .top_panel(TextView::new("Btrfs integration is a technology preview!").center());
@@ -390,10 +404,16 @@ impl BtrfsBootdiskOptionsView {
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
-        let disks = self.view.get_disks()?;
+        let (disks, selected_disks) = self.view.get_disks_and_selection()?;
         let disk_size = self.view.inner_mut()?.get_value::<DiskSizeEditView, _>(0)?;
 
-        Some((disks, BtrfsBootdiskOptions { disk_size }))
+        Some((
+            disks,
+            BtrfsBootdiskOptions {
+                disk_size,
+                selected_disks,
+            },
+        ))
     }
 }
 
@@ -437,7 +457,7 @@ impl ZfsBootdiskOptionsView {
             .child("copies", IntegerEditView::new().content(options.copies))
             .child("hdsize", DiskSizeEditView::new().content(options.disk_size));
 
-        let view = MultiDiskOptionsView::new(disks, inner)
+        let view = MultiDiskOptionsView::new(disks, &options.selected_disks, inner)
             .top_panel(TextView::new(
                 "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
             ).center());
@@ -446,7 +466,7 @@ impl ZfsBootdiskOptionsView {
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
-        let disks = self.view.get_disks()?;
+        let (disks, selected_disks) = self.view.get_disks_and_selection()?;
         let view = self.view.inner_mut()?;
 
         let ashift = view.get_value::<IntegerEditView, _>(0)?;
@@ -463,6 +483,7 @@ impl ZfsBootdiskOptionsView {
                 checksum,
                 copies,
                 disk_size,
+                selected_disks,
             },
         ))
     }
