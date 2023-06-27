@@ -1,3 +1,11 @@
+proxmox-installer (8.0.12) bookworm; urgency=medium
+
+  * tui: only show warning for missing hyper-visor CPU flags for PVE
+
+  * tui: block & notify if same disk gets selected twice for Btrfs or ZFS
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 27 Jun 2023 14:59:50 +0200
+
 proxmox-installer (8.0.11) bookworm; urgency=medium
 
   * tui: hide max-vz and max-root inputs if product isn't PVE to be consistent
