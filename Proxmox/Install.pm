@@ -1115,6 +1115,11 @@ _EOD
 	    }
 	    syscmd("chroot $targetdir /bin/chown clamav:clamav -R /var/lib/clamav") == 0 ||
 		die "unable to set owner for clamav database files\n";
+
+	    # on-access scanner (blocks file access if it thinks file is bad) needs to be explicit
+	    # configured by the user, otherwise it fails, and it doesn't make sense for most users.
+	    unlink "$targetdir/etc/systemd/system/multi-user.target.wants/clamav-clamonacc.service"
+		or warn "failed to disable clamav-clamonacc.service - $!";
 	}
 
 	if ($iso_env->{product} eq 'pve') {
