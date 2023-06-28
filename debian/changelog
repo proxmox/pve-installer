@@ -1,3 +1,9 @@
+proxmox-installer (8.0.14) bookworm; urgency=medium
+
+  * pmg: disable clamav-clamonacc.service by default on installation
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 28 Jun 2023 18:39:41 +0200
+
 proxmox-installer (8.0.13) bookworm; urgency=medium
 
   * tui: only show warning for missing hyper-visor CPU flags for PVE
