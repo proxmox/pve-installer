@@ -1583,14 +1583,11 @@ sub create_intro_view {
 	    "See 'System Requirements' in the $iso_env->{cfg}->{fullname} documentation.");
     }
 
-    if ($iso_env->{product} eq 'pve') {
-	my $cpuinfo = eval { file_read_all('/proc/cpuinfo') };
-	if (!$cpuinfo || $cpuinfo !~ /^flags\s*:.*(vmx|svm)/m) {
-	    Proxmox::UI::error(
-		"No support for hardware-accelerated KVM virtualization detected.\n\n"
-		."Check BIOS settings for Intel VT / AMD-V / SVM."
-	    );
-	}
+    if ($iso_env->{product} eq 'pve' && !$run_env->{hvm_supported}) {
+	Proxmox::UI::error(
+	    "No support for hardware-accelerated KVM virtualization detected.\n\n"
+	    ."Check BIOS settings for Intel VT / AMD-V / SVM."
+	);
     }
 
     Proxmox::UI::display_html('license.htm', sub {
