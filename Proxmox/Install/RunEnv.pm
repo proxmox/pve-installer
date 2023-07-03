@@ -35,6 +35,25 @@ sub query_total_memory : prototype() {
     return $mem_total;
 }
 
+my $cpu_hvm_support = undef;
+sub query_cpu_hvm_support : prototype() {
+    return $cpu_hvm_support if defined($cpu_hvm_support);
+
+    open (my $CPUINFO, '<', '/proc/cpuinfo');
+
+    my $res = 0;
+    while (my $line = <$CPUINFO>) {
+	if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
+	    $res = 1;
+	    last;
+	}
+    }
+    close($CPUINFO);
+
+    $cpu_hvm_support = $res;
+    return $cpu_hvm_support;
+}
+
 # Returns a hash.
 #
 # {
@@ -207,6 +226,11 @@ my sub detect_country_tracing_to : prototype($$) {
 # Returns the entire environment as a hash.
 # {
 #     country => <short country>,
+#     ipconf = <see Proxmox::Sys::Net::get_ip_config()>,
+#     kernel_cmdline = <contents of /proc/cmdline>,
+#     total_memory = <memory size in MiB>,
+#     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
+#     boot_type = <either 'efi' or 'bios'>,
 #     disks => <see Proxmox::Sys::Block::hd_list()>,
 #     network => {
 #         interfaces => <see query_netdevs()>,
@@ -246,6 +270,7 @@ sub query_installation_environment : prototype() {
 
     $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();
+    $output->{hvm_supported} = query_cpu_hvm_support();
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
 
     my $err;
