@@ -25,13 +25,11 @@ use cursive::{
 
 use regex::Regex;
 
-use proxmox_sys::linux::procfs;
-
 mod options;
 use options::*;
 
 mod setup;
-use setup::{InstallConfig, LocaleInfo, RuntimeInfo, SetupInfo};
+use setup::{InstallConfig, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo};
 
 mod system;
 
@@ -255,7 +253,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(LocaleInfo, RuntimeInfo), Stri
 
 /// Anything that can be done late in the setup and will not result in fatal errors.
 fn installer_setup_late(siv: &mut Cursive) {
-    let state = siv.user_data::<InstallerState>().unwrap();
+    let state = siv.user_data::<InstallerState>().cloned().unwrap();
 
     if !state.in_test_mode {
         let kmap_id = &state.options.timezone.kb_layout;
@@ -266,17 +264,14 @@ fn installer_setup_late(siv: &mut Cursive) {
         }
     }
 
-    if setup_info().config.product == setup::ProxmoxProduct::PVE {
-        let cpu_hvm = procfs::read_cpuinfo().map(|info| info.hvm).unwrap_or(false);
-        if !cpu_hvm {
-            display_setup_warning(
-                siv,
-                concat!(
-                    "No support for hardware-accelerated KVM virtualization detected.\n\n",
-                    "Check BIOS settings for Intel VT / AMD-V / SVM."
-                ),
-            );
-        }
+    if state.setup_info.config.product == ProxmoxProduct::PVE && !state.runtime_info.hvm_supported {
+        display_setup_warning(
+            siv,
+            concat!(
+                "No support for hardware-accelerated KVM virtualization detected.\n\n",
+                "Check BIOS settings for Intel VT / AMD-V / SVM."
+            ),
+        );
     }
 }
 

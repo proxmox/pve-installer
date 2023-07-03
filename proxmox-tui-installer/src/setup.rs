@@ -367,6 +367,10 @@ pub struct RuntimeInfo {
 
     /// Total memory of the system in MiB.
     pub total_memory: usize,
+
+    /// Whether the CPU supports hardware-accelerated virtualization
+    #[serde(deserialize_with = "deserialize_bool_from_int")]
+    pub hvm_supported: bool,
 }
 
 #[derive(Clone, Deserialize)]
