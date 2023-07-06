@@ -4,7 +4,7 @@ use cursive::{
     event::{Event, EventResult},
     view::{Resizable, ViewWrapper},
     views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
-    View,
+    Rect, Vec2, View,
 };
 
 use crate::utils::CidrAddress;
@@ -367,6 +367,22 @@ impl FormView {
 
 impl ViewWrapper for FormView {
     cursive::wrap_impl!(self.view: LinearLayout);
+
+    fn wrap_important_area(&self, size: Vec2) -> Rect {
+        // This fixes scrolling on small screen when many elements are present, e.g. bootdisk/RAID
+        // list. Without this, scrolling completely down and then back up would not properly
+        // display the currently selected form element.
+        // tl;dr: For whatever reason, the inner `LinearLayout` calculates the rect with a line
+        // height of 2. So e.g. if the first form element is selected, the y-coordinate is 2, if
+        // the second is selected it is 4 and so on. Knowing that, this can fortunately be quite
+        // easy fixed by just dividing the y-coordinate by 2 and adjusting the size of the area
+        // rectanglo to 1.
+
+        let inner = self.view.important_area(size);
+        let top_left = inner.top_left().map_y(|y| y / 2);
+
+        Rect::from_size(top_left, (inner.width(), 1))
+    }
 }
 
 pub struct CidrAddressEditView {
