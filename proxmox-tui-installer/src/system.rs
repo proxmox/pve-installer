@@ -1,18 +1,6 @@
 use std::{fs::OpenOptions, io::Write, process::Command};
 
-use crate::setup::{KeyboardMapping, RuntimeInfo};
-
-pub fn has_min_requirements(info: &RuntimeInfo) -> Result<(), String> {
-    if info.total_memory < 1024 {
-        return Err(concat!(
-            "Less than 1 GiB of usable memory detected, installation will probably fail.\n\n",
-            "See 'System Requirements' in the documentation."
-        )
-        .to_owned());
-    }
-
-    Ok(())
-}
+use crate::setup::KeyboardMapping;
 
 pub fn set_keyboard_layout(kmap: &KeyboardMapping) -> Result<(), String> {
     Command::new("setxkbmap")

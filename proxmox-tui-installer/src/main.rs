@@ -241,8 +241,6 @@ fn installer_setup(in_test_mode: bool) -> Result<(LocaleInfo, RuntimeInfo), Stri
             .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
     };
 
-    system::has_min_requirements(&runtime_info)?;
-
     runtime_info.disks.sort();
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
@@ -262,6 +260,16 @@ fn installer_setup_late(siv: &mut Cursive) {
                 display_setup_warning(siv, &format!("Failed to apply keyboard layout: {err}"));
             }
         }
+    }
+
+    if state.runtime_info.total_memory < 1024 {
+        display_setup_warning(
+            siv,
+            concat!(
+                "Less than 1 GiB of usable memory detected, installation will probably fail.\n\n",
+                "See 'System Requirements' in the documentation."
+            ),
+        );
     }
 
     if state.setup_info.config.product == ProxmoxProduct::PVE && !state.runtime_info.hvm_supported {
