@@ -326,6 +326,15 @@ impl FormView {
             .downcast_ref::<T>()
     }
 
+    pub fn get_child_mut<T: View>(&mut self, index: usize) -> Option<&mut T> {
+        self.view
+            .get_child_mut(1)?
+            .downcast_mut::<ResizedView<LinearLayout>>()?
+            .get_inner_mut()
+            .get_child_mut(index)?
+            .downcast_mut::<T>()
+    }
+
     pub fn get_value<T, R>(&self, index: usize) -> Option<R>
     where
         T: View + FormViewGetValue<R>,
@@ -343,6 +352,14 @@ impl FormView {
         if let Some(parent) = parent {
             parent.remove_child(index);
             parent.insert_child(index, view);
+        }
+    }
+
+    pub fn call_on_childs<T: View>(&mut self, callback: &dyn Fn(&mut T)) {
+        for i in 0..self.len() {
+            if let Some(v) = self.get_child_mut::<T>(i) {
+                callback(v);
+            }
         }
     }
 

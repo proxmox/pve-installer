@@ -3,7 +3,8 @@ use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
     views::{
-        Button, Dialog, DummyView, LinearLayout, NamedView, Panel, ScrollView, SelectView, TextView,
+        Button, Dialog, DummyView, LinearLayout, NamedView, PaddedView, Panel, ScrollView,
+        SelectView, TextView,
     },
     Cursive, View,
 };
@@ -293,10 +294,34 @@ impl<T: View> MultiDiskOptionsView<T> {
             );
         }
 
-        let disk_select_view = LinearLayout::vertical()
+        let mut disk_select_view = LinearLayout::vertical()
             .child(TextView::new("Disk setup").center())
             .child(DummyView)
-            .child(ScrollView::new(disk_form));
+            .child(ScrollView::new(disk_form.with_name("multidisk-disk-form")));
+
+        if avail_disks.len() > 3 {
+            let do_not_use_index = selectable_disks.len() - 1;
+            let deselect_all_button = Button::new("Deselect all", move |siv| {
+                siv.call_on_name("multidisk-disk-form", |view: &mut FormView| {
+                    view.call_on_childs(&|v: &mut SelectView<Option<Disk>>| {
+                        // As there is no .on_select() callback defined on the
+                        // SelectView's, the returned callback here can be safely
+                        // ignored.
+                        v.set_selection(do_not_use_index);
+                    });
+                });
+            });
+
+            disk_select_view.add_child(PaddedView::lrtb(
+                0,
+                0,
+                1,
+                0,
+                LinearLayout::horizontal()
+                    .child(DummyView.full_width())
+                    .child(deselect_all_button),
+            ));
+        }
 
         let options_view = LinearLayout::vertical()
             .child(TextView::new("Advanced options").center())
@@ -335,13 +360,14 @@ impl<T: View> MultiDiskOptionsView<T> {
 
         let disk_form = self
             .view
-            .get_child(view_top_index)?
-            .downcast_ref::<LinearLayout>()?
-            .get_child(0)?
-            .downcast_ref::<LinearLayout>()?
-            .get_child(2)?
-            .downcast_ref::<ScrollView<FormView>>()?
-            .get_inner();
+            .get_child_mut(view_top_index)?
+            .downcast_mut::<LinearLayout>()?
+            .get_child_mut(0)?
+            .downcast_mut::<LinearLayout>()?
+            .get_child_mut(2)?
+            .downcast_mut::<ScrollView<NamedView<FormView>>>()?
+            .get_inner_mut()
+            .get_mut();
 
         let mut selected_disks = Vec::new();
 
