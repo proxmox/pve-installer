@@ -57,11 +57,7 @@ pub enum FsType {
 
 impl FsType {
     pub fn is_btrfs(&self) -> bool {
-        use FsType::Btrfs;
-        match self {
-            Btrfs(_) => true,
-            _ => false,
-        }
+        matches!(self, FsType::Btrfs(_))
     }
 }
 

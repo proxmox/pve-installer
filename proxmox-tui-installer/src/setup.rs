@@ -206,23 +206,19 @@ impl From<InstallerOptions> for InstallConfig {
                 config.hdsize = zfs.disk_size;
                 config.zfs_opts = Some(zfs.clone().into());
 
-                let mut i = 0;
-                for disk in &options.bootdisk.disks {
+                for (i, disk) in options.bootdisk.disks.iter().enumerate() {
                     config
                         .disk_selection
                         .insert(i.to_string(), disk.index.clone());
-                    i = i + 1;
                 }
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
                 config.hdsize = btrfs.disk_size;
 
-                let mut i = 0;
-                for disk in &options.bootdisk.disks {
+                for (i, disk) in options.bootdisk.disks.iter().enumerate() {
                     config
                         .disk_selection
                         .insert(i.to_string(), disk.index.clone());
-                    i = i + 1;
                 }
             }
         }

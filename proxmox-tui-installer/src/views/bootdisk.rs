@@ -274,7 +274,7 @@ struct MultiDiskOptionsView<T> {
 }
 
 impl<T: View> MultiDiskOptionsView<T> {
-    fn new(avail_disks: &[Disk], selected_disks: &Vec<usize>, options_view: T) -> Self {
+    fn new(avail_disks: &[Disk], selected_disks: &[usize], options_view: T) -> Self {
         let mut selectable_disks = avail_disks
             .iter()
             .map(|d| (d.to_string(), Some(d.clone())))
@@ -283,7 +283,7 @@ impl<T: View> MultiDiskOptionsView<T> {
         selectable_disks.push(("-- do not use --".to_owned(), None));
 
         let mut disk_form = FormView::new();
-        for i in 0..avail_disks.len() {
+        for (i, _) in avail_disks.iter().enumerate() {
             disk_form.add_child(
                 &format!("Harddisk {i}"),
                 SelectView::new()
