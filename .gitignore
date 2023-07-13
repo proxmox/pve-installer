@@ -7,3 +7,4 @@
 /test*.img
 country.dat
 Cargo.lock
+/cd-info.test
