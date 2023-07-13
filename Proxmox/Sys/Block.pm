@@ -233,7 +233,7 @@ sub partition_bootable_disk {
 	    ." installation might not be successful! Continue?"
 	);
 	die "root disk '$target_dev' too small (${hdgb} GB < $soft_limit GB), and warning not accepted.\n"
-	    if $response_ok;
+	    if !$response_ok;
     }
 
     syscmd("sgdisk -Z ${target_dev}");
