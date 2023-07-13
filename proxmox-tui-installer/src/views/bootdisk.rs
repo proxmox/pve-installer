@@ -65,7 +65,7 @@ impl BootdiskOptionsView {
                 .and_then(|v| v.downcast_mut::<NamedView<FormView>>())
                 .map(NamedView::<FormView>::get_mut)
                 .and_then(|v| v.get_value::<SelectView<Disk>, _>(0))
-                .ok_or("failed to retrieve filesystem type")?;
+                .ok_or("failed to retrieve bootdisk")?;
 
             options.disks = vec![disk];
         }
