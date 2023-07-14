@@ -1,4 +1,12 @@
-use std::{cmp, collections::HashMap, fmt, fs::File, io::BufReader, net::IpAddr, path::Path};
+use std::{
+    cmp,
+    collections::HashMap,
+    fmt,
+    fs::File,
+    io::BufReader,
+    net::IpAddr,
+    path::{Path, PathBuf},
+};
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -43,12 +51,19 @@ pub struct IsoInfo {
     pub isorelease: String,
 }
 
+/// Paths in the ISO environment containing installer data.
+#[derive(Clone, Deserialize)]
+pub struct IsoLocations {
+    pub iso: PathBuf,
+}
+
 #[derive(Clone, Deserialize)]
 pub struct SetupInfo {
     #[serde(rename = "product-cfg")]
     pub config: ProductConfig,
     #[serde(rename = "iso-info")]
     pub iso_info: IsoInfo,
+    pub locations: IsoLocations,
 }
 
 #[derive(Clone, Deserialize)]

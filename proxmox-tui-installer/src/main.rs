@@ -391,9 +391,11 @@ fn abort_install_button() -> Button {
     Button::new("Abort", trigger_abort_install_dialog)
 }
 
-fn get_eula() -> String {
-    // TODO: properly using info from Proxmox::Install::Env::setup()
-    std::fs::read_to_string("/cdrom/EULA")
+fn get_eula(setup: &SetupInfo) -> String {
+    let mut path = setup.locations.iso.clone();
+    path.push("EULA");
+
+    std::fs::read_to_string(path)
         .unwrap_or_else(|_| "< Debug build - ignoring non-existing EULA >".to_owned())
 }
 
@@ -417,7 +419,7 @@ fn license_dialog(siv: &mut Cursive) -> InstallerView {
             TextView::new("END USER LICENSE AGREEMENT (EULA)").center(),
         ))
         .child(Panel::new(ScrollView::new(
-            TextView::new(get_eula()).center(),
+            TextView::new(get_eula(&state.setup_info)).center(),
         )))
         .child(PaddedView::lrtb(1, 1, 1, 0, bbar));
 
