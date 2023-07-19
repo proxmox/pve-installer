@@ -110,20 +110,51 @@ fn mask_limit(addr: &IpAddr) -> usize {
     }
 }
 
-#[derive(Clone, Debug)]
+/// Possible errors that might occur when parsing FQDNs.
+#[derive(Debug, Eq, PartialEq)]
+pub enum FqdnParseError {
+    MissingHostname,
+    NumericHostname,
+    InvalidPart(String),
+}
+
+impl fmt::Display for FqdnParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use FqdnParseError::*;
+        match self {
+            MissingHostname => write!(f, "missing hostname part"),
+            NumericHostname => write!(f, "hostname cannot be purely numeric"),
+            InvalidPart(part) => write!(
+                f,
+                "FQDN must only consist of alphanumeric characters and dashes. Invalid part: '{part}'",
+            ),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Fqdn {
     parts: Vec<String>,
 }
 
 impl Fqdn {
-    pub fn from(fqdn: &str) -> Result<Self, ()> {
+    pub fn from(fqdn: &str) -> Result<Self, FqdnParseError> {
         let parts = fqdn
             .split('.')
             .map(ToOwned::to_owned)
             .collect::<Vec<String>>();
 
-        if !parts.iter().all(&Self::validate_single) {
-            Err(())
+        for part in &parts {
+            if !Self::validate_single(part) {
+                return Err(FqdnParseError::InvalidPart(part.clone()));
+            }
+        }
+
+        if parts.len() < 2 {
+            Err(FqdnParseError::MissingHostname)
+        } else if parts[0].chars().all(|c| c.is_ascii_digit()) {
+            // Not allowed/supported on Debian systems.
+            Err(FqdnParseError::NumericHostname)
         } else {
             Ok(Self { parts })
         }
@@ -143,20 +174,24 @@ impl Fqdn {
         parts.join(".")
     }
 
+    /// Checks whether the FQDN has a hostname associated with it, i.e. is has more than 1 part.
     fn has_host(&self) -> bool {
         self.parts.len() > 1
     }
 
     fn validate_single(s: &String) -> bool {
         !s.is_empty()
+            // First character must be alphanumeric
             && s.chars()
                 .next()
                 .map(|c| c.is_ascii_alphanumeric())
                 .unwrap_or_default()
+            // .. last character as well,
             && s.chars()
                 .last()
                 .map(|c| c.is_ascii_alphanumeric())
                 .unwrap_or_default()
+            // and anything between must be alphanumeric or -
             && s.chars()
                 .skip(1)
                 .take(s.len().saturating_sub(2))
@@ -165,7 +200,7 @@ impl Fqdn {
 }
 
 impl FromStr for Fqdn {
-    type Err = ();
+    type Err = FqdnParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Self::from(value)
@@ -194,17 +229,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fqdn_validate_single() {
+    fn fqdn_construct() {
+        use FqdnParseError::*;
         assert!(Fqdn::from("foo.example.com").is_ok());
-        assert!(Fqdn::from("1.example.com").is_ok());
         assert!(Fqdn::from("foo-bar.com").is_ok());
         assert!(Fqdn::from("a-b.com").is_ok());
 
-        assert!(Fqdn::from("foo").is_err());
-        assert!(Fqdn::from("-foo.com").is_err());
-        assert!(Fqdn::from("foo-.com").is_err());
-        assert!(Fqdn::from("foo.com-").is_err());
-        assert!(Fqdn::from("-o-.com").is_err());
+        assert_eq!(Fqdn::from("foo"), Err(MissingHostname));
+
+        assert_eq!(Fqdn::from("-foo.com"), Err(InvalidPart("-foo".to_owned())));
+        assert_eq!(Fqdn::from("foo-.com"), Err(InvalidPart("foo-".to_owned())));
+        assert_eq!(Fqdn::from("foo.com-"), Err(InvalidPart("com-".to_owned())));
+        assert_eq!(Fqdn::from("-o-.com"), Err(InvalidPart("-o-".to_owned())));
+
+        assert_eq!(Fqdn::from("123.com"), Err(NumericHostname));
+        assert!(Fqdn::from("foo123.com").is_ok());
+        assert!(Fqdn::from("123foo.com").is_ok());
     }
 
     #[test]
@@ -212,6 +252,10 @@ mod tests {
         let fqdn = Fqdn::from("pve.example.com").unwrap();
         assert_eq!(fqdn.host().unwrap(), "pve");
         assert_eq!(fqdn.domain(), "example.com");
+        assert_eq!(
+            fqdn.parts,
+            &["pve".to_owned(), "example".to_owned(), "com".to_owned()]
+        );
     }
 
     #[test]

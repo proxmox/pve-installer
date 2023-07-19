@@ -589,7 +589,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     .get_value::<EditView, _>(1)
                     .ok_or("failed to retrieve host FQDN")?
                     .parse::<Fqdn>()
-                    .map_err(|_| "failed to parse hostname".to_owned())?;
+                    .map_err(|err| format!("hostname does not look valid:\n\n{err}"))?;
 
                 let address = view
                     .get_value::<CidrAddressEditView, _>(2)
@@ -611,9 +611,6 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
                     Err("host and gateway IP address version must not differ".to_owned())
                 } else if address.addr().is_ipv4() != dns_server.is_ipv4() {
                     Err("host and DNS IP address version must not differ".to_owned())
-                } else if fqdn.to_string().chars().all(|c| c.is_ascii_digit()) {
-                    // Not supported/allowed on Debian
-                    Err("hostname cannot be purely numeric".to_owned())
                 } else if fqdn.to_string().ends_with(".invalid") {
                     Err("hostname does not look valid".to_owned())
                 } else {
