@@ -10,11 +10,15 @@ use cursive::{
 };
 
 use super::{DiskSizeEditView, FormView, IntegerEditView};
-use crate::options::{
-    AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
-    LvmBootdiskOptions, ZfsBootdiskOptions, FS_TYPES, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+use crate::{
+    options::{
+        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, BtrfsRaidLevel, Disk,
+        FsType, LvmBootdiskOptions, ZfsBootdiskOptions, ZfsRaidLevel, FS_TYPES,
+        ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+    },
+    setup::{BootType, RuntimeInfo},
 };
-use crate::setup::ProxmoxProduct;
+use crate::{setup::ProxmoxProduct, InstallerState};
 
 pub struct BootdiskOptionsView {
     view: LinearLayout,
@@ -164,7 +168,7 @@ impl AdvancedBootdiskOptionsView {
         );
     }
 
-    fn get_values(&mut self) -> Result<BootdiskOptions, String> {
+    fn get_values(&mut self, runinfo: &RuntimeInfo) -> Result<BootdiskOptions, String> {
         let fstype = self
             .view
             .get_child(1)
@@ -193,6 +197,11 @@ impl AdvancedBootdiskOptionsView {
                 .get_values()
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
+            if let FsType::Zfs(level) = fstype {
+                check_zfs_raid_config(runinfo, level, &disks)
+                    .map_err(|err| format!("{fstype}: {err}"))?;
+            }
+
             Ok(BootdiskOptions {
                 disks,
                 fstype,
@@ -202,6 +211,10 @@ impl AdvancedBootdiskOptionsView {
             let (disks, advanced) = view
                 .get_values()
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
+
+            if let FsType::Btrfs(level) = fstype {
+                check_btrfs_raid_config(level, &disks).map_err(|err| format!("{fstype}: {err}"))?;
+            }
 
             Ok(BootdiskOptions {
                 disks,
@@ -541,11 +554,17 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
     .button("Ok", {
         let options_ref = options.clone();
         move |siv| {
+            let runinfo = siv
+                .user_data::<InstallerState>()
+                .unwrap()
+                .runtime_info
+                .clone();
+
             let options = siv
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
                     view.get_content_mut()
-                        .downcast_mut()
-                        .map(AdvancedBootdiskOptionsView::get_values)
+                        .downcast_mut::<AdvancedBootdiskOptionsView>()
+                        .map(|v| v.get_values(&runinfo))
                 })
                 .flatten();
 
@@ -588,6 +607,109 @@ fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
         if !set.insert(&disk.index) {
             return Err(disk);
         }
+    }
+
+    Ok(())
+}
+
+/// Simple wrapper which returns an descriptive error if the list of disks is too short.
+///
+/// # Arguments
+///
+/// * `disks` - A list of disks to check the lenght of.
+/// * `min` - Minimum number of disks
+fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
+    if disks.len() < min {
+        Err(format!("Need at least {min} disks"))
+    } else {
+        Ok(())
+    }
+}
+
+/// Checks whether a user-supplied ZFS RAID setup is valid or not, such as disk sizes, minimum
+/// number of disks and legacy BIOS compatibility.
+///
+/// # Arguments
+///
+/// * `runinfo` - `RuntimeInfo` instance of currently running system
+/// * `level` - The targeted ZFS RAID level by the user.
+/// * `disks` - List of disks designated as RAID targets.
+fn check_zfs_raid_config(
+    runinfo: &RuntimeInfo,
+    level: ZfsRaidLevel,
+    disks: &[Disk],
+) -> Result<(), String> {
+    // See also Proxmox/Install.pm:get_zfs_raid_setup()
+
+    for disk in disks {
+        if runinfo.boot_type != BootType::Efi && disk.block_size == 4096 {
+            return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.".to_owned());
+        }
+    }
+
+    let check_mirror_size = |disk1: &Disk, disk2: &Disk| {
+        if (disk1.size - disk2.size).abs() > disk1.size / 10. {
+            Err(format!(
+                "Mirrored disks must have same size:\n\n  * {disk1}\n  * {disk2}"
+            ))
+        } else {
+            Ok(())
+        }
+    };
+
+    match level {
+        ZfsRaidLevel::Raid0 => check_raid_min_disks(disks, 1)?,
+        ZfsRaidLevel::Raid1 => {
+            check_raid_min_disks(disks, 2)?;
+            for disk in disks {
+                check_mirror_size(&disks[0], disk)?;
+            }
+        }
+        ZfsRaidLevel::Raid10 => {
+            check_raid_min_disks(disks, 4)?;
+            // Pairs need to have the same size
+            for i in (0..disks.len()).step_by(2) {
+                check_mirror_size(&disks[i], &disks[i + 1])?;
+            }
+        }
+        // For RAID-Z: minimum disks number is level + 2
+        ZfsRaidLevel::RaidZ => {
+            check_raid_min_disks(disks, 3)?;
+            for disk in disks {
+                check_mirror_size(&disks[0], disk)?;
+            }
+        }
+        ZfsRaidLevel::RaidZ2 => {
+            check_raid_min_disks(disks, 4)?;
+            for disk in disks {
+                check_mirror_size(&disks[0], disk)?;
+            }
+        }
+        ZfsRaidLevel::RaidZ3 => {
+            check_raid_min_disks(disks, 5)?;
+            for disk in disks {
+                check_mirror_size(&disks[0], disk)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Checks whether a user-supplied Btrfs RAID setup is valid or not, such as minimum
+/// number of disks.
+///
+/// # Arguments
+///
+/// * `level` - The targeted Btrfs RAID level by the user.
+/// * `disks` - List of disks designated as RAID targets.
+fn check_btrfs_raid_config(level: BtrfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
+    // See also Proxmox/Install.pm:get_btrfs_raid_setup()
+
+    match level {
+        BtrfsRaidLevel::Raid0 => check_raid_min_disks(disks, 1)?,
+        BtrfsRaidLevel::Raid1 => check_raid_min_disks(disks, 2)?,
+        BtrfsRaidLevel::Raid10 => check_raid_min_disks(disks, 4)?,
     }
 
     Ok(())
