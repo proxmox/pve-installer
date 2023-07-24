@@ -164,39 +164,52 @@ impl AdvancedBootdiskOptionsView {
         );
     }
 
-    fn get_values(&mut self) -> Option<BootdiskOptions> {
+    fn get_values(&mut self) -> Result<BootdiskOptions, String> {
         let fstype = self
             .view
-            .get_child(1)?
-            .downcast_ref::<FormView>()?
-            .get_value::<SelectView<FsType>, _>(0)?;
+            .get_child(1)
+            .and_then(|v| v.downcast_ref::<FormView>())
+            .and_then(|v| v.get_value::<SelectView<FsType>, _>(0))
+            .ok_or("Failed to retrieve filesystem type".to_owned())?;
 
-        let advanced = self.view.get_child_mut(3)?;
+        let advanced = self
+            .view
+            .get_child_mut(3)
+            .ok_or("Failed to retrieve advanced bootdisk options view".to_owned())?;
 
         if let Some(view) = advanced.downcast_mut::<LvmBootdiskOptionsView>() {
-            Some(BootdiskOptions {
+            let advanced = view
+                .get_values()
+                .map(AdvancedBootdiskOptions::Lvm)
+                .ok_or("Failed to retrieve advanced bootdisk options")?;
+
+            Ok(BootdiskOptions {
                 disks: vec![],
                 fstype,
-                advanced: view.get_values().map(AdvancedBootdiskOptions::Lvm)?,
+                advanced,
             })
         } else if let Some(view) = advanced.downcast_mut::<ZfsBootdiskOptionsView>() {
-            let (disks, advanced) = view.get_values()?;
+            let (disks, advanced) = view
+                .get_values()
+                .ok_or("Failed to retrieve advanced bootdisk options")?;
 
-            Some(BootdiskOptions {
+            Ok(BootdiskOptions {
                 disks,
                 fstype,
                 advanced: AdvancedBootdiskOptions::Zfs(advanced),
             })
         } else if let Some(view) = advanced.downcast_mut::<BtrfsBootdiskOptionsView>() {
-            let (disks, advanced) = view.get_values()?;
+            let (disks, advanced) = view
+                .get_values()
+                .ok_or("Failed to retrieve advanced bootdisk options")?;
 
-            Some(BootdiskOptions {
+            Ok(BootdiskOptions {
                 disks,
                 fstype,
                 advanced: AdvancedBootdiskOptions::Btrfs(advanced),
             })
         } else {
-            None
+            Err("Invalid bootdisk view state".to_owned())
         }
     }
 }
@@ -532,9 +545,21 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
                     view.get_content_mut()
                         .downcast_mut()
-                        .and_then(AdvancedBootdiskOptionsView::get_values)
+                        .map(AdvancedBootdiskOptionsView::get_values)
                 })
                 .flatten();
+
+            let options = match options {
+                Some(Ok(options)) => options,
+                Some(Err(err)) => {
+                    siv.add_layer(Dialog::info(err));
+                    return;
+                }
+                None => {
+                    siv.add_layer(Dialog::info("Failed to retrieve bootdisk options view"));
+                    return;
+                }
+            };
 
             if let Err(duplicate) = check_for_duplicate_disks(&options.disks) {
                 siv.add_layer(Dialog::info(format!(
@@ -544,9 +569,7 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
             }
 
             siv.pop_layer();
-            if let Some(options) = options {
-                *(*options_ref).borrow_mut() = options;
-            }
+            *(*options_ref).borrow_mut() = options;
         }
     })
     .with_name("advanced-bootdisk-options-dialog")
