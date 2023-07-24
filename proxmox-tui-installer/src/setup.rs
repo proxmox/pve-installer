@@ -277,13 +277,14 @@ fn deserialize_disks_map<'de, D>(deserializer: D) -> Result<Vec<Disk>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let disks = <Vec<(usize, String, f64, String, f64, String)>>::deserialize(deserializer)?;
+    let disks = <Vec<(usize, String, f64, String, usize, String)>>::deserialize(deserializer)?;
     Ok(disks
         .into_iter()
         .map(
             |(index, device, size_mb, model, logical_bsize, _syspath)| Disk {
                 index: index.to_string(),
-                size: (size_mb * logical_bsize) / 1024. / 1024. / 1024.,
+                size: (size_mb * logical_bsize as f64) / 1024. / 1024. / 1024.,
+                block_size: logical_bsize,
                 path: device,
                 model: (!model.is_empty()).then_some(model),
             },
@@ -366,6 +367,9 @@ where
 
 #[derive(Clone, Deserialize)]
 pub struct RuntimeInfo {
+    /// Whether is system was booted in (legacy) BIOS or UEFI mode.
+    pub boot_type: BootType,
+
     /// Detected country if available.
     pub country: Option<String>,
 
@@ -382,6 +386,13 @@ pub struct RuntimeInfo {
     /// Whether the CPU supports hardware-accelerated virtualization
     #[serde(deserialize_with = "deserialize_bool_from_int")]
     pub hvm_supported: bool,
+}
+
+#[derive(Clone, Eq, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum BootType {
+    Bios,
+    Efi,
 }
 
 #[derive(Clone, Deserialize)]
