@@ -714,3 +714,144 @@ fn check_btrfs_raid_config(level: BtrfsRaidLevel, disks: &[Disk]) -> Result<(), 
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::setup::{Dns, NetworkInfo};
+
+    fn dummy_disk(index: usize) -> Disk {
+        Disk {
+            index: index.to_string(),
+            path: format!("/dev/dummy{index}"),
+            model: Some("Dummy disk".to_owned()),
+            size: 1024. * 1024. * 1024. * 8.,
+            block_size: 512,
+        }
+    }
+
+    fn dummy_disks(num: usize) -> Vec<Disk> {
+        (0..num).map(dummy_disk).collect()
+    }
+
+    fn dummy_runinfo(boot_type: BootType) -> RuntimeInfo {
+        RuntimeInfo {
+            boot_type,
+            country: Some("at".to_owned()),
+            disks: dummy_disks(4),
+            network: NetworkInfo {
+                dns: Dns {
+                    domain: None,
+                    dns: vec![],
+                },
+                routes: None,
+                interfaces: HashMap::new(),
+            },
+            total_memory: 1024 * 1024 * 1024 * 64,
+            hvm_supported: true,
+        }
+    }
+
+    #[test]
+    fn duplicate_disks() {
+        assert!(check_for_duplicate_disks(&dummy_disks(2)).is_ok());
+        assert_eq!(
+            check_for_duplicate_disks(&[
+                dummy_disk(0),
+                dummy_disk(1),
+                dummy_disk(2),
+                dummy_disk(2),
+                dummy_disk(3),
+            ]),
+            Err(&dummy_disk(2)),
+        );
+    }
+
+    #[test]
+    fn raid_min_disks() {
+        let disks = dummy_disks(10);
+
+        assert!(check_raid_min_disks(&disks[..1], 2).is_err());
+        assert!(check_raid_min_disks(&disks[..1], 1).is_ok());
+        assert!(check_raid_min_disks(&disks, 1).is_ok());
+    }
+
+    #[test]
+    fn btrfs_raid() {
+        let disks = dummy_disks(10);
+
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid0, &[]).is_err());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid0, &disks[..1]).is_ok());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid0, &disks).is_ok());
+
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid1, &[]).is_err());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid1, &disks[..1]).is_err());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid1, &disks[..2]).is_ok());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid1, &disks).is_ok());
+
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid10, &[]).is_err());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid10, &disks[..3]).is_err());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid10, &disks[..4]).is_ok());
+        assert!(check_btrfs_raid_config(BtrfsRaidLevel::Raid10, &disks).is_ok());
+    }
+
+    #[test]
+    fn zfs_raid_bios() {
+        let disks = dummy_disks(10);
+        let runinfo = dummy_runinfo(BootType::Bios);
+
+        zfs_common_tests(&disks, &runinfo);
+
+        for i in 0..10 {
+            let mut disks = dummy_disks(10);
+            disks[i].block_size = 4096;
+
+            // Must fail if /any/ of the disks are 4Kn
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid0, &disks).is_err());
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid1, &disks).is_err());
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid10, &disks).is_err());
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ, &disks).is_err());
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ2, &disks).is_err());
+            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ3, &disks).is_err());
+        }
+    }
+
+    #[test]
+    fn zfs_raid_efi() {
+        let disks = dummy_disks(10);
+        let runinfo = dummy_runinfo(BootType::Efi);
+
+        zfs_common_tests(&disks, &runinfo);
+    }
+
+    fn zfs_common_tests(disks: &[Disk], runinfo: &RuntimeInfo) {
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, &disks[..1]).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, disks).is_ok());
+
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, &disks[..2]).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, disks).is_ok());
+
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, &dummy_disks(4)).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, disks).is_ok());
+
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &disks[..2]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &disks[..3]).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, disks).is_ok());
+
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &disks[..3]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &disks[..4]).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, disks).is_ok());
+
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &[]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &disks[..4]).is_err());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &disks[..5]).is_ok());
+        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, disks).is_ok());
+    }
+}
