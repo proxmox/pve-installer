@@ -75,6 +75,9 @@ $(DSC): $(BUILDDIR)
 sbuild: $(DSC)
 	sbuild $(DSC)
 
+test:
+	$(CARGO) test --workspace $(CARGO_BUILD_ARGS)
+
 DESTDIR=
 VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
