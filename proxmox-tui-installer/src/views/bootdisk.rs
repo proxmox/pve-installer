@@ -1,4 +1,4 @@
-use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, marker::PhantomData, rc::Rc};
 
 use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
@@ -536,21 +536,11 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
                 })
                 .flatten();
 
-            if let Some(disks) = options.as_ref().map(|opts| &opts.disks) {
-                if disks.len() > 1 {
-                    for i in 0..(disks.len() - 1) {
-                        let check_disk = &disks[i];
-                        for disk in &disks[(i + 1)..] {
-                            if disk.index == check_disk.index {
-                                siv.add_layer(Dialog::info(format!(
-                                    "cannot select same disk ({}) twice",
-                                    disk.path
-                                )));
-                                return;
-                            }
-                        }
-                    }
-                }
+            if let Err(duplicate) = check_for_duplicate_disks(&options.disks) {
+                siv.add_layer(Dialog::info(format!(
+                    "Cannot select same disk twice: {duplicate}"
+                )));
+                return;
             }
 
             siv.pop_layer();
@@ -561,4 +551,21 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
     })
     .with_name("advanced-bootdisk-options-dialog")
     .max_size((120, 40))
+}
+
+/// Checks a list of disks for duplicate entries, using their index as key.
+///
+/// # Arguments
+///
+/// * `disks` - A list of disks to check for duplicates.
+fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
+    let mut set = HashSet::new();
+
+    for disk in disks {
+        if !set.insert(&disk.index) {
+            return Err(disk);
+        }
+    }
+
+    Ok(())
 }
