@@ -90,10 +90,10 @@ my sub hd_list {
 	}
 
 	my $size = file_read_firstline("$bd/size");
-	chomp $size;
-	$size = undef if !($size && $size =~ m/^\d+$/);
-	$size = int($size);
 	next if !$size;
+	chomp $size;
+	next if $size !~ m/^\d+$/;
+	$size = int($size);
 
 	my $model = file_read_firstline("$bd/device/model") || '';
 	$model =~ s/^\s+//;
@@ -104,8 +104,11 @@ my sub hd_list {
 
 	my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
 	chomp $logical_bsize;
-	$logical_bsize = undef if !($logical_bsize && $logical_bsize =~ m/^\d+$/);
-	$logical_bsize = int($logical_bsize);
+	if ($logical_bsize && $logical_bsize !~ m/^\d+$/) {
+	    $logical_bsize = int($logical_bsize);
+	} else {
+	    $logical_bsize = undef;
+	}
 
 	push @$res, [$count++, $dev_path, $size, $model, $logical_bsize, "/sys/block/$name"];
     }
