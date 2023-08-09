@@ -548,13 +548,20 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
 fn network_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
     let options = &state.options.network;
+    let ifnames = state.runtime_info.network.interfaces.keys();
 
     let inner = FormView::new()
         .child(
             "Management interface",
             SelectView::new()
                 .popup()
-                .with_all_str(state.runtime_info.network.interfaces.keys()),
+                .with_all_str(ifnames.clone())
+                .selected(
+                    ifnames
+                        .clone()
+                        .position(|ifname| ifname == &options.ifname)
+                        .unwrap_or_default(),
+                ),
         )
         .child(
             "Hostname (FQDN)",
