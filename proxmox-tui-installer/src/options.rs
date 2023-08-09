@@ -222,7 +222,7 @@ pub struct Disk {
     pub path: String,
     pub model: Option<String>,
     pub size: f64,
-    pub block_size: usize,
+    pub block_size: Option<usize>,
 }
 
 impl fmt::Display for Disk {

@@ -277,7 +277,8 @@ fn deserialize_disks_map<'de, D>(deserializer: D) -> Result<Vec<Disk>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let disks = <Vec<(usize, String, f64, String, usize, String)>>::deserialize(deserializer)?;
+    let disks =
+        <Vec<(usize, String, f64, String, Option<usize>, String)>>::deserialize(deserializer)?;
     Ok(disks
         .into_iter()
         .map(

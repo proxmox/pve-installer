@@ -642,7 +642,9 @@ fn check_zfs_raid_config(
     // See also Proxmox/Install.pm:get_zfs_raid_setup()
 
     for disk in disks {
-        if runinfo.boot_type != BootType::Efi && disk.block_size == 4096 {
+        if runinfo.boot_type != BootType::Efi
+            && disk.block_size.map(|v| v == 4096).unwrap_or_default()
+        {
             return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.".to_owned());
         }
     }
@@ -728,7 +730,7 @@ mod tests {
             path: format!("/dev/dummy{index}"),
             model: Some("Dummy disk".to_owned()),
             size: 1024. * 1024. * 1024. * 8.,
-            block_size: 512,
+            block_size: Some(512),
         }
     }
 
@@ -799,14 +801,20 @@ mod tests {
 
     #[test]
     fn zfs_raid_bios() {
-        let disks = dummy_disks(10);
         let runinfo = dummy_runinfo(BootType::Bios);
 
+        let mut disks = dummy_disks(10);
+        zfs_common_tests(&disks, &runinfo);
+
+        for disk in &mut disks {
+            disk.block_size = None;
+        }
+        // Should behave the same as if an explicit block size of 512 was set
         zfs_common_tests(&disks, &runinfo);
 
         for i in 0..10 {
             let mut disks = dummy_disks(10);
-            disks[i].block_size = 4096;
+            disks[i].block_size = Some(4096);
 
             // Must fail if /any/ of the disks are 4Kn
             assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid0, &disks).is_err());
