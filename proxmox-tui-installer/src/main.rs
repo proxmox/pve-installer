@@ -514,7 +514,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                         .unwrap();
 
                 if root_password.len() < 5 {
-                    Err("password too short")
+                    Err("password too short, must be at least 5 characters long")
                 } else if root_password != confirm_password {
                     Err("passwords do not match")
                 } else if email == "mail@example.invalid" {
