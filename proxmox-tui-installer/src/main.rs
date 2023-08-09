@@ -354,8 +354,6 @@ fn yes_no_dialog(
     siv: &mut Cursive,
     title: &str,
     text: &str,
-    // callback_yes: &'static dyn Fn(&mut Cursive),
-    // callback_no: &'static dyn Fn(&mut Cursive),
     callback_yes: Box<dyn Fn(&mut Cursive)>,
     callback_no: Box<dyn Fn(&mut Cursive)>,
 ) {
