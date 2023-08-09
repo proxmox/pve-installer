@@ -283,7 +283,10 @@ where
         .map(
             |(index, device, size_mb, model, logical_bsize, _syspath)| Disk {
                 index: index.to_string(),
-                size: (size_mb * logical_bsize as f64) / 1024. / 1024. / 1024.,
+                // Linux always reports the size of block devices in sectors, where one sector is
+                // defined as being 2^9 = 512 bytes in size.
+                // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/linux/blk_types.h?h=v6.4#n30
+                size: (size_mb * 512.) / 1024. / 1024. / 1024.,
                 block_size: logical_bsize,
                 path: device,
                 model: (!model.is_empty()).then_some(model),
