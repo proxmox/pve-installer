@@ -299,6 +299,10 @@ sub get_btrfs_raid_setup {
     my $diskcount = scalar(@$devlist);
     die "$filesys needs at least one device\n" if $diskcount < 1;
 
+    foreach my $hd (@$devlist) {
+	legacy_bios_4k_check(@$hd[4]);
+    }
+
     my $mode;
 
     if ($diskcount == 1) {
