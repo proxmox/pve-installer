@@ -16,17 +16,18 @@ use crate::{
         FsType, LvmBootdiskOptions, ZfsBootdiskOptions, ZfsRaidLevel, FS_TYPES,
         ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
     },
-    setup::{BootType, RuntimeInfo},
+    setup::BootType,
 };
 use crate::{setup::ProxmoxProduct, InstallerState};
 
 pub struct BootdiskOptionsView {
     view: LinearLayout,
     advanced_options: Rc<RefCell<BootdiskOptions>>,
+    boot_type: BootType,
 }
 
 impl BootdiskOptionsView {
-    pub fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
+    pub fn new(siv: &mut Cursive, disks: &[Disk], options: &BootdiskOptions) -> Self {
         let bootdisk_form = FormView::new()
             .child(
                 "Target harddisk",
@@ -53,9 +54,15 @@ impl BootdiskOptionsView {
             .child(DummyView)
             .child(advanced_button);
 
+        let boot_type = siv
+            .user_data::<InstallerState>()
+            .map(|state| state.runtime_info.boot_type)
+            .unwrap_or(BootType::Bios);
+
         Self {
             view,
             advanced_options,
+            boot_type,
         }
     }
 
@@ -74,6 +81,7 @@ impl BootdiskOptionsView {
             options.disks = vec![disk];
         }
 
+        check_disks_4kn_legacy_boot(self.boot_type, &options.disks)?;
         Ok(options)
     }
 }
@@ -168,7 +176,7 @@ impl AdvancedBootdiskOptionsView {
         );
     }
 
-    fn get_values(&mut self, runinfo: &RuntimeInfo) -> Result<BootdiskOptions, String> {
+    fn get_values(&mut self) -> Result<BootdiskOptions, String> {
         let fstype = self
             .view
             .get_child(1)
@@ -198,8 +206,7 @@ impl AdvancedBootdiskOptionsView {
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
             if let FsType::Zfs(level) = fstype {
-                check_zfs_raid_config(runinfo, level, &disks)
-                    .map_err(|err| format!("{fstype}: {err}"))?;
+                check_zfs_raid_config(level, &disks).map_err(|err| format!("{fstype}: {err}"))?;
             }
 
             Ok(BootdiskOptions {
@@ -554,17 +561,11 @@ fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) 
     .button("Ok", {
         let options_ref = options.clone();
         move |siv| {
-            let runinfo = siv
-                .user_data::<InstallerState>()
-                .unwrap()
-                .runtime_info
-                .clone();
-
             let options = siv
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
                     view.get_content_mut()
                         .downcast_mut::<AdvancedBootdiskOptionsView>()
-                        .map(|v| v.get_values(&runinfo))
+                        .map(AdvancedBootdiskOptionsView::get_values)
                 })
                 .flatten();
 
@@ -626,28 +627,32 @@ fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
     }
 }
 
-/// Checks whether a user-supplied ZFS RAID setup is valid or not, such as disk sizes, minimum
-/// number of disks and legacy BIOS compatibility.
+/// Checks all disks for legacy BIOS boot compatibility and reports an error as appropriate. 4Kn
+/// disks are generally broken with legacy BIOS and cannot be booted from.
 ///
 /// # Arguments
 ///
 /// * `runinfo` - `RuntimeInfo` instance of currently running system
+/// * `disks` - List of disks designated as bootdisk targets.
+fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<(), &str> {
+    let is_blocksize_4096 = |disk: &Disk| disk.block_size.map(|s| s == 4096).unwrap_or(false);
+
+    if boot_type == BootType::Bios && disks.iter().any(is_blocksize_4096) {
+        return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.");
+    }
+
+    Ok(())
+}
+
+/// Checks whether a user-supplied ZFS RAID setup is valid or not, such as disk sizes andminimum
+/// number of disks.
+///
+/// # Arguments
+///
 /// * `level` - The targeted ZFS RAID level by the user.
 /// * `disks` - List of disks designated as RAID targets.
-fn check_zfs_raid_config(
-    runinfo: &RuntimeInfo,
-    level: ZfsRaidLevel,
-    disks: &[Disk],
-) -> Result<(), String> {
+fn check_zfs_raid_config(level: ZfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
     // See also Proxmox/Install.pm:get_zfs_raid_setup()
-
-    for disk in disks {
-        if runinfo.boot_type != BootType::Efi
-            && disk.block_size.map(|v| v == 4096).unwrap_or_default()
-        {
-            return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.".to_owned());
-        }
-    }
 
     let check_mirror_size = |disk1: &Disk, disk2: &Disk| {
         if (disk1.size - disk2.size).abs() > disk1.size / 10. {
@@ -719,10 +724,7 @@ fn check_btrfs_raid_config(level: BtrfsRaidLevel, disks: &[Disk]) -> Result<(), 
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::setup::{Dns, NetworkInfo};
 
     fn dummy_disk(index: usize) -> Disk {
         Disk {
@@ -736,24 +738,6 @@ mod tests {
 
     fn dummy_disks(num: usize) -> Vec<Disk> {
         (0..num).map(dummy_disk).collect()
-    }
-
-    fn dummy_runinfo(boot_type: BootType) -> RuntimeInfo {
-        RuntimeInfo {
-            boot_type,
-            country: Some("at".to_owned()),
-            disks: dummy_disks(4),
-            network: NetworkInfo {
-                dns: Dns {
-                    domain: None,
-                    dns: vec![],
-                },
-                routes: None,
-                interfaces: HashMap::new(),
-            },
-            total_memory: 1024 * 1024 * 1024 * 64,
-            hvm_supported: true,
-        }
     }
 
     #[test]
@@ -781,6 +765,19 @@ mod tests {
     }
 
     #[test]
+    fn bios_boot_compat_4kn() {
+        for i in 0..10 {
+            let mut disks = dummy_disks(10);
+            disks[i].block_size = Some(4096);
+
+            // Must fail if /any/ of the disks are 4Kn
+            assert!(check_disks_4kn_legacy_boot(BootType::Bios, &disks).is_err());
+            // For UEFI, we allow it for every configuration
+            assert!(check_disks_4kn_legacy_boot(BootType::Efi, &disks).is_ok());
+        }
+    }
+
+    #[test]
     fn btrfs_raid() {
         let disks = dummy_disks(10);
 
@@ -800,66 +797,34 @@ mod tests {
     }
 
     #[test]
-    fn zfs_raid_bios() {
-        let runinfo = dummy_runinfo(BootType::Bios);
-
-        let mut disks = dummy_disks(10);
-        zfs_common_tests(&disks, &runinfo);
-
-        for disk in &mut disks {
-            disk.block_size = None;
-        }
-        // Should behave the same as if an explicit block size of 512 was set
-        zfs_common_tests(&disks, &runinfo);
-
-        for i in 0..10 {
-            let mut disks = dummy_disks(10);
-            disks[i].block_size = Some(4096);
-
-            // Must fail if /any/ of the disks are 4Kn
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid0, &disks).is_err());
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid1, &disks).is_err());
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::Raid10, &disks).is_err());
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ, &disks).is_err());
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ2, &disks).is_err());
-            assert!(check_zfs_raid_config(&runinfo, ZfsRaidLevel::RaidZ3, &disks).is_err());
-        }
-    }
-
-    #[test]
-    fn zfs_raid_efi() {
+    fn zfs_raid() {
         let disks = dummy_disks(10);
-        let runinfo = dummy_runinfo(BootType::Efi);
 
-        zfs_common_tests(&disks, &runinfo);
-    }
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid0, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid0, &disks[..1]).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid0, &disks).is_ok());
 
-    fn zfs_common_tests(disks: &[Disk], runinfo: &RuntimeInfo) {
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, &disks[..1]).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid0, disks).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid1, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid1, &disks[..2]).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid1, &disks).is_ok());
 
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, &disks[..2]).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid1, disks).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid10, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid10, &dummy_disks(4)).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::Raid10, &disks).is_ok());
 
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, &dummy_disks(4)).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::Raid10, disks).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ, &disks[..2]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ, &disks[..3]).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ, &disks).is_ok());
 
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &disks[..2]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, &disks[..3]).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ, disks).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ2, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ2, &disks[..3]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ2, &disks[..4]).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ2, &disks).is_ok());
 
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &disks[..3]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, &disks[..4]).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ2, disks).is_ok());
-
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &[]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &disks[..4]).is_err());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, &disks[..5]).is_ok());
-        assert!(check_zfs_raid_config(runinfo, ZfsRaidLevel::RaidZ3, disks).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ3, &[]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ3, &disks[..4]).is_err());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ3, &disks[..5]).is_ok());
+        assert!(check_zfs_raid_config(ZfsRaidLevel::RaidZ3, &disks).is_ok());
     }
 }

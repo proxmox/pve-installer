@@ -392,7 +392,7 @@ pub struct RuntimeInfo {
     pub hvm_supported: bool,
 }
 
-#[derive(Clone, Eq, Deserialize, PartialEq)]
+#[derive(Copy, Clone, Eq, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum BootType {
     Bios,
