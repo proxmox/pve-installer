@@ -365,8 +365,9 @@ impl From<&NetworkInfo> for NetworkOptions {
 
         if let Some(domain) = &info.dns.domain {
             let hostname = crate::current_product().default_hostname();
-            this.fqdn =
-                Fqdn::from(&format!("{hostname}.{domain}")).unwrap_or_else(|_| domain.clone());
+            if let Ok(fqdn) = Fqdn::from(&format!("{hostname}.{domain}")) {
+                this.fqdn = fqdn;
+            }
         }
 
         if let Some(routes) = &info.routes {
