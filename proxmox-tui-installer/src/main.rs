@@ -727,6 +727,7 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
 
     let cb_sink = siv.cb_sink().clone();
     let state = siv.user_data::<InstallerState>().unwrap();
+    let in_test_mode = state.in_test_mode;
     let progress_text = TextContent::new("starting the installation ..");
 
     let progress_task = {
@@ -736,16 +737,15 @@ fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
             let child = {
                 use std::process::{Command, Stdio};
 
-                #[cfg(not(debug_assertions))]
-                let (path, args, envs): (&str, [&str; 1], [(&str, &str); 0]) =
-                    ("proxmox-low-level-installer", ["start-session"], []);
-
-                #[cfg(debug_assertions)]
-                let (path, args, envs) = (
-                    PathBuf::from("./proxmox-low-level-installer"),
-                    ["-t", "start-session-test"],
-                    [("PERL5LIB", ".")],
-                );
+                let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if in_test_mode {
+                    (
+                        "./proxmox-low-level-installer",
+                        &["-t", "start-session-test"],
+                        vec![("PERL5LIB", ".")],
+                    )
+                } else {
+                    ("proxmox-low-level-installer", &["start-session"], vec![])
+                };
 
                 Command::new(path)
                     .args(args)
