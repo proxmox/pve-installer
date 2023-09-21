@@ -104,7 +104,7 @@ my sub hd_list {
 
 	my $logical_bsize = file_read_firstline("$bd/queue/logical_block_size") // '';
 	chomp $logical_bsize;
-	if ($logical_bsize && $logical_bsize !~ m/^\d+$/) {
+	if ($logical_bsize && $logical_bsize =~ m/^\d+$/) {
 	    $logical_bsize = int($logical_bsize);
 	} else {
 	    $logical_bsize = undef;
