@@ -1070,6 +1070,12 @@ _EOD
 	    chomp;
 	    my $path = $_;
 	    my ($deb) = $path =~ m/${proxmox_pkgdir}\/(.*\.deb)/;
+
+	    # the grub-pc/grub-efi-amd64 packages (w/o -bin) are the ones actually updating grub
+	    # upon upgrade - and conflict with each other - install the fitting one only
+	    next if ($deb =~ /grub-pc_/ && $run_env->{boot_type} ne 'bios');
+	    next if ($deb =~ /grub-efi-amd64_/ && $run_env->{boot_type} ne 'efi');
+
 	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print STDERR "extracting: $deb\n";
 	    syscmd("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/pkg/$deb") == 0
