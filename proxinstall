@@ -499,8 +499,8 @@ sub create_ipconf_view {
 	$text = $ipconf_entry_dns->get_text();
 	my ($dns_ip, $dns_ip_version) = parse_ip_address($text);
 	if (!defined($dns_ip) || $dns_ip_version != $ipversion) {
-	    my $msg = defined($gateway_ip)
-	        ? "DNS and host IP version must not differ (IPv$gateway_ip_version != IPv$ipversion)."
+	    my $msg = defined($dns_ip)
+	        ? "DNS and host IP version must not differ (IPv$dns_ip_version != IPv$ipversion)."
 	        : "DNS IP is not valid.";
 	    Proxmox::UI::message($msg);
 	    $ipconf_entry_dns->grab_focus();
