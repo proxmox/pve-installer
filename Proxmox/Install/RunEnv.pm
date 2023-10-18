@@ -248,7 +248,7 @@ my sub detect_country_tracing_to : prototype($$) {
 sub query_installation_environment : prototype() {
     # check first if somebody already cached this for us and re-use that
     my $run_env_file = Proxmox::Install::ISOEnv::get('run-env-cache-file');
-    if (-f "$run_env_file") {
+    if (-f "$run_env_file" && !Proxmox::Install::ISOEnv::is_test_mode()) {
 	log_info("re-using cached runtime env from $run_env_file");
 	my $cached_env = eval {
 	    my $run_env_raw = Proxmox::Sys::File::file_read_all($run_env_file);
