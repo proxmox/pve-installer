@@ -552,20 +552,18 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
     let ifnames = ifaces
         .clone()
         .map(|iface| (iface.render(), iface.name.clone()));
+    let mut ifaces_selection = SelectView::new().popup().with_all(ifnames.clone());
+
+    ifaces_selection.sort();
+    ifaces_selection.set_selection(
+        ifnames
+            .clone()
+            .position(|iface| &iface.1 == &options.ifname)
+            .unwrap_or(ifaces.len() - 1),
+    );
 
     let inner = FormView::new()
-        .child(
-            "Management interface",
-            SelectView::new()
-                .popup()
-                .with_all(ifnames.clone())
-                .selected(
-                    ifaces
-                        .clone()
-                        .position(|iface| &iface.name == &options.ifname)
-                        .unwrap_or_default(),
-                ),
-        )
+        .child("Management interface", ifaces_selection)
         .child(
             "Hostname (FQDN)",
             EditView::new().content(options.fqdn.to_string()),
