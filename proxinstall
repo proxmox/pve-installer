@@ -341,9 +341,19 @@ sub create_ipconf_view {
 
     my ($cidr_box, $ipconf_entry_addr, $ipconf_entry_mask) = create_cidr_inputs($cidr);
 
-    my $device_cb = Gtk3::ComboBoxText->new();
+    my $device_model = Gtk3::ListStore->new('Glib::String', 'Glib::String');
+    my $device_cb = Gtk3::ComboBox->new_with_model($device_model);
     $device_cb->set_active(0);
     $device_cb->set_visible(1);
+
+    my $icon_cell = Gtk3::CellRendererText->new();
+    $device_cb->pack_start($icon_cell, 0);
+    $device_cb->add_attribute($icon_cell, 'text', 0);
+    $icon_cell->set_property('foreground', 'green');
+
+    my $cell = Gtk3::CellRendererText->new();
+    $device_cb->pack_start($cell, 0);
+    $device_cb->add_attribute($cell, 'text', 1);
 
     my $get_device_desc = sub {
 	my $iface = shift;
@@ -374,7 +384,12 @@ sub create_ipconf_view {
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
 	my $iface = $ipconf->{ifaces}->{$index};
-	$device_cb->append_text($get_device_desc->($iface));
+	my $iter = $device_model->append();
+	my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
+	$device_model->set($iter,
+	   0 => $symbol,
+	   1 => $get_device_desc->($iface),
+	);
 	$device_active_map->{$i} = $index;
 	$device_active_reverse_map->{$iface->{name}} = $i;
 	if ($ipconf_first_view && $index == $ipconf->{default}) {
