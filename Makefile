@@ -146,7 +146,7 @@ check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img t
 check-pve-tui: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
 	./proxmox-low-level-installer dump-env -t
-	testdir/usr/bin/proxmox-tui-installer -t test.img
+	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
 
 prepare-check-pmg: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
@@ -160,7 +160,7 @@ check-pmg: prepare-check-pmg
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pmg-tui: prepare-check-pmg
-	testdir/usr/bin/proxmox-tui-installer -t test.img
+	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
 
 prepare-check-pbs: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) \
@@ -174,7 +174,7 @@ check-pbs: prepare-check-pbs
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs-tui: prepare-check-pbs
-	testdir/usr/bin/proxmox-tui-installer -t test.img
+	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
 
 .phony: clean
 clean:
