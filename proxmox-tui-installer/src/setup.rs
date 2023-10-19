@@ -438,12 +438,23 @@ pub struct Gateway {
 }
 
 #[derive(Clone, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum InterfaceState {
+    Up,
+    Down,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Clone, Deserialize)]
 pub struct Interface {
     pub name: String,
 
     pub index: usize,
 
     pub mac: String,
+
+    pub state: InterfaceState,
 
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]

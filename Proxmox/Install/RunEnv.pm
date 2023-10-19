@@ -100,6 +100,7 @@ my sub query_netdevs : prototype() {
 	    index => $index,
 	    name => $name,
 	    mac => $mac,
+	    state => uc($state),
 	};
 	$ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
     }
