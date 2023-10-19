@@ -446,6 +446,17 @@ pub enum InterfaceState {
     Unknown,
 }
 
+impl InterfaceState {
+    // avoid display trait as this is not the string representation for a serializer
+    pub fn render(&self) -> String {
+        match self {
+            Self::Up => "\u{25CF}",
+            Self::Down | Self::Unknown => " ",
+        }
+        .into()
+    }
+}
+
 #[derive(Clone, Deserialize)]
 pub struct Interface {
     pub name: String,
@@ -459,4 +470,11 @@ pub struct Interface {
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
     pub addresses: Option<Vec<CidrAddress>>,
+}
+
+impl Interface {
+    // avoid display trait as this is not the string representation for a serializer
+    pub fn render(&self) -> String {
+        format!("{} {}", self.state.render(), self.name)
+    }
 }
