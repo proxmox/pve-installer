@@ -33,7 +33,7 @@ pub enum CidrAddressParseError {
 /// assert_eq!(ipv4.to_string(), "192.168.0.1/24");
 /// assert_eq!(ipv6.to_string(), "2001:db8::c0a8:1/32");
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CidrAddress {
     addr: IpAddr,
     mask: usize,

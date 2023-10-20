@@ -328,7 +328,7 @@ impl Default for PasswordOptions {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NetworkOptions {
     pub ifname: String,
     pub fqdn: Fqdn,
@@ -448,5 +448,114 @@ impl InstallerOptions {
             SummaryOption::new("Gateway", self.network.gateway.to_string()),
             SummaryOption::new("DNS", self.network.dns_server.to_string()),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::setup::{
+        Dns, Gateway, Interface, InterfaceState, IsoInfo, IsoLocations, NetworkInfo, ProductConfig,
+        ProxmoxProduct, Routes, SetupInfo,
+    };
+    use std::{collections::HashMap, path::PathBuf};
+
+    fn fill_setup_info() {
+        crate::init_setup_info(SetupInfo {
+            config: ProductConfig {
+                fullname: "Proxmox VE".to_owned(),
+                product: ProxmoxProduct::PVE,
+                enable_btrfs: true,
+            },
+            iso_info: IsoInfo {
+                release: String::new(),
+                isorelease: String::new(),
+            },
+            locations: IsoLocations {
+                iso: PathBuf::new(),
+            },
+        });
+    }
+
+    #[test]
+    fn network_options_from_setup_network_info() {
+        fill_setup_info();
+
+        let mut interfaces = HashMap::new();
+        interfaces.insert(
+            "eth0".to_owned(),
+            Interface {
+                name: "eth0".to_owned(),
+                index: 0,
+                state: InterfaceState::Up,
+                mac: "01:23:45:67:89:ab".to_owned(),
+                addresses: Some(vec![
+                    CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap()
+                ]),
+            },
+        );
+
+        let mut info = NetworkInfo {
+            dns: Dns {
+                domain: Some("bar.com".to_owned()),
+                dns: Vec::new(),
+            },
+            routes: Some(Routes {
+                gateway4: Some(Gateway {
+                    dev: "eth0".to_owned(),
+                    gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                }),
+                gateway6: None,
+            }),
+            interfaces,
+            hostname: Some("foo".to_owned()),
+        };
+
+        assert_eq!(
+            NetworkOptions::from(&info),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.bar.com").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+
+        info.hostname = None;
+        assert_eq!(
+            NetworkOptions::from(&info),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("pve.bar.com").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+
+        info.dns.domain = None;
+        assert_eq!(
+            NetworkOptions::from(&info),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("pve.example.invalid").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+
+        info.hostname = Some("foo".to_owned());
+        assert_eq!(
+            NetworkOptions::from(&info),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.example.invalid").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
     }
 }
