@@ -408,6 +408,9 @@ pub struct NetworkInfo {
     /// (Contains no entries for devices with only link-local addresses.)
     #[serde(default)]
     pub interfaces: HashMap<String, Interface>,
+
+    /// The hostname of this machine, if set by the DHCP server.
+    pub hostname: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]

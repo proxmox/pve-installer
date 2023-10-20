@@ -337,11 +337,16 @@ pub struct NetworkOptions {
     pub dns_server: IpAddr,
 }
 
+impl NetworkOptions {
+    const DEFAULT_DOMAIN: &str = "example.invalid";
+}
+
 impl Default for NetworkOptions {
     fn default() -> Self {
         let fqdn = format!(
-            "{}.example.invalid",
-            crate::current_product().default_hostname()
+            "{}.{}",
+            crate::current_product().default_hostname(),
+            Self::DEFAULT_DOMAIN
         );
         // TODO: Retrieve automatically
         Self {
@@ -363,11 +368,14 @@ impl From<&NetworkInfo> for NetworkOptions {
             this.dns_server = *ip;
         }
 
-        if let Some(domain) = &info.dns.domain {
-            let hostname = crate::current_product().default_hostname();
-            if let Ok(fqdn) = Fqdn::from(&format!("{hostname}.{domain}")) {
-                this.fqdn = fqdn;
-            }
+        let hostname = info
+            .hostname
+            .as_deref()
+            .unwrap_or_else(|| crate::current_product().default_hostname());
+        let domain = info.dns.domain.as_deref().unwrap_or(Self::DEFAULT_DOMAIN);
+
+        if let Ok(fqdn) = Fqdn::from(&format!("{hostname}.{domain}")) {
+            this.fqdn = fqdn;
         }
 
         if let Some(routes) = &info.routes {
