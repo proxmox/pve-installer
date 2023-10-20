@@ -264,6 +264,10 @@ sub query_installation_environment : prototype() {
 	routes => $routes,
 	dns => query_dns(),
     };
+
+    # Cannot be put directly in the above hash as it might return undef ..
+    $output->{network}->{hostname} = Proxmox::Sys::Net::get_dhcp_hostname();
+
     # FIXME: move whatever makes sense over to Proxmox::Sys::Net:: and keep that as single source,
     # it can then use some different structure just fine (after adapting the GTK GUI to that) but
     # **never** to (slightly different!) things for the same stuff...
