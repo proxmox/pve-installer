@@ -6,6 +6,9 @@ use warnings;
 use base qw(Exporter);
 our @EXPORT_OK = qw(parse_ip_address parse_ip_mask);
 
+our $HOSTNAME_RE = "(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
+our $FQDN_RE = "(?:${HOSTNAME_RE}\.)*${HOSTNAME_RE}";
+
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
 my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
 my $IPV6H16 = "(?:[0-9a-fA-F]{1,4})";

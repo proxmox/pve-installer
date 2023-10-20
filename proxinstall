@@ -444,8 +444,6 @@ sub create_ipconf_view {
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
 
-	my $namere = "([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
-
 	# Debian does not support purely numeric hostnames
 	if ($text && $text =~ /^[0-9]+(?:\.|$)/) {
 	    Proxmox::UI::message("Purely numeric hostnames are not allowed.");
@@ -453,8 +451,11 @@ sub create_ipconf_view {
 	    return;
 	}
 
-	if ($text && $text =~ m/^(${namere}\.)*${namere}$/ && $text !~ m/.example.invalid$/ &&
-	    $text =~ m/^([^\.]+)\.(\S+)$/) {
+	if ($text
+	    && $text =~ m/^${Proxmox::Sys::Net::FQDN_RE}$/
+	    && $text !~ m/.example.invalid$/
+	    && $text =~ m/^([^\.]+)\.(\S+)$/
+	) {
 	    Proxmox::Install::Config::set_hostname($1);
 	    Proxmox::Install::Config::set_domain($2);
 	} else {
