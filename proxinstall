@@ -417,9 +417,11 @@ sub create_ipconf_view {
     $vbox->pack_start($devicebox, 0, 0, 2);
 
     my $fqdn = Proxmox::Install::Config::get_fqdn();
-    my $hn = $fqdn // "$iso_env->{product}." . ($ipconf->{domain} // "example.invalid");
+    my $hostname = $run_env->{network}->{hostname} || $iso_env->{product};
+    my $domain = $ipconf->{domain} || "example.invalid";
+    $fqdn //= "$hostname.$domain";
 
-    my ($hostbox, $hostentry) = create_text_input($hn, 'Hostname (FQDN):');
+    my ($hostbox, $hostentry) = create_text_input($fqdn, 'Hostname (FQDN):');
     $vbox->pack_start($hostbox, 0, 0, 2);
 
     $vbox->pack_start($cidr_box, 0, 0, 2);
