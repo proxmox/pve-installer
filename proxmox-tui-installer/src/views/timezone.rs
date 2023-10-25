@@ -6,9 +6,11 @@ use cursive::{
 
 use super::FormView;
 use crate::{
+    system, InstallerState,
+};
+use proxmox_installer_common::{
     options::TimezoneOptions,
     setup::{KeyboardMapping, LocaleInfo},
-    system, InstallerState,
 };
 
 pub struct TimezoneOptionsView {

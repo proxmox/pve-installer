@@ -7,7 +7,7 @@ use cursive::{
     Rect, Vec2, View,
 };
 
-use crate::utils::CidrAddress;
+use proxmox_installer_common::utils::CidrAddress;
 
 mod bootdisk;
 pub use bootdisk::*;

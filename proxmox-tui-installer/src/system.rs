@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::Write, process::Command};
 
-use crate::setup::KeyboardMapping;
+use proxmox_installer_common::setup::KeyboardMapping;
 
 pub fn set_keyboard_layout(kmap: &KeyboardMapping) -> Result<(), String> {
     Command::new("setxkbmap")

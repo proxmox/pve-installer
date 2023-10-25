@@ -28,15 +28,18 @@ use cursive::{
 use regex::Regex;
 
 mod options;
-use options::*;
+use options::InstallerOptions;
+
+use proxmox_installer_common::{
+    options::{BootdiskOptions, NetworkOptions, PasswordOptions, TimezoneOptions},
+    setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
+    utils::Fqdn,
+};
 
 mod setup;
-use setup::{InstallConfig, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo};
+use setup::InstallConfig;
 
 mod system;
-
-mod utils;
-use utils::Fqdn;
 
 mod views;
 use views::{
