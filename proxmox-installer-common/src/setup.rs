@@ -103,6 +103,7 @@ pub struct LocaleInfo {
     pub kmap: HashMap<String, KeyboardMapping>,
 }
 
+/// Fetches basic information needed for the installer which is required to work
 pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     let base_path = if in_test_mode { "./testdir" } else { "/" };
     let mut path = PathBuf::from(base_path);
