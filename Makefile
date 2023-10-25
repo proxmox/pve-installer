@@ -43,6 +43,7 @@ $(BUILDDIR):
 	  proxinstall \
 	  proxmox-low-level-installer \
 	  proxmox-tui-installer/ \
+	  proxmox-installer-common/ \
 	  spice-vdagent.sh \
 	  unconfigured.sh \
 	  xinitrc \
