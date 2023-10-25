@@ -103,6 +103,43 @@ pub struct LocaleInfo {
     pub kmap: HashMap<String, KeyboardMapping>,
 }
 
+pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
+    let base_path = if in_test_mode { "./testdir" } else { "/" };
+    let mut path = PathBuf::from(base_path);
+
+    path.push("run");
+    path.push("proxmox-installer");
+
+    let installer_info: SetupInfo = {
+        let mut path = path.clone();
+        path.push("iso-info.json");
+
+        read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
+    };
+
+    let locale_info = {
+        let mut path = path.clone();
+        path.push("locales.json");
+
+        read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
+    };
+
+    let mut runtime_info: RuntimeInfo = {
+        let mut path = path.clone();
+        path.push("run-env-info.json");
+
+        read_json(&path)
+            .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
+    };
+
+    runtime_info.disks.sort();
+    if runtime_info.disks.is_empty() {
+        Err("The installer could not find any supported hard disks.".to_owned())
+    } else {
+        Ok((installer_info, locale_info, runtime_info))
+    }
+}
+
 #[derive(Serialize)]
 pub struct InstallZfsOption {
     ashift: usize,
