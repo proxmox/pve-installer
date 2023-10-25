@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr};
 use std::{cmp, fmt};
 
-use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo};
+use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
 use crate::utils::{CidrAddress, Fqdn};
 use crate::SummaryOption;
 
@@ -339,49 +339,25 @@ pub struct NetworkOptions {
 
 impl NetworkOptions {
     const DEFAULT_DOMAIN: &str = "example.invalid";
-}
 
-impl Default for NetworkOptions {
-    fn default() -> Self {
-        let fqdn = format!(
-            "{}.{}",
-            crate::current_product().default_hostname(),
-            Self::DEFAULT_DOMAIN
-        );
-        // TODO: Retrieve automatically
-        Self {
+    pub fn defaults_from(setup: &SetupInfo, network: &NetworkInfo) -> Self {
+        let mut this = Self {
             ifname: String::new(),
-            fqdn: fqdn.parse().unwrap(),
+            fqdn: Self::construct_fqdn(network, setup.config.product.default_hostname()),
             // Safety: The provided mask will always be valid.
             address: CidrAddress::new(Ipv4Addr::UNSPECIFIED, 0).unwrap(),
             gateway: Ipv4Addr::UNSPECIFIED.into(),
             dns_server: Ipv4Addr::UNSPECIFIED.into(),
-        }
-    }
-}
+        };
 
-impl From<&NetworkInfo> for NetworkOptions {
-    fn from(info: &NetworkInfo) -> Self {
-        let mut this = Self::default();
-
-        if let Some(ip) = info.dns.dns.first() {
+        if let Some(ip) = network.dns.dns.first() {
             this.dns_server = *ip;
         }
 
-        let hostname = info
-            .hostname
-            .as_deref()
-            .unwrap_or_else(|| crate::current_product().default_hostname());
-        let domain = info.dns.domain.as_deref().unwrap_or(Self::DEFAULT_DOMAIN);
-
-        if let Ok(fqdn) = Fqdn::from(&format!("{hostname}.{domain}")) {
-            this.fqdn = fqdn;
-        }
-
-        if let Some(routes) = &info.routes {
+        if let Some(routes) = &network.routes {
             let mut filled = false;
             if let Some(gw) = &routes.gateway4 {
-                if let Some(iface) = info.interfaces.get(&gw.dev) {
+                if let Some(iface) = network.interfaces.get(&gw.dev) {
                     this.ifname = iface.name.clone();
                     if let Some(addresses) = &iface.addresses {
                         if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
@@ -394,7 +370,7 @@ impl From<&NetworkInfo> for NetworkOptions {
             }
             if !filled {
                 if let Some(gw) = &routes.gateway6 {
-                    if let Some(iface) = info.interfaces.get(&gw.dev) {
+                    if let Some(iface) = network.interfaces.get(&gw.dev) {
                         if let Some(addresses) = &iface.addresses {
                             if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
                                 this.ifname = iface.name.clone();
@@ -408,6 +384,23 @@ impl From<&NetworkInfo> for NetworkOptions {
         }
 
         this
+    }
+
+    fn construct_fqdn(network: &NetworkInfo, default_hostname: &str) -> Fqdn {
+        let hostname = network.hostname.as_deref().unwrap_or(default_hostname);
+
+        let domain = network
+            .dns
+            .domain
+            .as_deref()
+            .unwrap_or(Self::DEFAULT_DOMAIN);
+
+        Fqdn::from(&format!("{hostname}.{domain}")).unwrap_or_else(|_| {
+            // Safety: This will always result in a valid FQDN, as we control & know
+            // the values of default_hostname (one of "pve", "pmg" or "pbs") and
+            // constant-defined DEFAULT_DOMAIN.
+            Fqdn::from(&format!("{}.{}", default_hostname, Self::DEFAULT_DOMAIN)).unwrap()
+        })
     }
 }
 
@@ -460,8 +453,8 @@ mod tests {
     };
     use std::{collections::HashMap, path::PathBuf};
 
-    fn fill_setup_info() {
-        crate::init_setup_info(SetupInfo {
+    fn dummy_setup_info() -> SetupInfo {
+        SetupInfo {
             config: ProductConfig {
                 fullname: "Proxmox VE".to_owned(),
                 product: ProxmoxProduct::PVE,
@@ -474,12 +467,12 @@ mod tests {
             locations: IsoLocations {
                 iso: PathBuf::new(),
             },
-        });
+        }
     }
 
     #[test]
     fn network_options_from_setup_network_info() {
-        fill_setup_info();
+        let setup = dummy_setup_info();
 
         let mut interfaces = HashMap::new();
         interfaces.insert(
@@ -512,7 +505,7 @@ mod tests {
         };
 
         assert_eq!(
-            NetworkOptions::from(&info),
+            NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
@@ -524,7 +517,7 @@ mod tests {
 
         info.hostname = None;
         assert_eq!(
-            NetworkOptions::from(&info),
+            NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.bar.com").unwrap(),
@@ -536,7 +529,7 @@ mod tests {
 
         info.dns.domain = None;
         assert_eq!(
-            NetworkOptions::from(&info),
+            NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
@@ -548,7 +541,7 @@ mod tests {
 
         info.hostname = Some("foo".to_owned());
         assert_eq!(
-            NetworkOptions::from(&info),
+            NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.example.invalid").unwrap(),

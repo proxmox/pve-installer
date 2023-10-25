@@ -196,12 +196,10 @@ impl From<InstallerOptions> for InstallConfig {
 
             mngmt_nic: options.network.ifname,
 
-            hostname: options
-                .network
-                .fqdn
-                .host()
-                .unwrap_or_else(|| crate::current_product().default_hostname())
-                .to_owned(),
+            // Safety: At this point, it is know that we have a valid FQDN, as
+            // this is set by the TUI network panel, which only lets the user
+            // continue if a valid FQDN is provided.
+            hostname: options.network.fqdn.host().expect("valid FQDN").to_owned(),
             domain: options.network.fqdn.domain(),
             cidr: options.network.address,
             gateway: options.network.gateway,

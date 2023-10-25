@@ -166,7 +166,6 @@ enum InstallerStep {
 #[derive(Clone)]
 struct InstallerState {
     options: InstallerOptions,
-    /// FIXME: Remove:
     setup_info: SetupInfo,
     runtime_info: RuntimeInfo,
     locales: LocaleInfo,
@@ -184,7 +183,7 @@ fn main() {
         _ => cfg!(debug_assertions),
     };
 
-    let (locales, runtime_info) = match installer_setup(in_test_mode) {
+    let (setup_info, locales, runtime_info) = match installer_setup(in_test_mode) {
         Ok(result) => result,
         Err(err) => initial_setup_error(&mut siv, &err),
     };
@@ -197,10 +196,10 @@ fn main() {
             bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: Default::default(),
-            network: NetworkOptions::from(&runtime_info.network),
+            network: NetworkOptions::defaults_from(&setup_info, &runtime_info.network),
             autoreboot: false,
         },
-        setup_info: setup_info().clone(), // FIXME: REMOVE
+        setup_info,
         runtime_info,
         locales,
         steps: HashMap::new(),
@@ -211,20 +210,20 @@ fn main() {
     siv.run();
 }
 
-fn installer_setup(in_test_mode: bool) -> Result<(LocaleInfo, RuntimeInfo), String> {
+fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     let base_path = if in_test_mode { "./testdir" } else { "/" };
     let mut path = PathBuf::from(base_path);
 
     path.push("run");
     path.push("proxmox-installer");
 
-    let installer_info = {
+    let installer_info: SetupInfo = {
         let mut path = path.clone();
         path.push("iso-info.json");
 
         setup::read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
     };
-    init_setup_info(installer_info);
+    init_setup_info(installer_info.clone());
 
     let locale_info = {
         let mut path = path.clone();
@@ -245,7 +244,7 @@ fn installer_setup(in_test_mode: bool) -> Result<(LocaleInfo, RuntimeInfo), Stri
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
     } else {
-        Ok((locale_info, runtime_info))
+        Ok((installer_info, locale_info, runtime_info))
     }
 }
 
