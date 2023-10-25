@@ -5,7 +5,6 @@ use std::{
     env,
     io::{BufRead, BufReader, Write},
     net::IpAddr,
-    path::PathBuf,
     str::FromStr,
     sync::{Arc, Mutex},
     thread,
@@ -32,7 +31,7 @@ use options::InstallerOptions;
 
 use proxmox_installer_common::{
     options::{BootdiskOptions, NetworkOptions, PasswordOptions, TimezoneOptions},
-    setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
+    setup::{installer_setup, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
     utils::Fqdn,
 };
 
@@ -195,43 +194,6 @@ fn main() {
 
     switch_to_next_screen(&mut siv, InstallerStep::Licence, &license_dialog);
     siv.run();
-}
-
-fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
-    let base_path = if in_test_mode { "./testdir" } else { "/" };
-    let mut path = PathBuf::from(base_path);
-
-    path.push("run");
-    path.push("proxmox-installer");
-
-    let installer_info: SetupInfo = {
-        let mut path = path.clone();
-        path.push("iso-info.json");
-
-        setup::read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
-    };
-
-    let locale_info = {
-        let mut path = path.clone();
-        path.push("locales.json");
-
-        setup::read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
-    };
-
-    let mut runtime_info: RuntimeInfo = {
-        let mut path = path.clone();
-        path.push("run-env-info.json");
-
-        setup::read_json(&path)
-            .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
-    };
-
-    runtime_info.disks.sort();
-    if runtime_info.disks.is_empty() {
-        Err("The installer could not find any supported hard disks.".to_owned())
-    } else {
-        Ok((installer_info, locale_info, runtime_info))
-    }
 }
 
 /// Anything that can be done late in the setup and will not result in fatal errors.
