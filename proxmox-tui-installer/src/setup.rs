@@ -1,13 +1,10 @@
 use std::{
     collections::HashMap,
     fmt,
-    fs::File,
-    io::BufReader,
     net::IpAddr,
-    path::Path,
 };
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 
 use crate::options::InstallerOptions;
 use proxmox_installer_common::{
@@ -127,13 +124,6 @@ impl From<InstallerOptions> for InstallConfig {
 
         config
     }
-}
-
-pub fn read_json<T: for<'de> Deserialize<'de>, P: AsRef<Path>>(path: P) -> Result<T, String> {
-    let file = File::open(path).map_err(|err| err.to_string())?;
-    let reader = BufReader::new(file);
-
-    serde_json::from_reader(reader).map_err(|err| format!("failed to parse JSON: {err}"))
 }
 
 fn serialize_disk_opt<S>(value: &Option<Disk>, serializer: S) -> Result<S::Ok, S::Error>
