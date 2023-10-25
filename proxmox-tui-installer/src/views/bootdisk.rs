@@ -16,7 +16,7 @@ use crate::{
         FsType, LvmBootdiskOptions, ZfsBootdiskOptions, ZfsRaidLevel, FS_TYPES,
         ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
     },
-    setup::BootType,
+    setup::{BootType, ProductConfig},
 };
 use crate::{setup::ProxmoxProduct, InstallerState};
 
@@ -37,6 +37,11 @@ impl BootdiskOptionsView {
             )
             .with_name("bootdisk-options-target-disk");
 
+        let product_conf = siv
+            .user_data::<InstallerState>()
+            .map(|state| state.setup_info.config.clone())
+            .unwrap(); // Safety: InstallerState must always be set
+
         let advanced_options = Rc::new(RefCell::new(options.clone()));
 
         let advanced_button = LinearLayout::horizontal()
@@ -45,7 +50,11 @@ impl BootdiskOptionsView {
                 let disks = disks.to_owned();
                 let options = advanced_options.clone();
                 move |siv| {
-                    siv.add_layer(advanced_options_view(&disks, options.clone()));
+                    siv.add_layer(advanced_options_view(
+                        &disks,
+                        options.clone(),
+                        product_conf.clone(),
+                    ));
                 }
             }));
 
@@ -95,10 +104,9 @@ struct AdvancedBootdiskOptionsView {
 }
 
 impl AdvancedBootdiskOptionsView {
-    fn new(disks: &[Disk], options: &BootdiskOptions) -> Self {
-        let enable_btrfs = crate::setup_info().config.enable_btrfs;
-
-        let filter_btrfs = |fstype: &&FsType| -> bool { enable_btrfs || !fstype.is_btrfs() };
+    fn new(disks: &[Disk], options: &BootdiskOptions, product_conf: ProductConfig) -> Self {
+        let filter_btrfs =
+            |fstype: &&FsType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
 
         let fstype_select = SelectView::new()
             .popup()
@@ -126,7 +134,10 @@ impl AdvancedBootdiskOptionsView {
             .child(DummyView.full_width());
 
         match &options.advanced {
-            AdvancedBootdiskOptions::Lvm(lvm) => view.add_child(LvmBootdiskOptionsView::new(lvm)),
+            AdvancedBootdiskOptions::Lvm(lvm) => view.add_child(LvmBootdiskOptionsView::new(
+                lvm,
+                product_conf.product == ProxmoxProduct::PVE,
+            )),
             AdvancedBootdiskOptions::Zfs(zfs) => {
                 view.add_child(ZfsBootdiskOptionsView::new(disks, zfs))
             }
@@ -139,6 +150,11 @@ impl AdvancedBootdiskOptionsView {
     }
 
     fn fstype_on_submit(siv: &mut Cursive, disks: &[Disk], fstype: &FsType) {
+        let is_pve = siv
+            .user_data::<InstallerState>()
+            .map(|state| state.setup_info.config.product == ProxmoxProduct::PVE)
+            .unwrap_or_default();
+
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
             if let Some(AdvancedBootdiskOptionsView { view }) =
                 view.get_content_mut().downcast_mut()
@@ -147,6 +163,7 @@ impl AdvancedBootdiskOptionsView {
                 match fstype {
                     FsType::Ext4 | FsType::Xfs => view.add_child(LvmBootdiskOptionsView::new(
                         &LvmBootdiskOptions::defaults_from(&disks[0]),
+                        is_pve,
                     )),
                     FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new(
                         disks,
@@ -240,11 +257,11 @@ impl ViewWrapper for AdvancedBootdiskOptionsView {
 
 struct LvmBootdiskOptionsView {
     view: FormView,
+    has_extra_fields: bool,
 }
 
 impl LvmBootdiskOptionsView {
-    fn new(options: &LvmBootdiskOptions) -> Self {
-        let is_pve = crate::setup_info().config.product == ProxmoxProduct::PVE;
+    fn new(options: &LvmBootdiskOptions, show_extra_fields: bool) -> Self {
         // TODO: Set maximum accordingly to disk size
         let view = FormView::new()
             .child(
@@ -258,12 +275,12 @@ impl LvmBootdiskOptionsView {
                 DiskSizeEditView::new_emptyable().content_maybe(options.swap_size),
             )
             .child_conditional(
-                is_pve,
+                show_extra_fields,
                 "Maximum root volume size",
                 DiskSizeEditView::new_emptyable().content_maybe(options.max_root_size),
             )
             .child_conditional(
-                is_pve,
+                show_extra_fields,
                 "Maximum data volume size",
                 DiskSizeEditView::new_emptyable().content_maybe(options.max_data_size),
             )
@@ -272,22 +289,24 @@ impl LvmBootdiskOptionsView {
                 DiskSizeEditView::new_emptyable().content_maybe(options.min_lvm_free),
             );
 
-        Self { view }
+        Self {
+            view,
+            has_extra_fields: show_extra_fields,
+        }
     }
 
     fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
-        let is_pve = crate::setup_info().config.product == ProxmoxProduct::PVE;
-        let min_lvm_free_id = if is_pve { 4 } else { 2 };
-        let max_root_size = if is_pve {
-            self.view.get_value::<DiskSizeEditView, _>(2)
-        } else {
-            None
-        };
-        let max_data_size = if is_pve {
-            self.view.get_value::<DiskSizeEditView, _>(3)
-        } else {
-            None
-        };
+        let min_lvm_free_id = if self.has_extra_fields { 4 } else { 2 };
+
+        let max_root_size = self
+            .has_extra_fields
+            .then(|| self.view.get_value::<DiskSizeEditView, _>(2))
+            .flatten();
+        let max_data_size = self
+            .has_extra_fields
+            .then(|| self.view.get_value::<DiskSizeEditView, _>(3))
+            .flatten();
+
         Some(LvmBootdiskOptions {
             total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
             swap_size: self.view.get_value::<DiskSizeEditView, _>(1),
@@ -552,10 +571,15 @@ impl ViewWrapper for ZfsBootdiskOptionsView {
     cursive::wrap_impl!(self.view: MultiDiskOptionsView<FormView>);
 }
 
-fn advanced_options_view(disks: &[Disk], options: Rc<RefCell<BootdiskOptions>>) -> impl View {
+fn advanced_options_view(
+    disks: &[Disk],
+    options: Rc<RefCell<BootdiskOptions>>,
+    product_conf: ProductConfig,
+) -> impl View {
     Dialog::around(AdvancedBootdiskOptionsView::new(
         disks,
         &(*options).borrow(),
+        product_conf,
     ))
     .title("Advanced bootdisk options")
     .button("Ok", {
