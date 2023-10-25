@@ -8,7 +8,7 @@ use crate::setup::BootType;
 /// # Arguments
 ///
 /// * `disks` - A list of disks to check for duplicates.
-fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
+pub fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
     let mut set = HashSet::new();
 
     for disk in disks {
@@ -26,7 +26,7 @@ fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
 ///
 /// * `disks` - A list of disks to check the lenght of.
 /// * `min` - Minimum number of disks
-fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
+pub fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
     if disks.len() < min {
         Err(format!("Need at least {min} disks"))
     } else {
@@ -41,7 +41,7 @@ fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
 ///
 /// * `runinfo` - `RuntimeInfo` instance of currently running system
 /// * `disks` - List of disks designated as bootdisk targets.
-fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<(), &str> {
+pub fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<(), &str> {
     let is_blocksize_4096 = |disk: &Disk| disk.block_size.map(|s| s == 4096).unwrap_or(false);
 
     if boot_type == BootType::Bios && disks.iter().any(is_blocksize_4096) {
@@ -58,7 +58,7 @@ fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<()
 ///
 /// * `level` - The targeted ZFS RAID level by the user.
 /// * `disks` - List of disks designated as RAID targets.
-fn check_zfs_raid_config(level: ZfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
+pub fn check_zfs_raid_config(level: ZfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
     // See also Proxmox/Install.pm:get_zfs_raid_setup()
 
     let check_mirror_size = |disk1: &Disk, disk2: &Disk| {
@@ -117,7 +117,7 @@ fn check_zfs_raid_config(level: ZfsRaidLevel, disks: &[Disk]) -> Result<(), Stri
 ///
 /// * `level` - The targeted Btrfs RAID level by the user.
 /// * `disks` - List of disks designated as RAID targets.
-fn check_btrfs_raid_config(level: BtrfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
+pub fn check_btrfs_raid_config(level: BtrfsRaidLevel, disks: &[Disk]) -> Result<(), String> {
     // See also Proxmox/Install.pm:get_btrfs_raid_setup()
 
     match level {
