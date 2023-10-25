@@ -104,7 +104,7 @@ pub struct LocaleInfo {
 }
 
 #[derive(Serialize)]
-struct InstallZfsOption {
+pub struct InstallZfsOption {
     ashift: usize,
     #[serde(serialize_with = "serialize_as_display")]
     compress: ZfsCompressOption,
