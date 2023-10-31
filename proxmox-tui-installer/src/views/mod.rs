@@ -19,16 +19,38 @@ mod timezone;
 pub use timezone::*;
 
 pub struct NumericEditView<T> {
-    view: EditView,
+    view: LinearLayout,
     max_value: Option<T>,
     max_content_width: Option<usize>,
     allow_empty: bool,
 }
 
 impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
+    /// Creates a new [`NumericEditView`], with the value set to `0`.
     pub fn new() -> Self {
+        let view = LinearLayout::horizontal().child(EditView::new().content("0").full_width());
+
         Self {
-            view: EditView::new().content("0"),
+            view,
+            max_value: None,
+            max_content_width: None,
+            allow_empty: false,
+        }
+    }
+
+    /// Creates a new [`NumericEditView`], with the value set to `0` and a label to the right of it
+    /// with the given content, separated by a space.
+    ///
+    /// # Arguments
+    /// * `suffix` - Content for the label to the right of it.
+    #[allow(unused)]
+    pub fn new_with_suffix(suffix: &str) -> Self {
+        let view = LinearLayout::horizontal()
+            .child(EditView::new().content("0").full_width())
+            .child(TextView::new(format!(" {suffix}")));
+
+        Self {
+            view,
             max_value: None,
             max_content_width: None,
             allow_empty: false,
@@ -42,7 +64,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
 
     pub fn max_content_width(mut self, width: usize) -> Self {
         self.max_content_width = Some(width);
-        self.view.set_max_content_width(self.max_content_width);
+        self.inner_mut().set_max_content_width(Some(width));
         self
     }
 
@@ -50,24 +72,25 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         self.allow_empty = value;
 
         if value {
-            self.view = EditView::new();
+            *self.inner_mut() = EditView::new();
         } else {
-            self.view = EditView::new().content("0");
+            *self.inner_mut() = EditView::new().content("0");
         }
 
-        self.view.set_max_content_width(self.max_content_width);
+        let max_content_width = self.max_content_width;
+        self.inner_mut().set_max_content_width(max_content_width);
         self
     }
 
     pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
         assert!(!self.allow_empty);
-        self.view.get_content().parse()
+        self.inner().get_content().parse()
     }
 
     pub fn get_content_maybe(&self) -> Option<Result<T, <T as FromStr>::Err>> {
-        let content = self.view.get_content();
+        let content = self.inner().get_content();
         if !content.is_empty() {
-            Some(self.view.get_content().parse())
+            Some(self.inner().get_content().parse())
         } else {
             None
         }
@@ -83,7 +106,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
             if let Ok(val) = self.get_content() {
                 if result.is_consumed() && val > max {
                     // Restore the original value, before the insert
-                    let cb = self.view.set_content((*original).clone());
+                    let cb = self.inner_mut().set_content((*original).clone());
                     return EventResult::with_cb_once(move |siv| {
                         result.process(siv);
                         cb(siv);
@@ -94,16 +117,54 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
 
         result
     }
+
+    /// Provides an immutable reference to the inner [`EditView`].
+    fn inner(&self) -> &EditView {
+        // Safety: Invariant; first child must always exist and be a `EditView`
+        self.view
+            .get_child(0)
+            .unwrap()
+            .downcast_ref::<ResizedView<EditView>>()
+            .unwrap()
+            .get_inner()
+    }
+
+    /// Provides a mutable reference to the inner [`EditView`].
+    fn inner_mut(&mut self) -> &mut EditView {
+        // Safety: Invariant; first child must always exist and be a `EditView`
+        self.view
+            .get_child_mut(0)
+            .unwrap()
+            .downcast_mut::<ResizedView<EditView>>()
+            .unwrap()
+            .get_inner_mut()
+    }
+
+    /// Sets the content of the inner [`EditView`]. This correctly swaps out the content without
+    /// modifying the [`EditView`] in any way.
+    ///
+    /// Chainable variant.
+    ///
+    /// # Arguments
+    /// * `content` - New, stringified content for the inner [`EditView`]. Must be a valid value
+    /// according to the containet type `T`.
+    fn content_inner(mut self, content: &str) -> Self {
+        let mut inner = EditView::new();
+        std::mem::swap(self.inner_mut(), &mut inner);
+        inner = inner.content(content);
+        std::mem::swap(self.inner_mut(), &mut inner);
+        self
+    }
 }
 
 pub type FloatEditView = NumericEditView<f64>;
 pub type IntegerEditView = NumericEditView<usize>;
 
 impl ViewWrapper for FloatEditView {
-    cursive::wrap_impl!(self.view: EditView);
+    cursive::wrap_impl!(self.view: LinearLayout);
 
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
-        let original = self.view.get_content();
+        let original = self.inner_mut().get_content();
 
         let has_decimal_place = original.find('.').is_some();
 
@@ -114,13 +175,13 @@ impl ViewWrapper for FloatEditView {
         };
 
         let decimal_places = self
-            .view
+            .inner_mut()
             .get_content()
             .split_once('.')
             .map(|(_, s)| s.len())
             .unwrap_or_default();
         if decimal_places > 2 {
-            let cb = self.view.set_content((*original).clone());
+            let cb = self.inner_mut().set_content((*original).clone());
             return EventResult::with_cb_once(move |siv| {
                 result.process(siv);
                 cb(siv);
@@ -132,17 +193,17 @@ impl ViewWrapper for FloatEditView {
 }
 
 impl FloatEditView {
-    pub fn content(mut self, content: f64) -> Self {
-        self.view = self.view.content(format!("{:.2}", content));
-        self
+    /// Sets the value of the [`FloatEditView`].
+    pub fn content(self, content: f64) -> Self {
+        self.content_inner(&format!("{:.2}", content))
     }
 }
 
 impl ViewWrapper for IntegerEditView {
-    cursive::wrap_impl!(self.view: EditView);
+    cursive::wrap_impl!(self.view: LinearLayout);
 
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
-        let original = self.view.get_content();
+        let original = self.inner_mut().get_content();
 
         let result = match event {
             // Drop all other characters than numbers; allow dots if not set to integer-only
@@ -155,9 +216,9 @@ impl ViewWrapper for IntegerEditView {
 }
 
 impl IntegerEditView {
-    pub fn content(mut self, content: usize) -> Self {
-        self.view = self.view.content(content.to_string());
-        self
+    /// Sets the value of the [`IntegerEditView`].
+    pub fn content(self, content: usize) -> Self {
+        self.content_inner(&content.to_string())
     }
 }
 
