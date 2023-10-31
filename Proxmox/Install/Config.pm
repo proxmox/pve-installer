@@ -72,6 +72,7 @@ my sub init_cfg {
 	    compress => 'on',
 	    checksum => 'on',
 	    copies => 1,
+	    arc_max => Proxmox::Install::RunEnv::default_zfs_arc_max(), # in MiB
 	},
 	# TODO: single disk selection config
 	target_hd => undef,

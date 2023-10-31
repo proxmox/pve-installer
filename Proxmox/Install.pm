@@ -291,6 +291,19 @@ sub get_zfs_raid_setup {
     return ($devlist, $cmd);
 }
 
+# If the maximum ARC size for ZFS was explicitly changed by the user, applies
+# it to the new system by setting the `zfs_arc_max` module parameter in /etc/modprobe.d/zfs.conf
+my sub zfs_setup_module_conf {
+    my ($targetdir) = @_;
+
+    my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max');
+    my $arc_max_mib = Proxmox::Install::RunEnv::clamp_zfs_arc_max($arc_max) * 1024 * 1024;
+
+    if ($arc_max > 0) {
+	file_write_all("$targetdir/etc/modprobe.d/zfs.conf", "options zfs zfs_arc_max=$arc_max\n")
+    }
+}
+
 sub get_btrfs_raid_setup {
     my $filesys = Proxmox::Install::Config::get_filesys();
 
@@ -1141,6 +1154,7 @@ _EOD
 
 	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs\n");
 
+	    zfs_setup_module_conf($targetdir);
 	}
 
 	diversion_remove($targetdir, "/usr/sbin/update-grub");
