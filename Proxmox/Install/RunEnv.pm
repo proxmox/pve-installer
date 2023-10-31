@@ -18,6 +18,8 @@ my sub fromjs : prototype($) {
 }
 
 my $mem_total = undef;
+# Returns the system memory size in MiB, and falls back to 512 MiB if it
+# could not be determined.
 sub query_total_memory : prototype() {
     return $mem_total if defined($mem_total);
 
