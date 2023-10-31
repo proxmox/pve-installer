@@ -139,10 +139,9 @@ impl AdvancedBootdiskOptionsView {
             .child(DummyView.full_width());
 
         match &options.advanced {
-            AdvancedBootdiskOptions::Lvm(lvm) => view.add_child(LvmBootdiskOptionsView::new(
-                lvm,
-                product_conf.product == ProxmoxProduct::PVE,
-            )),
+            AdvancedBootdiskOptions::Lvm(lvm) => {
+                view.add_child(LvmBootdiskOptionsView::new(lvm, &product_conf))
+            }
             AdvancedBootdiskOptions::Zfs(zfs) => {
                 view.add_child(ZfsBootdiskOptionsView::new(disks, zfs))
             }
@@ -155,10 +154,8 @@ impl AdvancedBootdiskOptionsView {
     }
 
     fn fstype_on_submit(siv: &mut Cursive, disks: &[Disk], fstype: &FsType) {
-        let is_pve = siv
-            .user_data::<InstallerState>()
-            .map(|state| state.setup_info.config.product == ProxmoxProduct::PVE)
-            .unwrap_or_default();
+        let state = siv.user_data::<InstallerState>().unwrap();
+        let product_conf = state.setup_info.config.clone();
 
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
             if let Some(AdvancedBootdiskOptionsView { view }) =
@@ -166,18 +163,15 @@ impl AdvancedBootdiskOptionsView {
             {
                 view.remove_child(3);
                 match fstype {
-                    FsType::Ext4 | FsType::Xfs => view.add_child(LvmBootdiskOptionsView::new(
-                        &LvmBootdiskOptions::defaults_from(&disks[0]),
-                        is_pve,
-                    )),
-                    FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new(
-                        disks,
-                        &ZfsBootdiskOptions::defaults_from(disks),
-                    )),
-                    FsType::Btrfs(_) => view.add_child(BtrfsBootdiskOptionsView::new(
-                        disks,
-                        &BtrfsBootdiskOptions::defaults_from(disks),
-                    )),
+                    FsType::Ext4 | FsType::Xfs => view.add_child(
+                        LvmBootdiskOptionsView::new_with_defaults(&disks[0], &product_conf),
+                    ),
+                    FsType::Zfs(_) => {
+                        view.add_child(ZfsBootdiskOptionsView::new_with_defaults(disks))
+                    }
+                    FsType::Btrfs(_) => {
+                        view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(disks))
+                    }
                 }
             }
         });
@@ -266,7 +260,9 @@ struct LvmBootdiskOptionsView {
 }
 
 impl LvmBootdiskOptionsView {
-    fn new(options: &LvmBootdiskOptions, show_extra_fields: bool) -> Self {
+    fn new(options: &LvmBootdiskOptions, product_conf: &ProductConfig) -> Self {
+        let show_extra_fields = product_conf.product == ProxmoxProduct::PVE;
+
         // TODO: Set maximum accordingly to disk size
         let view = FormView::new()
             .child(
@@ -298,6 +294,10 @@ impl LvmBootdiskOptionsView {
             view,
             has_extra_fields: show_extra_fields,
         }
+    }
+
+    fn new_with_defaults(disk: &Disk, product_conf: &ProductConfig) -> Self {
+        Self::new(&LvmBootdiskOptions::defaults_from(disk), product_conf)
     }
 
     fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
@@ -486,6 +486,10 @@ impl BtrfsBootdiskOptionsView {
         Self { view }
     }
 
+    fn new_with_defaults(disks: &[Disk]) -> Self {
+        Self::new(disks, &BtrfsBootdiskOptions::defaults_from(disks))
+    }
+
     fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
         let disk_size = self.view.inner_mut()?.get_value::<DiskSizeEditView, _>(0)?;
@@ -546,6 +550,10 @@ impl ZfsBootdiskOptionsView {
             ).center());
 
         Self { view }
+    }
+
+    fn new_with_defaults(disks: &[Disk]) -> Self {
+        Self::new(disks, &ZfsBootdiskOptions::defaults_from(disks))
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
