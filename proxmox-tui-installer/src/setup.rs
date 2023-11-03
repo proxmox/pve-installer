@@ -1,17 +1,13 @@
-use std::{
-    collections::HashMap,
-    fmt,
-    net::IpAddr,
-};
+use std::{collections::HashMap, fmt, net::IpAddr};
 
 use serde::{Serialize, Serializer};
 
 use crate::options::InstallerOptions;
 use proxmox_installer_common::{
-        options::{AdvancedBootdiskOptions, BtrfsRaidLevel, Disk, FsType, ZfsRaidLevel},
-        setup::InstallZfsOption,
-        utils::CidrAddress,
-    };
+    options::{AdvancedBootdiskOptions, BtrfsRaidLevel, Disk, FsType, ZfsRaidLevel},
+    setup::InstallZfsOption,
+    utils::CidrAddress,
+};
 
 /// See Proxmox::Install::Config
 #[derive(Serialize)]

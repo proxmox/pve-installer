@@ -1,11 +1,11 @@
 use crate::SummaryOption;
 
 use proxmox_installer_common::{
-    setup::LocaleInfo,
     options::{
-        BootdiskOptions, BtrfsRaidLevel, FsType, NetworkOptions, TimezoneOptions,
-        PasswordOptions, ZfsRaidLevel,
+        BootdiskOptions, BtrfsRaidLevel, FsType, NetworkOptions, PasswordOptions, TimezoneOptions,
+        ZfsRaidLevel,
     },
+    setup::LocaleInfo,
 };
 
 pub const FS_TYPES: &[FsType] = {
@@ -70,13 +70,13 @@ mod tests {
     use super::*;
     use proxmox_installer_common::{
         setup::{
-            Dns, Gateway, Interface, InterfaceState, IsoInfo, IsoLocations, NetworkInfo, ProductConfig,
-            ProxmoxProduct, Routes, SetupInfo,
+            Dns, Gateway, Interface, InterfaceState, IsoInfo, IsoLocations, NetworkInfo,
+            ProductConfig, ProxmoxProduct, Routes, SetupInfo,
         },
         utils::{CidrAddress, Fqdn},
     };
-    use std::{collections::HashMap, path::PathBuf};
     use std::net::{IpAddr, Ipv4Addr};
+    use std::{collections::HashMap, path::PathBuf};
 
     fn dummy_setup_info() -> SetupInfo {
         SetupInfo {

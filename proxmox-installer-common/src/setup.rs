@@ -365,4 +365,3 @@ impl Interface {
         format!("{} {}", self.state.render(), self.name)
     }
 }
-

@@ -14,13 +14,15 @@ use crate::options::FS_TYPES;
 use crate::InstallerState;
 
 use proxmox_installer_common::{
+    disk_checks::{
+        check_btrfs_raid_config, check_disks_4kn_legacy_boot, check_for_duplicate_disks,
+        check_zfs_raid_config,
+    },
     options::{
-        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk,
-        FsType, LvmBootdiskOptions, ZfsBootdiskOptions,
-        ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
+        LvmBootdiskOptions, ZfsBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
     },
     setup::{BootType, ProductConfig, ProxmoxProduct},
-    disk_checks::{check_btrfs_raid_config, check_for_duplicate_disks, check_disks_4kn_legacy_boot, check_zfs_raid_config},
 };
 
 pub struct BootdiskOptionsView {
