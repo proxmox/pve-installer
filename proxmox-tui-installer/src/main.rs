@@ -505,7 +505,7 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
     ifaces_selection.set_selection(
         ifnames
             .clone()
-            .position(|iface| &iface.1 == &options.ifname)
+            .position(|iface| iface.1 == options.ifname)
             .unwrap_or(ifaces.len() - 1),
     );
 
