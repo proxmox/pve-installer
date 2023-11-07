@@ -378,7 +378,7 @@ fn bootdisk_dialog(siv: &mut Cursive) -> InstallerView {
 
     InstallerView::new(
         &state,
-        BootdiskOptionsView::new(siv, &state.runtime_info.disks, &state.options.bootdisk)
+        BootdiskOptionsView::new(siv, &state.runtime_info, &state.options.bootdisk)
             .with_name("bootdisk-options"),
         Box::new(|siv| {
             let options = siv.call_on_name("bootdisk-options", BootdiskOptionsView::get_values);

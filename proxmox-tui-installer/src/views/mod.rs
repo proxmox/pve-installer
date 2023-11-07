@@ -43,7 +43,6 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     ///
     /// # Arguments
     /// * `suffix` - Content for the label to the right of it.
-    #[allow(unused)]
     pub fn new_with_suffix(suffix: &str) -> Self {
         let view = LinearLayout::horizontal()
             .child(EditView::new().content("0").full_width())

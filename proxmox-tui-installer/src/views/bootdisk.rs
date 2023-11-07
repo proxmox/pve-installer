@@ -25,6 +25,10 @@ use proxmox_installer_common::{
     setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };
 
+/// OpenZFS specifies 64 MiB as the absolute minimum:
+/// https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
+const ZFS_ARC_MIN_SIZE_MIB: usize = 64; // MiB
+
 pub struct BootdiskOptionsView {
     view: LinearLayout,
     advanced_options: Rc<RefCell<BootdiskOptions>>,
@@ -32,13 +36,13 @@ pub struct BootdiskOptionsView {
 }
 
 impl BootdiskOptionsView {
-    pub fn new(siv: &mut Cursive, disks: &[Disk], options: &BootdiskOptions) -> Self {
+    pub fn new(siv: &mut Cursive, runinfo: &RuntimeInfo, options: &BootdiskOptions) -> Self {
         let bootdisk_form = FormView::new()
             .child(
                 "Target harddisk",
                 SelectView::new()
                     .popup()
-                    .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
+                    .with_all(runinfo.disks.iter().map(|d| (d.to_string(), d.clone()))),
             )
             .with_name("bootdisk-options-target-disk");
 
@@ -52,11 +56,11 @@ impl BootdiskOptionsView {
         let advanced_button = LinearLayout::horizontal()
             .child(DummyView.full_width())
             .child(Button::new("Advanced options", {
-                let disks = disks.to_owned();
+                let runinfo = runinfo.clone();
                 let options = advanced_options.clone();
                 move |siv| {
                     siv.add_layer(advanced_options_view(
-                        &disks,
+                        &runinfo,
                         options.clone(),
                         product_conf.clone(),
                     ));
@@ -109,7 +113,7 @@ struct AdvancedBootdiskOptionsView {
 }
 
 impl AdvancedBootdiskOptionsView {
-    fn new(disks: &[Disk], options: &BootdiskOptions, product_conf: ProductConfig) -> Self {
+    fn new(runinfo: &RuntimeInfo, options: &BootdiskOptions, product_conf: ProductConfig) -> Self {
         let filter_btrfs =
             |fstype: &&FsType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
 
@@ -128,10 +132,7 @@ impl AdvancedBootdiskOptionsView {
                     .position(|t| *t == options.fstype)
                     .unwrap_or_default(),
             )
-            .on_submit({
-                let disks = disks.to_owned();
-                move |siv, fstype| Self::fstype_on_submit(siv, &disks, fstype)
-            });
+            .on_submit(Self::fstype_on_submit);
 
         let mut view = LinearLayout::vertical()
             .child(DummyView.full_width())
@@ -143,17 +144,17 @@ impl AdvancedBootdiskOptionsView {
                 view.add_child(LvmBootdiskOptionsView::new(lvm, &product_conf))
             }
             AdvancedBootdiskOptions::Zfs(zfs) => {
-                view.add_child(ZfsBootdiskOptionsView::new(disks, zfs))
+                view.add_child(ZfsBootdiskOptionsView::new(runinfo, zfs, &product_conf))
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
-                view.add_child(BtrfsBootdiskOptionsView::new(disks, btrfs))
+                view.add_child(BtrfsBootdiskOptionsView::new(&runinfo.disks, btrfs))
             }
         };
 
         Self { view }
     }
 
-    fn fstype_on_submit(siv: &mut Cursive, disks: &[Disk], fstype: &FsType) {
+    fn fstype_on_submit(siv: &mut Cursive, fstype: &FsType) {
         let state = siv.user_data::<InstallerState>().unwrap();
         let runinfo = state.runtime_info.clone();
         let product_conf = state.setup_info.config.clone();
@@ -165,14 +166,14 @@ impl AdvancedBootdiskOptionsView {
                 view.remove_child(3);
                 match fstype {
                     FsType::Ext4 | FsType::Xfs => view.add_child(
-                        LvmBootdiskOptionsView::new_with_defaults(&disks[0], &product_conf),
+                        LvmBootdiskOptionsView::new_with_defaults(&runinfo.disks[0], &product_conf),
                     ),
                     FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new_with_defaults(
                         &runinfo,
                         &product_conf,
                     )),
                     FsType::Btrfs(_) => {
-                        view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(disks))
+                        view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo.disks))
                     }
                 }
             }
@@ -186,7 +187,7 @@ impl AdvancedBootdiskOptionsView {
                         0,
                         SelectView::new()
                             .popup()
-                            .with_all(disks.iter().map(|d| (d.to_string(), d.clone()))),
+                            .with_all(runinfo.disks.iter().map(|d| (d.to_string(), d.clone()))),
                     );
                 }
                 other => view.replace_child(0, TextView::new(other.to_string())),
@@ -516,7 +517,13 @@ struct ZfsBootdiskOptionsView {
 
 impl ZfsBootdiskOptionsView {
     // TODO: Re-apply previous disk selection from `options` correctly
-    fn new(disks: &[Disk], options: &ZfsBootdiskOptions) -> Self {
+    fn new(
+        runinfo: &RuntimeInfo,
+        options: &ZfsBootdiskOptions,
+        product_conf: &ProductConfig,
+    ) -> Self {
+        let is_pve = product_conf.product == ProxmoxProduct::PVE;
+
         let inner = FormView::new()
             .child("ashift", IntegerEditView::new().content(options.ashift))
             .child(
@@ -544,9 +551,16 @@ impl ZfsBootdiskOptionsView {
                     ),
             )
             .child("copies", IntegerEditView::new().content(options.copies))
+            .child_conditional(
+                is_pve,
+                "ARC max size",
+                IntegerEditView::new_with_suffix("MiB")
+                    .max_value(runinfo.total_memory)
+                    .content(options.arc_max),
+            )
             .child("hdsize", DiskSizeEditView::new().content(options.disk_size));
 
-        let view = MultiDiskOptionsView::new(disks, &options.selected_disks, inner)
+        let view = MultiDiskOptionsView::new(&runinfo.disks, &options.selected_disks, inner)
             .top_panel(TextView::new(
                 "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
             ).center());
@@ -556,20 +570,30 @@ impl ZfsBootdiskOptionsView {
 
     fn new_with_defaults(runinfo: &RuntimeInfo, product_conf: &ProductConfig) -> Self {
         Self::new(
-            &runinfo.disks,
+            runinfo,
             &ZfsBootdiskOptions::defaults_from(runinfo, product_conf),
+            product_conf,
         )
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
         let view = self.view.inner_mut()?;
+        let has_arc_max = view.len() >= 6;
+        let disk_size_index = if has_arc_max { 5 } else { 4 };
 
         let ashift = view.get_value::<IntegerEditView, _>(0)?;
         let compress = view.get_value::<SelectView<_>, _>(1)?;
         let checksum = view.get_value::<SelectView<_>, _>(2)?;
         let copies = view.get_value::<IntegerEditView, _>(3)?;
-        let disk_size = view.get_value::<DiskSizeEditView, _>(4)?;
+        let disk_size = view.get_value::<DiskSizeEditView, _>(disk_size_index)?;
+
+        let arc_max = if has_arc_max {
+            view.get_value::<IntegerEditView, _>(4)?
+                .max(ZFS_ARC_MIN_SIZE_MIB)
+        } else {
+            0 // use built-in ZFS default value
+        };
 
         Some((
             disks,
@@ -578,7 +602,7 @@ impl ZfsBootdiskOptionsView {
                 compress,
                 checksum,
                 copies,
-                arc_max: 0, // use built-in ZFS default value
+                arc_max,
                 disk_size,
                 selected_disks,
             },
@@ -591,12 +615,12 @@ impl ViewWrapper for ZfsBootdiskOptionsView {
 }
 
 fn advanced_options_view(
-    disks: &[Disk],
+    runinfo: &RuntimeInfo,
     options: Rc<RefCell<BootdiskOptions>>,
     product_conf: ProductConfig,
 ) -> impl View {
     Dialog::around(AdvancedBootdiskOptionsView::new(
-        disks,
+        runinfo,
         &(*options).borrow(),
         product_conf,
     ))
