@@ -434,7 +434,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
         .child("Root password", EditView::new().secret())
         .child("Confirm root password", EditView::new().secret())
         .child(
-            "Administator email",
+            "Administrator email",
             EditView::new().content(&options.email),
         )
         .with_name("password-options");

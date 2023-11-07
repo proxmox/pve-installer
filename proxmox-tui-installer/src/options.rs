@@ -55,7 +55,7 @@ impl InstallerOptions {
             ),
             SummaryOption::new("Timezone", &self.timezone.timezone),
             SummaryOption::new("Keyboard layout", kb_layout),
-            SummaryOption::new("Administator email", &self.password.email),
+            SummaryOption::new("Administrator email", &self.password.email),
             SummaryOption::new("Management interface", &self.network.ifname),
             SummaryOption::new("Hostname", self.network.fqdn.to_string()),
             SummaryOption::new("Host IP (CIDR)", self.network.address.to_string()),
