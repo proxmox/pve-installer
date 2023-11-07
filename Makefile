@@ -45,6 +45,7 @@ $(BUILDDIR):
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
 	  spice-vdagent.sh \
+	  test/ \
 	  unconfigured.sh \
 	  xinitrc \
 	  $@.tmp
@@ -76,7 +77,9 @@ $(DSC): $(BUILDDIR)
 sbuild: $(DSC)
 	sbuild $(DSC)
 
+.PHONY: test
 test:
+	$(MAKE) -C test check
 	$(CARGO) test --workspace $(CARGO_BUILD_ARGS)
 
 DESTDIR=

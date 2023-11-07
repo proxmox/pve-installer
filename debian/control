@@ -11,6 +11,7 @@ Build-Depends: cargo:native,
                librust-regex-1+default-dev (>= 1.7~~),
                librust-serde-1+default-dev,
                librust-serde-json-1+default-dev,
+               libtest-mockmodule-perl,
                perl,
                rustc:native,
 Standards-Version: 4.5.1
