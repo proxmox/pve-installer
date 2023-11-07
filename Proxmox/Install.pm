@@ -296,8 +296,8 @@ sub get_zfs_raid_setup {
 my sub zfs_setup_module_conf {
     my ($targetdir) = @_;
 
-    my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max');
-    my $arc_max_mib = Proxmox::Install::RunEnv::clamp_zfs_arc_max($arc_max) * 1024 * 1024;
+    my $arc_max_mib = Proxmox::Install::Config::get_zfs_opt('arc_max');
+    my $arc_max = Proxmox::Install::RunEnv::clamp_zfs_arc_max($arc_max_mib) * 1024 * 1024;
 
     if ($arc_max > 0) {
 	file_write_all("$targetdir/etc/modprobe.d/zfs.conf", "options zfs zfs_arc_max=$arc_max\n")
