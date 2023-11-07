@@ -22,7 +22,7 @@ use proxmox_installer_common::{
         AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
         LvmBootdiskOptions, ZfsBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
     },
-    setup::{BootType, ProductConfig, ProxmoxProduct},
+    setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };
 
 pub struct BootdiskOptionsView {
@@ -155,6 +155,7 @@ impl AdvancedBootdiskOptionsView {
 
     fn fstype_on_submit(siv: &mut Cursive, disks: &[Disk], fstype: &FsType) {
         let state = siv.user_data::<InstallerState>().unwrap();
+        let runinfo = state.runtime_info.clone();
         let product_conf = state.setup_info.config.clone();
 
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
@@ -166,9 +167,10 @@ impl AdvancedBootdiskOptionsView {
                     FsType::Ext4 | FsType::Xfs => view.add_child(
                         LvmBootdiskOptionsView::new_with_defaults(&disks[0], &product_conf),
                     ),
-                    FsType::Zfs(_) => {
-                        view.add_child(ZfsBootdiskOptionsView::new_with_defaults(disks))
-                    }
+                    FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new_with_defaults(
+                        &runinfo,
+                        &product_conf,
+                    )),
                     FsType::Btrfs(_) => {
                         view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(disks))
                     }
@@ -552,8 +554,11 @@ impl ZfsBootdiskOptionsView {
         Self { view }
     }
 
-    fn new_with_defaults(disks: &[Disk]) -> Self {
-        Self::new(disks, &ZfsBootdiskOptions::defaults_from(disks))
+    fn new_with_defaults(runinfo: &RuntimeInfo, product_conf: &ProductConfig) -> Self {
+        Self::new(
+            &runinfo.disks,
+            &ZfsBootdiskOptions::defaults_from(runinfo, product_conf),
+        )
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
@@ -573,6 +578,7 @@ impl ZfsBootdiskOptionsView {
                 compress,
                 checksum,
                 copies,
+                arc_max: 0, // use built-in ZFS default value
                 disk_size,
                 selected_disks,
             },

@@ -149,6 +149,7 @@ pub struct InstallZfsOption {
     #[serde(serialize_with = "serialize_as_display")]
     checksum: ZfsChecksumOption,
     copies: usize,
+    arc_max: usize,
 }
 
 impl From<ZfsBootdiskOptions> for InstallZfsOption {
@@ -158,6 +159,7 @@ impl From<ZfsBootdiskOptions> for InstallZfsOption {
             compress: opts.compress,
             checksum: opts.checksum,
             copies: opts.copies,
+            arc_max: opts.arc_max,
         }
     }
 }
