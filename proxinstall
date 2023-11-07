@@ -1162,6 +1162,21 @@ my $create_raid_advanced_grid = sub {
     $spinbutton_copies->set_value($copies);
     push @$labeled_widgets, "copies", $spinbutton_copies;
 
+    if ($iso_env->{product} eq 'pve') {
+	my $total_memory = Proxmox::Install::RunEnv::get('total_memory');
+
+	my $spinbutton_arc_max = Gtk3::SpinButton->new_with_range(
+	    $Proxmox::Install::RunEnv::ZFS_ARC_MIN_SIZE_MIB, $total_memory, 1);
+	$spinbutton_arc_max->set_tooltip_text('Maximum ARC size in megabytes');
+	$spinbutton_arc_max->signal_connect('value-changed' => sub {
+	    my $w = shift;
+	    Proxmox::Install::Config::set_zfs_opt('arc_max', $w->get_value_as_int());
+	});
+	my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max');
+	$spinbutton_arc_max->set_value($arc_max);
+	push @$labeled_widgets, "ARC max size", $spinbutton_arc_max;
+    }
+
     push @$labeled_widgets, "hdsize", $hdsize_btn;
     return $create_label_widget_grid->($labeled_widgets);;
 };
