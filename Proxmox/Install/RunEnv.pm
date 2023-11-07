@@ -319,7 +319,6 @@ sub default_zfs_arc_max {
 
     my $default_mib = get('total_memory') * $ZFS_ARC_SYSMEM_PERCENTAGE;
     my $rounded_mib = int(sprintf('%.0f', $default_mib));
-    print "total_memory:" . get('total_memory') . " mib_rounded:$rounded_mib\n";
 
     if ($rounded_mib > $ZFS_ARC_MAX_SIZE_MIB) {
 	return $ZFS_ARC_MAX_SIZE_MIB;
