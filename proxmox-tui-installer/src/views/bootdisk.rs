@@ -29,9 +29,13 @@ use proxmox_installer_common::{
 /// https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
 const ZFS_ARC_MIN_SIZE_MIB: usize = 64; // MiB
 
+/// Convience wrapper when needing to take a (interior-mutable) reference to `BootdiskOptions`.
+/// Interior mutability is safe for this case, as it is completely single-threaded.
+pub type BootdiskOptionsRef = Rc<RefCell<BootdiskOptions>>;
+
 pub struct BootdiskOptionsView {
     view: LinearLayout,
-    advanced_options: Rc<RefCell<BootdiskOptions>>,
+    advanced_options: BootdiskOptionsRef,
     boot_type: BootType,
 }
 
@@ -616,17 +620,17 @@ impl ViewWrapper for ZfsBootdiskOptionsView {
 
 fn advanced_options_view(
     runinfo: &RuntimeInfo,
-    options: Rc<RefCell<BootdiskOptions>>,
+    options_ref: BootdiskOptionsRef,
     product_conf: ProductConfig,
 ) -> impl View {
     Dialog::around(AdvancedBootdiskOptionsView::new(
         runinfo,
-        &(*options).borrow(),
+        &(*options_ref).borrow(),
         product_conf,
     ))
     .title("Advanced bootdisk options")
     .button("Ok", {
-        let options_ref = options.clone();
+        let options_ref = options_ref.clone();
         move |siv| {
             let options = siv
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
