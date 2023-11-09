@@ -11,14 +11,14 @@ use JSON;
 use Time::HiRes qw(usleep);
 
 {
-    my $test_mode;
+    my $test_image;
     GetOptions(
-	'test-mode|t' => \$test_mode
+	'test-image|t=s' => \$test_image
     ) or die "usage error\n";
 
-    # FIXME: use cleaner approach for setting tet mode?
-    Proxmox::Install::ISOEnv::set_test_image('/dev/null') if $test_mode;
+    Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
 }
+
 use Proxmox::Install::ISOEnv;
 use Proxmox::Install::RunEnv;
 
