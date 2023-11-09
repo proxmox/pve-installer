@@ -41,12 +41,16 @@ pub struct BootdiskOptionsView {
 
 impl BootdiskOptionsView {
     pub fn new(siv: &mut Cursive, runinfo: &RuntimeInfo, options: &BootdiskOptions) -> Self {
+        let advanced_options = Rc::new(RefCell::new(options.clone()));
+
         let bootdisk_form = FormView::new()
             .child(
                 "Target harddisk",
-                SelectView::new()
-                    .popup()
-                    .with_all(runinfo.disks.iter().map(|d| (d.to_string(), d.clone()))),
+                target_bootdisk_selectview(
+                    &runinfo.disks,
+                    advanced_options.clone(),
+                    options.disks.first(),
+                ),
             )
             .with_name("bootdisk-options-target-disk");
 
@@ -54,8 +58,6 @@ impl BootdiskOptionsView {
             .user_data::<InstallerState>()
             .map(|state| state.setup_info.config.clone())
             .unwrap(); // Safety: InstallerState must always be set
-
-        let advanced_options = Rc::new(RefCell::new(options.clone()));
 
         let advanced_button = LinearLayout::horizontal()
             .child(DummyView.full_width())
@@ -89,20 +91,10 @@ impl BootdiskOptionsView {
     }
 
     pub fn get_values(&mut self) -> Result<BootdiskOptions, String> {
-        let mut options = (*self.advanced_options).clone().into_inner();
-
-        if [FsType::Ext4, FsType::Xfs].contains(&options.fstype) {
-            let disk = self
-                .view
-                .get_child_mut(0)
-                .and_then(|v| v.downcast_mut::<NamedView<FormView>>())
-                .map(NamedView::<FormView>::get_mut)
-                .and_then(|v| v.get_value::<SelectView<Disk>, _>(0))
-                .ok_or("failed to retrieve bootdisk")?;
-
-            options.disks = vec![disk];
-        }
-
+        // The simple disk selector, as well as the advanced bootdisk dialog save their
+        // info on submit directly to the shared `BootdiskOptionsRef` - so just clone() + return
+        // it.
+        let options = (*self.advanced_options).clone().into_inner();
         check_disks_4kn_legacy_boot(self.boot_type, &options.disks)?;
         Ok(options)
     }
@@ -117,9 +109,14 @@ struct AdvancedBootdiskOptionsView {
 }
 
 impl AdvancedBootdiskOptionsView {
-    fn new(runinfo: &RuntimeInfo, options: &BootdiskOptions, product_conf: ProductConfig) -> Self {
+    fn new(
+        runinfo: &RuntimeInfo,
+        options_ref: BootdiskOptionsRef,
+        product_conf: ProductConfig,
+    ) -> Self {
         let filter_btrfs =
             |fstype: &&FsType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
+        let options = (*options_ref).borrow();
 
         let fstype_select = SelectView::new()
             .popup()
@@ -136,17 +133,25 @@ impl AdvancedBootdiskOptionsView {
                     .position(|t| *t == options.fstype)
                     .unwrap_or_default(),
             )
-            .on_submit(Self::fstype_on_submit);
+            .on_submit({
+                let options_ref = options_ref.clone();
+                move |siv, fstype| {
+                    Self::fstype_on_submit(siv, fstype, options_ref.clone());
+                }
+            });
 
         let mut view = LinearLayout::vertical()
             .child(DummyView.full_width())
             .child(FormView::new().child("Filesystem", fstype_select))
             .child(DummyView.full_width());
 
+        // Create the appropriate (inner) advanced options view
         match &options.advanced {
-            AdvancedBootdiskOptions::Lvm(lvm) => {
-                view.add_child(LvmBootdiskOptionsView::new(lvm, &product_conf))
-            }
+            AdvancedBootdiskOptions::Lvm(lvm) => view.add_child(LvmBootdiskOptionsView::new(
+                &options.disks[0],
+                lvm,
+                &product_conf,
+            )),
             AdvancedBootdiskOptions::Zfs(zfs) => {
                 view.add_child(ZfsBootdiskOptionsView::new(runinfo, zfs, &product_conf))
             }
@@ -158,20 +163,44 @@ impl AdvancedBootdiskOptionsView {
         Self { view }
     }
 
-    fn fstype_on_submit(siv: &mut Cursive, fstype: &FsType) {
+    /// Called when a new filesystem type is choosen by the user.
+    /// It first creates the inner (filesystem-specific) options view according to the selected
+    /// filesytem type.
+    /// Further, it replaces the (outer) bootdisk selector in the main dialog, either with a
+    /// selector for LVM configurations or a simple label displaying the chosen RAID for ZFS and
+    /// Btrfs configurations.
+    ///
+    /// # Arguments
+    /// * `siv` - Cursive instance
+    /// * `fstype` - The chosen filesystem type by the user, for which the UI should be
+    ///              updated accordingly
+    /// * `options_ref` - [`BootdiskOptionsRef`] where advanced disk options should be saved to
+    fn fstype_on_submit(siv: &mut Cursive, fstype: &FsType, options_ref: BootdiskOptionsRef) {
         let state = siv.user_data::<InstallerState>().unwrap();
         let runinfo = state.runtime_info.clone();
         let product_conf = state.setup_info.config.clone();
 
+        // Only used for LVM configurations, ZFS and Btrfs do not use the target disk selector
+        let selected_lvm_disk = siv
+            .find_name::<FormView>("bootdisk-options-target-disk")
+            .and_then(|v| v.get_value::<SelectView<Disk>, _>(0));
+
+        // Update the (inner) options view
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
             if let Some(AdvancedBootdiskOptionsView { view }) =
                 view.get_content_mut().downcast_mut()
             {
                 view.remove_child(3);
                 match fstype {
-                    FsType::Ext4 | FsType::Xfs => view.add_child(
-                        LvmBootdiskOptionsView::new_with_defaults(&runinfo.disks[0], &product_conf),
-                    ),
+                    FsType::Ext4 | FsType::Xfs => {
+                        // Safety: For LVM setups, the bootdisk SelectView always exists, thus
+                        // there will also always be a value.
+                        let selected_disk = selected_lvm_disk.clone().unwrap();
+                        view.add_child(LvmBootdiskOptionsView::new_with_defaults(
+                            &selected_disk,
+                            &product_conf,
+                        ));
+                    }
                     FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new_with_defaults(
                         &runinfo,
                         &product_conf,
@@ -183,15 +212,21 @@ impl AdvancedBootdiskOptionsView {
             }
         });
 
+        // The "bootdisk-options-target-disk" view might be either a `SelectView` (if ext4 of XFS
+        // is used) or a label containing the filesytem/RAID type (for ZFS and Btrfs).
+        // Now, unconditionally replace it with the appropriate type of these two, depending on the
+        // newly selected filesystem type.
         siv.call_on_name(
             "bootdisk-options-target-disk",
-            |view: &mut FormView| match fstype {
+            move |view: &mut FormView| match fstype {
                 FsType::Ext4 | FsType::Xfs => {
                     view.replace_child(
                         0,
-                        SelectView::new()
-                            .popup()
-                            .with_all(runinfo.disks.iter().map(|d| (d.to_string(), d.clone()))),
+                        target_bootdisk_selectview(
+                            &runinfo.disks,
+                            options_ref,
+                            selected_lvm_disk.as_ref(),
+                        ),
                     );
                 }
                 other => view.replace_child(0, TextView::new(other.to_string())),
@@ -213,15 +248,14 @@ impl AdvancedBootdiskOptionsView {
             .ok_or("Failed to retrieve advanced bootdisk options view".to_owned())?;
 
         if let Some(view) = advanced.downcast_mut::<LvmBootdiskOptionsView>() {
-            let advanced = view
+            let (disk, advanced) = view
                 .get_values()
-                .map(AdvancedBootdiskOptions::Lvm)
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
             Ok(BootdiskOptions {
-                disks: vec![],
+                disks: vec![disk],
                 fstype,
-                advanced,
+                advanced: AdvancedBootdiskOptions::Lvm(advanced),
             })
         } else if let Some(view) = advanced.downcast_mut::<ZfsBootdiskOptionsView>() {
             let (disks, advanced) = view
@@ -263,14 +297,14 @@ impl ViewWrapper for AdvancedBootdiskOptionsView {
 
 struct LvmBootdiskOptionsView {
     view: FormView,
+    disk: Disk,
     has_extra_fields: bool,
 }
 
 impl LvmBootdiskOptionsView {
-    fn new(options: &LvmBootdiskOptions, product_conf: &ProductConfig) -> Self {
+    fn new(disk: &Disk, options: &LvmBootdiskOptions, product_conf: &ProductConfig) -> Self {
         let show_extra_fields = product_conf.product == ProxmoxProduct::PVE;
 
-        // TODO: Set maximum accordingly to disk size
         let view = FormView::new()
             .child(
                 "Total size",
@@ -299,15 +333,16 @@ impl LvmBootdiskOptionsView {
 
         Self {
             view,
+            disk: disk.clone(),
             has_extra_fields: show_extra_fields,
         }
     }
 
     fn new_with_defaults(disk: &Disk, product_conf: &ProductConfig) -> Self {
-        Self::new(&LvmBootdiskOptions::defaults_from(disk), product_conf)
+        Self::new(disk, &LvmBootdiskOptions::defaults_from(disk), product_conf)
     }
 
-    fn get_values(&mut self) -> Option<LvmBootdiskOptions> {
+    fn get_values(&mut self) -> Option<(Disk, LvmBootdiskOptions)> {
         let min_lvm_free_id = if self.has_extra_fields { 4 } else { 2 };
 
         let max_root_size = self
@@ -319,13 +354,16 @@ impl LvmBootdiskOptionsView {
             .then(|| self.view.get_value::<DiskSizeEditView, _>(3))
             .flatten();
 
-        Some(LvmBootdiskOptions {
-            total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
-            swap_size: self.view.get_value::<DiskSizeEditView, _>(1),
-            max_root_size,
-            max_data_size,
-            min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(min_lvm_free_id),
-        })
+        Some((
+            self.disk.clone(),
+            LvmBootdiskOptions {
+                total_size: self.view.get_value::<DiskSizeEditView, _>(0)?,
+                swap_size: self.view.get_value::<DiskSizeEditView, _>(1),
+                max_root_size,
+                max_data_size,
+                min_lvm_free: self.view.get_value::<DiskSizeEditView, _>(min_lvm_free_id),
+            },
+        ))
     }
 }
 
@@ -625,12 +663,11 @@ fn advanced_options_view(
 ) -> impl View {
     Dialog::around(AdvancedBootdiskOptionsView::new(
         runinfo,
-        &(*options_ref).borrow(),
+        options_ref.clone(),
         product_conf,
     ))
     .title("Advanced bootdisk options")
     .button("Ok", {
-        let options_ref = options_ref.clone();
         move |siv| {
             let options = siv
                 .call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
@@ -665,4 +702,31 @@ fn advanced_options_view(
     })
     .with_name("advanced-bootdisk-options-dialog")
     .max_size((120, 40))
+}
+
+/// Creates a select view for all disks specified.
+///
+/// # Arguments
+///
+/// * `avail_disks` - Disks that should be shown in the select view
+/// * `options_ref` - [`BootdiskOptionsRef`] where advanced disk options should be saved to
+/// * `selected_disk` - Optional, specifies which disk should be pre-selected
+fn target_bootdisk_selectview(
+    avail_disks: &[Disk],
+    options_ref: BootdiskOptionsRef,
+    selected_disk: Option<&Disk>,
+) -> SelectView<Disk> {
+    let selected_disk_pos = selected_disk
+        .and_then(|disk| avail_disks.iter().position(|d| d.index == disk.index))
+        .unwrap_or_default();
+
+    SelectView::new()
+        .popup()
+        .with_all(avail_disks.iter().map(|d| (d.to_string(), d.clone())))
+        .selected(selected_disk_pos)
+        .on_submit(move |_, disk| {
+            options_ref.borrow_mut().disks = vec![disk.clone()];
+            options_ref.borrow_mut().advanced =
+                AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(disk));
+        })
 }
