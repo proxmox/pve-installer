@@ -14,6 +14,7 @@ use cursive::{
 };
 
 use crate::{abort_install_button, setup::InstallConfig, yes_no_dialog, InstallerState};
+use proxmox_installer_common::setup::spawn_low_level_installer;
 
 pub struct InstallProgressView {
     view: PaddedView<LinearLayout>,
@@ -59,28 +60,7 @@ impl InstallProgressView {
         state: InstallerState,
         progress_text: TextContent,
     ) {
-        let child = {
-            use std::process::{Command, Stdio};
-
-            let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if state.in_test_mode {
-                (
-                    "./proxmox-low-level-installer",
-                    &["-t", "start-session-test"],
-                    vec![("PERL5LIB", ".")],
-                )
-            } else {
-                ("proxmox-low-level-installer", &["start-session"], vec![])
-            };
-
-            Command::new(path)
-                .args(args)
-                .envs(envs)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .spawn()
-        };
-
-        let mut child = match child {
+        let mut child = match spawn_low_level_installer(state.in_test_mode) {
             Ok(child) => child,
             Err(err) => {
                 let _ = cb_sink.send(Box::new(move |siv| {

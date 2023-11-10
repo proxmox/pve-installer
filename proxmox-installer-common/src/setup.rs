@@ -3,9 +3,10 @@ use std::{
     collections::HashMap,
     fmt,
     fs::File,
-    io::BufReader,
+    io::{self, BufReader},
     net::IpAddr,
     path::{Path, PathBuf},
+    process::{self, Command, Stdio},
 };
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -366,4 +367,23 @@ impl Interface {
     pub fn render(&self) -> String {
         format!("{} {}", self.state.render(), self.name)
     }
+}
+
+pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> {
+    let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if test_mode {
+        (
+            "./proxmox-low-level-installer",
+            &["-t", "start-session-test"],
+            vec![("PERL5LIB", ".")],
+        )
+    } else {
+        ("proxmox-low-level-installer", &["start-session"], vec![])
+    };
+
+    Command::new(path)
+        .args(args)
+        .envs(envs)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
 }
