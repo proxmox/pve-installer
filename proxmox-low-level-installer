@@ -53,6 +53,22 @@ sub usage {
     exit($cmd ne 'help' ? 1 : 0);
 }
 
+sub read_and_merge_config {
+    my $config_raw;
+    while (my $line = <>) {
+	if ($line =~ /^\s*\{/) {
+	    $config_raw = $line;
+	    last;
+	}
+    }
+
+    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
+    die "failed to parse config from stdin - $@\n" if $@;
+
+    Proxmox::Install::Config::merge($config);
+    log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
+}
+
 my $cmd = shift;
 if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
     usage($cmd // '');
@@ -87,19 +103,7 @@ if ($cmd eq 'dump-env') {
     file_write_all($run_env_file, $run_env_serialized);
 } elsif ($cmd eq 'start-session') {
     Proxmox::UI::init_stdio({}, $env);
-
-    my $config_raw;
-    while (my $line = <>) {
-	if ($line =~ /^\s*\{/) {
-	    $config_raw = $line;
-	    last;
-	}
-    }
-    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
-    die "failed to parse config from stdin - $@\n" if $@;
-
-    Proxmox::Install::Config::merge($config);
-    log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
+    read_and_merge_config();
 
     eval { Proxmox::Install::extract_data() };
     if (my $err = $@) {
@@ -119,20 +123,7 @@ if ($cmd eq 'dump-env') {
     }
 } elsif ($cmd eq 'start-session-test') {
     Proxmox::UI::init_stdio({}, $env);
-
-    my $config_raw;
-    while (my $line = <>) {
-	if ($line =~ /^\s*\{/) {
-	    $config_raw = $line;
-	    last;
-	}
-    }
-    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
-    die "failed to parse config from stdin - $@\n" if $@;
-
-    Proxmox::Install::Config::merge($config);
-
-    print STDERR "got config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n";
+    read_and_merge_config();
 
     my $res = Proxmox::UI::prompt("Reply anything?") ? 'ok' : 'not ok';
     Proxmox::UI::message("Test Message - got $res");
