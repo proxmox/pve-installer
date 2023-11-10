@@ -106,26 +106,7 @@ impl InstallProgressView {
                     })),
                     UiMessage::Prompt(s) => cb_sink.send({
                         let writer = writer.clone();
-                        Box::new(move |siv| {
-                            yes_no_dialog(
-                                siv,
-                                "Prompt",
-                                &s,
-                                Box::new({
-                                    let writer = writer.clone();
-                                    move |_| {
-                                        if let Ok(mut writer) = writer.lock() {
-                                            let _ = writeln!(writer, "ok");
-                                        }
-                                    }
-                                }),
-                                Box::new(move |_| {
-                                    if let Ok(mut writer) = writer.lock() {
-                                        let _ = writeln!(writer);
-                                    }
-                                }),
-                            );
-                        })
+                        Box::new(move |siv| Self::show_prompt(siv, &s, writer))
                     }),
                     UiMessage::Progress(ratio, s) => {
                         counter.set(ratio);
@@ -185,6 +166,27 @@ impl InstallProgressView {
                 }
             });
         }
+    }
+
+    fn show_prompt<W: Write + 'static>(siv: &mut Cursive, text: &str, writer: Arc<Mutex<W>>) {
+        yes_no_dialog(
+            siv,
+            "Prompt",
+            text,
+            Box::new({
+                let writer = writer.clone();
+                move |_| {
+                    if let Ok(mut writer) = writer.lock() {
+                        let _ = writeln!(writer, "ok");
+                    }
+                }
+            }),
+            Box::new(move |_| {
+                if let Ok(mut writer) = writer.lock() {
+                    let _ = writeln!(writer);
+                }
+            }),
+        );
     }
 }
 
