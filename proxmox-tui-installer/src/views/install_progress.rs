@@ -136,31 +136,7 @@ impl InstallProgressView {
                         counter.set(100);
                         progress_text.set_content(msg.to_owned());
                         cb_sink.send(Box::new(move |siv| {
-                            let title = if success { "Success" } else { "Failure" };
-
-                            // For rebooting, we just need to quit the installer,
-                            // our caller does the actual reboot.
-                            siv.add_layer(
-                                Dialog::text(msg)
-                                    .title(title)
-                                    .button("Reboot now", Cursive::quit),
-                            );
-
-                            let autoreboot = siv
-                                .user_data::<InstallerState>()
-                                .map(|state| state.options.autoreboot)
-                                .unwrap_or_default();
-
-                            if autoreboot && success {
-                                let cb_sink = siv.cb_sink();
-                                thread::spawn({
-                                    let cb_sink = cb_sink.clone();
-                                    move || {
-                                        thread::sleep(Duration::from_secs(5));
-                                        let _ = cb_sink.send(Box::new(Cursive::quit));
-                                    }
-                                });
-                            }
+                            Self::prepare_for_reboot(siv, success, &msg)
                         }))
                     }
                 }
@@ -180,6 +156,34 @@ impl InstallProgressView {
                     );
                 }))
                 .unwrap();
+        }
+    }
+
+    fn prepare_for_reboot(siv: &mut Cursive, success: bool, msg: &str) {
+        let title = if success { "Success" } else { "Failure" };
+
+        // For rebooting, we just need to quit the installer,
+        // our caller does the actual reboot.
+        siv.add_layer(
+            Dialog::text(msg)
+                .title(title)
+                .button("Reboot now", Cursive::quit),
+        );
+
+        let autoreboot = siv
+            .user_data::<InstallerState>()
+            .map(|state| state.options.autoreboot)
+            .unwrap_or_default();
+
+        if autoreboot && success {
+            let cb_sink = siv.cb_sink();
+            thread::spawn({
+                let cb_sink = cb_sink.clone();
+                move || {
+                    thread::sleep(Duration::from_secs(5));
+                    let _ = cb_sink.send(Box::new(Cursive::quit));
+                }
+            });
         }
     }
 }
