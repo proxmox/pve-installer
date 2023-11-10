@@ -12,6 +12,9 @@ use proxmox_installer_common::utils::CidrAddress;
 mod bootdisk;
 pub use bootdisk::*;
 
+mod install_progress;
+pub use install_progress::*;
+
 mod table_view;
 pub use table_view::*;
 
