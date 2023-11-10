@@ -75,29 +75,36 @@ impl InstallProgressView {
         };
 
         let inner = || {
-            let reader = child.stdout.take().map(BufReader::new)?;
-            let mut writer = child.stdin.take()?;
+            let reader = child
+                .stdout
+                .take()
+                .map(BufReader::new)
+                .ok_or("failed to get stdin reader")?;
 
-            serde_json::to_writer(&mut writer, &InstallConfig::from(state.options)).unwrap();
-            writeln!(writer).unwrap();
+            let mut writer = child.stdin.take().ok_or("failed to get stdin writer")?;
+
+            serde_json::to_writer(&mut writer, &InstallConfig::from(state.options))
+                .map_err(|err| format!("failed to serialize install config: {err}"))?;
+            writeln!(writer).map_err(|err| format!("failed to write install config: {err}"))?;
 
             let writer = Arc::new(Mutex::new(writer));
 
             for line in reader.lines() {
                 let line = match line {
                     Ok(line) => line,
-                    Err(_) => break,
+                    Err(err) => return Err(format!("low-level installer exited early: {err}")),
                 };
 
                 let msg = match line.parse::<UiMessage>() {
                     Ok(msg) => msg,
                     Err(stray) => {
+                        // Not a fatal error, so don't abort the installation by returning
                         eprintln!("low-level installer: {stray}");
                         continue;
                     }
                 };
 
-                match msg {
+                let result = match msg.clone() {
                     UiMessage::Info(s) => cb_sink.send(Box::new(|siv| {
                         siv.add_layer(Dialog::info(s).title("Information"));
                     })),
@@ -120,18 +127,23 @@ impl InstallProgressView {
                             Self::prepare_for_reboot(siv, success, &msg)
                         }))
                     }
+                };
+
+                if let Err(err) = result {
+                    eprintln!("error during message handling: {err}");
+                    eprintln!("  message was: '{msg:?}");
                 }
-                .unwrap();
             }
 
-            Some(())
+            Ok(())
         };
 
-        if inner().is_none() {
+        if let Err(err) = inner() {
+            let message = format!("installation failed: {err}");
             cb_sink
                 .send(Box::new(|siv| {
                     siv.add_layer(
-                        Dialog::text("low-level installer exited early")
+                        Dialog::text(message)
                             .title("Error")
                             .button("Exit", Cursive::quit),
                     );
@@ -194,6 +206,7 @@ impl ViewWrapper for InstallProgressView {
     cursive::wrap_impl!(self.view: PaddedView<LinearLayout>);
 }
 
+#[derive(Clone, Debug)]
 enum UiMessage {
     Info(String),
     Error(String),
