@@ -8,7 +8,7 @@ use std::{
 
 use cursive::{
     utils::Counter,
-    view::{Resizable, ViewWrapper},
+    view::{Nameable, Resizable, ViewWrapper},
     views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextContent, TextView},
     CbSink, Cursive,
 };
@@ -153,14 +153,22 @@ impl InstallProgressView {
     }
 
     fn prepare_for_reboot(siv: &mut Cursive, success: bool, msg: &str) {
+        const DIALOG_ID: &str = "autoreboot-dialog";
         let title = if success { "Success" } else { "Failure" };
+
+        // If the dialog was previously created, just update its content and we're done.
+        if let Some(mut dialog) = siv.find_name::<Dialog>(DIALOG_ID) {
+            dialog.set_content(TextView::new(msg));
+            return;
+        }
 
         // For rebooting, we just need to quit the installer,
         // our caller does the actual reboot.
         siv.add_layer(
             Dialog::text(msg)
                 .title(title)
-                .button("Reboot now", Cursive::quit),
+                .button("Reboot now", Cursive::quit)
+                .with_name(DIALOG_ID),
         );
 
         let autoreboot = siv

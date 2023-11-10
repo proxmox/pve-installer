@@ -69,6 +69,19 @@ sub read_and_merge_config {
     log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
 }
 
+sub send_reboot_ui_message {
+    if (Proxmox::Install::Config::get_autoreboot()) {
+	my $secs = 5;
+	while ($secs > 0) {
+	    Proxmox::UI::finished(1, "Installation finished - auto-rebooting in $secs seconds ..");
+	    sleep 1;
+	    $secs -= 1;
+	}
+    } else {
+	Proxmox::UI::finished(1, "Installation complete - reboot now?");
+    }
+}
+
 my $cmd = shift;
 if (!$cmd || $cmd eq 'help' || !exists($commands->{$cmd})) {
     usage($cmd // '');
@@ -115,11 +128,7 @@ if ($cmd eq 'dump-env') {
 	    Proxmox::UI::finished(0, $err);
 	}
     } else {
-	if (Proxmox::Install::Config::get_autoreboot()) {
-	    Proxmox::UI::finished(1, "Installation finished - auto-rebooting in ~ 5 seconds");
-	} else {
-	    Proxmox::UI::finished(1, "Installation complete - reboot now?");
-	}
+	send_reboot_ui_message();
     }
 } elsif ($cmd eq 'start-session-test') {
     Proxmox::UI::init_stdio({}, $env);
@@ -137,11 +146,7 @@ if ($cmd eq 'dump-env') {
 	}
     }
 
-    if (Proxmox::Install::Config::get_autoreboot()) {
-	Proxmox::UI::finished(1, "Installation finished - auto-rebooting in ~ 5 seconds");
-    } else {
-	Proxmox::UI::finished(1, "Installation complete - reboot now?");
-    }
+    send_reboot_ui_message();
 }
 
 exit(0);
