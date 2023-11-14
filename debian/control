@@ -5,6 +5,7 @@ Maintainer: Proxmox Support Team <support@proxmox.com>
 Build-Depends: cargo:native,
                debhelper-compat (= 12),
                iso-codes,
+               libgtk3-perl,
                libpve-common-perl,
                librsvg2-bin,
                librust-cursive+termion-backend-dev (>= 0.20.0),
