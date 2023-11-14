@@ -43,7 +43,7 @@ my sub parse_kernel_cmdline {
 	}
     }
 
-    if ($cmdline =~ m/console=(\S+)[\s\n]/i) {
+    if ($cmdline =~ m/console=(\S+)[\s\n]?/i) {
 	    $cfg->{console} = $1;
     }
 

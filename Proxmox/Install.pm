@@ -1154,7 +1154,7 @@ _EOD
 	update_progress(0.8, 0.95, 1, "make system bootable");
 	my $console_param='';
 	if (my $console = Proxmox::Install::Config::get_console()) {
-	    my $console_param="console=$console";;
+	    $console_param="console=$console";
 	    my $console_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX $console_param\"";
 	    file_write_all("$targetdir/etc/default/grub.d/console.cfg", $console_snippet);
 	}
