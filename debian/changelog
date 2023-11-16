@@ -1,3 +1,11 @@
+proxmox-installer (8.1.2) bookworm; urgency=medium
+
+  * x display server: disable screen saver via blank time
+
+  * zfs: create /var/lib/vz only for PVE
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 16 Nov 2023 19:21:09 +0100
+
 proxmox-installer (8.1.1) bookworm; urgency=medium
 
   * pass optional console parameter from installer to target
