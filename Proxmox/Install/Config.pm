@@ -16,36 +16,37 @@ my sub parse_kernel_cmdline {
 
     my $cmdline = Proxmox::Install::RunEnv::get('kernel_cmdline');
 
-    if ($cmdline =~ m/\s(ext4|xfs)(\s.*)?$/) {
+    if ($cmdline =~ s/\b(ext4|xfs)\s?//i) {
 	$cfg->{filesys} = $1;
     }
 
-    if ($cmdline =~ m/hdsize=(\d+(\.\d+)?)[\s\n]/i) {
+    if ($cmdline =~ s/\bhdsize=(\d+(\.\d+)?)\s?//i) {
 	$cfg->{hdsize} = $1;
     }
 
-    if ($cmdline =~ m/swapsize=(\d+(\.\d+)?)[\s\n]/i) {
+    if ($cmdline =~ s/\bswapsize=(\d+(\.\d+)?)\s?//i) {
 	$cfg->{swapsize} = $1;
     }
 
-    if ($cmdline =~ m/maxroot=(\d+(\.\d+)?)[\s\n]/i) {
+    if ($cmdline =~ s/\bmaxroot=(\d+(\.\d+)?)\s?//i) {
 	$cfg->{maxroot} = $1;
     }
 
-    if ($cmdline =~ m/minfree=(\d+(\.\d+)?)[\s\n]/i) {
+    if ($cmdline =~ s/\bminfree=(\d+(\.\d+)?)\s?//i) {
 	$cfg->{minfree} = $1;
     }
 
     my $iso_env = Proxmox::Install::ISOEnv::get();
     if ($iso_env->{product} eq 'pve') {
-	if ($cmdline =~ m/maxvz=(\d+(\.\d+)?)[\s\n]/i) {
+	if ($cmdline =~ s/\bmaxvz=(\d+(\.\d+)?)\s?//i) {
 	    $cfg->{maxvz} = $1;
 	}
     }
 
-    if ($cmdline =~ m/console=(\S+)[\s\n]?/i) {
-	    $cfg->{console} = $1;
-    }
+    $cmdline =~ s/(?:BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+\s?//gi;
+    $cmdline =~ s/ro|rw|quiet|proxdebug|proxtui|nomodeset//gi;
+
+    $cfg->{target_cmdline}= $cmdline;
 
     return $cfg;
 }
@@ -101,7 +102,7 @@ my sub init_cfg {
 	cidr => undef,
 	gateway => undef,
 	dns => undef,
-	console => undef,
+	target_cmdline => undef,
     };
 
     $initial = parse_kernel_cmdline($initial);
@@ -235,8 +236,8 @@ sub get_gateway { return get('gateway'); }
 sub set_dns { set_key('dns', $_[0]); }
 sub get_dns { return get('dns'); }
 
-sub set_console { set_key('console', $_[0]); }
-sub get_console { return get('console'); }
+sub set_target_cmdline { set_key('target_cmdline', $_[0]); }
+sub get_target_cmdline { return get('target_cmdline'); }
 
 
 1;
