@@ -1,3 +1,18 @@
+proxmox-installer (8.1.1) bookworm; urgency=medium
+
+  * pass optional console parameter from installer to target
+
+  * serial install: fix console parameter parsing
+
+  * fix #4747: pass kernel cmdline parameters to target system
+
+  * fix #1410: zfs: create /var/lib/vz as separate dataset
+
+  * zfs: set acltype=posix for root-dataset to ensure that daemons like
+    journald can provide fine-grained access to non-root users.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 16 Nov 2023 08:33:32 +0100
+
 proxmox-installer (8.1.0) bookworm; urgency=medium
 
   * various improvements for the TUI installer:
