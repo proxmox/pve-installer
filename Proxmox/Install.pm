@@ -203,6 +203,8 @@ sub zfs_create_rpool {
 
     $value = $zfs_opts->{copies} // 1;
     syscmd("zfs set copies=$value $pool_name") if defined($value) && $value != 1;
+
+    syscmd("zfs set acltype=posix $pool_name/ROOT/$root_volume_name");
 }
 
 my $get_raid_devlist = sub {
