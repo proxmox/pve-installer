@@ -182,15 +182,14 @@ sub zfs_create_rpool {
 
     syscmd("zfs create $pool_name/ROOT")  == 0 || die "unable to create zfs $pool_name/ROOT volume\n";
 
-    if ($iso_env->{product} eq 'pve') {
-	syscmd("zfs create $pool_name/data")  == 0 || die "unable to create zfs $pool_name/data volume\n";
-    }
-
     syscmd("zfs create $pool_name/ROOT/$root_volume_name")  == 0 ||
 	die "unable to create zfs $pool_name/ROOT/$root_volume_name volume\n";
 
-    syscmd("zfs create -p $pool_name/ROOT/$root_volume_name/var/lib/vz")  == 0 ||
-	die "unable to create zfs $pool_name/ROOT/$root_volume_name/var/lib/vz volume\n";
+    if ($iso_env->{product} eq 'pve') {
+	syscmd("zfs create $pool_name/data")  == 0 || die "unable to create zfs $pool_name/data volume\n";
+	syscmd("zfs create -p $pool_name/ROOT/$root_volume_name/var/lib/vz")  == 0 ||
+	    die "unable to create zfs $pool_name/ROOT/$root_volume_name/var/lib/vz volume\n";
+    }
 
     # default to `relatime` on, fast enough for the installer and production
     syscmd("zfs set atime=on relatime=on $pool_name") == 0 || die "unable to set zfs properties\n";
