@@ -224,7 +224,7 @@ if [ $proxtui -ne 0 ]; then
     /usr/bin/proxmox-tui-installer 2>/dev/tty2
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
-    xinit -- -dpi "$DPI" >/dev/tty2 2>&1
+    xinit -- -dpi "$DPI" -s 0 >/dev/tty2 2>&1
 fi
 
 # just to be sure everything is on disk
