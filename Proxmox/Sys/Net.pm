@@ -211,7 +211,7 @@ sub get_dhcp_hostname : prototype() {
     }
 
     close($fh);
-    return $1 if defined($name) && $name =~ m/^([^\.]+)(?:\.(?:\S+))?$/;
+    return $name if defined($name) && $name =~ m/^([^\.]+)(?:\.(?:\S+))?$/;
 }
 
 1;
