@@ -1,3 +1,11 @@
+proxmox-installer (8.1.3) bookworm; urgency=medium
+
+  * run env: do not store empty hostname when trying to detect from DHCP
+
+  * gtk installer: show the unit of inputs for the disk related options
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 17 Nov 2023 07:39:23 +0100
+
 proxmox-installer (8.1.2) bookworm; urgency=medium
 
   * x display server: disable screen saver via blank time
