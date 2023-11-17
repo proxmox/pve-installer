@@ -267,9 +267,9 @@ sub query_installation_environment : prototype() {
 	dns => query_dns(),
     };
 
-    # Cannot be put directly in the above hash as it might return undef ..
-    if ( my $hostname = Proxmox::Sys::Net::get_dhcp_hostname()) {
-	$output->{network}->{hostname} = $hostname;
+    # avoid serializing out null or an empty string, that can trip up the UIs
+    if (my $fqdn = Proxmox::Sys::Net::get_dhcp_fqdn()) {
+	$output->{network}->{hostname} = $fqdn;
     }
 
     # FIXME: move whatever makes sense over to Proxmox::Sys::Net:: and keep that as single source,

@@ -189,16 +189,16 @@ sub get_ip_config {
     }
 }
 
-# Tries to detect the hostname for this system via DHCP, if available.
-# DHCP server can set option 12 to inform the client about it's hostname [0].
-# dhclient dumps all options set by the DHCP server it in lease file, so just
-# read it from there.
+# Tries to detect the FQDN hostname for this system via DHCP, if available.
+#
+# DHCP server can set option 12 to inform the client about it's hostname [0]. dhclient dumps all
+# options set by the DHCP server it in lease file, so just read it from there.
 # [0] RFC 2132, section 3.14
-sub get_dhcp_hostname : prototype() {
+sub get_dhcp_fqdn : prototype() {
     my $leasefile = '/var/lib/dhcp/dhclient.leases';
     return if ! -f $leasefile;
 
-    open (my $fh, '<', $leasefile) or return;
+    open(my $fh, '<', $leasefile) or return;
 
     my $name = undef;
     while (my $line = <$fh>) {
