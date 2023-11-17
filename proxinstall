@@ -1033,7 +1033,7 @@ my sub get_hdsize_spin_button {
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
     $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
     $spinbutton_hdsize->set_adjustment($hdsize_size_adj);
-    $spinbutton_hdsize->set_tooltip_text("only use specified size (GB) of the harddisk (rest left unpartitioned)");
+    $spinbutton_hdsize->set_tooltip_text("only use specified size of the harddisk (rest left unpartitioned)");
     return $spinbutton_hdsize;
 };
 
@@ -1179,17 +1179,17 @@ my $create_raid_advanced_grid = sub {
 	});
 	my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max');
 	$spinbutton_arc_max->set_value($arc_max);
-	push @$labeled_widgets, ['ARC max size', $spinbutton_arc_max];
+	push @$labeled_widgets, ['ARC max size', $spinbutton_arc_max, 'MiB'];
     }
 
-    push @$labeled_widgets, ['hdsize', $hdsize_btn];
+    push @$labeled_widgets, ['hdsize', $hdsize_btn, 'GB'];
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
 my $create_btrfs_raid_advanced_grid = sub {
     my ($hdsize_btn) = @_;
     my $labeled_widgets = [];
-    push @$labeled_widgets, ['hdsize', $hdsize_btn];
+    push @$labeled_widgets, ['hdsize', $hdsize_btn, 'GB'];
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
@@ -1268,43 +1268,43 @@ sub create_hdoption_view {
     }
 
     my $spinbutton_hdsize_nonraid = get_hdsize_spin_button($hdsize);
-    push @$hdsize_labeled_widgets, ['hdsize', $spinbutton_hdsize_nonraid];
+    push @$hdsize_labeled_widgets, ['hdsize', $spinbutton_hdsize_nonraid, 'GB'];
     my $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
 
     my $entry_swapsize = Gtk3::Entry->new();
-    $entry_swapsize->set_tooltip_text("maximum SWAP size (GB)");
+    $entry_swapsize->set_tooltip_text("maximum SWAP size");
     $entry_swapsize->signal_connect (key_press_event => \&check_float);
     my $swapsize = Proxmox::Install::Config::get_swapsize();
     $entry_swapsize->set_text($swapsize) if defined($swapsize);
-    push @$hdsize_labeled_widgets, ['swapsize', $entry_swapsize];
+    push @$hdsize_labeled_widgets, ['swapsize', $entry_swapsize, 'GB'];
 
     my $entry_maxroot = Gtk3::Entry->new();
     if ($iso_env->{product} eq 'pve') {
-	$entry_maxroot->set_tooltip_text("maximum size (GB) for LVM root volume");
+	$entry_maxroot->set_tooltip_text("maximum size for LVM root volume");
 	$entry_maxroot->signal_connect (key_press_event => \&check_float);
 	if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
 	    $entry_maxroot->set_text($maxroot);
 	}
-	push @$hdsize_labeled_widgets, ['maxroot', $entry_maxroot];
+	push @$hdsize_labeled_widgets, ['maxroot', $entry_maxroot, 'GB'];
     }
 
     my $entry_minfree = Gtk3::Entry->new();
-    $entry_minfree->set_tooltip_text("minimum free LVM space (GB, required for LVM snapshots)");
+    $entry_minfree->set_tooltip_text("minimum free LVM space (required for LVM snapshots)");
     $entry_minfree->signal_connect (key_press_event => \&check_float);
     if (defined(my $minfree = Proxmox::Install::Config::get_minfree())) {
 	$entry_minfree->set_text($minfree);
     }
-    push @$hdsize_labeled_widgets, ['minfree', $entry_minfree];
+    push @$hdsize_labeled_widgets, ['minfree', $entry_minfree, 'GB'];
 
     my $entry_maxvz;
     if ($iso_env->{product} eq 'pve') {
 	$entry_maxvz = Gtk3::Entry->new();
-	$entry_maxvz->set_tooltip_text("maximum size (GB) for LVM data volume");
+	$entry_maxvz->set_tooltip_text("maximum size for LVM data volume");
 	$entry_maxvz->signal_connect (key_press_event => \&check_float);
 	if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
 	    $entry_maxvz->set_text($maxvz);
 	}
-	push @$hdsize_labeled_widgets, ['maxvz', $entry_maxvz];
+	push @$hdsize_labeled_widgets, ['maxvz', $entry_maxvz, 'GB'];
     }
 
     my $spinbutton_hdsize_zfs = get_hdsize_spin_button($hdsize);
