@@ -493,13 +493,14 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
         .map(|iface| (iface.render(), iface.name.clone()));
     let mut ifaces_selection = SelectView::new().popup().with_all(ifnames.clone());
 
+    // sort first to always have stable view
     ifaces_selection.sort();
-    ifaces_selection.set_selection(
-        ifnames
-            .clone()
-            .position(|iface| iface.1 == options.ifname)
-            .unwrap_or(ifaces.len() - 1),
-    );
+    let selected = ifaces_selection
+        .iter()
+        .position(|(_label, iface)| *iface == options.ifname)
+        .unwrap_or(ifaces.len() - 1);
+
+    ifaces_selection.set_selection(selected);
 
     let inner = FormView::new()
         .child("Management interface", ifaces_selection)
