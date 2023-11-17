@@ -956,21 +956,22 @@ my $create_basic_grid = sub {
     return $grid;
 };
 
+# takes an array ref of rows with [$label_text, $widget] array refs as columns
 my $create_label_widget_grid = sub {
     my ($labeled_widgets) = @_;
 
     my $grid = &$create_basic_grid();
-    my $row = 0;
 
-    for (my $i = 0; $i < @$labeled_widgets; $i += 2) {
-	my $widget = @$labeled_widgets[$i+1];
-	my $label = Gtk3::Label->new(@$labeled_widgets[$i]);
+    for (my $row = 0; $row < scalar($labeled_widgets->@*); $row++) {
+	my ($label_text, $widget) = $labeled_widgets->[$row]->@*;
+
+	my $label = Gtk3::Label->new($label_text);
 	$label->set_visible(1);
 	$label->set_xalign(1.0);
 	$grid->attach($label, 0, $row, 1, 1);
+
 	$widget->set_visible(1);
 	$grid->attach($widget, 1, $row, 1, 1);
-	$row++;
     }
 
     return $grid;
@@ -1071,7 +1072,7 @@ my $create_raid_disk_grid = sub {
 	    }
 	}
 
-	push @$disk_labeled_widgets, "Harddisk $i", $disk_selector;
+	push @$disk_labeled_widgets, ["Harddisk $i", $disk_selector];
     }
 
     my $clear_all_button = Gtk3::Button->new('_Deselect All');
@@ -1079,8 +1080,7 @@ my $create_raid_disk_grid = sub {
 	$clear_all_button->signal_connect('clicked', sub {
 	    my $is_widget = 0;
 	    for my $disk_selector (@$disk_labeled_widgets) {
-		$disk_selector->set_active(0) if $is_widget;
-		$is_widget ^= 1;
+		$disk_selector->[1]->set_active(0);
 	    }
 	});
 	$clear_all_button->set_visible(1);
@@ -1119,8 +1119,7 @@ my $create_raid_advanced_grid = sub {
     });
     my $ashift = Proxmox::Install::Config::get_zfs_opt('ashift') // 12;
     $spinbutton_ashift->set_value($ashift);
-    push @$labeled_widgets, "ashift";
-    push @$labeled_widgets, $spinbutton_ashift;
+    push @$labeled_widgets, ['ashift', $spinbutton_ashift ];
 
     my $combo_compress = Gtk3::ComboBoxText->new();
     $combo_compress->set_tooltip_text("zfs compression algorithm for rpool dataset");
@@ -1134,8 +1133,7 @@ my $create_raid_advanced_grid = sub {
 	my $w = shift;
 	Proxmox::Install::Config::set_zfs_opt('compress', $w->get_active_text());
     });
-    push @$labeled_widgets, "compress";
-    push @$labeled_widgets, $combo_compress;
+    push @$labeled_widgets, ['compress', $combo_compress];
 
     my $combo_checksum = Gtk3::ComboBoxText->new();
     $combo_checksum->set_tooltip_text("zfs checksum algorithm for rpool dataset");
@@ -1149,8 +1147,7 @@ my $create_raid_advanced_grid = sub {
 	my $w = shift;
 	Proxmox::Install::Config::set_zfs_opt('checksum', $w->get_active_text());
     });
-    push @$labeled_widgets, "checksum";
-    push @$labeled_widgets, $combo_checksum;
+    push @$labeled_widgets, ['checksum', $combo_checksum];
 
     my $spinbutton_copies = Gtk3::SpinButton->new_with_range(1,3,1);
     $spinbutton_copies->set_tooltip_text("zfs copies property for rpool dataset (in addition to RAID redundancy!)");
@@ -1160,7 +1157,7 @@ my $create_raid_advanced_grid = sub {
     });
     my $copies = Proxmox::Install::Config::get_zfs_opt('copies') // 1;
     $spinbutton_copies->set_value($copies);
-    push @$labeled_widgets, "copies", $spinbutton_copies;
+    push @$labeled_widgets, ['copies', $spinbutton_copies];
 
     if ($iso_env->{product} eq 'pve') {
 	my $total_memory = Proxmox::Install::RunEnv::get('total_memory');
@@ -1174,17 +1171,17 @@ my $create_raid_advanced_grid = sub {
 	});
 	my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max');
 	$spinbutton_arc_max->set_value($arc_max);
-	push @$labeled_widgets, "ARC max size", $spinbutton_arc_max;
+	push @$labeled_widgets, ['ARC max size', $spinbutton_arc_max];
     }
 
-    push @$labeled_widgets, "hdsize", $hdsize_btn;
+    push @$labeled_widgets, ['hdsize', $hdsize_btn];
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
 my $create_btrfs_raid_advanced_grid = sub {
     my ($hdsize_btn) = @_;
     my $labeled_widgets = [];
-    push @$labeled_widgets, "hdsize", $hdsize_btn;
+    push @$labeled_widgets, ['hdsize', $hdsize_btn];
     return $create_label_widget_grid->($labeled_widgets);;
 };
 
@@ -1263,7 +1260,7 @@ sub create_hdoption_view {
     }
 
     my $spinbutton_hdsize_nonraid = get_hdsize_spin_button($hdsize);
-    push @$hdsize_labeled_widgets, "hdsize", $spinbutton_hdsize_nonraid;
+    push @$hdsize_labeled_widgets, ['hdsize', $spinbutton_hdsize_nonraid];
     my $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
 
     my $entry_swapsize = Gtk3::Entry->new();
@@ -1271,7 +1268,7 @@ sub create_hdoption_view {
     $entry_swapsize->signal_connect (key_press_event => \&check_float);
     my $swapsize = Proxmox::Install::Config::get_swapsize();
     $entry_swapsize->set_text($swapsize) if defined($swapsize);
-    push @$hdsize_labeled_widgets, "swapsize", $entry_swapsize;
+    push @$hdsize_labeled_widgets, ['swapsize', $entry_swapsize];
 
     my $entry_maxroot = Gtk3::Entry->new();
     if ($iso_env->{product} eq 'pve') {
@@ -1280,7 +1277,7 @@ sub create_hdoption_view {
 	if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
 	    $entry_maxroot->set_text($maxroot);
 	}
-	push @$hdsize_labeled_widgets, "maxroot", $entry_maxroot;
+	push @$hdsize_labeled_widgets, ['maxroot', $entry_maxroot];
     }
 
     my $entry_minfree = Gtk3::Entry->new();
@@ -1289,7 +1286,7 @@ sub create_hdoption_view {
     if (defined(my $minfree = Proxmox::Install::Config::get_minfree())) {
 	$entry_minfree->set_text($minfree);
     }
-    push @$hdsize_labeled_widgets, "minfree", $entry_minfree;
+    push @$hdsize_labeled_widgets, ['minfree', $entry_minfree];
 
     my $entry_maxvz;
     if ($iso_env->{product} eq 'pve') {
@@ -1299,7 +1296,7 @@ sub create_hdoption_view {
 	if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
 	    $entry_maxvz->set_text($maxvz);
 	}
-	push @$hdsize_labeled_widgets, "maxvz", $entry_maxvz;
+	push @$hdsize_labeled_widgets, ['maxvz', $entry_maxvz];
     }
 
     my $spinbutton_hdsize_zfs = get_hdsize_spin_button($hdsize);
