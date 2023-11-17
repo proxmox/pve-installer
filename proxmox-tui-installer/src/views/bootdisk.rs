@@ -592,7 +592,7 @@ impl ZfsBootdiskOptionsView {
                             .unwrap_or_default(),
                     ),
             )
-            .child("copies", IntegerEditView::new().content(options.copies))
+            .child("copies", IntegerEditView::new().content(options.copies).max_value(3))
             .child_conditional(
                 is_pve,
                 "ARC max size",
