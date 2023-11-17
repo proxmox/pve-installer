@@ -13,7 +13,7 @@ use cursive::{
     CbSink, Cursive,
 };
 
-use crate::{abort_install_button, setup::InstallConfig, yes_no_dialog, InstallerState};
+use crate::{abort_install_button, prompt_dialog, setup::InstallConfig, InstallerState};
 use proxmox_installer_common::setup::spawn_low_level_installer;
 
 pub struct InstallProgressView {
@@ -189,10 +189,11 @@ impl InstallProgressView {
     }
 
     fn show_prompt<W: Write + 'static>(siv: &mut Cursive, text: &str, writer: Arc<Mutex<W>>) {
-        yes_no_dialog(
+        prompt_dialog(
             siv,
             "Prompt",
             text,
+            "OK",
             Box::new({
                 let writer = writer.clone();
                 move |_| {
@@ -201,6 +202,7 @@ impl InstallProgressView {
                     }
                 }
             }),
+            "Cancel",
             Box::new(move |_| {
                 if let Ok(mut writer) = writer.lock() {
                     let _ = writeln!(writer);

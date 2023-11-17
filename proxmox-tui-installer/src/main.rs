@@ -285,21 +285,23 @@ fn switch_to_prev_screen(siv: &mut Cursive) {
     siv.set_screen(id);
 }
 
-fn yes_no_dialog(
+fn prompt_dialog(
     siv: &mut Cursive,
     title: &str,
     text: &str,
+    yes_text: &str,
     callback_yes: Box<dyn Fn(&mut Cursive)>,
+    no_text: &str,
     callback_no: Box<dyn Fn(&mut Cursive)>,
 ) {
     siv.add_layer(
         Dialog::around(TextView::new(text))
             .title(title)
-            .button("No", move |siv| {
+            .button(no_text, move |siv| {
                 siv.pop_layer();
                 callback_no(siv);
             })
-            .button("Yes", move |siv| {
+            .button(yes_text, move |siv| {
                 siv.pop_layer();
                 callback_yes(siv);
             }),
@@ -311,11 +313,13 @@ fn trigger_abort_install_dialog(siv: &mut Cursive) {
     siv.quit();
 
     #[cfg(not(debug_assertions))]
-    yes_no_dialog(
+    prompt_dialog(
         siv,
         "Abort installation?",
         "Are you sure you want to abort the installation?",
+        "Yes",
         Box::new(Cursive::quit),
+        "No",
         Box::new(|_| {}),
     )
 }
