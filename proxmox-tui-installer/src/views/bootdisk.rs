@@ -49,7 +49,9 @@ impl BootdiskOptionsView {
                 target_bootdisk_selectview(
                     &runinfo.disks,
                     advanced_options.clone(),
-                    options.disks.first(),
+                    // At least one disk must always exist to even get to this point,
+                    // see proxmox_installer_common::setup::installer_setup()
+                    &options.disks[0],
                 ),
             )
             .with_name("bootdisk-options-target-disk");
@@ -181,9 +183,14 @@ impl AdvancedBootdiskOptionsView {
         let product_conf = state.setup_info.config.clone();
 
         // Only used for LVM configurations, ZFS and Btrfs do not use the target disk selector
+        // Must be done here, as we cannot mutable borrow `siv` a second time inside the closure
+        // below.
         let selected_lvm_disk = siv
             .find_name::<FormView>("bootdisk-options-target-disk")
-            .and_then(|v| v.get_value::<SelectView<Disk>, _>(0));
+            .and_then(|v| v.get_value::<SelectView<Disk>, _>(0))
+            // If not defined, then the view was switched from a non-LVM filesystem to a LVM one.
+            // Just use the first disk is such a case.
+            .unwrap_or_else(|| runinfo.disks[0].clone());
 
         // Update the (inner) options view
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
@@ -193,11 +200,8 @@ impl AdvancedBootdiskOptionsView {
                 view.remove_child(3);
                 match fstype {
                     FsType::Ext4 | FsType::Xfs => {
-                        // Safety: For LVM setups, the bootdisk SelectView always exists, thus
-                        // there will also always be a value.
-                        let selected_disk = selected_lvm_disk.clone().unwrap();
                         view.add_child(LvmBootdiskOptionsView::new_with_defaults(
-                            &selected_disk,
+                            &selected_lvm_disk,
                             &product_conf,
                         ));
                     }
@@ -222,11 +226,7 @@ impl AdvancedBootdiskOptionsView {
                 FsType::Ext4 | FsType::Xfs => {
                     view.replace_child(
                         0,
-                        target_bootdisk_selectview(
-                            &runinfo.disks,
-                            options_ref,
-                            selected_lvm_disk.as_ref(),
-                        ),
+                        target_bootdisk_selectview(&runinfo.disks, options_ref, &selected_lvm_disk),
                     );
                 }
                 other => view.replace_child(0, TextView::new(other.to_string())),
@@ -714,10 +714,11 @@ fn advanced_options_view(
 fn target_bootdisk_selectview(
     avail_disks: &[Disk],
     options_ref: BootdiskOptionsRef,
-    selected_disk: Option<&Disk>,
+    selected_disk: &Disk,
 ) -> SelectView<Disk> {
-    let selected_disk_pos = selected_disk
-        .and_then(|disk| avail_disks.iter().position(|d| d.index == disk.index))
+    let selected_disk_pos = avail_disks
+        .iter()
+        .position(|d| d.index == selected_disk.index)
         .unwrap_or_default();
 
     SelectView::new()
