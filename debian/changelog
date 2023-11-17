@@ -1,3 +1,17 @@
+proxmox-installer (8.1.4) bookworm; urgency=medium
+
+  * tui: fix changing between non-LVM and LVM filesystem in bootdisk chooser
+
+  * ui: stdio: replace newlines with whitespaces in prompt messages
+
+  * tui: install progress: use ok/cancel as button text for installer prompt
+
+  * tui: bootdisk zfs config: add a maximum value to the `copies` option
+
+  * tui: fix interface sort order
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 17 Nov 2023 19:35:19 +0100
+
 proxmox-installer (8.1.3) bookworm; urgency=medium
 
   * run env: do not store empty hostname when trying to detect from DHCP
