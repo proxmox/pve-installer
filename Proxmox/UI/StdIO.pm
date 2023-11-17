@@ -36,6 +36,7 @@ sub finished {
 sub prompt {
     my ($self, $query) = @_;
 
+    $query =~ s/\n/ /g; # FIXME: use a better serialisation (e.g., JSON)
     print STDOUT "prompt: $query\n";
 
     my $response = <STDIN> // ''; # FIXME: error handling?
