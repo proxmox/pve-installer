@@ -1158,7 +1158,13 @@ _EOD
 	update_progress(0.8, 0.95, 1, "make system bootable");
 	my $target_cmdline='';
 	if ($target_cmdline = Proxmox::Install::Config::get_target_cmdline()) {
-	    my $target_cmdline_snippet = "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX $target_cmdline\"";
+	    my $target_cmdline_snippet = '';
+	    if ($target_cmdline =~ /console=ttyS(\d+),(\d+)/) {
+		$target_cmdline_snippet .= "GRUB_TERMINAL_INPUT=\"console serial\"\n";
+		$target_cmdline_snippet .= "GRUB_TERMINAL_OUTPUT=\"gfxterm serial\"\n";
+		$target_cmdline_snippet .= "GRUB_SERIAL_COMMAND=\"serial --unit=$1 --speed=$2\"\n";
+	    }
+	    $target_cmdline_snippet .= "GRUB_CMDLINE_LINUX=\"\$GRUB_CMDLINE_LINUX $target_cmdline\"";
 	    file_write_all("$targetdir/etc/default/grub.d/installer.cfg", $target_cmdline_snippet);
 	}
 
