@@ -1,3 +1,19 @@
+proxmox-installer (8.1.5) bookworm; urgency=medium
+
+  * various fixes for the TUI installer:
+   - do not center EULA text
+   - preserve auto-reboot checkbox state when switching views
+   - common: enforce even number of disks for ZFS RAID-10
+
+  * serial installer: add serial config for grub to target system
+
+  * zfs: create dataset var-lib-vz for /var/lib/vz to avoid to many
+    intermediate datasets
+
+  * ZFS: detect and handle secure boot
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 21 Nov 2023 14:22:23 +0100
+
 proxmox-installer (8.1.4) bookworm; urgency=medium
 
   * tui: fix changing between non-LVM and LVM filesystem in bootdisk chooser
