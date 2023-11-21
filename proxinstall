@@ -416,7 +416,7 @@ sub create_ipconf_view {
 	$device_cb->set_active(0);
     }
 
-    my $label = Gtk3::Label->new("Management Interface:");
+    my $label = Gtk3::Label->new("Management Interface");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
 
@@ -428,7 +428,7 @@ sub create_ipconf_view {
     my $domain = $ipconf->{domain} || "example.invalid";
     $fqdn //= "$hostname.$domain";
 
-    my ($host_label, $hostentry) = create_text_input($fqdn, 'Hostname (FQDN):');
+    my ($host_label, $hostentry) = create_text_input($fqdn, 'Hostname (FQDN)');
     $grid->attach($host_label, 0, 1, 1, 1);
     $grid->attach($hostentry, 1, 1, 1, 1);
 
@@ -438,14 +438,14 @@ sub create_ipconf_view {
     my $cfg_gateway = Proxmox::Install::Config::get_gateway();
     my $gateway = $cfg_gateway // $ipconf->{gateway} || '192.168.100.1';
 
-    my ($gw_label, $ipconf_entry_gw) = create_text_input($gateway, 'Gateway:');
+    my ($gw_label, $ipconf_entry_gw) = create_text_input($gateway, 'Gateway');
     $grid->attach($gw_label, 0, 3, 1, 1);
     $grid->attach($ipconf_entry_gw, 1, 3, 1, 1);
 
     my $cfg_dns = Proxmox::Install::Config::get_dns();
     my $dnsserver = $cfg_dns // $ipconf->{dnsserver} || $gateway;
 
-    my ($dns_label, $ipconf_entry_dns) = create_text_input($dnsserver, 'DNS Server:');
+    my ($dns_label, $ipconf_entry_dns) = create_text_input($dnsserver, 'DNS Server');
 
     $grid->attach($dns_label, 0, 4, 1, 1);
     $grid->attach($ipconf_entry_dns, 1, 4, 1, 1);
@@ -1332,7 +1332,7 @@ sub create_hdoption_view {
 	    $target_hd_label->set_text("Target: $filesys ");
 	    $options_stack->set_visible_child_name("raiddisk");
 	} else {
-	    $target_hd_label->set_text("Target Harddisk: ");
+	    $target_hd_label->set_text("Target Harddisk");
 	}
 
 	if ($raid) {
@@ -1438,7 +1438,7 @@ sub create_hdsel_view {
 	Proxmox::Install::Config::set_target_hd($devname);
     }
 
-    $target_hd_label = Gtk3::Label->new("Target Harddisk: ");
+    $target_hd_label = Gtk3::Label->new("Target Harddisk");
     $hbox->pack_start($target_hd_label, 0, 0, 0);
 
     $target_hd_combo = Gtk3::ComboBoxText->new();
