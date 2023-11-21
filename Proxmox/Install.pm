@@ -187,8 +187,8 @@ sub zfs_create_rpool {
 
     if ($iso_env->{product} eq 'pve') {
 	syscmd("zfs create $pool_name/data")  == 0 || die "unable to create zfs $pool_name/data volume\n";
-	syscmd("zfs create -p $pool_name/ROOT/$root_volume_name/var/lib/vz")  == 0 ||
-	    die "unable to create zfs $pool_name/ROOT/$root_volume_name/var/lib/vz volume\n";
+	syscmd("zfs create -o mountpoint=/$pool_name/ROOT/$root_volume_name/var/lib/vz $pool_name/var-lib-vz")  == 0 ||
+	    die "unable to create zfs $pool_name/var-lib-vz volume\n";
     }
 
     # default to `relatime` on, fast enough for the installer and production
@@ -1334,6 +1334,11 @@ _EOD
 
 	syscmd("zfs set mountpoint=/ $zfs_pool_name/ROOT/$zfs_root_volume_name") == 0 ||
 	    die "zfs set mountpoint failed\n";
+
+	if ($iso_env->{product} eq 'pve') {
+	    syscmd("zfs set mountpoint=/var/lib/vz $zfs_pool_name/var-lib-vz") == 0 ||
+		die "zfs set mountpoint for var-lib-vz failed\n";
+	}
 
 	syscmd("zpool set bootfs=$zfs_pool_name/ROOT/$zfs_root_volume_name $zfs_pool_name") == 0 ||
 	    die "zpool set bootfs failed\n";
