@@ -303,7 +303,7 @@ sub create_cidr_inputs {
 
     my $ip_el = Gtk3::Entry->new();
     $ip_el->set_width_chars(28);
-    $hbox->pack_start($ip_el, 0, 0, 0);
+    $hbox->pack_start($ip_el, 1, 1, 0);
     $ip_el->set_text($default_ip);
 
     my $dash_label = Gtk3::Label->new('/');
