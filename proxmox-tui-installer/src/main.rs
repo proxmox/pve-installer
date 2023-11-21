@@ -355,9 +355,9 @@ fn license_dialog(siv: &mut Cursive) -> InstallerView {
             0,
             TextView::new("END USER LICENSE AGREEMENT (EULA)").center(),
         ))
-        .child(Panel::new(ScrollView::new(
-            TextView::new(get_eula(&state.setup_info)).center(),
-        )))
+        .child(Panel::new(ScrollView::new(TextView::new(get_eula(
+            &state.setup_info,
+        )))))
         .child(PaddedView::lrtb(1, 1, 1, 0, bbar));
 
     let _ = inner.set_focus_index(2); // ignore errors
