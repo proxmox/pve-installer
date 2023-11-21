@@ -81,6 +81,14 @@ pub fn check_zfs_raid_config(level: ZfsRaidLevel, disks: &[Disk]) -> Result<(), 
         }
         ZfsRaidLevel::Raid10 => {
             check_raid_min_disks(disks, 4)?;
+
+            if disks.len() % 2 != 0 {
+                return Err(format!(
+                    "Needs an even number of disks, currently selected: {}",
+                    disks.len(),
+                ));
+            }
+
             // Pairs need to have the same size
             for i in (0..disks.len()).step_by(2) {
                 check_mirror_size(&disks[i], &disks[i + 1])?;
