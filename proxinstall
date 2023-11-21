@@ -325,6 +325,21 @@ sub create_cidr_inputs {
 
 my $ipconf_first_view = 1;
 
+my $create_basic_grid = sub {
+    my $grid =  Gtk3::Grid->new();
+    $grid->set_visible(1);
+    $grid->set_column_spacing(10);
+    $grid->set_row_spacing(10);
+    $grid->set_hexpand(1);
+
+    $grid->set_margin_start(10);
+    $grid->set_margin_end(20);
+    $grid->set_margin_top(5);
+    $grid->set_margin_bottom(5);
+
+    return $grid;
+};
+
 sub create_ipconf_view {
 
     cleanup_view();
@@ -940,21 +955,6 @@ my $target_hd_combo;
 my $target_hd_label;
 
 my $hdoption_first_setup = 1;
-
-my $create_basic_grid = sub {
-    my $grid =  Gtk3::Grid->new();
-    $grid->set_visible(1);
-    $grid->set_column_spacing(10);
-    $grid->set_row_spacing(10);
-    $grid->set_hexpand(1);
-
-    $grid->set_margin_start(10);
-    $grid->set_margin_end(20);
-    $grid->set_margin_top(5);
-    $grid->set_margin_bottom(5);
-
-    return $grid;
-};
 
 # takes an array ref of rows with [$label_text, $widget, $suffix_label] array refs as columns
 # $suffix_label is optional
