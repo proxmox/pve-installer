@@ -8,7 +8,7 @@ use cursive::{
     view::{Nameable, Offset, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
-        ResizedView, ScrollView, SelectView, StackView, TextView, ViewRef,
+        ResizedView, ScrollView, SelectView, StackView, TextView,
     },
     Cursive, CursiveRunnable, ScreenId, View, XY,
 };
@@ -171,7 +171,7 @@ fn main() {
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: Default::default(),
             network: NetworkOptions::defaults_from(&setup_info, &runtime_info.network),
-            autoreboot: false,
+            autoreboot: true,
         },
         setup_info,
         runtime_info,
@@ -612,6 +612,7 @@ impl TableViewItem for SummaryOption {
 
 fn summary_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
+    let autoreboot = state.options.autoreboot;
 
     let mut bbar = LinearLayout::horizontal()
         .child(abort_install_button())
@@ -619,19 +620,19 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
         .child(Button::new("Previous", switch_to_prev_screen))
         .child(DummyView)
         .child(Button::new("Install", |siv| {
-            let autoreboot = siv
-                .find_name("reboot-after-install")
-                .map(|v: ViewRef<Checkbox>| v.is_checked())
-                .unwrap_or_default();
-
-            siv.with_user_data(|state: &mut InstallerState| {
-                state.options.autoreboot = autoreboot;
-            });
-
             switch_to_next_screen(siv, InstallerStep::Install, &install_progress_dialog);
         }));
 
     let _ = bbar.set_focus_index(2); // ignore errors
+
+    let autoreboot_checkbox =
+        Checkbox::new()
+            .with_checked(autoreboot)
+            .on_change(|siv, autoreboot| {
+                siv.with_user_data(|state: &mut InstallerState| {
+                    state.options.autoreboot = autoreboot;
+                });
+            });
 
     let mut inner = LinearLayout::vertical()
         .child(PaddedView::lrtb(
@@ -649,7 +650,7 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
         .child(
             LinearLayout::horizontal()
                 .child(DummyView.full_width())
-                .child(Checkbox::new().checked().with_name("reboot-after-install"))
+                .child(autoreboot_checkbox)
                 .child(
                     TextView::new(" Automatically reboot after successful installation").no_wrap(),
                 )
