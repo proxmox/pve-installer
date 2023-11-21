@@ -648,12 +648,12 @@ sub update_layout {
 
 my $lastzonecb;
 sub update_zonelist {
-    my ($box, $cc) = @_;
+    my ($grid, $cc) = @_;
 
     my $sel = Proxmox::Install::Config::get_timezone(); # initial default
     if ($lastzonecb) {
 	$sel = $lastzonecb->get_active_text();
-	$box->remove($lastzonecb);
+	$grid->remove($lastzonecb);
     }
 
     my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
@@ -679,7 +679,7 @@ sub update_zonelist {
     $cb->set_active($selected_index || 0);
 
     $cb->show;
-    $box->pack_start($cb, 0, 0, 0);
+    $grid->attach($cb, 1, 1, 1, 1);
 }
 
 sub create_password_view {
@@ -775,10 +775,8 @@ sub create_country_view {
 
     my $locales = $iso_env->{locales};
 
-    my $vbox2 =  Gtk3::Box->new('vertical', 0);
-    $gtk_state->{inbox}->pack_start($vbox2, 1, 0, 0);
-    my $vbox =  Gtk3::Box->new('vertical', 0);
-    $vbox2->pack_start($vbox, 0, 0, 10);
+    my $grid = &$create_basic_grid();
+    $gtk_state->{inbox}->pack_start($grid, 0, 0, 0);
 
     my $w = Gtk3::Entry->new();
     $w->set_size_request(200, -1);
@@ -789,18 +787,16 @@ sub create_country_view {
     $c->set_popup_set_width(1);
     $c->set_inline_completion(1);
 
-    my $hbox2 = Gtk3::Box->new('horizontal', 0);
     my $label = Gtk3::Label->new("Time zone");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
-    $hbox2->pack_start($label, 0, 0, 10);
-    update_zonelist ($hbox2);
+    $grid->attach($label, 0, 1, 1, 1);
+    update_zonelist ($grid);
 
-    my $hbox3 = Gtk3::Box->new('horizontal', 0);
     $label = Gtk3::Label->new("Keyboard Layout");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
-    $hbox3->pack_start($label, 0, 0, 10);
+    $grid->attach($label, 0, 2, 1, 1);
 
     my $kmapcb = Gtk3::ComboBoxText->new();
     $kmapcb->set_size_request (200, -1);
@@ -809,7 +805,7 @@ sub create_country_view {
     }
 
     update_layout($kmapcb);
-    $hbox3->pack_start ($kmapcb, 0, 0, 0);
+    $grid->attach($kmapcb, 1, 2, 1, 1);
 
     $kmapcb->signal_connect ('changed' => sub {
 	my $sel = $kmapcb->get_active_text();
@@ -846,7 +842,7 @@ sub create_country_view {
 	my $text = $entry->get_text;
 
 	if (my $cc = $locales->{countryhash}->{lc($text)}) {
-	    update_zonelist($hbox2, $cc);
+	    update_zonelist($grid, $cc);
 	    my $kmap = $locales->{country}->{$cc}->{kmap} || 'en-us';
 	    update_layout($kmapcb, $kmap);
 	}
@@ -906,17 +902,11 @@ sub create_country_view {
 
     $w->set_completion ($c);
 
-    my $hbox =  Gtk3::Box->new('horizontal', 0);
-
     $label = Gtk3::Label->new("Country");
     $label->set_xalign(1.0);
     $label->set_size_request(150, -1);
-    $hbox->pack_start($label, 0, 0, 10);
-    $hbox->pack_start($w, 0, 0, 0);
-
-    $vbox->pack_start($hbox, 0, 0, 5);
-    $vbox->pack_start($hbox2, 0, 0, 5);
-    $vbox->pack_start($hbox3, 0, 0, 5);
+    $grid->attach($label, 0, 0, 1, 1);
+    $grid->attach($w, 1, 0, 1, 1);
 
     my $country = Proxmox::Install::Config::get_country();
     if ($country && (my $entry = $locales->{country}->{$country})) {
