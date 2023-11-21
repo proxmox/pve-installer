@@ -688,47 +688,40 @@ sub create_password_view {
 
     my $password = Proxmox::Install::Config::get_password();
 
-    my $vbox2 =  Gtk3::Box->new('vertical', 0);
-    $gtk_state->{inbox}->pack_start($vbox2, 1, 0, 0);
-    my $vbox =  Gtk3::Box->new('vertical', 0);
-    $vbox2->pack_start($vbox, 0, 0, 10);
+    my $grid = &$create_basic_grid();
+    $gtk_state->{inbox}->pack_start($grid, 0, 0, 0);
 
-    my $hbox1 = Gtk3::Box->new('horizontal', 0);
     my $label = Gtk3::Label->new("Password");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
-    $hbox1->pack_start($label, 0, 0, 10);
+    $grid->attach($label, 0, 0, 1, 1);
     my $pwe1 = Gtk3::Entry->new();
     $pwe1->set_visibility(0);
     $pwe1->set_text($password) if $password;
     $pwe1->set_size_request(200, -1);
-    $hbox1->pack_start($pwe1, 0, 0, 0);
+    $grid->attach($pwe1, 1, 0, 1, 1);
 
-    my $hbox2 = Gtk3::Box->new('horizontal', 0);
     $label = Gtk3::Label->new("Confirm");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
-    $hbox2->pack_start($label, 0, 0, 10);
+    $grid->attach($label, 0, 1, 1, 1);
     my $pwe2 = Gtk3::Entry->new();
     $pwe2->set_visibility(0);
     $pwe2->set_text($password) if $password;
     $pwe2->set_size_request(200, -1);
-    $hbox2->pack_start($pwe2, 0, 0, 0);
+    $grid->attach($pwe2, 1, 1, 1, 1);
 
-    my $hbox3 = Gtk3::Box->new('horizontal', 0);
     $label = Gtk3::Label->new("Email");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
-    $hbox3->pack_start($label, 0, 0, 10);
+    $label->set_margin_top(10);
+    $grid->attach($label, 0, 2, 1, 1);
+
     my $eme = Gtk3::Entry->new();
     $eme->set_size_request(200, -1);
     $eme->set_text(Proxmox::Install::Config::get_mailto());
-    $hbox3->pack_start($eme, 0, 0, 0);
-
-
-    $vbox->pack_start($hbox1, 0, 0, 5);
-    $vbox->pack_start($hbox2, 0, 0, 5);
-    $vbox->pack_start($hbox3, 0, 0, 15);
+    $eme->set_margin_top(10);
+    $grid->attach($eme, 1, 2, 1, 1);
 
     $gtk_state->{inbox}->show_all;
 
