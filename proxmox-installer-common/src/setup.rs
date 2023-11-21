@@ -373,7 +373,7 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
     let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if test_mode {
         (
             "./proxmox-low-level-installer",
-            &["-t", "start-session-test"],
+            &["-t", "/dev/null", "start-session-test"],
             vec![("PERL5LIB", ".")],
         )
     } else {
