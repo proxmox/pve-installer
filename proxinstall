@@ -332,10 +332,10 @@ my $create_basic_grid = sub {
     $grid->set_row_spacing(10);
     $grid->set_hexpand(1);
 
-    $grid->set_margin_start(10);
+    $grid->set_margin_start(20);
     $grid->set_margin_end(20);
-    $grid->set_margin_top(5);
-    $grid->set_margin_bottom(5);
+    $grid->set_margin_top(10);
+    $grid->set_margin_bottom(10);
 
     return $grid;
 };
