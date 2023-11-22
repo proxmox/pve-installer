@@ -605,8 +605,10 @@ sub prepare_grub_efi_boot_esp {
 	}
 	# also install fallback boot file (OVMF does not boot without)
 	mkdir("$targetdir/boot/efi/EFI/BOOT");
-	syscmd("cp $targetdir/boot/efi/EFI/proxmox/grubx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.EFI") == 0 ||
+	syscmd("cp $targetdir/boot/efi/EFI/proxmox/*.efi $targetdir/boot/efi/EFI/BOOT/") == 0 ||
 	    die "unable to copy efi boot loader\n";
+	syscmd("mv $targetdir/boot/efi/EFI/BOOT/shimx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.efi") == 0 ||
+	    die "unable to setup default efi boot loader\n";
     };
     my $err = $@;
 
