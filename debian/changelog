@@ -1,3 +1,9 @@
+proxmox-installer (8.1.6) bookworm; urgency=medium
+
+  * grub: install all efi binaries in fallback/default dir
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 22 Nov 2023 13:30:06 +0100
+
 proxmox-installer (8.1.5) bookworm; urgency=medium
 
   * various fixes for the TUI installer:
