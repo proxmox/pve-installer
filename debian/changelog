@@ -1,3 +1,9 @@
+proxmox-installer (8.1.7) bookworm; urgency=medium
+
+  *  source interfaces.d snippets by default
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 23 Nov 2023 11:11:20 +0100
+
 proxmox-installer (8.1.6) bookworm; urgency=medium
 
   * grub: install all efi binaries in fallback/default dir
