@@ -979,6 +979,8 @@ sub extract_data {
 	    $ifaces .= "\niface $name $ntype manual\n";
 	}
 
+	$ifaces .= "\n\nsource /etc/network/interfaces.d/*\n";
+
 	file_write_all("$targetdir/etc/network/interfaces", $ifaces);
 
 	# configure dns
