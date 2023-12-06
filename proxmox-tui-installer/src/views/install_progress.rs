@@ -246,3 +246,97 @@ enum UiMessage {
         text: String,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn run_low_level_installer_test_session() {
+        env::set_current_dir("..").expect("failed to change working directory");
+        let mut child = spawn_low_level_installer(true)
+            .expect("failed to run low-level installer test session");
+
+        let mut reader = child
+            .stdout
+            .take()
+            .map(BufReader::new)
+            .expect("failed to get stdin reader");
+
+        let mut writer = child.stdin.take().expect("failed to get stdin writer");
+
+        serde_json::to_writer(&mut writer, &serde_json::json!({ "autoreboot": false }))
+            .expect("failed to serialize install config");
+
+        writeln!(writer).expect("failed to write install config: {err}");
+
+        let mut next_msg = || {
+            let mut line = String::new();
+            reader.read_line(&mut line).expect("a line");
+
+            match serde_json::from_str::<UiMessage>(&line) {
+                Ok(msg) => Some(msg),
+                Err(err) => panic!("unexpected error: '{err}'"),
+            }
+        };
+
+        assert_eq!(
+            next_msg(),
+            Some(UiMessage::Prompt {
+                query: "Reply anything?".to_owned()
+            }),
+        );
+
+        serde_json::to_writer(
+            &mut writer,
+            &serde_json::json!({"type": "prompt-answer", "answer": "ok"}),
+        )
+        .expect("failed to write prompt answer");
+        writeln!(writer).expect("failed to write prompt answer");
+
+        assert_eq!(
+            next_msg(),
+            Some(UiMessage::Info {
+                message: "Test Message - got ok".to_owned()
+            }),
+        );
+
+        for i in (1..=1000).step_by(3) {
+            assert_eq!(
+                next_msg(),
+                Some(UiMessage::Progress {
+                    ratio: (i as f32) / 1000.,
+                    text: format!("foo {i}"),
+                }),
+            );
+        }
+
+        assert_eq!(
+            next_msg(),
+            Some(UiMessage::Finished {
+                state: "ok".to_owned(),
+                message: "Installation finished - reboot now?".to_owned(),
+            }),
+        );
+
+        // Should be nothing left to read now
+        let mut line = String::new();
+        assert_eq!(reader.read_line(&mut line).expect("success"), 0);
+
+        // Give the low-level installer some time to exit properly
+        std::thread::sleep(Duration::new(1, 0));
+
+        match child.try_wait() {
+            Ok(Some(status)) => assert!(
+                status.success(),
+                "low-level installer did not exit successfully"
+            ),
+            Ok(None) => {
+                child.kill().expect("could not kill low-level installer");
+                panic!("low-level install was not successful");
+            }
+            Err(err) => panic!("failed to wait for low-level installer: {err}"),
+        }
+    }
+}
