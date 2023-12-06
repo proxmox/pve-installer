@@ -78,7 +78,7 @@ sub send_reboot_ui_message {
 	    $secs -= 1;
 	}
     } else {
-	Proxmox::UI::finished(1, "Installation complete - reboot now?");
+	Proxmox::UI::finished(1, "Installation finished - reboot now?");
     }
 }
 
