@@ -1,16 +1,15 @@
-use std::{
-    io::{BufRead, BufReader, Write},
-    str::FromStr,
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
-
 use cursive::{
     utils::Counter,
     view::{Nameable, Resizable, ViewWrapper},
     views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextContent, TextView},
     CbSink, Cursive,
+};
+use serde::Deserialize;
+use std::{
+    io::{BufRead, BufReader, Write},
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 use crate::{abort_install_button, prompt_dialog, setup::InstallConfig, InstallerState};
@@ -95,7 +94,7 @@ impl InstallProgressView {
                     Err(err) => return Err(format!("low-level installer exited early: {err}")),
                 };
 
-                let msg = match line.parse::<UiMessage>() {
+                let msg = match serde_json::from_str::<UiMessage>(&line) {
                     Ok(msg) => msg,
                     Err(stray) => {
                         // Not a fatal error, so don't abort the installation by returning
@@ -105,26 +104,26 @@ impl InstallProgressView {
                 };
 
                 let result = match msg.clone() {
-                    UiMessage::Info(s) => cb_sink.send(Box::new(|siv| {
-                        siv.add_layer(Dialog::info(s).title("Information"));
+                    UiMessage::Info { message } => cb_sink.send(Box::new(|siv| {
+                        siv.add_layer(Dialog::info(message).title("Information"));
                     })),
-                    UiMessage::Error(s) => cb_sink.send(Box::new(|siv| {
-                        siv.add_layer(Dialog::info(s).title("Error"));
+                    UiMessage::Error { message } => cb_sink.send(Box::new(|siv| {
+                        siv.add_layer(Dialog::info(message).title("Error"));
                     })),
-                    UiMessage::Prompt(s) => cb_sink.send({
+                    UiMessage::Prompt { query } => cb_sink.send({
                         let writer = writer.clone();
-                        Box::new(move |siv| Self::show_prompt(siv, &s, writer))
+                        Box::new(move |siv| Self::show_prompt(siv, &query, writer))
                     }),
-                    UiMessage::Progress(ratio, s) => {
-                        counter.set(ratio);
-                        progress_text.set_content(s);
+                    UiMessage::Progress { ratio, text } => {
+                        counter.set((ratio * 100.).floor() as usize);
+                        progress_text.set_content(text);
                         Ok(())
                     }
-                    UiMessage::Finished(success, msg) => {
+                    UiMessage::Finished { state, message } => {
                         counter.set(100);
-                        progress_text.set_content(msg.to_owned());
+                        progress_text.set_content(message.to_owned());
                         cb_sink.send(Box::new(move |siv| {
-                            Self::prepare_for_reboot(siv, success, &msg)
+                            Self::prepare_for_reboot(siv, state == "ok", &message);
                         }))
                     }
                 };
@@ -189,6 +188,19 @@ impl InstallProgressView {
     }
 
     fn show_prompt<W: Write + 'static>(siv: &mut Cursive, text: &str, writer: Arc<Mutex<W>>) {
+        let send_answer = |writer: Arc<Mutex<W>>, answer| {
+            if let Ok(mut writer) = writer.lock() {
+                let _ = writeln!(
+                    writer,
+                    "{}",
+                    serde_json::json!({
+                        "type" : "prompt-answer",
+                        "answer" : answer,
+                    })
+                );
+            }
+        };
+
         prompt_dialog(
             siv,
             "Prompt",
@@ -197,16 +209,12 @@ impl InstallProgressView {
             Box::new({
                 let writer = writer.clone();
                 move |_| {
-                    if let Ok(mut writer) = writer.lock() {
-                        let _ = writeln!(writer, "ok");
-                    }
+                    send_answer(writer.clone(), "ok");
                 }
             }),
             "Cancel",
             Box::new(move |_| {
-                if let Ok(mut writer) = writer.lock() {
-                    let _ = writeln!(writer);
-                }
+                send_answer(writer.clone(), "cancel");
             }),
         );
     }
@@ -216,40 +224,25 @@ impl ViewWrapper for InstallProgressView {
     cursive::wrap_impl!(self.view: PaddedView<LinearLayout>);
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
 enum UiMessage {
-    Info(String),
-    Error(String),
-    Prompt(String),
-    Finished(bool, String),
-    Progress(usize, String),
-}
-
-impl FromStr for UiMessage {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (ty, rest) = s.split_once(": ").ok_or("invalid message: no type")?;
-
-        match ty {
-            "message" => Ok(UiMessage::Info(rest.to_owned())),
-            "error" => Ok(UiMessage::Error(rest.to_owned())),
-            "prompt" => Ok(UiMessage::Prompt(rest.to_owned())),
-            "finished" => {
-                let (state, rest) = rest.split_once(", ").ok_or("invalid message: no state")?;
-                Ok(UiMessage::Finished(state == "ok", rest.to_owned()))
-            }
-            "progress" => {
-                let (percent, rest) = rest.split_once(' ').ok_or("invalid progress message")?;
-                Ok(UiMessage::Progress(
-                    percent
-                        .parse::<f64>()
-                        .map(|v| (v * 100.).floor() as usize)
-                        .map_err(|err| err.to_string())?,
-                    rest.to_owned(),
-                ))
-            }
-            unknown => Err(format!("invalid message type {unknown}, rest: {rest}")),
-        }
-    }
+    #[serde(rename = "message")]
+    Info {
+        message: String,
+    },
+    Error {
+        message: String,
+    },
+    Prompt {
+        query: String,
+    },
+    Finished {
+        state: String,
+        message: String,
+    },
+    Progress {
+        ratio: f32,
+        text: String,
+    },
 }
