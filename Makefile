@@ -77,8 +77,15 @@ $(DSC): $(BUILDDIR)
 sbuild: $(DSC)
 	sbuild $(DSC)
 
+.PHONY: prepare-test-env
+prepare-test-env: cd-info.test country.dat test.img
+	rm -rf testdir
+	mkdir -p testdir/var/lib/proxmox-installer/
+	cp -v country.dat testdir/var/lib/proxmox-installer/
+	./proxmox-low-level-installer -t test.img dump-env
+
 .PHONY: test
-test:
+test: prepare-test-env
 	$(MAKE) -C test check
 	$(CARGO) test --workspace $(CARGO_BUILD_ARGS)
 
