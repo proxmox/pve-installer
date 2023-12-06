@@ -49,7 +49,7 @@ sub prompt {
 sub display_html {
     my ($raw_html, $html_dir) = @_;
 
-    # ignore for now
+    log_error("display_html() not available for stdio backend!");
 }
 
 sub progress {
