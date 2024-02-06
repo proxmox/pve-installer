@@ -1145,7 +1145,7 @@ my $create_raid_advanced_grid = sub {
 
     my $combo_checksum = Gtk3::ComboBoxText->new();
     $combo_checksum->set_tooltip_text("zfs checksum algorithm for rpool dataset");
-    my $csum_opts = ["on", "off", "fletcher4", "sha256"];
+    my $csum_opts = ["on", "fletcher4", "sha256"];
     foreach my $opt (@$csum_opts) {
 	$combo_checksum->append($opt, $opt);
     }

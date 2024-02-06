@@ -145,7 +145,6 @@ pub const ZFS_COMPRESS_OPTIONS: &[ZfsCompressOption] = {
 pub enum ZfsChecksumOption {
     #[default]
     On,
-    Off,
     Fletcher4,
     Sha256,
 }
@@ -164,7 +163,7 @@ impl From<&ZfsChecksumOption> for String {
 
 pub const ZFS_CHECKSUM_OPTIONS: &[ZfsChecksumOption] = {
     use ZfsChecksumOption::*;
-    &[On, Off, Fletcher4, Sha256]
+    &[On, Fletcher4, Sha256]
 };
 
 #[derive(Clone, Debug)]
