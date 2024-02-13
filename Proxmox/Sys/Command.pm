@@ -85,8 +85,9 @@ sub syscmd {
 #           to exit early and ignore the rest of the process output.
 # * $input - Stdin contents for the spawned subprocess
 # * $noout - Whether to append any process output to the return value
+# * $noprint - Whether to print any process output to the parents stdout
 sub run_command {
-    my ($cmd, $func, $input, $noout) = @_;
+    my ($cmd, $func, $input, $noout, $noprint) = @_;
 
     my $cmdstr;
     if (!ref($cmd)) {
@@ -178,7 +179,7 @@ sub run_command {
 	    } elsif ($h eq $error) {
 		$ostream .= $buf if !($noout || $func);
 	    }
-	    print $buf;
+	    print $buf if !$noprint;
 	    STDOUT->flush();
 	    log_info($buf);
 	}
