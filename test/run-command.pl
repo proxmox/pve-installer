@@ -27,6 +27,17 @@ my $ret = run_command('bash -c "echo test; sleep 1000; echo test"', sub {
 });
 is($ret, '', 'using CMD_FINISHED');
 
+# https://bugzilla.proxmox.com/show_bug.cgi?id=4872
+my $prev;
+eval {
+    local $SIG{ALRM} = sub { die "timed out!\n" };
+    $prev = alarm(1);
+    $ret = run_command('sleep 5');
+};
+alarm($prev);
+
+is($@, "timed out!\n", 'SIGALRM interaction');
+
 # Check the log for errors/warnings
 my $log = file_read_all($log_file->filename);
 ok($log !~ m/(WARN|ERROR): /, 'no warnings or errors logged');

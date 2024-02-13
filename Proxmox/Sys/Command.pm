@@ -134,9 +134,16 @@ sub run_command {
     $select->add($error);
 
     my ($ostream, $logout) = ('', '', '');
+    my $caught_sig;
 
     while ($select->count) {
 	my @handles = $select->can_read (0.2);
+
+	# If we catch a signal, stop processing & clean up
+	if ($!{EINTR}) {
+	    $caught_sig = 1;
+	    last;
+	}
 
 	Proxmox::UI::process_events();
 
@@ -170,7 +177,7 @@ sub run_command {
 
     &$func($logout) if $func;
 
-    my $ec = wait_for_process($pid);
+    my $ec = wait_for_process($pid, kill => $caught_sig);
 
     # behave like standard system(); returns -1 in case of errors too
     return ($ec // -1) if $noout;
