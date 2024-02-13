@@ -7,6 +7,7 @@ use Carp;
 use JSON qw(from_json to_json);
 
 use Proxmox::Log;
+use Proxmox::Sys::Command qw(run_command CMD_FINISHED);
 use Proxmox::Sys::File qw(file_read_firstline);
 use Proxmox::Sys::Block;
 use Proxmox::Sys::Net;
@@ -188,34 +189,35 @@ my sub detect_country_tracing_to : prototype($$) {
     my ($ipver, $destination) = @_;
 
     print STDERR "trying to detect country...\n";
-    open(my $TRACEROUTE_FH, '-|', 'traceroute', "-$ipver", '-N', '1', '-q', '1', '-n', $destination)
-	or return undef;
 
+    my $traceroute_cmd = ['traceroute', "-$ipver", '-N', '1', '-q', '1', '-n', $destination];
     my $geoip_bin = ($ipver == 6) ? 'geoiplookup6' : 'geoiplookup';
 
     my $country;
-
-    my $previous_alarm = alarm (10);
+    my $previous_alarm;
     eval {
 	local $SIG{ALRM} = sub { die "timed out!\n" };
-	my $line;
-	while (defined ($line = <$TRACEROUTE_FH>)) {
+	$previous_alarm = alarm (10);
+
+	run_command($traceroute_cmd, sub {
+	    my $line = shift;
+
 	    log_debug("DC TRACEROUTE: $line");
 	    if ($line =~ m/^\s*\d+\s+(\S+)\s/) {
 		my $geoip = qx/$geoip_bin $1/;
 		log_debug("DC GEOIP: $geoip");
+
 		if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
 		    $country = lc ($1);
 		    log_info("DC FOUND: $country\n");
-		    last;
+		    return CMD_FINISHED;
 		}
 	    }
-	}
+	}, undef, undef, 1);
+
     };
     my $err = $@;
     alarm ($previous_alarm);
-
-    close($TRACEROUTE_FH);
 
     if ($err) {
 	die "unable to detect country - $err\n";
