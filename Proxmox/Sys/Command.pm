@@ -33,12 +33,55 @@ my sub cmd2string {
     return join (' ', $quoted_args->@*);
 }
 
+# Safely for the (sub-)process specified by $pid to exit, using a timeout.
+#
+# When kill => 1 is set, at first a TERM-signal is sent to the process before
+# checking if it exited.
+# If that fails, KILL is sent to process and then up to timeout => $timeout
+# seconds (default: 5) are waited for the process to exit.
+#
+# On sucess, the exitcode of the process is returned, otherwise `undef` (aka.
+# the process was unkillable).
+my sub wait_for_process {
+    my ($pid, %params) = @_;
+
+    kill('TERM', $pid) if $params{kill};
+
+    my $terminated = waitpid($pid, WNOHANG);
+    return $? if $terminated > 0;
+
+    kill('KILL', $pid) if $params{kill};
+
+    my $timeout = $params{timeout} // 5;
+    for (1 .. $timeout) {
+	$terminated = waitpid($pid, WNOHANG);
+	return $? if $terminated > 0;
+	sleep(1);
+    }
+
+    log_warn("failed to kill child pid $pid, probably stuck in D-state?\n");
+
+    # We tried our best, better let the child hang in the back then completely
+    # blocking installer progress .. it's a rather short-lived environment anyway
+}
+
 sub syscmd {
     my ($cmd) = @_;
 
     return run_command($cmd, undef, undef, 1);
 }
 
+# Runs a command an a subprocess, properly handling IO via piping, cleaning up and passing back the
+# exit code.
+#
+# If $cmd contains a pipe |, the command will be executed inside a bash shell.
+# If $cmd contains 'chpasswd', the input will be specially quoted for that purpose.
+#
+# Arguments:
+# * $cmd - The command to run, either a single string or array with individual arguments
+# * $func - Logging subroutine to call, receives both stdout and stderr
+# * $input - Stdin contents for the spawned subprocess
+# * $noout - Whether to append any process output to the return value
 sub run_command {
     my ($cmd, $func, $input, $noout) = @_;
 
@@ -104,8 +147,7 @@ sub run_command {
 	    my $count = sysread ($h, $buf, 4096);
 	    if (!defined ($count)) {
 		my $err = $!;
-		kill (9, $pid);
-		waitpid ($pid, 0);
+		wait_for_process($pid, kill => 1);
 		die "command '$cmd' failed: $err";
 	    }
 	    $select->remove($h) if !$count;
@@ -128,15 +170,19 @@ sub run_command {
 
     &$func($logout) if $func;
 
-    my $rv = waitpid ($pid, 0);
+    my $ec = wait_for_process($pid);
 
-    return $? if $noout; # behave like standard system();
+    # behave like standard system(); returns -1 in case of errors too
+    return ($ec // -1) if $noout;
 
-    if ($? == -1) {
+    if (!defined($ec)) {
+	# Don't fail completely here to let the install continue
+	warn "command '$cmdstr' failed to exit properly\n";
+    } elsif ($ec == -1) {
 	croak "command '$cmdstr' failed to execute\n";
-    } elsif (my $sig = ($? & 127)) {
+    } elsif (my $sig = ($ec & 127)) {
 	croak "command '$cmdstr' failed - got signal $sig\n";
-    } elsif (my $exitcode = ($? >> 8)) {
+    } elsif (my $exitcode = ($ec >> 8)) {
 	croak "command '$cmdstr' failed with exit code $exitcode";
     }
 
