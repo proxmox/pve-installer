@@ -15,7 +15,9 @@ use Proxmox::Log;
 use Proxmox::UI;
 
 use base qw(Exporter);
-our @EXPORT_OK = qw(run_command syscmd);
+our @EXPORT_OK = qw(run_command syscmd CMD_FINISHED);
+
+use constant CMD_FINISHED => 1;
 
 my sub shellquote {
     my $str = shift;
@@ -79,7 +81,8 @@ sub syscmd {
 #
 # Arguments:
 # * $cmd - The command to run, either a single string or array with individual arguments
-# * $func - Logging subroutine to call, receives both stdout and stderr
+# * $func - Logging subroutine to call, receives both stdout and stderr. Might return CMD_FINISHED
+#           to exit early and ignore the rest of the process output.
 # * $input - Stdin contents for the spawned subprocess
 # * $noout - Whether to append any process output to the return value
 sub run_command {
@@ -163,7 +166,13 @@ sub run_command {
 		$logout .= $buf;
 		while ($logout =~ s/^([^\010\r\n]*)(\r|\n|(\010)+|\r\n)//s) {
 		    my $line = $1;
-		    $func->($line) if $func;
+		    if ($func) {
+			my $ret = $func->($line);
+			if (defined($ret) && $ret == CMD_FINISHED) {
+			    wait_for_process($pid, kill => 1);
+			    return $ostream;
+			}
+		    };
 		}
 
 	    } elsif ($h eq $error) {
