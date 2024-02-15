@@ -47,4 +47,8 @@ is_invalid('123.com', ERR_NUMERIC);
 is_parsed('foo123.com', ['foo123', 'com']);
 is_parsed('123foo.com', ['123foo', 'com']);
 
+is_parsed('a' x 63 . '.com', ['a' x 63, 'com']);
+is_invalid('a' x 250 . '.com', ERR_TOOLONG);
+is_invalid('a' x 64 . '.com', ERR_ALPHANUM);
+
 done_testing();

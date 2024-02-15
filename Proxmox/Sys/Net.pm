@@ -6,7 +6,7 @@ use warnings;
 use base qw(Exporter);
 our @EXPORT_OK = qw(parse_ip_address parse_ip_mask parse_fqdn);
 
-our $HOSTNAME_RE = "(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
+our $HOSTNAME_RE = "(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}?[a-zA-Z0-9])?)";
 our $FQDN_RE = "(?:${HOSTNAME_RE}\.)*${HOSTNAME_RE}";
 
 my $IPV4OCTET = "(?:25[0-5]|(?:2[0-4]|1[0-9]|[1-9])?[0-9])";
@@ -220,6 +220,9 @@ sub parse_fqdn : prototype($) {
 
     die "FQDN cannot be empty\n"
 	if !$text || length($text) == 0;
+
+    die "FQDN too long\n"
+	if length($text) > 253;
 
     die "Purely numeric hostnames are not allowed\n"
 	if $text =~ /^[0-9]+(?:\.|$)/;
