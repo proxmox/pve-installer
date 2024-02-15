@@ -309,6 +309,12 @@ mod tests {
             Fqdn::from(&format!("{}.com", "a".repeat(64))),
             Err(InvalidPart("a".repeat(64))),
         );
+
+        // https://bugzilla.proxmox.com/show_bug.cgi?id=5230
+        assert_eq!(
+            Fqdn::from("123@foo.com"),
+            Err(InvalidPart("123@foo".to_owned()))
+        );
     }
 
     #[test]

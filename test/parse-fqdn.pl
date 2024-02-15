@@ -51,4 +51,7 @@ is_parsed('a' x 63 . '.com', ['a' x 63, 'com']);
 is_invalid('a' x 250 . '.com', ERR_TOOLONG);
 is_invalid('a' x 64 . '.com', ERR_ALPHANUM);
 
+# https://bugzilla.proxmox.com/show_bug.cgi?id=5230
+is_invalid('123@foo.com', ERR_ALPHANUM);
+
 done_testing();
