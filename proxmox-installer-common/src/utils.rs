@@ -154,7 +154,7 @@ impl fmt::Display for FqdnParseError {
 ///
 /// Some terminology:
 /// - "label" - a single part of a FQDN, e.g. <label>.<label>.<tld>
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub struct Fqdn {
     parts: Vec<String>,
 }
@@ -257,6 +257,26 @@ impl<'de> Deserialize<'de> for Fqdn {
     }
 }
 
+impl PartialEq for Fqdn {
+    fn eq(&self, other: &Self) -> bool {
+        // Case-insensitive comparison, as per RFC 952 "ASSUMPTIONS",
+        // RFC 1035 sec. 2.3.3. "Character Case" and RFC 4343 as a whole
+        let a = self
+            .parts
+            .iter()
+            .map(|s| s.to_lowercase())
+            .collect::<Vec<String>>();
+
+        let b = other
+            .parts
+            .iter()
+            .map(|s| s.to_lowercase())
+            .collect::<Vec<String>>();
+
+        a == b
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,5 +328,11 @@ mod tests {
             Fqdn::from("foo.example.com").unwrap().to_string(),
             "foo.example.com"
         );
+    }
+
+    #[test]
+    fn fqdn_compare() {
+        assert_eq!(Fqdn::from("example.com"), Fqdn::from("ExAmPle.Com"));
+        assert_eq!(Fqdn::from("ExAmPle.Com"), Fqdn::from("example.com"));
     }
 }
