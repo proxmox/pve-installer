@@ -457,24 +457,16 @@ sub create_ipconf_view {
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
 
-	# Debian does not support purely numeric hostnames
-	if ($text && $text =~ /^[0-9]+(?:\.|$)/) {
-	    Proxmox::UI::message("Purely numeric hostnames are not allowed.");
-	    $hostentry->grab_focus();
-	    return;
-	}
+	my ($hostname, $domainname) = eval { Proxmox::Sys::Net::parse_fqdn($text) };
+	my $err = $@;
 
-	if ($text
-	    && $text =~ m/^${Proxmox::Sys::Net::FQDN_RE}$/
-	    && $text !~ m/.example.invalid$/
-	    && $text =~ m/^([^\.]+)\.(\S+)$/
-	) {
-	    Proxmox::Install::Config::set_hostname($1);
-	    Proxmox::Install::Config::set_domain($2);
-	} else {
-	    Proxmox::UI::message("Hostname does not look like a fully qualified domain name.");
+	if ($err || $text =~ m/.example.invalid$/) {
+	    Proxmox::UI::message($err // 'Hostname does not look like a valid fully qualified domain name');
 	    $hostentry->grab_focus();
 	    return;
+	} else {
+	    Proxmox::Install::Config::set_hostname($hostname);
+	    Proxmox::Install::Config::set_domain($domainname);
 	}
 
 	# verify ip address

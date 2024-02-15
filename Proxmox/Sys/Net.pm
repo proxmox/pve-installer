@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use base qw(Exporter);
-our @EXPORT_OK = qw(parse_ip_address parse_ip_mask);
+our @EXPORT_OK = qw(parse_ip_address parse_ip_mask parse_fqdn);
 
 our $HOSTNAME_RE = "(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)";
 our $FQDN_RE = "(?:${HOSTNAME_RE}\.)*${HOSTNAME_RE}";
@@ -212,6 +212,26 @@ sub get_dhcp_fqdn : prototype() {
 
     close($fh);
     return $name if defined($name) && $name =~ m/^([^\.]+)(?:\.(?:\S+))?$/;
+}
+
+# Follows the rules as laid out by proxmox_installer_common::utils::Fqdn
+sub parse_fqdn : prototype($) {
+    my ($text) = @_;
+
+    die "FQDN cannot be empty\n"
+	if !$text || length($text) == 0;
+
+    die "Purely numeric hostnames are not allowed\n"
+	if $text =~ /^[0-9]+(?:\.|$)/;
+
+    die "FQDN must only consist of alphanumeric characters and dashes\n"
+	if $text !~ m/^${Proxmox::Sys::Net::FQDN_RE}$/;
+
+    if ($text =~ m/^([^\.]+)\.(\S+)$/) {
+	return ($1, $2);
+    }
+
+    die "Hostname does not look like a fully qualified domain name\n";
 }
 
 1;
