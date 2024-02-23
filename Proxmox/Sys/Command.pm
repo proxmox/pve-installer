@@ -49,16 +49,13 @@ my sub wait_for_process {
 
     kill('TERM', $pid) if $params{kill};
 
-    my $terminated = waitpid($pid, WNOHANG);
-    return $? if $terminated > 0;
-
-    kill('KILL', $pid) if $params{kill};
-
     my $timeout = $params{timeout} // 5;
-    for (1 .. $timeout) {
-	$terminated = waitpid($pid, WNOHANG);
+    for (0 .. $timeout) {
+	my $terminated = waitpid($pid, WNOHANG);
 	return $? if $terminated > 0;
-	sleep(1);
+
+	sleep(1) if $_ != $timeout; # all but last round
+	kill('KILL', $pid) if $params{kill} && $_ == 1; # just first round
     }
 
     log_warn("failed to kill child pid $pid, probably stuck in D-state?\n");
