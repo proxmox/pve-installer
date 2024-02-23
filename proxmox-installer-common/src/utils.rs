@@ -258,22 +258,17 @@ impl<'de> Deserialize<'de> for Fqdn {
 }
 
 impl PartialEq for Fqdn {
+    // Case-insensitive comparison, as per RFC 952 "ASSUMPTIONS", RFC 1035 sec. 2.3.3. "Character
+    // Case" and RFC 4343 as a whole
     fn eq(&self, other: &Self) -> bool {
-        // Case-insensitive comparison, as per RFC 952 "ASSUMPTIONS",
-        // RFC 1035 sec. 2.3.3. "Character Case" and RFC 4343 as a whole
-        let a = self
-            .parts
-            .iter()
-            .map(|s| s.to_lowercase())
-            .collect::<Vec<String>>();
+        if self.parts.len() != other.parts.len() {
+            return false;
+        }
 
-        let b = other
-            .parts
+        self.parts
             .iter()
-            .map(|s| s.to_lowercase())
-            .collect::<Vec<String>>();
-
-        a == b
+            .zip(other.parts.iter())
+            .all(|(a, b)| a.to_lowercase() == b.to_lowercase())
     }
 }
 
