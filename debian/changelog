@@ -1,3 +1,26 @@
+proxmox-installer (8.1.8) bookworm; urgency=medium
+
+  * ZFS : remove deprecated "fletcher2" algorithm and the dangerous "off"
+    checksum  options
+
+  * GTK based UI: replace the use of nested boxes for layouting with grids
+    when possible to ensure correct margins and alignment of widgets.
+
+  * fix #4872: run env: set timeout for country detection
+
+  * common: fqdn: do not allow overlong FQDNs, limit to 63 characters per part
+    and 253 charactrers total, as per Debian spec
+
+  * common: fqdn: implement case-insensitive comparison as per RFC 952
+
+  * fix #5230: properly escape FQDN regex to avoid that problematic values can
+    make it into the host configuration files by mistake
+
+  * switch over to JSON-based protocol for installer to UI communication
+
+
+ -- Proxmox Support Team <support@proxmox.com>  Sat, 24 Feb 2024 16:30:08 +0100
+
 proxmox-installer (8.1.7) bookworm; urgency=medium
 
   *  source interfaces.d snippets by default
