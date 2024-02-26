@@ -1,3 +1,10 @@
+proxmox-installer (8.1.9) bookworm; urgency=medium
+
+  * run command: avoid using the true value 1 as a special value for parser
+    closure to avoid false-positive detection of CMD_FINISHED flag
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 26 Feb 2024 15:11:45 +0100
+
 proxmox-installer (8.1.8) bookworm; urgency=medium
 
   * ZFS : remove deprecated "fletcher2" algorithm and the dangerous "off"
