@@ -121,6 +121,7 @@ sub create_filesystem {
 	} elsif ($line =~ m/Writing superblocks and filesystem.*done/) {
 	    update_progress(1, $rs, $re);
 	}
+	return;
     });
 }
 
@@ -358,6 +359,7 @@ sub get_pv_list_from_vgname {
 	} else {
 	    $res->{$vg_uuid}->{pvs} .= ", $pv";
 	}
+	return;
     };
     run_command("pvs --noheadings -o pv_name,vg_uuid -S vg_name='$vgname'", $parser, undef, 1);
 
@@ -903,6 +905,7 @@ sub extract_data {
 		my $frac = $per > 100 ? 1 : $per/100;
 		update_progress($frac, $maxper, 0.5);
 	    }
+	    return;
 	});
 
 	syscmd("mount -n -t tmpfs tmpfs $targetdir/tmp") == 0 || die "unable to mount tmpfs on $targetdir/tmp\n";
@@ -1004,6 +1007,7 @@ sub extract_data {
 		if ($line =~ m/^UUID=([A-Fa-f0-9\-]+)$/) {
 		    $fsuuid = $1;
 		}
+		return;
 	    });
 
 	    die "unable to detect FS UUID" if !defined($fsuuid);
@@ -1114,6 +1118,7 @@ _EOD
 	    if ($line =~ m/Setting up\s+(\S+)/) {
 		update_progress((++$count)/$pkg_count, 0.75, 0.95, "configuring $1");
 	    }
+	    return;
 	});
 
 	unlink "$targetdir/etc/mailname";

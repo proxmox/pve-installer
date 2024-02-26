@@ -212,6 +212,7 @@ my sub detect_country_tracing_to : prototype($$) {
 		    log_info("DC FOUND: $country\n");
 		    return CMD_FINISHED;
 		}
+		return;
 	    }
 	}, undef, undef, 1);
 
