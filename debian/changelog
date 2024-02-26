@@ -1,3 +1,10 @@
+proxmox-installer (8.1.10) bookworm; urgency=medium
+
+  * run command: wait for process exit with sub-second granularity to avoid
+    artificially delay.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 26 Feb 2024 20:51:03 +0100
+
 proxmox-installer (8.1.9) bookworm; urgency=medium
 
   * run command: avoid using the true value 1 as a special value for parser
