@@ -9,6 +9,7 @@ use IPC::Open3;
 use IO::Select;
 use String::ShellQuote;
 use POSIX ":sys_wait_h";
+use Time::HiRes qw(usleep);
 
 use Proxmox::Install::ISOEnv;
 use Proxmox::Log;
@@ -52,12 +53,12 @@ my sub wait_for_process {
 
     kill('TERM', $pid) if $params{kill};
 
-    my $timeout = $params{timeout} // 5;
+    my $timeout = ($params{timeout} // 5) * 10; # waiting 0.1 secs per loop
     for (0 .. $timeout) {
 	my $terminated = waitpid($pid, WNOHANG);
 	return $? if $terminated > 0;
 
-	sleep(1) if $_ != $timeout; # all but last round
+	usleep(100_000) if $_ != $timeout; # sleep 0.1 sec, on all but last round
 	kill('KILL', $pid) if $params{kill} && $_ == 1; # just first round
     }
 
