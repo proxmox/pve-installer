@@ -6,6 +6,7 @@ use cursive::{
 };
 use serde::Deserialize;
 use std::{
+    fs::File,
     io::{BufRead, BufReader, Write},
     sync::{Arc, Mutex},
     thread,
@@ -86,6 +87,9 @@ impl InstallProgressView {
                 .map_err(|err| format!("failed to serialize install config: {err}"))?;
             writeln!(writer).map_err(|err| format!("failed to write install config: {err}"))?;
 
+            let mut lowlevel_log = File::create("/tmp/install-low-level.log")
+                .map_err(|err| format!("failed to open low-level installer logfile: {err}"))?;
+
             let writer = Arc::new(Mutex::new(writer));
 
             for line in reader.lines() {
@@ -94,11 +98,20 @@ impl InstallProgressView {
                     Err(err) => return Err(format!("low-level installer exited early: {err}")),
                 };
 
+                // The low-level installer also spews the output of any command it runs on its
+                // stdout. Use a very simple heuricstic to determine whether it is actually JSON
+                // or not.
+                if !line.starts_with('{') || !line.ends_with('}') {
+                    let _ = writeln!(lowlevel_log, "{}", line);
+                    continue;
+                }
+
                 let msg = match serde_json::from_str::<UiMessage>(&line) {
                     Ok(msg) => msg,
-                    Err(stray) => {
+                    Err(err) => {
                         // Not a fatal error, so don't abort the installation by returning
-                        eprintln!("low-level installer: {stray}");
+                        eprintln!("low-level installer: error while parsing message: '{err}'");
+                        eprintln!("    original message was: '{line}'");
                         continue;
                     }
                 };
