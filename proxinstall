@@ -461,7 +461,7 @@ sub create_ipconf_view {
 	my $err = $@;
 
 	if ($err || $text =~ m/.example.invalid$/) {
-	    Proxmox::UI::message($err // 'Hostname does not look like a valid fully qualified domain name');
+	    Proxmox::UI::message($err || 'Hostname does not look like a valid fully qualified domain name');
 	    $hostentry->grab_focus();
 	    return;
 	} else {
