@@ -196,7 +196,7 @@ sub zfs_create_rpool {
     syscmd("zfs set atime=on relatime=on $pool_name") == 0 || die "unable to set zfs properties\n";
 
     my $value = $zfs_opts->{compress} // 'on';
-    syscmd("zfs set compression=$value $pool_name") if defined($value) && $value ne 'off';
+    syscmd("zfs set compression=$value $pool_name");
 
     $value = $zfs_opts->{checksum} // 'on';
     syscmd("zfs set checksum=$value $pool_name") if defined($value) && $value ne 'on';
