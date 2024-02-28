@@ -1,12 +1,14 @@
-proxmox-installer (8.1.11) bookworm; urgency=medium
+proxmox-installer (8.1.12) bookworm; urgency=medium
+
+  * installation: handle if the clamav-clamonacc.service is already disabled
 
   * gtk: FQDN parsing: fix fallback from error to generic message
 
-  * install: zfs: fix setting compression to 'off'
+  * installation: ZFS: fix setting compression explicitly to 'off'
 
   * tui: install_progress: write low-level non-JSON messages to separate file
 
- -- Proxmox Support Team <support@proxmox.com>  Wed, 28 Feb 2024 15:29:13 +0100
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 28 Feb 2024 16:07:10 +0100
 
 proxmox-installer (8.1.10) bookworm; urgency=medium
 
