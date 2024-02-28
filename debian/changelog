@@ -1,3 +1,13 @@
+proxmox-installer (8.1.11) bookworm; urgency=medium
+
+  * gtk: FQDN parsing: fix fallback from error to generic message
+
+  * install: zfs: fix setting compression to 'off'
+
+  * tui: install_progress: write low-level non-JSON messages to separate file
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 28 Feb 2024 15:29:13 +0100
+
 proxmox-installer (8.1.10) bookworm; urgency=medium
 
   * run command: wait for process exit with sub-second granularity to avoid
