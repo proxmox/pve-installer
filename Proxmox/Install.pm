@@ -1168,7 +1168,7 @@ _EOD
 	    # on-access scanner (blocks file access if it thinks file is bad) needs to be explicit
 	    # configured by the user, otherwise it fails, and it doesn't make sense for most users.
 	    unlink "$targetdir/etc/systemd/system/multi-user.target.wants/clamav-clamonacc.service"
-		or warn "failed to disable clamav-clamonacc.service - $!";
+		or $!{ENOENT} or warn "failed to disable clamav-clamonacc.service - $!\n";
 	}
 
 	if ($iso_env->{product} eq 'pve') {
