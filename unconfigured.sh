@@ -194,6 +194,11 @@ busybox --install -s || true
 
 setupcon || echo "setupcon failed, TUI rendering might be garbled - $?"
 
+if [ "$serial" -ne 0 ]; then
+    echo "Setting terminal size to 80x24 for serial install"
+    stty columns 80 rows 24
+fi
+
 if [ $proxdebug -ne 0 ]; then
     /sbin/agetty -o '-p -- \\u' --noclear tty9 &
     printf "\nDropping in debug shell before starting installation\n"
@@ -215,11 +220,6 @@ setsid /sbin/agetty -a root --noclear tty3 &
 /usr/bin/proxmox-low-level-installer dump-env
 
 if [ $proxtui -ne 0 ]; then
-    if [ "$serial" -ne 0 ]; then
-        echo "Setting terminal size to 80x24 for serial install"
-        stty columns 80 rows 25
-    fi
-
     echo "Starting the TUI installer"
     /usr/bin/proxmox-tui-installer 2>/dev/tty2
 else
