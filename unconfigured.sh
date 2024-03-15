@@ -99,6 +99,8 @@ real_reboot() {
     exit 0 # shouldn't be reached, kernel will panic in that case
 }
 
+# reachable through the ERR trap
+# shellcheck disable=SC2317
 err_reboot() {
     printf "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)\n"
     debugsh || true
@@ -242,4 +244,5 @@ killall5 -15
 real_reboot
 
 # never reached
+# shellcheck disable=SC2317
 exit 0

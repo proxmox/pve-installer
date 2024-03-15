@@ -23,6 +23,13 @@ USR_BIN := proxmox-tui-installer
 COMPILED_BINS := \
 	$(addprefix $(CARGO_COMPILEDIR)/,$(USR_BIN))
 
+SHELL_SCRIPTS := \
+	fake-start-stop-daemon \
+	policy-disable-rc.d \
+	spice-vdagent.sh \
+	unconfigured.sh \
+	xinitrc
+
 all:
 
 $(BUILDDIR):
@@ -36,18 +43,14 @@ $(BUILDDIR):
 	  banner/ \
 	  checktime \
 	  country.pl \
-	  fake-start-stop-daemon \
 	  html/ \
 	  interfaces \
-	  policy-disable-rc.d \
 	  proxinstall \
 	  proxmox-low-level-installer \
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
-	  spice-vdagent.sh \
 	  test/ \
-	  unconfigured.sh \
-	  xinitrc \
+	  $(SHELL_SCRIPTS) \
 	  $@.tmp
 	cp -a debian $@.tmp/
 	mv $@.tmp $@
@@ -86,6 +89,7 @@ prepare-test-env: cd-info.test country.dat test.img
 
 .PHONY: test
 test: prepare-test-env
+	shellcheck $(SHELL_SCRIPTS)
 	$(MAKE) -C test check
 	$(CARGO) test --workspace $(CARGO_BUILD_ARGS)
 
