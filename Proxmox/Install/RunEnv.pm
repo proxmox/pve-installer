@@ -302,7 +302,7 @@ sub query_installation_environment : prototype() {
     if (defined($country)) {
 	$output->{country} = $country;
     } else {
-	warn ($err // "unable to detect country\n");
+	warn ($err || "unable to detect country\n");
     }
 
     return $output;
