@@ -145,7 +145,7 @@ pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Run
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct InstallZfsOption {
     pub ashift: usize,
     #[serde(serialize_with = "serialize_as_display")]
@@ -392,11 +392,11 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 }
 
 /// See Proxmox::Install::Config
-#[derive(Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct InstallConfig {
     pub autoreboot: usize,
 
-    #[serde(serialize_with = "serialize_fstype")]
+    #[serde(serialize_with = "serialize_fstype", deserialize_with = "deserialize_fs_type")]
     pub filesys: FsType,
     pub hdsize: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -470,4 +470,28 @@ where
     };
 
     serializer.collect_str(value)
+}
+
+pub fn deserialize_fs_type<'de, D>(deserializer: D) -> Result<FsType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use FsType::*;
+    let de_fs: String = Deserialize::deserialize(deserializer)?;
+
+    println!("deserializing fstype");
+    match de_fs.as_str() {
+        "ext4" => Ok(Ext4),
+        "xfs" => Ok(Xfs),
+        "zfs (RAID0)" => Ok(Zfs(ZfsRaidLevel::Raid0)),
+        "zfs (RAID1)" => Ok(Zfs(ZfsRaidLevel::Raid1)),
+        "zfs (RAID10)" => Ok(Zfs(ZfsRaidLevel::Raid10)),
+        "zfs (RAIDZ-1)" => Ok(Zfs(ZfsRaidLevel::RaidZ)),
+        "zfs (RAIDZ-2)" => Ok(Zfs(ZfsRaidLevel::RaidZ2)),
+        "zfs (RAIDZ-3)" => Ok(Zfs(ZfsRaidLevel::RaidZ3)),
+        "btrfs (RAID0)" => Ok(Btrfs(BtrfsRaidLevel::Raid0)),
+        "btrfs (RAID1)" => Ok(Btrfs(BtrfsRaidLevel::Raid1)),
+        "btrfs (RAID10)" => Ok(Btrfs(BtrfsRaidLevel::Raid10)),
+        _ => Err(de::Error::custom("could not find file system: {de_fs}"))
+    }
 }

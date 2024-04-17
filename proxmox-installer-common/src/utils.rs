@@ -103,6 +103,17 @@ impl fmt::Display for CidrAddress {
     }
 }
 
+impl<'de> Deserialize<'de> for CidrAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        s.parse()
+            .map_err(|_| serde::de::Error::custom("invalid CIDR"))
+    }
+}
+
 fn mask_limit(addr: &IpAddr) -> usize {
     if addr.is_ipv4() {
         32

@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::net::{IpAddr, Ipv4Addr};
 use std::{cmp, fmt};
 
@@ -6,7 +7,8 @@ use crate::setup::{
 };
 use crate::utils::{CidrAddress, Fqdn};
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum BtrfsRaidLevel {
     Raid0,
     Raid1,
@@ -24,13 +26,17 @@ impl fmt::Display for BtrfsRaidLevel {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum ZfsRaidLevel {
     Raid0,
     Raid1,
     Raid10,
+    #[serde(rename = "raidz-1")]
     RaidZ,
+    #[serde(rename = "raidz-2")]
     RaidZ2,
+    #[serde(rename = "raidz-3")]
     RaidZ3,
 }
 
@@ -48,7 +54,8 @@ impl fmt::Display for ZfsRaidLevel {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum FsType {
     Ext4,
     Xfs,
@@ -112,7 +119,8 @@ impl BtrfsBootdiskOptions {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all(deserialize = "lowercase"))]
 pub enum ZfsCompressOption {
     #[default]
     On,
@@ -141,7 +149,8 @@ pub const ZFS_COMPRESS_OPTIONS: &[ZfsCompressOption] = {
     &[On, Off, Lzjb, Lz4, Zle, Gzip, Zstd]
 };
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
 pub enum ZfsChecksumOption {
     #[default]
     On,
@@ -221,7 +230,7 @@ pub enum AdvancedBootdiskOptions {
     Btrfs(BtrfsBootdiskOptions),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Disk {
     pub index: String,
     pub path: String,
