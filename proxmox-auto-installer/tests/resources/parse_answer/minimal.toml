@@ -1,0 +1,14 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "pveauto.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+password = "123456"
+
+[network]
+use_dhcp = true
+
+[disk-setup]
+filesystem = "ext4"
+disk_list = ["sda"]

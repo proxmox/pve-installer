@@ -1,0 +1,19 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "pveauto.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+password = "123456"
+
+[network]
+use_dhcp = false
+cidr = "10.10.10.10/24"
+dns = "10.10.10.1"
+gateway = "10.10.10.1"
+filter.ID_NET_NAME = "enp129s0f1np1"
+
+
+[disk-setup]
+filesystem = "ext4"
+disk_list = ["sda"]

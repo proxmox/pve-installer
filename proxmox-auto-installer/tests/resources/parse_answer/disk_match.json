@@ -1,0 +1,29 @@
+{
+  "autoreboot": 1,
+  "cidr": "192.168.1.114/24",
+  "country": "at",
+  "dns": "192.168.1.254",
+  "domain": "testinstall",
+  "disk_selection": {
+	"6": "6",
+	"7": "7",
+	"8": "8",
+	"9": "9"
+  },
+  "filesys": "zfs (RAID10)",
+  "gateway": "192.168.1.1",
+  "hdsize": 223.57088470458984,
+  "hostname": "pveauto",
+  "keymap": "de",
+  "mailto": "mail@no.invalid",
+  "mngmt_nic": "eno1",
+  "password": "123456",
+  "timezone": "Europe/Vienna",
+  "zfs_opts": {
+      "arc_max": 2048,
+      "ashift": 12,
+      "checksum": "on",
+      "compress": "on",
+      "copies": 1
+  }
+}

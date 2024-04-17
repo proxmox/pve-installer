@@ -1,0 +1,4 @@
+the size parameter from /sys/block/{disk}/size is the number of blocks.
+
+to calculate the size as the low level installer needs it:
+size * 512 / 1024 / 1024 / 1024 with 14 digits after the comma
