@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use proxmox_installer_common::{
     options::{BtrfsRaidLevel, FsType, ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel},
     utils::{CidrAddress, Fqdn},
@@ -205,7 +206,7 @@ pub enum DiskSelection {
     Selection(Vec<String>),
     Filter(BTreeMap<String, String>),
 }
-#[derive(Clone, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum FilterMatch {
     Any,

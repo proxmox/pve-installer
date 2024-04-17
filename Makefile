@@ -20,6 +20,7 @@ PREFIX = /usr
 BINDIR = $(PREFIX)/bin
 USR_BIN := \
 	   proxmox-tui-installer\
+	   proxmox-autoinst-helper\
 	   proxmox-fetch-answer\
 	   proxmox-auto-installer
 
@@ -123,7 +124,7 @@ $(COMPILED_BINS): cargo-build
 cargo-build:
 	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer \
 		--package proxmox-auto-installer --bin proxmox-auto-installer \
-		--bin proxmox-fetch-answer $(CARGO_BUILD_ARGS)
+		--bin proxmox-fetch-answer --bin proxmox-autoinst-helper $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<
