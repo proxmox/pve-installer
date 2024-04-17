@@ -2,6 +2,7 @@
 members = [
     "proxmox-auto-installer",
     "proxmox-autoinst-helper",
+    "proxmox-chroot",
     "proxmox-fetch-answer",
     "proxmox-installer-common",
     "proxmox-tui-installer",

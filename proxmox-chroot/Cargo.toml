@@ -1,0 +1,16 @@
+[package]
+name = "proxmox-chroot"
+version = "0.1.0"
+edition = "2021"
+authors = [ "Aaron Lauterer <a.lauterer@proxmox.com>" ]
+license = "AGPL-3"
+exclude = [ "build", "debian" ]
+homepage = "https://www.proxmox.com"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+nix = "0.26.1"
+proxmox-installer-common = { path = "../proxmox-installer-common" }
+regex = "1.7"
+serde_json = "1.0"

@@ -19,6 +19,7 @@ INSTALLER_SOURCES=$(shell git ls-files) country.dat
 PREFIX = /usr
 BINDIR = $(PREFIX)/bin
 USR_BIN := \
+	   proxmox-chroot\
 	   proxmox-tui-installer\
 	   proxmox-autoinst-helper\
 	   proxmox-fetch-answer\
@@ -54,6 +55,7 @@ $(BUILDDIR):
 	  proxmox-auto-installer/ \
 	  proxmox-autoinst-helper/ \
 	  proxmox-fetch-answer/ \
+	  proxmox-chroot \
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
 	  test/ \
@@ -127,7 +129,8 @@ cargo-build:
 	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer \
 		--package proxmox-auto-installer --bin proxmox-auto-installer \
 		--package proxmox-fetch-answer --bin proxmox-fetch-answer \
-		--package proxmox-autoinst-helper --bin proxmox-autoinst-helper $(CARGO_BUILD_ARGS)
+		--package proxmox-autoinst-helper --bin proxmox-autoinst-helper \
+		--package proxmox-chroot --bin proxmox-chroot $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<
