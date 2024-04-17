@@ -1,0 +1,20 @@
+[package]
+name = "proxmox-auto-installer"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Aaron Lauterer <a.lauterer@proxmox.com>",
+    "Proxmox Support Team <support@proxmox.com>",
+]
+license = "AGPL-3"
+exclude = [ "build", "debian" ]
+homepage = "https://www.proxmox.com"
+
+[dependencies]
+anyhow = "1.0"
+glob = "0.3"
+log = "0.4.20"
+proxmox-installer-common = { path = "../proxmox-installer-common" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.7"

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "proxmox-auto-installer",
     "proxmox-installer-common",
     "proxmox-tui-installer",
 ]

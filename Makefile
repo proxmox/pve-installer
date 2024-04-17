@@ -47,6 +47,7 @@ $(BUILDDIR):
 	  interfaces \
 	  proxinstall \
 	  proxmox-low-level-installer \
+	  proxmox-auto-installer/ \
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
 	  test/ \
