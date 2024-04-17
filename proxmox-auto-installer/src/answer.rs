@@ -10,7 +10,7 @@ use std::{collections::BTreeMap, net::IpAddr};
 /// storing them in a HashMap
 
 #[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Answer {
     pub global: Global,
     pub network: Network,
@@ -19,6 +19,7 @@ pub struct Answer {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Global {
     pub country: String,
     pub fqdn: Fqdn,
@@ -33,6 +34,7 @@ pub struct Global {
 }
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 struct NetworkInAnswer {
     #[serde(default)]
     pub use_dhcp: bool,
@@ -43,7 +45,7 @@ struct NetworkInAnswer {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-#[serde(try_from = "NetworkInAnswer")]
+#[serde(try_from = "NetworkInAnswer", deny_unknown_fields)]
 pub struct Network {
     pub network_settings: NetworkSettings,
 }
@@ -97,6 +99,7 @@ pub struct NetworkManual {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DiskSetup {
     pub filesystem: Filesystem,
     #[serde(default)]
@@ -109,7 +112,7 @@ pub struct DiskSetup {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(try_from = "DiskSetup")]
+#[serde(try_from = "DiskSetup", deny_unknown_fields)]
 pub struct Disks {
     pub fs_type: FsType,
     pub disk_selection: DiskSelection,
@@ -207,14 +210,14 @@ pub enum DiskSelection {
     Filter(BTreeMap<String, String>),
 }
 #[derive(Clone, Deserialize, Debug, PartialEq, ValueEnum)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub enum FilterMatch {
     Any,
     All,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub enum Filesystem {
     Ext4,
     Xfs,
@@ -223,6 +226,7 @@ pub enum Filesystem {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ZfsOptions {
     pub raid: Option<ZfsRaidLevel>,
     pub ashift: Option<usize>,
@@ -234,6 +238,7 @@ pub struct ZfsOptions {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct LvmOptions {
     pub hdsize: Option<f64>,
     pub swapsize: Option<f64>,
@@ -243,6 +248,7 @@ pub struct LvmOptions {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct BtrfsOptions {
     pub hdsize: Option<f64>,
     pub raid: Option<BtrfsRaidLevel>,
