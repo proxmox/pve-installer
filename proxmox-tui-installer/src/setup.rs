@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::options::InstallerOptions;
 use proxmox_installer_common::{
@@ -19,7 +19,7 @@ impl From<InstallerOptions> for InstallConfig {
             maxvz: None,
             zfs_opts: None,
             target_hd: None,
-            disk_selection: HashMap::new(),
+            disk_selection: BTreeMap::new(),
 
             country: options.timezone.country,
             timezone: options.timezone.timezone,

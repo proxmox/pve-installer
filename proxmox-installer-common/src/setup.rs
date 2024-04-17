@@ -1,6 +1,6 @@
 use std::{
     cmp,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fmt,
     fs::File,
     io::{self, BufReader},
@@ -297,7 +297,7 @@ pub struct NetworkInfo {
     /// Maps devices to their configuration, if it has a usable configuration.
     /// (Contains no entries for devices with only link-local addresses.)
     #[serde(default)]
-    pub interfaces: HashMap<String, Interface>,
+    pub interfaces: BTreeMap<String, Interface>,
 
     /// The hostname of this machine, if set by the DHCP server.
     pub hostname: Option<String>,
@@ -416,8 +416,8 @@ pub struct InstallConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub target_hd: Option<Disk>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub disk_selection: HashMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub disk_selection: BTreeMap<String, String>,
 
     pub country: String,
     pub timezone: String,

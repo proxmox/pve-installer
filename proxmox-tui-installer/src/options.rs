@@ -76,7 +76,7 @@ mod tests {
         utils::{CidrAddress, Fqdn},
     };
     use std::net::{IpAddr, Ipv4Addr};
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{collections::BTreeMap, path::PathBuf};
 
     fn dummy_setup_info() -> SetupInfo {
         SetupInfo {
@@ -99,7 +99,7 @@ mod tests {
     fn network_options_from_setup_network_info() {
         let setup = dummy_setup_info();
 
-        let mut interfaces = HashMap::new();
+        let mut interfaces = BTreeMap::new();
         interfaces.insert(
             "eth0".to_owned(),
             Interface {
