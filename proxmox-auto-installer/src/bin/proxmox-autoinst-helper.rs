@@ -2,12 +2,13 @@ use anyhow::{bail, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use glob::Pattern;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::{collections::BTreeMap, fs, io::Read, path::PathBuf, process::Command};
 
 use proxmox_auto_installer::{
     answer::Answer,
     answer::FilterMatch,
+    fetch_plugins::utils::{sysinfo, get_nic_list},
     utils::{get_matched_udev_indexes, get_single_udev_index},
 };
 
@@ -23,13 +24,14 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     ValidateAnswer(CommandValidateAnswer),
-    Match(CommandMatch),
-    Info(CommandInfo),
+    DeviceMatch(CommandDeviceMatch),
+    DeviceInfo(CommandDeviceInfo),
+    Identifiers(CommandIdentifiers),
 }
 
 /// Show device information that can be used for filters
 #[derive(Args, Debug)]
-struct CommandInfo {
+struct CommandDeviceInfo {
     /// For which device type information should be shown
     #[arg(name="type", short, long, value_enum, default_value_t=AllDeviceTypes::All)]
     device: AllDeviceTypes,
@@ -52,7 +54,7 @@ struct CommandInfo {
 /// proxmox-autoinst-helper match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
 #[derive(Args, Debug)]
 #[command(verbatim_doc_comment)]
-struct CommandMatch {
+struct CommandDeviceMatch {
     /// Device type to match the filter against
     r#type: Devicetype,
 
@@ -73,6 +75,11 @@ struct CommandValidateAnswer {
     #[arg(short, long, default_value_t = false)]
     debug: bool,
 }
+
+/// Show identifiers for the current machine. This information is part of the POST request to fetch
+/// an answer file.
+#[derive(Args, Debug)]
+struct CommandIdentifiers {}
 
 #[derive(Args, Debug)]
 struct GlobalOpts {
@@ -109,9 +116,10 @@ struct Devs {
 fn main() {
     let args = Cli::parse();
     let res = match &args.command {
-        Commands::Info(args) => info(args),
-        Commands::Match(args) => match_filter(args),
         Commands::ValidateAnswer(args) => validate_answer(args),
+        Commands::DeviceInfo(args) => info(args),
+        Commands::DeviceMatch(args) => match_filter(args),
+        Commands::Identifiers(args) => show_identifiers(args),
     };
     if let Err(err) = res {
         eprintln!("{err}");
@@ -119,7 +127,7 @@ fn main() {
     }
 }
 
-fn info(args: &CommandInfo) -> Result<()> {
+fn info(args: &CommandDeviceInfo) -> Result<()> {
     let mut devs = Devs {
         disks: None,
         nics: None,
@@ -141,7 +149,7 @@ fn info(args: &CommandInfo) -> Result<()> {
     Ok(())
 }
 
-fn match_filter(args: &CommandMatch) -> Result<()> {
+fn match_filter(args: &CommandDeviceMatch) -> Result<()> {
     let devs: BTreeMap<String, BTreeMap<String, String>> = match args.r#type {
         Devicetype::Disk => get_disks().unwrap(),
         Devicetype::Network => get_nics().unwrap(),
@@ -201,6 +209,14 @@ fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
     };
     if args.debug {
         println!("Parsed data from answer file:\n{:#?}", answer);
+    }
+    Ok(())
+}
+
+fn show_identifiers(_args: &CommandIdentifiers) -> Result<()> {
+    match sysinfo::get_sysinfo(true) {
+        Ok(res) => println!("{res}"),
+        Err(err) => eprintln!("Error fetching system identifiers: {err}"),
     }
     Ok(())
 }
@@ -275,30 +291,12 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     Ok(disks)
 }
 
-#[derive(Deserialize, Debug)]
-struct IpLinksInfo {
-    ifname: String,
-}
 
 fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     let re_props = Regex::new(r"(?m)^E: (.*)=(.*)$")?;
     let mut nics: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
 
-    let ip_output = Command::new("/usr/sbin/ip")
-        .arg("-j")
-        .arg("link")
-        .output()?;
-    let parsed_links: Vec<IpLinksInfo> =
-        serde_json::from_str(String::from_utf8(ip_output.stdout)?.as_str())?;
-    let mut links: Vec<String> = Vec::new();
-
-    for link in parsed_links {
-        if link.ifname == *"lo" {
-            continue;
-        }
-        links.push(link.ifname);
-    }
-
+    let links = get_nic_list()?;
     for link in links {
         let path = format!("/sys/class/net/{link}");
 
