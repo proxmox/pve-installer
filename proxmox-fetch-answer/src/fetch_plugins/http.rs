@@ -142,6 +142,7 @@ impl FetchFromHTTP {
 
     /// Tries to fetch answer URL and SSL fingerprint info from DHCP options
     fn fetch_dhcp(mut fingerprint: Option<String>) -> Result<(String, Option<String>)> {
+        info!("Checking DHCP options.");
         let leases = fs::read_to_string(DHCP_LEASE_FILE)?;
 
         let mut answer_url: Option<String> = None;
@@ -160,8 +161,15 @@ impl FetchFromHTTP {
 
         let answer_url = match answer_url {
             None => bail!("No DHCP option found for fetch URL."),
-            Some(url) => url,
+            Some(url) => {
+                info!("Found URL for answer in DHCP option: '{url}'");
+                url
+            }
         };
+
+        if let Some(fp) = fingerprint.clone() {
+            info!("Found SSL Fingerprint via DHCP: '{fp}'");
+        }
 
         Ok((answer_url, fingerprint))
     }
