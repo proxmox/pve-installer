@@ -67,6 +67,7 @@ sub read_and_merge_config {
 
     Proxmox::Install::Config::merge($config);
     log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
+    file_write_all("/tmp/low-level-config.json", to_json(Proxmox::Install::Config::get()));
 }
 
 sub send_reboot_ui_message {
