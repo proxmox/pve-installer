@@ -18,7 +18,9 @@ INSTALLER_SOURCES=$(shell git ls-files) country.dat
 
 PREFIX = /usr
 BINDIR = $(PREFIX)/bin
-USR_BIN := proxmox-tui-installer
+USR_BIN := \
+	   proxmox-tui-installer\
+	   proxmox-auto-installer
 
 COMPILED_BINS := \
 	$(addprefix $(CARGO_COMPILEDIR)/,$(USR_BIN))
@@ -99,7 +101,7 @@ VARLIBDIR=$(DESTDIR)/var/lib/proxmox-installer
 HTMLDIR=$(VARLIBDIR)/html/common
 
 .PHONY: install
-install: $(INSTALLER_SOURCES) $(CARGO_COMPILEDIR)/proxmox-tui-installer
+install: $(INSTALLER_SOURCES) $(COMPILED_BINS)
 	$(MAKE) -C banner install
 	$(MAKE) -C Proxmox install
 	install -D -m 644 interfaces $(DESTDIR)/etc/network/interfaces
@@ -118,7 +120,8 @@ install: $(INSTALLER_SOURCES) $(CARGO_COMPILEDIR)/proxmox-tui-installer
 $(COMPILED_BINS): cargo-build
 .PHONY: cargo-build
 cargo-build:
-	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer $(CARGO_BUILD_ARGS)
+	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer \
+		--package proxmox-auto-installer --bin proxmox-auto-installer $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<
