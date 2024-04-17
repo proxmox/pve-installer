@@ -13,8 +13,8 @@ use std::{
     time::Duration,
 };
 
-use crate::{abort_install_button, prompt_dialog, setup::InstallConfig, InstallerState};
-use proxmox_installer_common::setup::spawn_low_level_installer;
+use crate::{abort_install_button, prompt_dialog, InstallerState};
+use proxmox_installer_common::setup::{InstallConfig, spawn_low_level_installer};
 
 pub struct InstallProgressView {
     view: PaddedView<LinearLayout>,

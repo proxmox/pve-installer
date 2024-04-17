@@ -12,7 +12,10 @@ use std::{
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    options::{Disk, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption},
+    options::{
+        BtrfsRaidLevel, Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
+        ZfsRaidLevel,
+    },
     utils::CidrAddress,
 };
 
@@ -386,4 +389,85 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
+}
+
+/// See Proxmox::Install::Config
+#[derive(Serialize)]
+pub struct InstallConfig {
+    pub autoreboot: usize,
+
+    #[serde(serialize_with = "serialize_fstype")]
+    pub filesys: FsType,
+    pub hdsize: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub swapsize: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maxroot: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minfree: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maxvz: Option<f64>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zfs_opts: Option<InstallZfsOption>,
+
+    #[serde(
+        serialize_with = "serialize_disk_opt",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub target_hd: Option<Disk>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub disk_selection: HashMap<String, String>,
+
+    pub country: String,
+    pub timezone: String,
+    pub keymap: String,
+
+    pub password: String,
+    pub mailto: String,
+
+    pub mngmt_nic: String,
+
+    pub hostname: String,
+    pub domain: String,
+    #[serde(serialize_with = "serialize_as_display")]
+    pub cidr: CidrAddress,
+    pub gateway: IpAddr,
+    pub dns: IpAddr,
+}
+
+fn serialize_disk_opt<S>(value: &Option<Disk>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if let Some(disk) = value {
+        serializer.serialize_str(&disk.path)
+    } else {
+        serializer.serialize_none()
+    }
+}
+
+fn serialize_fstype<S>(value: &FsType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use FsType::*;
+    let value = match value {
+        // proxinstall::$fssetup
+        Ext4 => "ext4",
+        Xfs => "xfs",
+        // proxinstall::get_zfs_raid_setup()
+        Zfs(ZfsRaidLevel::Raid0) => "zfs (RAID0)",
+        Zfs(ZfsRaidLevel::Raid1) => "zfs (RAID1)",
+        Zfs(ZfsRaidLevel::Raid10) => "zfs (RAID10)",
+        Zfs(ZfsRaidLevel::RaidZ) => "zfs (RAIDZ-1)",
+        Zfs(ZfsRaidLevel::RaidZ2) => "zfs (RAIDZ-2)",
+        Zfs(ZfsRaidLevel::RaidZ3) => "zfs (RAIDZ-3)",
+        // proxinstall::get_btrfs_raid_setup()
+        Btrfs(BtrfsRaidLevel::Raid0) => "btrfs (RAID0)",
+        Btrfs(BtrfsRaidLevel::Raid1) => "btrfs (RAID1)",
+        Btrfs(BtrfsRaidLevel::Raid10) => "btrfs (RAID10)",
+    };
+
+    serializer.collect_str(value)
 }
