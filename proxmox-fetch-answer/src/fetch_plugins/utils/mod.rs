@@ -1,7 +1,5 @@
 use anyhow::{Error, Result};
 use log::{info, warn};
-use serde::Deserialize;
-use serde_json;
 use std::{
     fs::{self, create_dir_all},
     path::{Path, PathBuf},
@@ -12,8 +10,7 @@ static ANSWER_MP: &str = "/mnt/answer";
 static PARTLABEL: &str = "proxmoxinst";
 static SEARCH_PATH: &str = "/dev/disk/by-label";
 
-pub mod post;
-pub mod sysinfo;
+pub(crate) mod post;
 
 /// Searches for upper and lower case existence of the partlabel in the search_path
 ///
@@ -85,29 +82,4 @@ fn check_if_mounted(target_path: &str) -> Result<bool> {
         }
     }
     Ok(false)
-}
-
-#[derive(Deserialize, Debug)]
-struct IpLinksUdevInfo {
-    ifname: String,
-}
-
-/// Returns vec of usable NICs
-pub fn get_nic_list() -> Result<Vec<String>> {
-    let ip_output = Command::new("/usr/sbin/ip")
-        .arg("-j")
-        .arg("link")
-        .output()?;
-    let parsed_links: Vec<IpLinksUdevInfo> =
-        serde_json::from_str(String::from_utf8(ip_output.stdout)?.as_str())?;
-    let mut links: Vec<String> = Vec::new();
-
-    for link in parsed_links {
-        if link.ifname == *"lo" {
-            continue;
-        }
-        links.push(link.ifname);
-    }
-
-    Ok(links)
 }

@@ -16,7 +16,7 @@ use ureq::{Agent, AgentBuilder};
 /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
 /// * `payload` - The payload to send to the server. Expected to be a JSON formatted string.
 pub fn call(url: String, fingerprint: Option<&str>, payload: String) -> Result<String> {
-    let answer      ;
+    let answer;
 
     if let Some(fingerprint) = fingerprint {
         let tls_config = ClientConfig::builder()

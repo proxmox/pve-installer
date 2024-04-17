@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Error, Result};
+use fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition};
 use log::{error, info, LevelFilter};
-use proxmox_auto_installer::{
-    fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition},
-    log::AutoInstLogger,
-};
+use proxmox_auto_installer::log::AutoInstLogger;
 use std::io::Write;
 use std::process::{Command, ExitCode, Stdio};
+
+mod fetch_plugins;
 
 static LOGGER: AutoInstLogger = AutoInstLogger;
 

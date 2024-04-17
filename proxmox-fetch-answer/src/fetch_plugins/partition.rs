@@ -1,6 +1,6 @@
 use anyhow::{Error, Result};
-use std::{fs::read_to_string, path::Path};
 use log::info;
+use std::{fs::read_to_string, path::Path};
 
 use crate::fetch_plugins::utils::mount_proxmoxinst_part;
 

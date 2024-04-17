@@ -72,6 +72,31 @@ pub fn get_single_udev_index(
     Ok(dev_index.unwrap())
 }
 
+#[derive(Deserialize, Debug)]
+struct IpLinksUdevInfo {
+    ifname: String,
+}
+
+/// Returns vec of usable NICs
+pub fn get_nic_list() -> Result<Vec<String>> {
+    let ip_output = Command::new("/usr/sbin/ip")
+        .arg("-j")
+        .arg("link")
+        .output()?;
+    let parsed_links: Vec<IpLinksUdevInfo> =
+        serde_json::from_str(String::from_utf8(ip_output.stdout)?.as_str())?;
+    let mut links: Vec<String> = Vec::new();
+
+    for link in parsed_links {
+        if link.ifname == *"lo" {
+            continue;
+        }
+        links.push(link.ifname);
+    }
+
+    Ok(links)
+}
+
 pub fn get_matched_udev_indexes(
     filter: BTreeMap<String, String>,
     udev_list: &BTreeMap<String, BTreeMap<String, String>>,

@@ -6,7 +6,8 @@ use std::{
     process::Command,
 };
 
-use crate::fetch_plugins::utils::{post, sysinfo};
+use crate::fetch_plugins::utils::post;
+use proxmox_auto_installer::sysinfo;
 
 use super::utils;
 

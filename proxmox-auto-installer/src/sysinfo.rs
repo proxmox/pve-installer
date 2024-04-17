@@ -3,7 +3,7 @@ use proxmox_installer_common::setup::SetupInfo;
 use serde::Serialize;
 use std::{collections::HashMap, fs, io, path::Path};
 
-use super::get_nic_list;
+use crate::utils::get_nic_list;
 
 const DMI_PATH: &str = "/sys/devices/virtual/dmi/id";
 

@@ -1,0 +1,25 @@
+[package]
+name = "proxmox-fetch-answer"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Aaron Lauterer <a.lauterer@proxmox.com>",
+    "Proxmox Support Team <support@proxmox.com>",
+]
+license = "AGPL-3"
+exclude = [ "build", "debian" ]
+homepage = "https://www.proxmox.com"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+hex = "0.4"
+log = "0.4.20"
+native-tls = "0.2"
+proxmox-auto-installer = { path = "../proxmox-auto-installer" }
+rustls = { version = "0.20", features = [ "dangerous_configuration" ] }
+rustls-native-certs = "0.6"
+sha2 = "0.10"
+ureq = { version = "2.6", features = [ "native-certs", "native-tls" ] }

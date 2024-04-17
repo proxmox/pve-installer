@@ -8,8 +8,8 @@ use std::{collections::BTreeMap, fs, io::Read, path::PathBuf, process::Command};
 use proxmox_auto_installer::{
     answer::Answer,
     answer::FilterMatch,
-    fetch_plugins::utils::{sysinfo, get_nic_list},
-    utils::{get_matched_udev_indexes, get_single_udev_index},
+    sysinfo,
+    utils::{get_matched_udev_indexes, get_nic_list, get_single_udev_index},
 };
 
 /// This tool validates the format of an answer file. Additionally it can test match filters and
@@ -290,7 +290,6 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     }
     Ok(disks)
 }
-
 
 fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     let re_props = Regex::new(r"(?m)^E: (.*)=(.*)$")?;
