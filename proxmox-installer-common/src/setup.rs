@@ -423,7 +423,12 @@ pub struct InstallConfig {
 
     #[serde(
         serialize_with = "serialize_disk_opt",
-        skip_serializing_if = "Option::is_none"
+        skip_serializing_if = "Option::is_none",
+        // only the 'path' property is serialized -> deserialization is problematic
+        // The information would be present in the 'run-env-info-json', but for now there is no
+        // need for it in any code that deserializes the low-level config. Therefore we are
+        // currently skipping it on deserialization
+        skip_deserializing
     )]
     pub target_hd: Option<Disk>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
