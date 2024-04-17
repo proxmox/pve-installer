@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use log::{info, warn};
 use std::{
-    fs::{self, create_dir_all},
+    fs::{self, create_dir_all, read_to_string},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -82,4 +82,15 @@ fn check_if_mounted(target_path: &str) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+/// Searches for answer file and returns contents if found
+pub fn get_answer_file(path: &PathBuf) -> Result<String> {
+    match path.try_exists() {
+        Ok(true) => Ok(read_to_string(path)?),
+        _ => Err(Error::msg(format!(
+            "could not find answer file expected at: {}",
+            path.display()
+        ))),
+    }
 }
