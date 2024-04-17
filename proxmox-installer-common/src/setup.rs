@@ -38,6 +38,16 @@ impl ProxmoxProduct {
     }
 }
 
+impl fmt::Display for ProxmoxProduct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PVE => write!(f, "pve"),
+            Self::PMG => write!(f, "pmg"),
+            Self::PBS => write!(f, "pbs"),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize)]
 pub struct ProductConfig {
     pub fullname: String,
