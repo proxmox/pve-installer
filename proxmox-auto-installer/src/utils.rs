@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use clap::ValueEnum;
 use glob::Pattern;
 use log::info;
 use std::{
@@ -14,7 +15,7 @@ use proxmox_installer_common::{
     options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
     setup::{InstallConfig, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 fn find_with_glob(pattern: &str, value: &str) -> Result<bool> {
     let p = Pattern::new(pattern)?;
@@ -70,6 +71,23 @@ pub fn get_single_udev_index(
     }
 
     Ok(dev_index.unwrap())
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ValueEnum, PartialEq)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub enum AutoInstModes {
+    Auto,
+    Included,
+    Http,
+    Partition,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub struct AutoInstSettings {
+    pub mode: AutoInstModes,
+    pub http_url: Option<String>,
+    pub cert_fingerprint: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
