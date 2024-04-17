@@ -208,6 +208,15 @@ if [ $proxdebug -ne 0 ]; then
     debugsh || true
 fi
 
+# add custom DHCP options for auto installer
+if [ $proxauto -ne 0 ]; then
+    cat >> /etc/dhcp/dhclient.conf <<EOF
+option proxmoxinst-url code 250 = text;
+option proxmoxinst-fp code 251 = text;
+also request proxmoxinst-url, proxmoxinst-fp;
+EOF
+fi
+
 # try to get ip config with dhcp
 echo -n "Attempting to get DHCP leases... "
 dhclient -v

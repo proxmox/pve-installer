@@ -1,6 +1,9 @@
 use anyhow::{anyhow, Error, Result};
 use log::{error, info, LevelFilter};
-use proxmox_auto_installer::{fetch_plugins::partition::FetchFromPartition, log::AutoInstLogger};
+use proxmox_auto_installer::{
+    fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition},
+    log::AutoInstLogger,
+};
 use std::io::Write;
 use std::process::{Command, ExitCode, Stdio};
 
@@ -18,8 +21,10 @@ fn fetch_answer() -> Result<String> {
         Ok(answer) => return Ok(answer),
         Err(err) => info!("Fetching answer file from partition failed: {err}"),
     }
-    // TODO: add more options to get an answer file, e.g. download from url where url could be
-    // fetched via txt records on predefined subdomain, kernel param, dhcp option, ...
+    match FetchFromHTTP::get_answer() {
+        Ok(answer) => return Ok(answer),
+        Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
+    }
 
     Err(Error::msg("Could not find any answer file!"))
 }

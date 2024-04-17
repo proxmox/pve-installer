@@ -12,6 +12,7 @@ static ANSWER_MP: &str = "/mnt/answer";
 static PARTLABEL: &str = "proxmoxinst";
 static SEARCH_PATH: &str = "/dev/disk/by-label";
 
+pub mod post;
 pub mod sysinfo;
 
 /// Searches for upper and lower case existence of the partlabel in the search_path

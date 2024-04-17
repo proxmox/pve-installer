@@ -14,9 +14,15 @@ homepage = "https://www.proxmox.com"
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 glob = "0.3"
+hex = "0.4"
 log = "0.4.20"
+native-tls = "0.2"
 proxmox-installer-common = { path = "../proxmox-installer-common" }
 regex = "1.7"
+rustls = { version = "0.20", features = [ "dangerous_configuration" ] }
+rustls-native-certs = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
 toml = "0.7"
+ureq = { version = "2.6", features = [ "native-certs", "native-tls" ] }
