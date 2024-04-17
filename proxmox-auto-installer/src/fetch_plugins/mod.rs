@@ -1,2 +1,2 @@
 pub mod partition;
-mod utils;
+pub mod utils;
