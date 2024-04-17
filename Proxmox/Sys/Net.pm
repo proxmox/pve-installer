@@ -3,6 +3,8 @@ package Proxmox::Sys::Net;
 use strict;
 use warnings;
 
+use Proxmox::Sys::Udev;
+
 use base qw(Exporter);
 our @EXPORT_OK = qw(parse_ip_address parse_ip_mask parse_fqdn);
 
@@ -187,6 +189,17 @@ sub get_ip_config {
 	dnsserver => $dnsserver,
 	domain => $domain,
     }
+}
+
+sub udevadm_netdev_details {
+    my $ip_config = get_ip_config();
+
+    my $result = {};
+    for my $dev (values $ip_config->{ifaces}->%*) {
+	my $name = $dev->{name};
+	$result->{$name} = Proxmox::Sys::Udev::get_udev_properties("/sys/class/net/$name");
+    }
+    return $result;
 }
 
 # Tries to detect the FQDN hostname for this system via DHCP, if available.

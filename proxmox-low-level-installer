@@ -21,6 +21,7 @@ use Time::HiRes qw(usleep);
 
 use Proxmox::Install::ISOEnv;
 use Proxmox::Install::RunEnv;
+use Proxmox::Sys::Udev;
 
 use Proxmox::Sys::File qw(file_write_all);
 
@@ -31,6 +32,7 @@ use Proxmox::UI;
 
 my $commands = {
     'dump-env' => 'Dump the current ISO and Hardware environment to base the installer UI on.',
+    'dump-udev' => 'Dump disk and network device info. Used for the auto installation.',
     'start-session' => 'Start an installation session, with command and result transmitted via stdin/out',
     'start-session-test' => 'Start an installation TEST session, with command and result transmitted via stdin/out',
     'help' => 'Output this usage help.',
@@ -116,6 +118,18 @@ if ($cmd eq 'dump-env') {
     my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
     my $run_env_serialized = to_json($run_env, {canonical => 1, utf8 => 1}) ."\n";
     file_write_all($run_env_file, $run_env_serialized);
+} elsif ($cmd eq 'dump-udev') {
+    my $out_dir = $env->{locations}->{run};
+    make_path($out_dir);
+    die "failed to create output directory '$out_dir'\n" if !-d $out_dir;
+
+    my $output = {
+	disks => Proxmox::Sys::Block::udevadm_disk_details(),
+	nics => Proxmox::Sys::Net::udevadm_netdev_details(),
+    };
+
+    my $output_serialized = to_json($output, {canonical => 1, utf8 => 1}) ."\n";
+    file_write_all("$out_dir/run-env-udev.json", $output_serialized);
 } elsif ($cmd eq 'start-session') {
     Proxmox::UI::init_stdio({}, $env);
     read_and_merge_config();

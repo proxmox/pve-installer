@@ -10,6 +10,7 @@ use List::Util qw(first);
 use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
+use Proxmox::Sys::Udev;
 use Proxmox::UI;
 
 use base qw(Exporter);
@@ -73,7 +74,8 @@ my sub hd_list {
 	next if $bd =~ m|^/sys/block/fd\d+$|;
 	next if $bd =~ m|^/sys/block/sr\d+$|;
 
-	my $info = `udevadm info --path $bd --query all`;
+	# TODO: switch to get_udev_properties and switch from regex to checking the parsed properties
+	my $info = Proxmox::Sys::Udev::query_udevadm_info($bd);
 	next if !$info;
 	next if $info !~ m/^E: DEVTYPE=disk$/m;
 	next if $info =~ m/^E: ID_CDROM/m;
@@ -183,6 +185,16 @@ sub udevadm_trigger_block {
     syscmd("udevadm trigger --subsystem-match block");
     syscmd("udevadm settle --timeout 10");
 };
+
+sub udevadm_disk_details {
+    my $disks = get_cached_disks();
+    my $result = {};
+    for my $disk_info ($disks->@*) {
+	my ($dev_index, $sys_path) = ($disk_info->[0], $disk_info->[5]);
+	$result->{$dev_index} = Proxmox::Sys::Udev::get_udev_properties($sys_path);
+    }
+    return $result;
+}
 
 sub wipe_disk {
     my ($disk) = @_;
