@@ -5,6 +5,7 @@ trap "err_reboot" ERR
 # NOTE: we nowadays get exec'd by the initrd's PID 1, so we're the new PID 1
 
 parse_cmdline() {
+    proxauto=0
     proxdebug=0
     proxtui=0
     serial=0
@@ -16,6 +17,9 @@ parse_cmdline() {
             ;;
             proxtui)
                 proxtui=1
+            ;;
+            proxauto)
+                proxauto=1
             ;;
             console=ttyS*)
                 serial=1
@@ -233,6 +237,10 @@ setsid /sbin/agetty -a root --noclear tty3 &
 if [ $proxtui -ne 0 ]; then
     echo "Starting the TUI installer"
     /usr/bin/proxmox-tui-installer 2>/dev/tty2
+elif [ $proxauto -ne 0 ]; then
+    /usr/bin/proxmox-low-level-installer dump-udev
+    echo "Starting automatic installation"
+    /usr/bin/proxmox-fetch-answer
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
     xinit -- -dpi "$DPI" -s 0 >/dev/tty2 2>&1
