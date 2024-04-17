@@ -147,13 +147,13 @@ pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Run
 
 #[derive(Serialize)]
 pub struct InstallZfsOption {
-    ashift: usize,
+    pub ashift: usize,
     #[serde(serialize_with = "serialize_as_display")]
-    compress: ZfsCompressOption,
+    pub compress: ZfsCompressOption,
     #[serde(serialize_with = "serialize_as_display")]
-    checksum: ZfsChecksumOption,
-    copies: usize,
-    arc_max: usize,
+    pub checksum: ZfsChecksumOption,
+    pub copies: usize,
+    pub arc_max: usize,
 }
 
 impl From<ZfsBootdiskOptions> for InstallZfsOption {
