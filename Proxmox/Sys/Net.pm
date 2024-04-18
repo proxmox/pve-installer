@@ -228,7 +228,7 @@ sub parse_fqdn : prototype($) {
 	if $text =~ /^[0-9]+(?:\.|$)/;
 
     die "FQDN must only consist of alphanumeric characters and dashes\n"
-	if $text !~ m/^${Proxmox::Sys::Net::FQDN_RE}$/;
+	if $text !~ m/^${FQDN_RE}$/;
 
     if ($text =~ m/^([^\.]+)\.(\S+)$/) {
 	return ($1, $2);
