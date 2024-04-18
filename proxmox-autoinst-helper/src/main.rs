@@ -3,16 +3,28 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use glob::Pattern;
 use regex::Regex;
 use serde::Serialize;
-use std::{collections::BTreeMap, fs, io::Read, path::PathBuf, process::Command};
+use std::{
+    collections::BTreeMap,
+    fs,
+    io::Read,
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+};
 
 use proxmox_auto_installer::{
     answer::Answer,
     answer::FilterMatch,
     sysinfo,
-    utils::{get_matched_udev_indexes, get_nic_list, get_single_udev_index},
+    utils::{
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstModes,
+        AutoInstSettings,
+    },
 };
 
-/// This tool validates the format of an answer file. Additionally it can test match filters and
+static PROXMOX_ISO_FLAG: &str = "/autoinst-capable";
+
+/// This tool can be used to prepare a Proxmox installation ISO for automated installations.
+/// Additional uses are to validate the format of an answer file or to test match filters and
 /// print information on the properties to match against for the current hardware.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,6 +35,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    PrepareIso(CommandPrepareISO),
     ValidateAnswer(CommandValidateAnswer),
     DeviceMatch(CommandDeviceMatch),
     DeviceInfo(CommandDeviceInfo),
@@ -76,6 +89,62 @@ struct CommandValidateAnswer {
     debug: bool,
 }
 
+/// Prepare an ISO for automated installation.
+///
+/// The final ISO will try to fetch an answer file automatically. It will first search for a
+/// partition / file-system called "PROXMOXINST" (or lowercase) and a file in the root named
+/// "answer.toml".
+///
+/// If that is not found, it will try to fetch an answer file via an HTTP Post request. The URL for
+/// it can be defined for the ISO with the '--url', '-u' argument. If not present, it will try to
+/// get a URL from a DHCP option (250, TXT) or as a DNS TXT record at 'proxmoxinst.{search
+/// domain}'.
+///
+/// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint', '-c'
+/// argument or alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located
+/// at 'proxmoxinst-fp.{search domain}'.
+///
+/// The latter options to provide the TLS fingerprint will only be used if the same method was used
+/// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
+/// no one was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via
+/// the DNS TXT record.
+///
+/// The behavior of how to fetch an answer file can be overridden with the '--install-mode', '-i'
+/// parameter. The answer file can be{n}
+/// * integrated into the ISO itself ('included'){n}
+/// * needs to be present in a partition / file-system called 'PROXMOXINST' ('partition'){n}
+/// * only be requested via an HTTP Post request ('http').
+#[derive(Args, Debug)]
+struct CommandPrepareISO {
+    /// Path to the source ISO
+    source: PathBuf,
+
+    /// Path to store the final ISO to.
+    #[arg(short, long)]
+    target: Option<PathBuf>,
+
+    /// Where to fetch the answer file from.
+    #[arg(short, long, value_enum, default_value_t=AutoInstModes::Auto)]
+    install_mode: AutoInstModes,
+
+    /// Include the specified answer file in the ISO. Requires the '--install-mode', '-i' parameter
+    /// to be set to 'included'.
+    #[arg(short, long)]
+    answer_file: Option<PathBuf>,
+
+    /// Specify URL for fetching the answer file via HTTP
+    #[arg(short, long)]
+    url: Option<String>,
+
+    /// Pin the ISO to the specified SHA256 TLS certificate fingerprint.
+    #[arg(short, long)]
+    cert_fingerprint: Option<String>,
+
+    /// Tmp directory to use.
+    #[arg(long)]
+    tmp: Option<String>,
+}
+
 /// Show identifiers for the current machine. This information is part of the POST request to fetch
 /// an answer file.
 #[derive(Args, Debug)]
@@ -116,6 +185,7 @@ struct Devs {
 fn main() {
     let args = Cli::parse();
     let res = match &args.command {
+        Commands::PrepareIso(args) => prepare_iso(args),
         Commands::ValidateAnswer(args) => validate_answer(args),
         Commands::DeviceInfo(args) => info(args),
         Commands::DeviceMatch(args) => match_filter(args),
@@ -188,25 +258,7 @@ fn match_filter(args: &CommandDeviceMatch) -> Result<()> {
 }
 
 fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
-    let mut file = match fs::File::open(&args.path) {
-        Ok(file) => file,
-        Err(err) => bail!(
-            "Opening answer file '{}' failed: {err}",
-            args.path.display()
-        ),
-    };
-    let mut contents = String::new();
-    if let Err(err) = file.read_to_string(&mut contents) {
-        bail!("Reading from file '{}' failed: {err}", args.path.display());
-    }
-
-    let answer: Answer = match toml::from_str(&contents) {
-        Ok(answer) => {
-            println!("The file was parsed successfully, no syntax errors found!");
-            answer
-        }
-        Err(err) => bail!("Error parsing answer file: {err}"),
-    };
+    let answer = parse_answer(&args.path)?;
     if args.debug {
         println!("Parsed data from answer file:\n{:#?}", answer);
     }
@@ -217,6 +269,133 @@ fn show_identifiers(_args: &CommandIdentifiers) -> Result<()> {
     match sysinfo::get_sysinfo(true) {
         Ok(res) => println!("{res}"),
         Err(err) => eprintln!("Error fetching system identifiers: {err}"),
+    }
+    Ok(())
+}
+
+fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
+    check_prepare_requirements(args)?;
+
+    if args.install_mode == AutoInstModes::Included {
+        if args.answer_file.is_none() {
+            bail!("Missing path to answer file needed for 'direct' install mode.");
+        }
+        if args.cert_fingerprint.is_some() {
+            bail!("No certificate fingerprint needed for direct install mode. Drop the parameter!");
+        }
+        if args.url.is_some() {
+            bail!("No URL needed for direct install mode. Drop the parameter!");
+        }
+    } else if args.install_mode == AutoInstModes::Partition {
+        if args.cert_fingerprint.is_some() {
+            bail!(
+                "No certificate fingerprint needed for partition install mode. Drop the parameter!"
+            );
+        }
+        if args.url.is_some() {
+            bail!("No URL needed for partition install mode. Drop the parameter!");
+        }
+    }
+    if args.answer_file.is_some() && args.install_mode != AutoInstModes::Included {
+        bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
+    }
+
+    if let Some(file) = &args.answer_file {
+        println!("Checking provided answer file...");
+        parse_answer(file)?;
+    }
+
+    let mut tmp_base = PathBuf::new();
+    if args.tmp.is_some() {
+        tmp_base.push(args.tmp.as_ref().unwrap());
+    } else {
+        tmp_base.push(args.source.parent().unwrap());
+        tmp_base.push(".proxmox-iso-prepare");
+    }
+    fs::create_dir_all(&tmp_base)?;
+
+    let mut tmp_iso = tmp_base.clone();
+    tmp_iso.push("proxmox.iso");
+    let mut tmp_answer = tmp_base.clone();
+    tmp_answer.push("answer.toml");
+
+    println!("Copying source ISO to temporary location...");
+    fs::copy(&args.source, &tmp_iso)?;
+    println!("Done copying source ISO");
+
+    println!("Preparing ISO...");
+    let install_mode = AutoInstSettings {
+        mode: args.install_mode.clone(),
+        http_url: args.url.clone(),
+        cert_fingerprint: args.cert_fingerprint.clone(),
+    };
+    let mut instmode_file_tmp = tmp_base.clone();
+    instmode_file_tmp.push("autoinst-mode.toml");
+    fs::write(&instmode_file_tmp, toml::to_string_pretty(&install_mode)?)?;
+
+    inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/autoinst-mode.toml")?;
+
+    if let Some(answer) = &args.answer_file {
+        fs::copy(answer, &tmp_answer)?;
+        inject_file_to_iso(&tmp_iso, &tmp_answer, "/answer.toml")?;
+    }
+
+    println!("Done preparing iso.");
+    println!("Move ISO to target location...");
+    let iso_target = final_iso_location(args);
+    fs::rename(&tmp_iso, &iso_target)?;
+    println!("Cleaning up...");
+    fs::remove_dir_all(&tmp_base)?;
+    println!("Final ISO is available at {}.", &iso_target.display());
+
+    Ok(())
+}
+
+fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
+    if let Some(specified) = args.target.clone() {
+        return specified;
+    }
+    let mut suffix: String = match args.install_mode {
+        AutoInstModes::Auto => "auto".into(),
+        AutoInstModes::Http => "auto-http".into(),
+        AutoInstModes::Included => "auto-answer-included".into(),
+        AutoInstModes::Partition => "auto-part".into(),
+    };
+
+    if args.url.is_some() {
+        suffix.push_str("-url");
+    }
+    if args.cert_fingerprint.is_some() {
+        suffix.push_str("-fp");
+    }
+
+    let base = args.source.parent().unwrap();
+    let iso = args.source.file_stem().unwrap();
+
+    let mut target = base.to_path_buf();
+    target.push(format!("{}-{}.iso", iso.to_str().unwrap(), suffix));
+
+    target.to_path_buf()
+}
+
+fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str) -> Result<()> {
+    let result = Command::new("xorriso")
+        .arg("--boot_image")
+        .arg("any")
+        .arg("keep")
+        .arg("-dev")
+        .arg(iso)
+        .arg("-map")
+        .arg(file)
+        .arg(location)
+        .output()?;
+    if !result.status.success() {
+        bail!(
+            "Error injecting {} into {}: {}",
+            file.display(),
+            iso.display(),
+            String::from_utf8(result.stderr)?
+        );
     }
     Ok(())
 }
@@ -334,4 +513,49 @@ fn get_udev_properties(path: &PathBuf) -> Result<String> {
         bail!("could not run udevadm successfully for {}", path.display());
     }
     Ok(String::from_utf8(udev_output.stdout)?)
+}
+
+fn parse_answer(path: &PathBuf) -> Result<Answer> {
+    let mut file = match fs::File::open(path) {
+        Ok(file) => file,
+        Err(err) => bail!("Opening answer file '{}' failed: {err}", path.display()),
+    };
+    let mut contents = String::new();
+    if let Err(err) = file.read_to_string(&mut contents) {
+        bail!("Reading from file '{}' failed: {err}", path.display());
+    }
+    match toml::from_str(&contents) {
+        Ok(answer) => {
+            println!("The file was parsed successfully, no syntax errors found!");
+            Ok(answer)
+        }
+        Err(err) => bail!("Error parsing answer file: {err}"),
+    }
+}
+
+fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
+    match Path::try_exists(&args.source) {
+        Ok(true) => (),
+        Ok(false) => bail!("Source file does not exist."),
+        Err(_) => bail!("Source file does not exist."),
+    }
+
+    match Command::new("xorriso")
+        .arg("-dev")
+        .arg(&args.source)
+        .arg("-find")
+        .arg(PROXMOX_ISO_FLAG)
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
+        .status()
+    {
+        Ok(v) => {
+            if !v.success() {
+                bail!("The source ISO file is not able to be installed automatically. Please try a more current one.");
+            }
+        }
+        Err(_) => bail!("Could not run 'xorriso'. Please install it."),
+    };
+
+    Ok(())
 }
