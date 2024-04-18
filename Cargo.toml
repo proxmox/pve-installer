@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "proxmox-auto-installer",
-    "proxmox-autoinst-helper",
+    "proxmox-auto-install-assistant",
     "proxmox-chroot",
     "proxmox-fetch-answer",
     "proxmox-installer-common",

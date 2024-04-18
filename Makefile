@@ -21,8 +21,8 @@ BINDIR = $(PREFIX)/bin
 USR_BIN := \
 	   proxmox-chroot\
 	   proxmox-tui-installer\
-	   proxmox-autoinst-helper\
 	   proxmox-fetch-answer\
+	   proxmox-auto-install-assistant \
 	   proxmox-auto-installer
 
 COMPILED_BINS := \
@@ -53,7 +53,7 @@ $(BUILDDIR):
 	  proxinstall \
 	  proxmox-low-level-installer \
 	  proxmox-auto-installer/ \
-	  proxmox-autoinst-helper/ \
+	  proxmox-auto-install-assistant/ \
 	  proxmox-fetch-answer/ \
 	  proxmox-chroot \
 	  proxmox-tui-installer/ \
@@ -129,7 +129,7 @@ cargo-build:
 	$(CARGO) build --package proxmox-tui-installer --bin proxmox-tui-installer \
 		--package proxmox-auto-installer --bin proxmox-auto-installer \
 		--package proxmox-fetch-answer --bin proxmox-fetch-answer \
-		--package proxmox-autoinst-helper --bin proxmox-autoinst-helper \
+		--package proxmox-auto-install-assistant --bin proxmox-auto-install-assistant \
 		--package proxmox-chroot --bin proxmox-chroot $(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg

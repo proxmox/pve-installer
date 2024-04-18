@@ -1,5 +1,5 @@
 [package]
-name = "proxmox-autoinst-helper"
+name = "proxmox-auto-install-assistant"
 version = "0.1.0"
 edition = "2021"
 authors = [
@@ -9,8 +9,6 @@ authors = [
 license = "AGPL-3"
 exclude = [ "build", "debian" ]
 homepage = "https://www.proxmox.com"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0"
