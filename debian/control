@@ -51,3 +51,12 @@ Description: Installer for Proxmox Projects
   * Proxmox VE.
   * Proxmox Mail Gateway.
   * Proxmox Backup Server
+
+Package: proxmox-auto-install-assistant
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: Assistant to help with automated installations
+ Provides a helper that can assist with creating an answer file for a automated
+ installation of a Proxmox project, and preparing a official ISO image to use
+ this answer file.

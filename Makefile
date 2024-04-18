@@ -4,6 +4,7 @@ PACKAGE = proxmox-installer
 BUILDDIR ?= $(PACKAGE)-$(DEB_VERSION_UPSTREAM)
 
 DEB=$(PACKAGE)_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
+ASSISTANT_DEB=proxmox-auto-install-assistant_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
 DSC=$(PACKAGE)_$(DEB_VERSION).dsc
 
 CARGO ?= cargo
@@ -69,6 +70,7 @@ country.dat: country.pl
 	mv country.dat.tmp country.dat
 
 deb: $(DEB)
+$(ASSISTANT_DEB): $(DEB)
 $(DEB): $(BUILDDIR)
 	cd $(BUILDDIR); dpkg-buildpackage -b -us -uc
 	lintian $(DEB)
@@ -137,8 +139,8 @@ cargo-build:
 
 .PHONY: upload
 upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
-upload: $(DEB)
-	tar cf - $(DEB) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
+upload: $(DEB) $(ASSISTANT_DEB)
+	tar cf - $(DEB) $(ASSISTANT_DEB) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
 
 %.img:
 	truncate -s 2G $@
