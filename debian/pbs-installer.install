@@ -1,7 +1,0 @@
-html-pbs/extract1-license.htm /var/lib/pve-installer/html
-html-pbs/extract2-rulesystem.htm /var/lib/pve-installer/html
-html-pbs/extract3-spam.htm /var/lib/pve-installer/html
-html-pbs/extract4-virus.htm /var/lib/pve-installer/html
-html-pbs/page1.htm /var/lib/pve-installer/html
-html-pbs/passwd.htm /var/lib/pve-installer/html
-pbs-banner.png /var/lib/pve-installer
