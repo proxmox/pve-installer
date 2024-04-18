@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
 Build-Depends: cargo:native,
                debhelper-compat (= 12),
+               iproute2,
                iso-codes,
                libgtk3-perl,
                libpve-common-perl,
@@ -14,6 +15,7 @@ Build-Depends: cargo:native,
                librust-glob-0.3-dev,
                librust-hex-0.4-dev,
                librust-native-tls-dev,
+               librust-nix-0.26+default-dev,
                librust-regex-1+default-dev (>= 1.7~~),
                librust-rustls-0.20+dangerous-configuration-dev,
                librust-rustls-native-certs-dev,
@@ -33,6 +35,7 @@ Package: proxmox-installer
 Architecture: any
 Depends: chrony,
          geoip-bin,
+         iproute2,
          libgtk3-perl,
          libgtk3-webkit2-perl,
          libjson-perl,
