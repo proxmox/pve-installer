@@ -1,3 +1,20 @@
+proxmox-installer (8.2.0) bookworm; urgency=medium
+
+  * unconfigured: move terminal size setting before starting debug shell
+
+  * html: pbs: fix missing <br> in template after feature list
+
+  * run env: use default error message if country detection failed with empty
+    string
+
+  * add tech-preview for unattended automatic installation through a premade,
+    but flexible answer file
+
+  * add new proxmox-auto-install-assistant to provide a tool to help with
+    preparing an ISO and answer files for automated installation
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 18 Apr 2024 22:37:04 +0200
+
 proxmox-installer (8.1.12) bookworm; urgency=medium
 
   * installation: handle if the clamav-clamonacc.service is already disabled
