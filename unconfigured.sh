@@ -238,9 +238,12 @@ if [ $proxtui -ne 0 ]; then
     echo "Starting the TUI installer"
     /usr/bin/proxmox-tui-installer 2>/dev/tty2
 elif [ $proxauto -ne 0 ]; then
+    echo "Caching device info from udev"
     /usr/bin/proxmox-low-level-installer dump-udev
+    echo "Fetching answers for automatic installation"
+    /usr/bin/proxmox-fetch-answer >/run/automatic-installer-answers
     echo "Starting automatic installation"
-    /usr/bin/proxmox-fetch-answer
+    /usr/bin/proxmox-auto-installer </run/automatic-installer-answers
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
     xinit -- -dpi "$DPI" -s 0 >/dev/tty2 2>&1

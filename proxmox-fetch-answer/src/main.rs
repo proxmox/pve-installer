@@ -1,5 +1,4 @@
-use std::io::Write;
-use std::process::{Command, ExitCode, Stdio};
+use std::process::ExitCode;
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Error, Result};
@@ -83,35 +82,9 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    info!("queried answer file for automatic installation successfully");
 
-    let mut child = match Command::new("proxmox-auto-installer")
-        .stdout(Stdio::inherit())
-        .stdin(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(err) => panic!("Failed to start automatic installation: {err}"),
-    };
+    println!("{answer}");
 
-    let mut stdin = child.stdin.take().expect("Failed to open stdin");
-    std::thread::spawn(move || {
-        stdin
-            .write_all(answer.as_bytes())
-            .expect("Failed to write to stdin");
-    });
-
-    match child.wait() {
-        Ok(status) => {
-            if status.success() {
-                ExitCode::SUCCESS
-            } else {
-                ExitCode::FAILURE // Will be trapped
-            }
-        }
-        Err(err) => {
-            error!("Auto installer exited: {err}");
-            ExitCode::FAILURE
-        }
-    }
+    return ExitCode::SUCCESS;
 }
