@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ProxmoxProduct {
     PVE,
@@ -48,7 +48,7 @@ impl fmt::Display for ProxmoxProduct {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProductConfig {
     pub fullname: String,
     pub product: ProxmoxProduct,
@@ -56,16 +56,46 @@ pub struct ProductConfig {
     pub enable_btrfs: bool,
 }
 
-#[derive(Clone, Deserialize)]
+impl ProductConfig {
+    /// A mocked ProductConfig simulating a Proxmox VE environment.
+    pub fn mocked() -> Self {
+        Self {
+            fullname: String::from("Proxmox VE (mocked)"),
+            product: ProxmoxProduct::PVE,
+            enable_btrfs: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct IsoInfo {
     pub release: String,
     pub isorelease: String,
+}
+
+impl IsoInfo {
+    /// A mocked IsoInfo with some edge case to convey that this is not necessarily purely numeric.
+    pub fn mocked() -> Self {
+        Self {
+            release: String::from("42.1"),
+            isorelease: String::from("mocked-1"),
+        }
+    }
 }
 
 /// Paths in the ISO environment containing installer data.
 #[derive(Clone, Deserialize)]
 pub struct IsoLocations {
     pub iso: PathBuf,
+}
+
+impl IsoLocations {
+    /// A mocked location, uses the current working directory by default
+    pub fn mocked() -> Self {
+        Self {
+            iso: std::env::current_dir().unwrap_or("/dev/null".into()),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize)]
@@ -75,6 +105,18 @@ pub struct SetupInfo {
     #[serde(rename = "iso-info")]
     pub iso_info: IsoInfo,
     pub locations: IsoLocations,
+}
+
+impl SetupInfo {
+    /// Return a mocked SetupInfo that is very similar to how our actual ones look like and should
+    /// be good enough for testing.
+    pub fn mocked() -> Self {
+        Self {
+            config: ProductConfig::mocked(),
+            iso_info: IsoInfo::mocked(),
+            locations: IsoLocations::mocked(),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize)]
