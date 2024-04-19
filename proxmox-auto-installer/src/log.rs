@@ -20,16 +20,16 @@ impl log::Log for AutoInstLogger {
         metadata.level() <= Level::Info
     }
 
-    /// Logs to stdout without log level and into log file including log level
+    /// Logs to both, stderr and into a log file
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            println!("{}", record.args());
+            eprintln!("{}: {}", record.level(), record.args());
             let mut file = LOGFILE
                 .get()
                 .expect("could not get LOGFILE")
                 .lock()
                 .expect("could not get mutex for LOGFILE");
-            file.write_all(format!("{} - {}\n", record.level(), record.args()).as_bytes())
+            write!(file, "{}: {}\n", record.level(), record.args())
                 .expect("could not write to LOGFILE");
         }
     }
