@@ -307,22 +307,25 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     }
 
     let mut tmp_base = PathBuf::new();
-    if args.tmp.is_some() {
-        tmp_base.push(args.tmp.as_ref().unwrap());
-    } else {
-        tmp_base.push(args.source.parent().unwrap());
-        tmp_base.push(".proxmox-iso-prepare");
+    match args.tmp.as_ref() {
+        Some(tmp_dir) => tmp_base.push(tmp_dir),
+        None => tmp_base.push(args.source.parent().unwrap()),
     }
-    fs::create_dir_all(&tmp_base)?;
+
+    let iso_target = final_iso_location(args);
 
     let mut tmp_iso = tmp_base.clone();
-    tmp_iso.push("proxmox.iso");
+    let iso_target_file_name = match iso_target.file_name() {
+        None => bail!("no base filename in target ISO path found"),
+        Some(source_file_name) => source_file_name.to_string_lossy(),
+    };
+    tmp_iso.push(format!("{iso_target_file_name}.tmp",));
+
     let mut tmp_answer = tmp_base.clone();
     tmp_answer.push("answer.toml");
 
     println!("Copying source ISO to temporary location...");
     fs::copy(&args.source, &tmp_iso)?;
-    println!("Done copying source ISO");
 
     println!("Preparing ISO...");
     let install_mode = AutoInstSettings {
@@ -341,13 +344,9 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         inject_file_to_iso(&tmp_iso, &tmp_answer, "/answer.toml")?;
     }
 
-    println!("Done preparing iso.");
-    println!("Move ISO to target location...");
-    let iso_target = final_iso_location(args);
+    println!("Moving prepared ISO to target location...");
     fs::rename(&tmp_iso, &iso_target)?;
-    println!("Cleaning up...");
-    fs::remove_dir_all(&tmp_base)?;
-    println!("Final ISO is available at {}.", &iso_target.display());
+    println!("Final ISO is available at {iso_target:?}.");
 
     Ok(())
 }
