@@ -34,5 +34,13 @@ impl log::Log for AutoInstLogger {
         }
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        LOGFILE
+            .get()
+            .expect("could not get LOGFILE")
+            .lock()
+            .expect("could not get mutex for LOGFILE")
+            .flush()
+            .expect("could not flush LOGFILE");
+    }
 }
