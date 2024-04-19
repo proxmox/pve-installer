@@ -39,7 +39,7 @@ enum Commands {
     ValidateAnswer(CommandValidateAnswer),
     DeviceMatch(CommandDeviceMatch),
     DeviceInfo(CommandDeviceInfo),
-    Identifiers(CommandIdentifiers),
+    SystemInfo(CommandSystemInfo),
 }
 
 /// Show device information that can be used for filters
@@ -146,10 +146,13 @@ struct CommandPrepareISO {
     tmp: Option<String>,
 }
 
-/// Show identifiers for the current machine. This information is part of the POST request to fetch
-/// an answer file.
+/// Show the system information that can be used to identify a host.
+///
+/// The shown information is sent as POST HTTP request when fetching the answer file for the
+/// automatic installation through HTTP, You can, for example, use this to return a dynamically
+/// assembled answer file.
 #[derive(Args, Debug)]
-struct CommandIdentifiers {}
+struct CommandSystemInfo {}
 
 #[derive(Args, Debug)]
 struct GlobalOpts {
@@ -190,7 +193,7 @@ fn main() {
         Commands::ValidateAnswer(args) => validate_answer(args),
         Commands::DeviceInfo(args) => info(args),
         Commands::DeviceMatch(args) => match_filter(args),
-        Commands::Identifiers(args) => show_identifiers(args),
+        Commands::SystemInfo(args) => show_system_info(args),
     };
     if let Err(err) = res {
         eprintln!("{err}");
@@ -266,10 +269,10 @@ fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
     Ok(())
 }
 
-fn show_identifiers(_args: &CommandIdentifiers) -> Result<()> {
+fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
     match SysInfo::as_json_pretty() {
         Ok(res) => println!("{res}"),
-        Err(err) => eprintln!("Error fetching system identifiers: {err}"),
+        Err(err) => eprintln!("Error fetching system info: {err}"),
     }
     Ok(())
 }
