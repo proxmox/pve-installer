@@ -497,7 +497,6 @@ where
     use FsType::*;
     let de_fs: String = Deserialize::deserialize(deserializer)?;
 
-    println!("deserializing fstype");
     match de_fs.as_str() {
         "ext4" => Ok(Ext4),
         "xfs" => Ok(Xfs),
