@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::{
     collections::BTreeMap,
     fs,
-    io::Read,
+    io::{self, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -556,7 +556,10 @@ fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
                 bail!("The source ISO file is not able to be installed automatically. Please try a more current one.");
             }
         }
-        Err(_) => bail!("Could not run 'xorriso'. Please install it."),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            bail!("Could not find the 'xorriso' binary. Please install it.")
+        }
+        Err(err) => bail!("unexpected error when trying to execute 'xorriso' - {err}"),
     };
 
     Ok(())
