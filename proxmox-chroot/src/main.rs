@@ -305,7 +305,7 @@ fn bindmount() -> Result<()> {
         let source = path::Path::new("/").join(item);
         let target = path::Path::new(TARGET_DIR).join(item);
 
-        println!("Bindmount {} to {}", source.display(), target.display());
+        println!("Bindmount {source:?} to {target:?}");
         mount(Some(source.as_path()), target.as_path(), NONE, flags, NONE)?;
     }
 
@@ -313,14 +313,10 @@ fn bindmount() -> Result<()> {
     if answer_path.exists() {
         let target = path::Path::new(TARGET_DIR).join("mnt").join(ANSWER_MP);
 
-        println!("Create dir {}", target.display());
+        println!("Create dir {target:?}");
         fs::create_dir_all(&target)?;
 
-        println!(
-            "Bindmount {} to {}",
-            answer_path.display(),
-            target.display()
-        );
+        println!("Bindmount {answer_path:?} to {target:?}");
         mount(
             Some(answer_path.as_path()),
             target.as_path(),
@@ -335,7 +331,7 @@ fn bindmount() -> Result<()> {
 fn bind_umount() -> Result<()> {
     for item in BINDMOUNTS {
         let target = path::Path::new(TARGET_DIR).join(item);
-        println!("Unmounting {}", target.display());
+        println!("Unmounting {target:?}");
         if let Err(e) = umount(target.as_path()) {
             eprintln!("{e}");
         }

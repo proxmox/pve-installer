@@ -43,7 +43,7 @@ fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf>
             return Ok(path);
         }
         Ok(false) => info!("Did not detect partition with label '{partlabel}'"),
-        Err(err) => info!("Encountered issue, accessing '{}': {err}", path.display()),
+        Err(err) => info!("Encountered issue, accessing '{path:?}': {err}"),
     }
 
     let partlabel = partlabel_source.to_lowercase();
@@ -54,7 +54,7 @@ fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf>
             return Ok(path);
         }
         Ok(false) => info!("Did not detect partition with label '{partlabel}'"),
-        Err(err) => info!("Encountered issue, accessing '{}': {err}", path.display()),
+        Err(err) => info!("Encountered issue, accessing '{path:?}': {err}"),
     }
     Err(Error::msg(format!(
         "Could not detect upper or lower case labels for '{partlabel_source}'"

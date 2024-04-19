@@ -356,11 +356,12 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         return specified;
     }
     let mut suffix: String = match args.install_mode {
-        AutoInstModes::Auto => "auto".into(),
-        AutoInstModes::Http => "auto-http".into(),
-        AutoInstModes::Included => "auto-answer-included".into(),
-        AutoInstModes::Partition => "auto-part".into(),
-    };
+        AutoInstModes::Auto => "auto",
+        AutoInstModes::Http => "auto-http",
+        AutoInstModes::Included => "auto-answer-included",
+        AutoInstModes::Partition => "auto-part",
+    }
+    .into();
 
     if args.url.is_some() {
         suffix.push_str("-url");
@@ -391,10 +392,8 @@ fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str) -> Result<(
         .output()?;
     if !result.status.success() {
         bail!(
-            "Error injecting {} into {}: {}",
-            file.display(),
-            iso.display(),
-            String::from_utf8(result.stderr)?
+            "Error injecting {file:?} into {iso:?}: {}",
+            String::from_utf8_lossy(&result.stderr)
         );
     }
     Ok(())
@@ -510,7 +509,7 @@ fn get_udev_properties(path: &PathBuf) -> Result<String> {
         .arg("all")
         .output()?;
     if !udev_output.status.success() {
-        bail!("could not run udevadm successfully for {}", path.display());
+        bail!("could not run udevadm successfully for {path:?}");
     }
     Ok(String::from_utf8(udev_output.stdout)?)
 }
@@ -518,11 +517,11 @@ fn get_udev_properties(path: &PathBuf) -> Result<String> {
 fn parse_answer(path: &PathBuf) -> Result<Answer> {
     let mut file = match fs::File::open(path) {
         Ok(file) => file,
-        Err(err) => bail!("Opening answer file '{}' failed: {err}", path.display()),
+        Err(err) => bail!("Opening answer file {path:?} failed: {err}"),
     };
     let mut contents = String::new();
     if let Err(err) = file.read_to_string(&mut contents) {
-        bail!("Reading from file '{}' failed: {err}", path.display());
+        bail!("Reading from file {path:?} failed: {err}");
     }
     match toml::from_str(&contents) {
         Ok(answer) => {
