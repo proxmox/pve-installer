@@ -327,7 +327,7 @@ fn run_cmd(cmds: &Vec<String>) -> Result<()> {
                 } else {
                     bail!("{}", String::from_utf8(output.stderr).unwrap());
                 }
-            },
+            }
             Err(err) => bail!("{err}"),
         }
     }

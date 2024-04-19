@@ -347,7 +347,10 @@ mod tests {
         assert_eq!(Fqdn::from("example.com"), Fqdn::from("example.com"));
         assert_eq!(Fqdn::from("example.com"), Fqdn::from("ExAmPle.Com"));
         assert_eq!(Fqdn::from("ExAmPle.Com"), Fqdn::from("example.com"));
-        assert_ne!(Fqdn::from("subdomain.ExAmPle.Com"), Fqdn::from("example.com"));
+        assert_ne!(
+            Fqdn::from("subdomain.ExAmPle.Com"),
+            Fqdn::from("example.com")
+        );
         assert_ne!(Fqdn::from("foo.com"), Fqdn::from("bar.com"));
         assert_ne!(Fqdn::from("example.com"), Fqdn::from("example.net"));
     }

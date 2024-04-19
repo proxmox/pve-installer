@@ -1,10 +1,16 @@
-use anyhow::{anyhow, Error, Result};
-use fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition};
-use log::{error, info, LevelFilter};
-use proxmox_auto_installer::{log::AutoInstLogger, utils::{AutoInstModes, AutoInstSettings}};
-use std::{fs, path::PathBuf};
 use std::io::Write;
 use std::process::{Command, ExitCode, Stdio};
+use std::{fs, path::PathBuf};
+
+use anyhow::{anyhow, Error, Result};
+use log::{error, info, LevelFilter};
+
+use proxmox_auto_installer::{
+    log::AutoInstLogger,
+    utils::{AutoInstModes, AutoInstSettings},
+};
+
+use fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition};
 
 mod fetch_plugins;
 
@@ -30,27 +36,22 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
                 Ok(answer) => return Ok(answer),
                 Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
             }
-        },
+        }
         AutoInstModes::Included => {
             let answer_path = PathBuf::from("/cdrom/answer.toml");
             match fetch_plugins::utils::get_answer_file(&answer_path) {
                 Ok(answer) => return Ok(answer),
                 Err(err) => info!("Fetching answer file from ISO failed: {err}"),
             }
+        }
+        AutoInstModes::Partition => match FetchFromPartition::get_answer() {
+            Ok(answer) => return Ok(answer),
+            Err(err) => info!("Fetching answer file from partition failed: {err}"),
         },
-        AutoInstModes::Partition => {
-            match FetchFromPartition::get_answer() {
-                Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file from partition failed: {err}"),
-            }
+        AutoInstModes::Http => match FetchFromHTTP::get_answer(install_settings) {
+            Ok(answer) => return Ok(answer),
+            Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
         },
-        AutoInstModes::Http => {
-            match FetchFromHTTP::get_answer(install_settings) {
-                Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
-            }
-        },
-
     }
     Err(Error::msg("Could not find any answer file!"))
 }
@@ -65,14 +66,14 @@ fn main() -> ExitCode {
         Err(err) => {
             error!("Could not find needed file '{AUTOINST_MODE_FILE}' in live environment: {err}");
             return ExitCode::FAILURE;
-        },
+        }
     };
     let install_settings: AutoInstSettings = match toml::from_str(raw_install_settings.as_str()) {
         Ok(content) => content,
         Err(err) => {
             error!("Failed to parse '{AUTOINST_MODE_FILE}': {err}");
             return ExitCode::FAILURE;
-        },
+        }
     };
 
     let answer = match fetch_answer(&install_settings) {

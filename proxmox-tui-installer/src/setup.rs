@@ -1,10 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::options::InstallerOptions;
-use proxmox_installer_common::{
-    options::AdvancedBootdiskOptions,
-    setup::InstallConfig,
-};
+use proxmox_installer_common::{options::AdvancedBootdiskOptions, setup::InstallConfig};
 
 impl From<InstallerOptions> for InstallConfig {
     fn from(options: InstallerOptions) -> Self {

@@ -406,7 +406,10 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 pub struct InstallConfig {
     pub autoreboot: usize,
 
-    #[serde(serialize_with = "serialize_fstype", deserialize_with = "deserialize_fs_type")]
+    #[serde(
+        serialize_with = "serialize_fstype",
+        deserialize_with = "deserialize_fs_type"
+    )]
     pub filesys: FsType,
     pub hdsize: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -507,6 +510,6 @@ where
         "btrfs (RAID0)" => Ok(Btrfs(BtrfsRaidLevel::Raid0)),
         "btrfs (RAID1)" => Ok(Btrfs(BtrfsRaidLevel::Raid1)),
         "btrfs (RAID10)" => Ok(Btrfs(BtrfsRaidLevel::Raid10)),
-        _ => Err(de::Error::custom("could not find file system: {de_fs}"))
+        _ => Err(de::Error::custom("could not find file system: {de_fs}")),
     }
 }
