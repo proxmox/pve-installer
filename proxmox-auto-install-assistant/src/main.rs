@@ -92,17 +92,17 @@ struct CommandValidateAnswer {
 /// Prepare an ISO for automated installation.
 ///
 /// The final ISO will try to fetch an answer file automatically. It will first search for a
-/// partition / file-system called "PROXMOXINST" (or lowercase) and a file in the root named
+/// partition / file-system called "PROXMOX-INST-SRC" (or lowercase) and a file in the root named
 /// "answer.toml".
 ///
 /// If that is not found, it will try to fetch an answer file via an HTTP Post request. The URL for
 /// it can be defined for the ISO with the '--url', '-u' argument. If not present, it will try to
-/// get a URL from a DHCP option (250, TXT) or as a DNS TXT record at 'proxmoxinst.{search
-/// domain}'.
+/// get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
+/// 'proxmox-auto-installer.{search domain}'.
 ///
 /// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint', '-c'
 /// argument or alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located
-/// at 'proxmoxinst-fp.{search domain}'.
+/// at 'proxmox-auto-installer-cert-fingerprint.{search domain}'.
 ///
 /// The latter options to provide the TLS fingerprint will only be used if the same method was used
 /// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
@@ -112,8 +112,9 @@ struct CommandValidateAnswer {
 /// The behavior of how to fetch an answer file can be overridden with the '--install-mode', '-i'
 /// parameter. The answer file can be{n}
 /// * integrated into the ISO itself ('included'){n}
-/// * needs to be present in a partition / file-system called 'PROXMOXINST' ('partition'){n}
-/// * only be requested via an HTTP Post request ('http').
+/// * needs to be present in a partition / file-system with the label 'PROXMOX-INST-SRC'
+///   ('partition'){n}
+/// * get requested via an HTTP Post request ('http').
 #[derive(Args, Debug)]
 struct CommandPrepareISO {
     /// Path to the source ISO

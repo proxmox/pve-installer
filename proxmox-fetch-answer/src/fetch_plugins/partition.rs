@@ -8,7 +8,7 @@ use std::{
 
 static ANSWER_FILE: &str = "answer.toml";
 static ANSWER_MP: &str = "/mnt/answer";
-static PARTLABEL: &str = "proxmoxinst";
+static PARTLABEL: &str = "proxmox-inst-src";
 static SEARCH_PATH: &str = "/dev/disk/by-label";
 
 pub struct FetchFromPartition;
@@ -61,7 +61,8 @@ fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf>
     )))
 }
 
-/// Will search and mount a partition/FS labeled proxmoxinst in lower or uppercase to ANSWER_MP;
+/// Will search and mount a partition/FS labeled PARTLABEL (proxmox-inst-src) in lower or uppercase
+/// to ANSWER_MP
 fn mount_proxmoxinst_part() -> Result<String> {
     if let Ok(true) = check_if_mounted(ANSWER_MP) {
         info!("Skipping: '{ANSWER_MP}' is already mounted.");
