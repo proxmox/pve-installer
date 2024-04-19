@@ -5,7 +5,7 @@ trap "err_reboot" ERR
 # NOTE: we nowadays get exec'd by the initrd's PID 1, so we're the new PID 1
 
 parse_cmdline() {
-    proxauto=0
+    start_auto_installer=0
     proxdebug=0
     proxtui=0
     serial=0
@@ -19,7 +19,7 @@ parse_cmdline() {
                 proxtui=1
             ;;
             proxauto)
-                proxauto=1
+                start_auto_installer=1
             ;;
             console=ttyS*)
                 serial=1
@@ -213,7 +213,7 @@ if [ $proxdebug -ne 0 ]; then
 fi
 
 # add custom DHCP options for auto installer
-if [ $proxauto -ne 0 ]; then
+if [ $start_auto_installer -ne 0 ]; then
     cat >> /etc/dhcp/dhclient.conf <<EOF
 option proxmoxinst-url code 250 = text;
 option proxmoxinst-fp code 251 = text;
@@ -237,7 +237,7 @@ setsid /sbin/agetty -a root --noclear tty3 &
 if [ $proxtui -ne 0 ]; then
     echo "Starting the TUI installer"
     /usr/bin/proxmox-tui-installer 2>/dev/tty2
-elif [ $proxauto -ne 0 ]; then
+elif [ $start_auto_installer -ne 0 ]; then
     echo "Caching device info from udev"
     /usr/bin/proxmox-low-level-installer dump-udev
     echo "Fetching answers for automatic installation"
