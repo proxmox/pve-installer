@@ -9,7 +9,7 @@ use std::process::{Command, ExitCode, Stdio};
 mod fetch_plugins;
 
 static LOGGER: AutoInstLogger = AutoInstLogger;
-static AUTOINST_MODE_FILE: &str = "/cdrom/autoinst-mode.toml";
+static AUTOINST_MODE_FILE: &str = "/cdrom/auto-installer-mode.toml";
 
 pub fn init_log() -> Result<()> {
     AutoInstLogger::init("/tmp/fetch_answer.log")?;

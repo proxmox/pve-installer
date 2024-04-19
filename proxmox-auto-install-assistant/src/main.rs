@@ -21,7 +21,7 @@ use proxmox_auto_installer::{
     },
 };
 
-static PROXMOX_ISO_FLAG: &str = "/autoinst-capable";
+static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 
 /// This tool can be used to prepare a Proxmox installation ISO for automated installations.
 /// Additional uses are to validate the format of an answer file or to test match filters and
@@ -64,7 +64,7 @@ struct CommandDeviceInfo {
 /// Examples:
 /// Match disks against the serial number and device name, both must match:
 ///
-/// proxmox-autoinst-helper match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
+/// proxmox-auto-install-assistant match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
 #[derive(Args, Debug)]
 #[command(verbatim_doc_comment)]
 struct CommandDeviceMatch {
@@ -330,10 +330,10 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         cert_fingerprint: args.cert_fingerprint.clone(),
     };
     let mut instmode_file_tmp = tmp_base.clone();
-    instmode_file_tmp.push("autoinst-mode.toml");
+    instmode_file_tmp.push("auto-installer-mode.toml");
     fs::write(&instmode_file_tmp, toml::to_string_pretty(&install_mode)?)?;
 
-    inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/autoinst-mode.toml")?;
+    inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/auto-installer-mode.toml")?;
 
     if let Some(answer) = &args.answer_file {
         fs::copy(answer, &tmp_answer)?;
