@@ -12,13 +12,13 @@ parse_cmdline() {
     # shellcheck disable=SC2013 # per word splitting is wanted here
     for par in $(cat /proc/cmdline); do
         case $par in
-            proxdebug)
+            proxdebug|proxmox-debug)
                 proxdebug=1
             ;;
-            proxtui)
+            proxtui|proxmox-tui-mode)
                 proxtui=1
             ;;
-            proxauto)
+            proxauto|proxmox-start-auto-installer)
                 start_auto_installer=1
             ;;
             console=ttyS*)
