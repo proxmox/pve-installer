@@ -214,10 +214,11 @@ fi
 
 # add custom DHCP options for auto installer
 if [ $start_auto_installer -ne 0 ]; then
+    echo "Preparing DHCP as potential source to get location of automatic-installation answer file"
     cat >> /etc/dhcp/dhclient.conf <<EOF
-option proxmoxinst-url code 250 = text;
-option proxmoxinst-fp code 251 = text;
-also request proxmoxinst-url, proxmoxinst-fp;
+option proxmox-auto-installer-manifest-url code 250 = text;
+option proxmox-auto-installer-cert-fingerprint code 251 = text;
+also request proxmox-auto-installer-manifest-url, proxmox-auto-installer-cert-fingerprint;
 EOF
 fi
 

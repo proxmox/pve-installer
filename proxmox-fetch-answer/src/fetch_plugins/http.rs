@@ -5,11 +5,10 @@ use std::{
     process::Command,
 };
 
-use crate::fetch_plugins::utils::post;
 use proxmox_auto_installer::{sysinfo, utils::AutoInstSettings};
 
-static ANSWER_SUBDOMAIN: &str = "proxmoxinst";
-static ANSWER_SUBDOMAIN_FP: &str = "proxmoxinst-fp";
+static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
+static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
 
 // It is possible to set custom DHPC options. Option numbers 224 to 254 [0].
 // To use them with dhclient, we need to configure it to request them and what they should be
@@ -17,16 +16,16 @@ static ANSWER_SUBDOMAIN_FP: &str = "proxmoxinst-fp";
 //
 // e.g. /etc/dhcp/dhclient.conf:
 // ```
-// option proxmoxinst-url code 250 = text;
-// option proxmoxinst-fp code 251 = text;
-// also request proxmoxinst-url, proxmoxinst-fp;
+// option proxmox-auto-installer-manifest-url code 250 = text;
+// option proxmox-auto-installer-cert-fingerprint code 251 = text;
+// also request proxmox-auto-installer-manifest-url, proxmox-auto-installer-cert-fingerprint;
 // ```
 //
 // The results will end up in the /var/lib/dhcp/dhclient.leases file from where we can fetch them
 //
 // [0] https://www.iana.org/assignments/bootp-dhcp-parameters/bootp-dhcp-parameters.xhtml
-static DHCP_URL_OPTION: &str = "proxmoxinst-url";
-static DHCP_FP_OPTION: &str = "proxmoxinst-fp";
+static DHCP_URL_OPTION: &str = "proxmox-auto-installer-manifest-url";
+static DHCP_CERT_FP_OPTION: &str = "proxmox-auto-installer-cert-fingerprint";
 static DHCP_LEASE_FILE: &str = "/var/lib/dhcp/dhclient.leases";
 
 pub struct FetchFromHTTP;
@@ -121,15 +120,16 @@ impl FetchFromHTTP {
     fn fetch_dns(mut fingerprint: Option<String>) -> Result<(String, Option<String>)> {
         let search_domain = Self::get_search_domain()?;
 
-        let answer_url = match Self::query_txt_record(format!("{ANSWER_SUBDOMAIN}.{search_domain}"))
-        {
-            Ok(url) => url,
-            Err(err) => bail!("{err}"),
-        };
+        let answer_url =
+            match Self::query_txt_record(format!("{ANSWER_URL_SUBDOMAIN}.{search_domain}")) {
+                Ok(url) => url,
+                Err(err) => bail!("{err}"),
+            };
 
         if fingerprint.is_none() {
             fingerprint =
-                match Self::query_txt_record(format!("{ANSWER_SUBDOMAIN_FP}.{search_domain}")) {
+                match Self::query_txt_record(format!("{ANSWER_CERT_FP_SUBDOMAIN}.{search_domain}"))
+                {
                     Ok(fp) => Some(fp),
                     Err(err) => {
                         info!("{err}");
@@ -148,7 +148,7 @@ impl FetchFromHTTP {
         let mut answer_url: Option<String> = None;
 
         let url_match = format!("option {DHCP_URL_OPTION}");
-        let fp_match = format!("option {DHCP_FP_OPTION}");
+        let fp_match = format!("option {DHCP_CERT_FP_OPTION}");
 
         for line in leases.lines() {
             if answer_url.is_none() && line.trim().starts_with(url_match.as_str()) {
