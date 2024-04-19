@@ -5,7 +5,7 @@ use std::{
     process::Command,
 };
 
-use proxmox_auto_installer::{sysinfo, utils::AutoInstSettings};
+use proxmox_auto_installer::{sysinfo::SysInfo, utils::AutoInstSettings};
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -66,7 +66,7 @@ impl FetchFromHTTP {
         }
 
         info!("Gathering system information.");
-        let payload = sysinfo::get_sysinfo(false)?;
+        let payload = SysInfo::as_json()?;
         info!("Sending POST request to '{answer_url}'.");
         let answer = http_post::call(answer_url, fingerprint.as_deref(), payload)?;
         Ok(answer)

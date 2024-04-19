@@ -14,7 +14,7 @@ use std::{
 use proxmox_auto_installer::{
     answer::Answer,
     answer::FilterMatch,
-    sysinfo,
+    sysinfo::SysInfo,
     utils::{
         get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstModes,
         AutoInstSettings,
@@ -267,7 +267,7 @@ fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
 }
 
 fn show_identifiers(_args: &CommandIdentifiers) -> Result<()> {
-    match sysinfo::get_sysinfo(true) {
+    match SysInfo::as_json_pretty() {
         Ok(res) => println!("{res}"),
         Err(err) => eprintln!("Error fetching system identifiers: {err}"),
     }

@@ -7,36 +7,42 @@ use crate::utils::get_nic_list;
 
 const DMI_PATH: &str = "/sys/devices/virtual/dmi/id";
 
-pub fn get_sysinfo(pretty: bool) -> Result<String> {
-    let dmi = SystemDMI::get()?;
-
-    let setup_info: SetupInfo = match fs::File::open("/run/proxmox-installer/iso-info.json") {
-        Ok(iso_info_file) => {
-            let reader = io::BufReader::new(iso_info_file);
-            serde_json::from_reader(reader)?
-        }
-        Err(err) if err.kind() == io::ErrorKind::NotFound => SetupInfo::mocked(),
-        Err(err) => bail!("failed to open iso-info.json - {err}"),
-    };
-
-    let sysinfo = SysInfo {
-        product: setup_info.config,
-        iso: setup_info.iso_info,
-        network_interfaces: NetdevWithMac::get_all()?,
-        dmi,
-    };
-    if pretty {
-        return Ok(serde_json::to_string_pretty(&sysinfo)?);
-    }
-    Ok(serde_json::to_string(&sysinfo)?)
-}
-
 #[derive(Debug, Serialize)]
-struct SysInfo {
+pub struct SysInfo {
     product: ProductConfig,
     iso: IsoInfo,
     dmi: SystemDMI,
     network_interfaces: Vec<NetdevWithMac>,
+}
+
+impl SysInfo {
+    pub fn get() -> Result<Self> {
+        let setup_info: SetupInfo = match fs::File::open("/run/proxmox-installer/iso-info.json") {
+            Ok(iso_info_file) => {
+                let reader = io::BufReader::new(iso_info_file);
+                serde_json::from_reader(reader)?
+            }
+            Err(err) if err.kind() == io::ErrorKind::NotFound => SetupInfo::mocked(),
+            Err(err) => bail!("failed to open iso-info.json - {err}"),
+        };
+
+        Ok(Self {
+            product: setup_info.config,
+            iso: setup_info.iso_info,
+            network_interfaces: NetdevWithMac::get_all()?,
+            dmi: SystemDMI::get()?,
+        })
+    }
+
+    pub fn as_json_pretty() -> Result<String> {
+        let info = Self::get()?;
+        Ok(serde_json::to_string_pretty(&info)?)
+    }
+
+    pub fn as_json() -> Result<String> {
+        let info = Self::get()?;
+        Ok(serde_json::to_string(&info)?)
+    }
 }
 
 #[derive(Debug, Serialize)]
