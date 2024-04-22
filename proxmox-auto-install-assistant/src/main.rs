@@ -324,9 +324,6 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     };
     tmp_iso.push(format!("{iso_target_file_name}.tmp",));
 
-    let mut tmp_answer = tmp_base.clone();
-    tmp_answer.push("answer.toml");
-
     println!("Copying source ISO to temporary location...");
     fs::copy(&args.source, &tmp_iso)?;
 
@@ -342,9 +339,8 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
 
     inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/auto-installer-mode.toml")?;
 
-    if let Some(answer) = &args.answer_file {
-        fs::copy(answer, &tmp_answer)?;
-        inject_file_to_iso(&tmp_iso, &tmp_answer, "/answer.toml")?;
+    if let Some(answer_file) = &args.answer_file {
+        inject_file_to_iso(&tmp_iso, &answer_file, "/answer.toml")?;
     }
 
     println!("Moving prepared ISO to target location...");
