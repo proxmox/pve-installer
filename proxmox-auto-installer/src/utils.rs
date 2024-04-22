@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use clap::ValueEnum;
 use glob::Pattern;
-use log::info;
+use log::{debug, error, info};
 use std::{
     collections::BTreeMap,
     process::{Command, Stdio},
@@ -296,40 +296,56 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
     Ok(())
 }
 
-pub fn run_cmds(step: &str, cmd_vec: &Option<Vec<String>>) -> Result<()> {
-    if let Some(cmds) = cmd_vec {
-        if !cmds.is_empty() {
-            info!("Running {step}-Commands:");
-            run_cmd(cmds)?;
-            info!("{step}-Commands finished");
+pub fn run_cmds(step: &str, in_chroot: bool, cmds: &[&str]) {
+    let run = || {
+        debug!("Running commands for '{step}':");
+        for cmd in cmds {
+            run_cmd(cmd)?;
+        }
+        Ok::<(), anyhow::Error>(())
+    };
+
+    if in_chroot {
+        if let Err(err) = run_cmd("proxmox-chroot prepare") {
+            error!("Failed to setup chroot for '{step}': {err}");
+            return;
         }
     }
-    Ok(())
+
+    if let Err(err) = run() {
+        error!("Running commands for '{step}' failed: {err:?}");
+    } else {
+        debug!("Running commands in chroot for '{step}' finished");
+    }
+
+    if in_chroot {
+        if let Err(err) = run_cmd("proxmox-chroot cleanup") {
+            error!("Failed to clean up chroot for '{step}': {err}");
+        }
+    }
 }
 
-fn run_cmd(cmds: &Vec<String>) -> Result<()> {
-    for cmd in cmds {
-        info!("Command '{cmd}':");
-        let child = match Command::new("/bin/bash")
-            .arg("-c")
-            .arg(cmd.clone())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
-            Ok(child) => child,
-            Err(err) => bail!("error running command {cmd}: {err}"),
-        };
-        match child.wait_with_output() {
-            Ok(output) => {
-                if output.status.success() {
-                    info!("{}", String::from_utf8(output.stdout).unwrap());
-                } else {
-                    bail!("{}", String::from_utf8(output.stderr).unwrap());
-                }
+fn run_cmd(cmd: &str) -> Result<()> {
+    debug!("Command '{cmd}':");
+    let child = match Command::new("/bin/bash")
+        .arg("-c")
+        .arg(cmd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(err) => bail!("error running command {cmd}: {err}"),
+    };
+    match child.wait_with_output() {
+        Ok(output) => {
+            if output.status.success() {
+                debug!("{}", String::from_utf8(output.stdout).unwrap());
+            } else {
+                bail!("{}", String::from_utf8(output.stderr).unwrap());
             }
-            Err(err) => bail!("{err}"),
         }
+        Err(err) => bail!("{err}"),
     }
 
     Ok(())

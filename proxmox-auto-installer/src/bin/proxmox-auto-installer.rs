@@ -15,7 +15,7 @@ use proxmox_auto_installer::{
     answer::Answer,
     log::AutoInstLogger,
     udevinfo::UdevInfo,
-    utils::{parse_answer, LowLevelMessage},
+    utils::{parse_answer, run_cmds, LowLevelMessage},
 };
 
 static LOGGER: AutoInstLogger = AutoInstLogger;
@@ -89,6 +89,8 @@ fn main() -> ExitCode {
             return exit_failure(answer.global.reboot_on_error);
         }
     }
+
+    run_postinstallation(&answer);
 
     // TODO: (optionally) do a HTTP post with basic system info, like host SSH public key(s) here
 
@@ -179,5 +181,24 @@ fn run_installation(
             "low level installer returned early: {err}"
         ))),
         _ => Ok(()),
+    }
+}
+
+fn run_postinstallation(answer: &Answer) {
+    if let Some(system) = &answer.system {
+        if !system.root_ssh_keys.is_empty() {
+            info!("Adding root ssh-keys to the installed system ..");
+            run_cmds(
+                "ssh-key-setup",
+                true,
+                &[
+                    "mkdir -p /target/root/.ssh",
+                    &format!(
+                        "printf '{}' >>/target/root/.ssh/authorized_keys",
+                        system.root_ssh_keys.join("\n"),
+                    ),
+                ],
+            );
+        }
     }
 }
