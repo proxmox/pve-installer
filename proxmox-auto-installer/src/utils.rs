@@ -42,14 +42,14 @@ pub fn get_network_settings(
         network_options.address = settings.cidr.clone();
         network_options.dns_server = settings.dns;
         network_options.gateway = settings.gateway;
-        network_options.ifname = get_single_udev_index(settings.filter.clone(), &udev_info.nics)?;
+        network_options.ifname = get_single_udev_index(&settings.filter, &udev_info.nics)?;
     }
     info!("Network interface used is '{}'", &network_options.ifname);
     Ok(network_options)
 }
 
 pub fn get_single_udev_index(
-    filter: BTreeMap<String, String>,
+    filter: &BTreeMap<String, String>,
     udev_list: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Result<String> {
     if filter.is_empty() {
@@ -57,7 +57,7 @@ pub fn get_single_udev_index(
     }
     let mut dev_index: Option<String> = None;
     'outer: for (dev, dev_values) in udev_list {
-        for (filter_key, filter_value) in &filter {
+        for (filter_key, filter_value) in filter {
             for (udev_key, udev_value) in dev_values {
                 if udev_key == filter_key && find_with_glob(filter_value, udev_value)? {
                     dev_index = Some(dev.clone());
@@ -115,7 +115,7 @@ pub fn get_nic_list() -> Result<Vec<String>> {
 }
 
 pub fn get_matched_udev_indexes(
-    filter: BTreeMap<String, String>,
+    filter: &BTreeMap<String, String>,
     udev_list: &BTreeMap<String, BTreeMap<String, String>>,
     match_all: bool,
 ) -> Result<Vec<String>> {
@@ -123,7 +123,7 @@ pub fn get_matched_udev_indexes(
     for (dev, dev_values) in udev_list {
         let mut did_match_once = false;
         let mut did_match_all = true;
-        for (filter_key, filter_value) in &filter {
+        for (filter_key, filter_value) in filter {
             for (udev_key, udev_value) in dev_values {
                 if udev_key == filter_key && find_with_glob(filter_value, udev_value)? {
                     did_match_once = true;
@@ -176,7 +176,7 @@ fn set_single_disk(
             }
         }
         answer::DiskSelection::Filter(filter) => {
-            let disk_index = get_single_udev_index(filter.clone(), &udev_info.disks)?;
+            let disk_index = get_single_udev_index(filter, &udev_info.disks)?;
             let disk = runtime_info
                 .disks
                 .iter()
@@ -216,9 +216,8 @@ fn set_selected_disks(
                 .filter_match
                 .clone()
                 .unwrap_or(answer::FilterMatch::Any);
-            let disk_filters = filter.clone();
             let selected_disk_indexes = get_matched_udev_indexes(
-                disk_filters,
+                filter,
                 &udev_info.disks,
                 filter_match == answer::FilterMatch::All,
             )?;

@@ -249,9 +249,9 @@ fn match_filter(args: &CommandDeviceMatch) -> Result<()> {
     // align return values
     let result = match args.r#type {
         Devicetype::Disk => {
-            get_matched_udev_indexes(filters, &devs, args.filter_match == FilterMatch::All)
+            get_matched_udev_indexes(&filters, &devs, args.filter_match == FilterMatch::All)
         }
-        Devicetype::Network => get_single_udev_index(filters, &devs).map(|r| vec![r]),
+        Devicetype::Network => get_single_udev_index(&filters, &devs).map(|r| vec![r]),
     };
 
     match result {
