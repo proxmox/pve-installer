@@ -7,7 +7,7 @@ timezone = "Europe/Vienna"
 password = "123456"
 
 [network]
-use_dhcp = true
+source = "from-dhcp"
 
 [disk-setup]
 filesystem = "zfs"

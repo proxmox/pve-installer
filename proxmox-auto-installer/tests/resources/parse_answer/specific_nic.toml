@@ -7,7 +7,7 @@ timezone = "Europe/Vienna"
 password = "123456"
 
 [network]
-use_dhcp = false
+source = "from-answer"
 cidr = "10.10.10.10/24"
 dns = "10.10.10.1"
 gateway = "10.10.10.1"

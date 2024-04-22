@@ -31,11 +31,21 @@ pub struct Global {
     pub reboot_on_error: bool,
 }
 
+#[derive(Clone, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+enum NetworkConfigMode {
+    #[default]
+    #[serde(rename = "from-dhcp")]
+    FromDhcp,
+    #[serde(rename = "from-answer")]
+    FromAnswer,
+}
+
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct NetworkInAnswer {
     #[serde(default)]
-    pub use_dhcp: bool,
+    pub source: NetworkConfigMode,
     pub cidr: Option<CidrAddress>,
     pub dns: Option<IpAddr>,
     pub gateway: Option<IpAddr>,
@@ -51,32 +61,32 @@ pub struct Network {
 impl TryFrom<NetworkInAnswer> for Network {
     type Error = &'static str;
 
-    fn try_from(source: NetworkInAnswer) -> Result<Self, Self::Error> {
-        if !source.use_dhcp {
-            if source.cidr.is_none() {
+    fn try_from(network: NetworkInAnswer) -> Result<Self, Self::Error> {
+        if network.source == NetworkConfigMode::FromAnswer {
+            if network.cidr.is_none() {
                 return Err("Field 'cidr' must be set.");
             }
-            if source.dns.is_none() {
+            if network.dns.is_none() {
                 return Err("Field 'dns' must be set.");
             }
-            if source.gateway.is_none() {
+            if network.gateway.is_none() {
                 return Err("Field 'gateway' must be set.");
             }
-            if source.filter.is_none() {
+            if network.filter.is_none() {
                 return Err("Field 'filter' must be set.");
             }
 
             Ok(Network {
                 network_settings: NetworkSettings::Manual(NetworkManual {
-                    cidr: source.cidr.unwrap(),
-                    dns: source.dns.unwrap(),
-                    gateway: source.gateway.unwrap(),
-                    filter: source.filter.unwrap(),
+                    cidr: network.cidr.unwrap(),
+                    dns: network.dns.unwrap(),
+                    gateway: network.gateway.unwrap(),
+                    filter: network.filter.unwrap(),
                 }),
             })
         } else {
             Ok(Network {
-                network_settings: NetworkSettings::Dhcp(true),
+                network_settings: NetworkSettings::FromDhcp,
             })
         }
     }
@@ -84,7 +94,7 @@ impl TryFrom<NetworkInAnswer> for Network {
 
 #[derive(Clone, Debug)]
 pub enum NetworkSettings {
-    Dhcp(bool),
+    FromDhcp,
     Manual(NetworkManual),
 }
 
