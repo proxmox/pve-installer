@@ -3,7 +3,7 @@ package Proxmox::Sys::Udev;
 use strict;
 use warnings;
 
-my $UDEV_REGEX = '^E: ([A-Z_]*)=(.*)$';
+my $UDEV_REGEX = '^E: ([^=]*)=(.*)$';
 
 sub query_udevadm_info {
     my ($sys_path) = @_;

@@ -414,7 +414,7 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     let re_iso9660 = Regex::new(r"(?m)^E: ID_FS_TYPE=iso9660")?;
 
     let re_name = Regex::new(r"(?m)^N: (.*)$")?;
-    let re_props = Regex::new(r"(?m)^E: (.*)=(.*)$")?;
+    let re_props = Regex::new(r"(?m)^E: ([^=]+)=(.*)$")?;
 
     let mut disks: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
 
