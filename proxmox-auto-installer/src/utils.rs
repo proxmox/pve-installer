@@ -384,7 +384,7 @@ pub fn parse_answer(
         timezone: answer.global.timezone.clone(),
         keymap: answer.global.keyboard.clone(),
 
-        password: answer.global.password.clone(),
+        password: answer.global.root_password.clone(),
         mailto: answer.global.mailto.clone(),
 
         mngmt_nic: network_settings.ifname,

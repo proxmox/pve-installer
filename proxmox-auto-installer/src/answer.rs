@@ -27,7 +27,7 @@ pub struct Global {
     pub keyboard: String,
     pub mailto: String,
     pub timezone: String,
-    pub password: String,
+    pub root_password: String,
     #[serde(default)]
     pub reboot_on_error: bool,
 }
