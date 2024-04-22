@@ -374,8 +374,6 @@ sub ask_existing_vg_rename_or_abort {
     my $duplicate_vgs = get_pv_list_from_vgname($vgname);
     return if !$duplicate_vgs;
 
-    my $message = "Detected existing '$vgname' Volume Group(s)! Do you want to:\n";
-
     for my $vg_uuid (keys %$duplicate_vgs) {
 	my $vg = $duplicate_vgs->{$vg_uuid};
 
@@ -384,12 +382,20 @@ sub ask_existing_vg_rename_or_abort {
 	# we have a disk with both a "$vgname" and "$vgname-old"...
 	my $short_uid = sprintf "%08X", rand(0xffffffff);
 	$vg->{new_vgname} = "$vgname-OLD-$short_uid";
-
-	$message .= "rename VG backed by PV '$vg->{pvs}' to '$vg->{new_vgname}'\n";
     }
-    $message .= "or cancel the installation?";
 
-    my $response_ok = Proxmox::UI::prompt($message);
+    my $response_ok = Proxmox::Install::Config::get_lvm_auto_rename();
+    if (!$response_ok) {
+	my $message = "Detected existing '$vgname' Volume Group(s)! Do you want to:\n";
+
+	for my $vg_uuid (keys %$duplicate_vgs) {
+	    my $vg = $duplicate_vgs->{$vg_uuid};
+	    $message .= "rename VG backed by PV '$vg->{pvs}' to '$vg->{new_vgname}'\n";
+	}
+	$message .= "or cancel the installation?";
+
+	$response_ok = Proxmox::UI::prompt($message);
+    }
 
     if ($response_ok) {
 	for my $vg_uuid (keys %$duplicate_vgs) {
