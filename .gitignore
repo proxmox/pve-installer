@@ -1,10 +1,11 @@
-/*.deb
-/*.changes
 /*.buildinfo
+/*.changes
+/*.deb
 /build/
-/testdir/
+/cd-info.test
+/proxmox-installer-[0-9]*/
 /target/
 /test*.img
-country.dat
+/testdir/
 Cargo.lock
-/cd-info.test
+country.dat
