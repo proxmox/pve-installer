@@ -1,3 +1,17 @@
+proxmox-installer (8.2.1) bookworm; urgency=medium
+
+  * low-level install: add option to automatically rename LVM volumes
+
+  * auto-installer: always set new `lvm_auto_rename` option to avoid prompt
+    that breaks installation flow
+
+  * assistant: prepare iso: avoid an useless intermediate copy of the answer
+    file
+
+  * d/control: recommend xorriso as dependency for the assistant package
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 22 Apr 2024 17:50:41 +0200
+
 proxmox-installer (8.2.0) bookworm; urgency=medium
 
   * unconfigured: move terminal size setting before starting debug shell
