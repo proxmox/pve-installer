@@ -3,7 +3,7 @@ package Proxmox::Sys::Udev;
 use strict;
 use warnings;
 
-my $UDEV_REGEX = '^E: ([^=]*)=(.*)$';
+my $UDEV_REGEX = qr/^E: ([^=]+)=(.*)$/;
 
 sub query_udevadm_info {
     my ($sys_path) = @_;
@@ -19,7 +19,7 @@ sub parse_udevadm_info {
 
     my $details = {};
     for my $line (split('\n', $udev_raw)) {
-	if ($line =~ m/$UDEV_REGEX/) {
+	if ($line =~ $UDEV_REGEX) {
 	    $details->{$1} = $2;
 	}
     }
