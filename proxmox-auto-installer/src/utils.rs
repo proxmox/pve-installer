@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context as _, Result};
 use clap::ValueEnum;
 use glob::Pattern;
 use log::{debug, error, info};
@@ -16,14 +16,6 @@ use proxmox_installer_common::{
     setup::{InstallConfig, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo},
 };
 use serde::{Deserialize, Serialize};
-
-fn find_with_glob(pattern: &str, value: &str) -> Result<bool> {
-    let p = Pattern::new(pattern)?;
-    match p.matches(value) {
-        true => Ok(true),
-        false => Ok(false),
-    }
-}
 
 pub fn get_network_settings(
     answer: &Answer,
@@ -58,8 +50,10 @@ pub fn get_single_udev_index(
     let mut dev_index: Option<String> = None;
     'outer: for (dev, dev_values) in udev_list {
         for (filter_key, filter_value) in filter {
+            let filter_pattern =
+                Pattern::new(filter_value).context("invalid glob in disk selection")?;
             for (udev_key, udev_value) in dev_values {
-                if udev_key == filter_key && find_with_glob(filter_value, udev_value)? {
+                if udev_key == filter_key && filter_pattern.matches(udev_value) {
                     dev_index = Some(dev.clone());
                     break 'outer; // take first match
                 }
@@ -124,8 +118,10 @@ pub fn get_matched_udev_indexes(
         let mut did_match_once = false;
         let mut did_match_all = true;
         for (filter_key, filter_value) in filter {
+            let filter_pattern =
+                Pattern::new(filter_value).context("invalid glob in disk selection")?;
             for (udev_key, udev_value) in dev_values {
-                if udev_key == filter_key && find_with_glob(filter_value, udev_value)? {
+                if udev_key == filter_key && filter_pattern.matches(udev_value) {
                     did_match_once = true;
                 } else if udev_key == filter_key {
                     did_match_all = false;
@@ -454,22 +450,4 @@ pub enum LowLevelMessage {
         ratio: f32,
         text: String,
     },
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_glob_patterns() {
-        let test_value = "foobar";
-        assert_eq!(find_with_glob("*bar", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("foo*", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("foobar", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("oobar", test_value).unwrap(), false);
-        assert_eq!(find_with_glob("f*bar", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("f?bar", test_value).unwrap(), false);
-        assert_eq!(find_with_glob("fo?bar", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("f[!a]obar", test_value).unwrap(), true);
-        assert_eq!(find_with_glob("f[oa]obar", test_value).unwrap(), true);
-    }
 }
