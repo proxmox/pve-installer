@@ -195,6 +195,9 @@ fn run_installation(
 fn run_postinstallation(answer: &Answer) {
     if let Some(system) = &answer.system {
         if !system.root_ssh_keys.is_empty() {
+            // FIXME: move handling this into the low-level installer and just pass in installation
+            // config, as doing parts of the installation/configuration here and parts in the
+            // low-level installer is not nice (seemingly spooky actions at a distance).
             info!("Adding root ssh-keys to the installed system ..");
             run_cmds(
                 "ssh-key-setup",
