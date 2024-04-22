@@ -1,5 +1,5 @@
 {
-  "autoreboot": 1,
+  "autoreboot": 0,
   "cidr": "192.168.1.114/24",
   "country": "at",
   "dns": "192.168.1.254",

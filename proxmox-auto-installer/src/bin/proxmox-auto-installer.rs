@@ -5,6 +5,8 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::PathBuf,
     process::ExitCode,
+    thread,
+    time::Duration,
 };
 
 use proxmox_installer_common::setup::{
@@ -94,6 +96,11 @@ fn main() -> ExitCode {
 
     // TODO: (optionally) do a HTTP post with basic system info, like host SSH public key(s) here
 
+    for secs in (0..=5).rev() {
+        info!("Installation finished - auto-rebooting in {secs} seconds ..");
+        thread::sleep(Duration::from_secs(1));
+    }
+
     ExitCode::SUCCESS
 }
 
@@ -170,7 +177,8 @@ fn run_installation(
                     if state == "err" {
                         bail!("{message}");
                     }
-                    info!("Finished: '{state}' {message}");
+                    // Do not print anything if the installation was successful,
+                    // as we handle that here ourselves
                 }
             };
         }

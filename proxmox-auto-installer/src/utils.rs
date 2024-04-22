@@ -368,7 +368,7 @@ pub fn parse_answer(
     verify_locale_settings(answer, locales)?;
 
     let mut config = InstallConfig {
-        autoreboot: 1_usize,
+        autoreboot: 0,
         filesys: filesystem,
         hdsize: 0.,
         swapsize: None,
@@ -426,6 +426,11 @@ pub fn parse_answer(
                 .unwrap_or(runtime_info.disks[first_selected_disk].size);
         }
     }
+
+    // never print the auto reboot text after finishing to avoid the delay, as this is handled by
+    // the auto-installer itself anyway. The auto-installer might still perform some post-install
+    // steps after running the low-level installer.
+    config.autoreboot = 0;
     Ok(config)
 }
 
