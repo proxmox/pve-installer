@@ -54,8 +54,8 @@ Description: Installer for Proxmox Projects
 
 Package: proxmox-auto-install-assistant
 Architecture: any
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
+Depends: ${misc:Depends}, ${shlibs:Depends},
+Recommends: xorriso,
 Description: Assistant to help with automated installations
  Provides a helper that can assist with creating an answer file for a automated
  installation of a Proxmox project, and preparing a official ISO image to use
