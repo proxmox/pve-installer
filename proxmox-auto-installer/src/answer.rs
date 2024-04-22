@@ -27,8 +27,6 @@ pub struct Global {
     pub mailto: String,
     pub timezone: String,
     pub password: String,
-    pub pre_commands: Option<Vec<String>>,
-    pub post_commands: Option<Vec<String>>,
     #[serde(default)]
     pub reboot_on_error: bool,
 }

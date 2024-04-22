@@ -15,7 +15,6 @@ use proxmox_auto_installer::{
     answer::Answer,
     log::AutoInstLogger,
     udevinfo::UdevInfo,
-    utils,
     utils::{parse_answer, LowLevelMessage},
 };
 
@@ -83,13 +82,6 @@ fn main() -> ExitCode {
         }
     };
 
-    match utils::run_cmds("Pre", &answer.global.pre_commands) {
-        Ok(_) => (),
-        Err(err) => {
-            error!("Error when running Pre-Commands: {}", err);
-            return exit_failure(answer.global.reboot_on_error);
-        }
-    };
     match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {
         Ok(_) => info!("Installation done."),
         Err(err) => {
@@ -97,13 +89,9 @@ fn main() -> ExitCode {
             return exit_failure(answer.global.reboot_on_error);
         }
     }
-    match utils::run_cmds("Post", &answer.global.post_commands) {
-        Ok(_) => (),
-        Err(err) => {
-            error!("Error when running Post-Commands: {}", err);
-            return exit_failure(answer.global.reboot_on_error);
-        }
-    };
+
+    // TODO: (optionally) do a HTTP post with basic system info, like host SSH public key(s) here
+
     ExitCode::SUCCESS
 }
 
