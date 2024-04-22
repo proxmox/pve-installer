@@ -6,8 +6,8 @@ use proxmox_installer_common::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, net::IpAddr};
 
-/// BTreeMap is used to store filters as the order of the filters will be stable, compared to
-/// storing them in a HashMap
+// BTreeMap is used to store filters as the order of the filters will be stable, compared to
+// storing them in a HashMap
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
