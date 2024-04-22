@@ -16,7 +16,6 @@ pub struct Answer {
     pub network: Network,
     #[serde(rename = "disk-setup")]
     pub disks: Disks,
-    pub system: Option<System>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -30,6 +29,8 @@ pub struct Global {
     pub root_password: String,
     #[serde(default)]
     pub reboot_on_error: bool,
+    #[serde(default)]
+    pub root_ssh_keys: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Debug, Default, PartialEq)]
@@ -261,11 +262,4 @@ pub struct LvmOptions {
 pub struct BtrfsOptions {
     pub hdsize: Option<f64>,
     pub raid: Option<BtrfsRaidLevel>,
-}
-
-#[derive(Clone, Default, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct System {
-    #[serde(default)]
-    pub root_ssh_keys: Vec<String>,
 }
