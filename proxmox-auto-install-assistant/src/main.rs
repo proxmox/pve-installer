@@ -16,7 +16,7 @@ use proxmox_auto_installer::{
     answer::FilterMatch,
     sysinfo::SysInfo,
     utils::{
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstModes,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstMode,
         AutoInstSettings,
     },
 };
@@ -125,8 +125,8 @@ struct CommandPrepareISO {
     target: Option<PathBuf>,
 
     /// Where to fetch the answer file from.
-    #[arg(short, long, value_enum, default_value_t=AutoInstModes::Auto)]
-    install_mode: AutoInstModes,
+    #[arg(short, long, value_enum, default_value_t=AutoInstMode::Auto)]
+    install_mode: AutoInstMode,
 
     /// Include the specified answer file in the ISO. Requires the '--install-mode', '-i' parameter
     /// to be set to 'included'.
@@ -280,7 +280,7 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
 fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     check_prepare_requirements(args)?;
 
-    if args.install_mode == AutoInstModes::Included {
+    if args.install_mode == AutoInstMode::Included {
         if args.answer_file.is_none() {
             bail!("Missing path to answer file needed for 'direct' install mode.");
         }
@@ -290,7 +290,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         if args.url.is_some() {
             bail!("No URL needed for direct install mode. Drop the parameter!");
         }
-    } else if args.install_mode == AutoInstModes::Partition {
+    } else if args.install_mode == AutoInstMode::Partition {
         if args.cert_fingerprint.is_some() {
             bail!(
                 "No certificate fingerprint needed for partition install mode. Drop the parameter!"
@@ -300,7 +300,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
             bail!("No URL needed for partition install mode. Drop the parameter!");
         }
     }
-    if args.answer_file.is_some() && args.install_mode != AutoInstModes::Included {
+    if args.answer_file.is_some() && args.install_mode != AutoInstMode::Included {
         bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
     }
 
@@ -355,10 +355,10 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         return specified;
     }
     let mut suffix: String = match args.install_mode {
-        AutoInstModes::Auto => "auto",
-        AutoInstModes::Http => "auto-http",
-        AutoInstModes::Included => "auto-answer-included",
-        AutoInstModes::Partition => "auto-part",
+        AutoInstMode::Auto => "auto",
+        AutoInstMode::Http => "auto-http",
+        AutoInstMode::Included => "auto-answer-included",
+        AutoInstMode::Partition => "auto-part",
     }
     .into();
 

@@ -6,7 +6,7 @@ use log::{error, info, LevelFilter};
 
 use proxmox_auto_installer::{
     log::AutoInstLogger,
-    utils::{AutoInstModes, AutoInstSettings},
+    utils::{AutoInstMode, AutoInstSettings},
 };
 
 use fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition};
@@ -26,7 +26,7 @@ pub fn init_log() -> Result<()> {
 fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
     info!("Fetching answer file in mode {:?}:", &install_settings.mode);
     match install_settings.mode {
-        AutoInstModes::Auto => {
+        AutoInstMode::Auto => {
             match FetchFromPartition::get_answer() {
                 Ok(answer) => return Ok(answer),
                 Err(err) => info!("Fetching answer file from partition failed: {err}"),
@@ -36,18 +36,18 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
                 Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
             }
         }
-        AutoInstModes::Included => {
+        AutoInstMode::Included => {
             let answer_path = PathBuf::from("/cdrom/answer.toml");
             match fs::read_to_string(answer_path) {
                 Ok(answer) => return Ok(answer),
                 Err(err) => info!("Fetching answer file from ISO failed: {err}"),
             }
         }
-        AutoInstModes::Partition => match FetchFromPartition::get_answer() {
+        AutoInstMode::Partition => match FetchFromPartition::get_answer() {
             Ok(answer) => return Ok(answer),
             Err(err) => info!("Fetching answer file from partition failed: {err}"),
         },
-        AutoInstModes::Http => match FetchFromHTTP::get_answer(install_settings) {
+        AutoInstMode::Http => match FetchFromHTTP::get_answer(&install_settings) {
             Ok(answer) => return Ok(answer),
             Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
         },

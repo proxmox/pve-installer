@@ -69,7 +69,7 @@ pub fn get_single_udev_index(
 
 #[derive(Deserialize, Serialize, Debug, Clone, ValueEnum, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
-pub enum AutoInstModes {
+pub enum AutoInstMode {
     Auto,
     Included,
     Http,
@@ -79,7 +79,7 @@ pub enum AutoInstModes {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub struct AutoInstSettings {
-    pub mode: AutoInstModes,
+    pub mode: AutoInstMode,
     pub http_url: Option<String>,
     pub cert_fingerprint: Option<String>,
 }
