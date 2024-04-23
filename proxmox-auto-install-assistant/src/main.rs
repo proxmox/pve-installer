@@ -277,10 +277,8 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
 fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     check_prepare_requirements(args)?;
 
-    if args.fetch_from == FetchAnswerFrom::Iso {
-        if args.answer_file.is_none() {
-            bail!("Missing path to the answer file required for the fetch-from 'iso' mode.");
-        }
+    if args.fetch_from == FetchAnswerFrom::Iso && args.answer_file.is_none() {
+        bail!("Missing path to the answer file required for the fetch-from 'iso' mode.");
     }
     if args.url.is_some() && args.fetch_from != FetchAnswerFrom::Http {
         bail!(
