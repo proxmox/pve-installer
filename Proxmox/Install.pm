@@ -824,8 +824,8 @@ sub extract_data {
 		die "unable to set zfs properties\n";
 	}
 
-	update_progress(0.04, 0, $maxper, "create swap space");
 	if ($swapfile) {
+	    update_progress(0.04, 0, $maxper, "create swap space");
 	    syscmd("mkswap -f $swapfile") == 0 ||
 		die "unable to create swap space\n";
 	}
