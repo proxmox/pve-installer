@@ -123,7 +123,6 @@ fn run_installation(
         }
     };
 
-    let mut cur_counter = 111;
     let mut inner = || -> Result<()> {
         let reader = child
             .stdout
@@ -158,12 +157,9 @@ fn run_installation(
                 LowLevelMessage::Prompt { query } => {
                     bail!("Got interactive prompt I cannot answer: {query}")
                 }
-                LowLevelMessage::Progress { ratio, text: _ } => {
-                    let counter = (ratio * 100.).floor() as usize;
-                    if counter != cur_counter {
-                        cur_counter = counter;
-                        info!("Progress: {counter:>3}%");
-                    }
+                LowLevelMessage::Progress { ratio, text } => {
+                    let percentage = ratio * 100.;
+                    info!("progress {percentage:>5.1} % - {text}");
                 }
                 LowLevelMessage::Finished { state, message } => {
                     if state == "err" {
