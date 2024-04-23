@@ -45,36 +45,31 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
     bail!("Could not find any answer file!");
 }
 
-fn main() -> ExitCode {
+fn do_main() -> Result<()> {
     if let Err(err) = init_log() {
-        panic!("could not initialize logging: {err}");
+        bail!("could not initialize logging: {err}");
     }
 
-    let raw_install_settings = match fs::read_to_string(AUTOINST_MODE_FILE) {
-        Ok(f) => f,
-        Err(err) => {
-            error!("Could not find needed file '{AUTOINST_MODE_FILE}' in live environment: {err}");
-            return ExitCode::FAILURE;
-        }
-    };
-    let install_settings: AutoInstSettings = match toml::from_str(raw_install_settings.as_str()) {
-        Ok(content) => content,
-        Err(err) => {
-            error!("Failed to parse '{AUTOINST_MODE_FILE}': {err}");
-            return ExitCode::FAILURE;
-        }
-    };
+    let raw_install_settings = fs::read_to_string(AUTOINST_MODE_FILE).map_err(|err| {
+        format_err!("Could not find needed file '{AUTOINST_MODE_FILE}' in live environment: {err}")
+    })?;
+    let install_settings: AutoInstSettings = toml::from_str(raw_install_settings.as_str())
+        .map_err(|err| format_err!("Failed to parse '{AUTOINST_MODE_FILE}': {err}"))?;
 
-    let answer = match fetch_answer(&install_settings) {
-        Ok(answer) => answer,
-        Err(err) => {
-            error!("Aborting: {}", err);
-            return ExitCode::FAILURE;
-        }
-    };
+    let answer = fetch_answer(&install_settings).map_err(|err| format_err!("Aborting: {err}"))?;
     info!("queried answer file for automatic installation successfully");
 
     println!("{answer}");
 
-    ExitCode::SUCCESS
+    Ok(())
+}
+
+fn main() -> ExitCode {
+    match do_main() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            error!("{err}");
+            ExitCode::FAILURE
+        }
+    }
 }
