@@ -664,9 +664,6 @@ fn summary_dialog(siv: &mut Cursive) -> InstallerView {
 }
 
 fn install_progress_dialog(siv: &mut Cursive) -> InstallerView {
-    // Ensure the screen is updated independently of keyboard events and such
-    siv.set_autorefresh(true);
-
     let state = siv.user_data::<InstallerState>().cloned().unwrap();
     InstallerView::with_raw(&state, InstallProgressView::new(siv))
 }

@@ -1,7 +1,7 @@
 use cursive::{
     utils::Counter,
     view::{Nameable, Resizable, ViewWrapper},
-    views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextContent, TextView},
+    views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextView},
     CbSink, Cursive,
 };
 use serde::Deserialize;
@@ -21,15 +21,15 @@ pub struct InstallProgressView {
 }
 
 impl InstallProgressView {
+    const PROGRESS_TEXT_VIEW_ID: &str = "progress-text";
+
     pub fn new(siv: &mut Cursive) -> Self {
         let cb_sink = siv.cb_sink().clone();
         let state = siv.user_data::<InstallerState>().unwrap();
-        let progress_text = TextContent::new("starting the installation ..");
 
         let progress_task = {
-            let progress_text = progress_text.clone();
             let state = state.clone();
-            move |counter: Counter| Self::progress_task(counter, cb_sink, state, progress_text)
+            move |counter: Counter| Self::progress_task(counter, cb_sink, state)
         };
 
         let progress_bar = ProgressBar::new().with_task(progress_task).full_width();
@@ -41,7 +41,11 @@ impl InstallProgressView {
             LinearLayout::vertical()
                 .child(PaddedView::lrtb(1, 1, 0, 0, progress_bar))
                 .child(DummyView)
-                .child(TextView::new_with_content(progress_text).center())
+                .child(
+                    TextView::new("starting the installation ..")
+                        .center()
+                        .with_name(Self::PROGRESS_TEXT_VIEW_ID),
+                )
                 .child(PaddedView::lrtb(
                     1,
                     1,
@@ -54,12 +58,7 @@ impl InstallProgressView {
         Self { view }
     }
 
-    fn progress_task(
-        counter: Counter,
-        cb_sink: CbSink,
-        state: InstallerState,
-        progress_text: TextContent,
-    ) {
+    fn progress_task(counter: Counter, cb_sink: CbSink, state: InstallerState) {
         let mut child = match spawn_low_level_installer(state.in_test_mode) {
             Ok(child) => child,
             Err(err) => {
@@ -129,13 +128,18 @@ impl InstallProgressView {
                     }),
                     UiMessage::Progress { ratio, text } => {
                         counter.set((ratio * 100.).floor() as usize);
-                        progress_text.set_content(text);
-                        Ok(())
+                        cb_sink.send(Box::new(move |siv| {
+                            siv.call_on_name(Self::PROGRESS_TEXT_VIEW_ID, |v: &mut TextView| {
+                                v.set_content(text);
+                            });
+                        }))
                     }
                     UiMessage::Finished { state, message } => {
                         counter.set(100);
-                        progress_text.set_content(message.to_owned());
                         cb_sink.send(Box::new(move |siv| {
+                            siv.call_on_name(Self::PROGRESS_TEXT_VIEW_ID, |v: &mut TextView| {
+                                v.set_content(&message);
+                            });
                             Self::prepare_for_reboot(siv, state == "ok", &message);
                         }))
                     }
