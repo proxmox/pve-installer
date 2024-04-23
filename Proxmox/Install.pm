@@ -1101,7 +1101,7 @@ _EOD
 	    next if ($deb =~ /^proxmox-secure-boot-support_/ && !$run_env->{secure_boot});
 
 	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
-	    print STDERR "extracting: $deb\n";
+
 	    syscmd("chroot $targetdir dpkg $dpkg_opts --force-depends --no-triggers --unpack /tmp/pkg/$deb") == 0
 		|| die "installation of package $deb failed\n";
 	    update_progress((++$count)/$pkg_count, 0.5, 0.75);
