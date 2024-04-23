@@ -70,7 +70,6 @@ pub fn get_single_udev_index(
 #[derive(Deserialize, Serialize, Debug, Clone, ValueEnum, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub enum AutoInstMode {
-    Auto,
     Included,
     Http,
     Partition,

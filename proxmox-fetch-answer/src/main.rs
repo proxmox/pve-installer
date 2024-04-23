@@ -26,16 +26,6 @@ pub fn init_log() -> Result<()> {
 fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
     info!("Fetching answer file in mode {:?}:", &install_settings.mode);
     match install_settings.mode {
-        AutoInstMode::Auto => {
-            match FetchFromPartition::get_answer() {
-                Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file from partition failed: {err}"),
-            }
-            match FetchFromHTTP::get_answer(install_settings) {
-                Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
-            }
-        }
         AutoInstMode::Included => {
             let answer_path = PathBuf::from("/cdrom/answer.toml");
             match fs::read_to_string(answer_path) {

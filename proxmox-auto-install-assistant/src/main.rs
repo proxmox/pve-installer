@@ -125,7 +125,7 @@ struct CommandPrepareISO {
     target: Option<PathBuf>,
 
     /// Where to fetch the answer file from.
-    #[arg(short, long, value_enum, default_value_t=AutoInstMode::Auto)]
+    #[arg(short, long, value_enum)]
     install_mode: AutoInstMode,
 
     /// Include the specified answer file in the ISO. Requires the '--install-mode', '-i' parameter
@@ -355,7 +355,6 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         return specified;
     }
     let mut suffix: String = match args.install_mode {
-        AutoInstMode::Auto => "auto",
         AutoInstMode::Http => "auto-http",
         AutoInstMode::Included => "auto-answer-included",
         AutoInstMode::Partition => "auto-part",
