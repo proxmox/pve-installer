@@ -14,7 +14,6 @@ homepage = "https://www.proxmox.com"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.0", features = ["derive"] }
 hex = "0.4"
 log = "0.4.20"
 native-tls = "0.2"
