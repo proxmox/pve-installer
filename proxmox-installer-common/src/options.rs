@@ -262,7 +262,7 @@ impl cmp::Eq for Disk {}
 
 impl cmp::PartialOrd for Disk {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.index.partial_cmp(&other.index)
+        Some(self.cmp(other))
     }
 }
 
@@ -372,7 +372,7 @@ impl NetworkOptions {
             let mut filled = false;
             if let Some(gw) = &routes.gateway4 {
                 if let Some(iface) = network.interfaces.get(&gw.dev) {
-                    this.ifname = iface.name.clone();
+                    this.ifname.clone_from(&iface.name);
                     if let Some(addresses) = &iface.addresses {
                         if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
                             this.gateway = gw.gateway;
@@ -387,7 +387,7 @@ impl NetworkOptions {
                     if let Some(iface) = network.interfaces.get(&gw.dev) {
                         if let Some(addresses) = &iface.addresses {
                             if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
-                                this.ifname = iface.name.clone();
+                                this.ifname.clone_from(&iface.name);
                                 this.gateway = gw.gateway;
                                 this.address = addr.clone();
                             }

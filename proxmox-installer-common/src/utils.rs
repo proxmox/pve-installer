@@ -222,7 +222,7 @@ impl Fqdn {
         self.parts.len() > 1
     }
 
-    fn validate_single(s: &String) -> bool {
+    fn validate_single(s: &str) -> bool {
         !s.is_empty()
             && s.len() <= Self::MAX_LABEL_LENGTH
             // First character must be alphanumeric
