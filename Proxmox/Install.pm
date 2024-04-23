@@ -848,11 +848,12 @@ sub extract_data {
 	    create_filesystem($rootdev, 'root', $filesys, 0.05, $maxper, 0, 1);
 	}
 
-	update_progress(1, 0.05, $maxper, "mounting target $rootdev");
 
 	if ($use_zfs) {
 	    # do nothing
 	} else {
+	    update_progress(1, 0.05, $maxper, "mounting target $rootdev");
+
 	    my $mount_opts = 'noatime';
 	    $mount_opts .= ',nobarrier'
 		if $use_btrfs || $filesys =~ /^ext\d$/;
