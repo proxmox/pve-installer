@@ -241,8 +241,17 @@ if [ $proxtui -ne 0 ]; then
 elif [ $start_auto_installer -ne 0 ]; then
     echo "Caching device info from udev"
     /usr/bin/proxmox-low-level-installer dump-udev
-    echo "Fetching answers for automatic installation"
-    /usr/bin/proxmox-fetch-answer >/run/automatic-installer-answers
+
+    if [ -f /cdrom/auto-installer-mode.toml ]; then
+        echo "Fetching answers for automatic installation"
+        /usr/bin/proxmox-fetch-answer >/run/automatic-installer-answers
+    else
+        printf "\nAutomatic installation selected but no config for fetching the answer file found!\n"
+        echo "Starting debug shell, to fetch the answer file manually use:"
+        echo "  proxmox-fetch-answer MODE >/run/automatic-installer-answers"
+        echo "and enter 'exit' or press 'CTRL' + 'D' when finished."
+        debugsh || true
+    fi
     echo "Starting automatic installation"
     /usr/bin/proxmox-auto-installer </run/automatic-installer-answers
 else
