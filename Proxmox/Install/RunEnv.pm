@@ -8,7 +8,7 @@ use JSON qw(from_json to_json);
 
 use Proxmox::Log;
 use Proxmox::Sys::Command qw(run_command CMD_FINISHED);
-use Proxmox::Sys::File qw(file_read_firstline);
+use Proxmox::Sys::File qw(file_read_all file_read_firstline);
 use Proxmox::Sys::Block;
 use Proxmox::Sys::Net;
 
@@ -284,6 +284,16 @@ sub query_installation_environment : prototype() {
     $output->{total_memory} = query_total_memory();
     $output->{hvm_supported} = query_cpu_hvm_support();
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
+
+    if ($output->{boot_type} eq 'efi') {
+	my $content = eval { file_read_all("/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c") };
+	if ($@) {
+	    log_warn("Failed to read secure boot state: $@\n");
+	} else {
+	    my @secureboot = unpack("CCCCC", $content);
+	    $output->{secure_boot} = $secureboot[4] == 1;
+	}
+    }
 
     my $err;
     my $country;

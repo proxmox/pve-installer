@@ -15,7 +15,7 @@ use Proxmox::Install::StorageConfig;
 
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
-use Proxmox::Sys::File qw(file_read_all file_read_firstline file_write_all);
+use Proxmox::Sys::File qw(file_read_firstline file_write_all);
 use Proxmox::UI;
 
 # TODO: move somewhere better?
@@ -576,20 +576,12 @@ my sub chroot_chmod {
 }
 
 sub prepare_proxmox_boot_esp {
-    my ($espdev, $targetdir) = @_;
+    my ($espdev, $targetdir, $secureboot) = @_;
 
     my $mode = '';
 
-    # detect secure boot being enabled and switch to grub-on-ESP if it is
-    if (-d "/sys/firmware/efi") {
-	my $content = eval { file_read_all("/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c") };
-	if ($@) {
-	    warn "Failed to read secure boot state: $@\n";
-	} else {
-	    my @secureboot = unpack("CCCCC", $content);
-	    $mode = 'grub' if $secureboot[4] == 1;
-	}
-    }
+    # if secure boot is enabled switch to grub-on-ESP
+    $mode = 'grub' if $secureboot;
 
     syscmd("chroot $targetdir proxmox-boot-tool init $espdev $mode") == 0 ||
 	die "unable to init ESP and install proxmox-boot loader on '$espdev'\n";
@@ -1237,7 +1229,7 @@ _EOD
 		foreach my $di (@$bootdevinfo) {
 		    my $dev = $di->{devname};
 		    if ($use_zfs) {
-			prepare_proxmox_boot_esp($di->{esp}, $targetdir);
+			prepare_proxmox_boot_esp($di->{esp}, $targetdir, $run_env->{secure_boot});
 		    } else {
 			if (!$native_4k_disk_bootable) {
 			    eval {
