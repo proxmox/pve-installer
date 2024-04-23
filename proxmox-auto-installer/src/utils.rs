@@ -69,8 +69,8 @@ pub fn get_single_udev_index(
 
 #[derive(Deserialize, Serialize, Debug, Clone, ValueEnum, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
-pub enum AutoInstMode {
-    Included,
+pub enum FetchAnswerFrom {
+    Iso,
     Http,
     Partition,
 }
@@ -86,7 +86,7 @@ pub struct HttpOptions {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub struct AutoInstSettings {
-    pub mode: AutoInstMode,
+    pub mode: FetchAnswerFrom,
     #[serde(default)]
     pub http: HttpOptions,
 }

@@ -16,7 +16,7 @@ use proxmox_auto_installer::{
     answer::FilterMatch,
     sysinfo::SysInfo,
     utils::{
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstMode,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, FetchAnswerFrom,
         AutoInstSettings, HttpOptions,
     },
 };
@@ -126,7 +126,7 @@ struct CommandPrepareISO {
 
     /// Where the automatic installer should fetch the answer file from.
     #[arg(long, value_enum)]
-    fetch_from: AutoInstMode,
+    fetch_from: FetchAnswerFrom,
 
     /// Include the specified answer file in the ISO. Requires the '--fetch-from'  parameter
     /// to be set to 'iso'.
@@ -281,7 +281,7 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
 fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     check_prepare_requirements(args)?;
 
-    if args.fetch_from == AutoInstMode::Included {
+    if args.fetch_from == FetchAnswerFrom::Iso {
         if args.answer_file.is_none() {
             bail!("Missing path to answer file needed for 'direct' install mode.");
         }
@@ -291,7 +291,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         if args.url.is_some() {
             bail!("No URL needed for direct install mode. Drop the parameter!");
         }
-    } else if args.fetch_from == AutoInstMode::Partition {
+    } else if args.fetch_from == FetchAnswerFrom::Partition {
         if args.cert_fingerprint.is_some() {
             bail!(
                 "No certificate fingerprint needed for partition install mode. Drop the parameter!"
@@ -301,7 +301,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
             bail!("No URL needed for partition install mode. Drop the parameter!");
         }
     }
-    if args.answer_file.is_some() && args.fetch_from != AutoInstMode::Included {
+    if args.answer_file.is_some() && args.fetch_from != FetchAnswerFrom::Iso {
         bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
     }
 
@@ -358,9 +358,9 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         return specified;
     }
     let mut suffix: String = match args.fetch_from {
-        AutoInstMode::Http => "auto-from-http",
-        AutoInstMode::Included => "auto-from-iso",
-        AutoInstMode::Partition => "auto-from-partition",
+        FetchAnswerFrom::Http => "auto-from-http",
+        FetchAnswerFrom::Iso => "auto-from-iso",
+        FetchAnswerFrom::Partition => "auto-from-partition",
     }
     .into();
 
