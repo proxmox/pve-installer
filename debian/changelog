@@ -1,3 +1,10 @@
+proxmox-installer (8.2.3) bookworm; urgency=medium
+
+  * also skip installing the proxmox-grub meta package if not booted in EFI
+    mode
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 24 Apr 2024 00:16:36 +0200
+
 proxmox-installer (8.2.2) bookworm; urgency=medium
 
   * auto-installer:
