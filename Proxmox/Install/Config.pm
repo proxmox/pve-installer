@@ -92,6 +92,7 @@ my sub init_cfg {
 	# root credentials & details
 	password => undef,
 	mailto => 'mail@example.invalid',
+	root_ssh_keys => [],
 
 	# network related
 	mngmt_nic => undef,
@@ -200,6 +201,9 @@ sub get_password { return get('password'); }
 
 sub set_mailto { set_key('mailto', $_[0]); }
 sub get_mailto { return get('mailto'); }
+
+sub set_root_ssh_keys { set_key('root_ssh_keys', $_[0]); }
+sub get_root_ssh_keys { return get('root_ssh_keys'); }
 
 sub set_mngmt_nic { set_key('mngmt_nic', $_[0]); }
 sub get_mngmt_nic { return get('mngmt_nic'); }

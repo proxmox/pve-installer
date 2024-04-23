@@ -1,11 +1,8 @@
 use anyhow::{bail, Context as _, Result};
 use clap::ValueEnum;
 use glob::Pattern;
-use log::{debug, error, info};
-use std::{
-    collections::BTreeMap,
-    process::{Command, Stdio},
-};
+use log::info;
+use std::{collections::BTreeMap, process::Command};
 
 use crate::{
     answer::{self, Answer},
@@ -300,61 +297,6 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
     Ok(())
 }
 
-pub fn run_cmds(step: &str, in_chroot: bool, cmds: &[&str]) {
-    let run = || {
-        debug!("Running commands for '{step}':");
-        for cmd in cmds {
-            run_cmd(cmd)?;
-        }
-        Ok::<(), anyhow::Error>(())
-    };
-
-    if in_chroot {
-        if let Err(err) = run_cmd("proxmox-chroot prepare") {
-            error!("Failed to setup chroot for '{step}': {err}");
-            return;
-        }
-    }
-
-    if let Err(err) = run() {
-        error!("Running commands for '{step}' failed: {err:?}");
-    } else {
-        debug!("Running commands in chroot for '{step}' finished");
-    }
-
-    if in_chroot {
-        if let Err(err) = run_cmd("proxmox-chroot cleanup") {
-            error!("Failed to clean up chroot for '{step}': {err}");
-        }
-    }
-}
-
-fn run_cmd(cmd: &str) -> Result<()> {
-    debug!("Command '{cmd}':");
-    let child = match Command::new("/bin/bash")
-        .arg("-c")
-        .arg(cmd)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(err) => bail!("error running command {cmd}: {err}"),
-    };
-    match child.wait_with_output() {
-        Ok(output) => {
-            if output.status.success() {
-                debug!("{}", String::from_utf8(output.stdout).unwrap());
-            } else {
-                bail!("{}", String::from_utf8(output.stderr).unwrap());
-            }
-        }
-        Err(err) => bail!("{err}"),
-    }
-
-    Ok(())
-}
-
 pub fn parse_answer(
     answer: &Answer,
     udev_info: &UdevInfo,
@@ -372,7 +314,7 @@ pub fn parse_answer(
     verify_locale_settings(answer, locales)?;
 
     let mut config = InstallConfig {
-        autoreboot: 0,
+        autoreboot: 1_usize,
         filesys: filesystem,
         hdsize: 0.,
         swapsize: None,
@@ -390,6 +332,7 @@ pub fn parse_answer(
 
         password: answer.global.root_password.clone(),
         mailto: answer.global.mailto.clone(),
+        root_ssh_keys: answer.global.root_ssh_keys.clone(),
 
         mngmt_nic: network_settings.ifname,
 
@@ -431,11 +374,6 @@ pub fn parse_answer(
                 .unwrap_or(runtime_info.disks[first_selected_disk].size);
         }
     }
-
-    // never print the auto reboot text after finishing to avoid the delay, as this is handled by
-    // the auto-installer itself anyway. The auto-installer might still perform some post-install
-    // steps after running the low-level installer.
-    config.autoreboot = 0;
     Ok(config)
 }
 

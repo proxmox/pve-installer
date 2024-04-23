@@ -5,8 +5,6 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::PathBuf,
     process::ExitCode,
-    thread,
-    time::Duration,
 };
 
 use proxmox_installer_common::setup::{
@@ -17,7 +15,7 @@ use proxmox_auto_installer::{
     answer::Answer,
     log::AutoInstLogger,
     udevinfo::UdevInfo,
-    utils::{parse_answer, run_cmds, LowLevelMessage},
+    utils::{parse_answer, LowLevelMessage},
 };
 
 static LOGGER: AutoInstLogger = AutoInstLogger;
@@ -93,14 +91,7 @@ fn main() -> ExitCode {
         }
     }
 
-    run_postinstallation(&answer);
-
     // TODO: (optionally) do a HTTP post with basic system info, like host SSH public key(s) here
-
-    for secs in (0..=5).rev() {
-        info!("Installation finished - auto-rebooting in {secs} seconds ..");
-        thread::sleep(Duration::from_secs(1));
-    }
 
     ExitCode::SUCCESS
 }
@@ -178,32 +169,11 @@ fn run_installation(
                     if state == "err" {
                         bail!("{message}");
                     }
-                    // Do not print anything if the installation was successful,
-                    // as we handle that here ourselves
+                    info!("Finished: '{state}' {message}");
                 }
             };
         }
         Ok(())
     };
     inner().map_err(|err| format_err!("low level installer returned early: {err}"))
-}
-
-fn run_postinstallation(answer: &Answer) {
-    if !answer.global.root_ssh_keys.is_empty() {
-        // FIXME: move handling this into the low-level installer and just pass in installation
-        // config, as doing parts of the installation/configuration here and parts in the
-        // low-level installer is not nice (seemingly spooky actions at a distance).
-        info!("Adding root ssh-keys to the installed system ..");
-        run_cmds(
-            "ssh-key-setup",
-            true,
-            &[
-                "mkdir -p /target/root/.ssh",
-                &format!(
-                    "printf '{}' >>/target/root/.ssh/authorized_keys",
-                    answer.global.root_ssh_keys.join("\n"),
-                ),
-            ],
-        );
-    }
 }

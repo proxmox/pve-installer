@@ -1271,6 +1271,13 @@ _EOD
 	my $octets = encode("utf-8", Proxmox::Install::Config::get_password());
 	run_command("chroot $targetdir /usr/sbin/chpasswd", undef, "root:$octets\n");
 
+	# set root ssh keys
+	my $ssh_keys = Proxmox::Install::Config::get_root_ssh_keys();
+	if (scalar(@$ssh_keys) > 0) {
+	    mkdir "$targetdir/root/.ssh";
+	    file_write_all("$targetdir/root/.ssh/authorized_keys", join("\n", @$ssh_keys));
+	}
+
 	my $mailto = Proxmox::Install::Config::get_mailto();
 	if ($iso_env->{product} eq 'pmg') {
 	    # save admin email

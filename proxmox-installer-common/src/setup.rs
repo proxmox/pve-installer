@@ -487,6 +487,8 @@ pub struct InstallConfig {
 
     pub password: String,
     pub mailto: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub root_ssh_keys: Vec<String>,
 
     pub mngmt_nic: String,
 

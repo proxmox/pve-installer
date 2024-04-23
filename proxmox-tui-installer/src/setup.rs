@@ -25,6 +25,7 @@ impl From<InstallerOptions> for InstallConfig {
 
             password: options.password.root_password,
             mailto: options.password.email,
+            root_ssh_keys: vec![],
 
             mngmt_nic: options.network.ifname,
 
