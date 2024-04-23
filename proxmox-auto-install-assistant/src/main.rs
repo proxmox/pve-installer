@@ -283,13 +283,13 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
 
     if args.fetch_from == FetchAnswerFrom::Iso {
         if args.answer_file.is_none() {
-            bail!("Missing path to answer file needed for 'direct' install mode.");
+            bail!("Missing path to answer file needed for 'included' install mode.");
         }
         if args.cert_fingerprint.is_some() {
-            bail!("No certificate fingerprint needed for direct install mode. Drop the parameter!");
+            bail!("No certificate fingerprint needed for 'included' install mode. Drop the parameter!");
         }
         if args.url.is_some() {
-            bail!("No URL needed for direct install mode. Drop the parameter!");
+            bail!("No URL needed for 'included' install mode. Drop the parameter!");
         }
     } else if args.fetch_from == FetchAnswerFrom::Partition {
         if args.cert_fingerprint.is_some() {
