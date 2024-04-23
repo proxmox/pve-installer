@@ -96,52 +96,53 @@ struct CommandValidateAnswer {
 /// "answer.toml".
 ///
 /// If that is not found, it will try to fetch an answer file via an HTTP Post request. The URL for
-/// it can be defined for the ISO with the '--url', '-u' argument. If not present, it will try to
-/// get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
+/// it can be defined for the ISO with the '--url' argument. If not present, it will try to get a
+/// URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
 /// 'proxmox-auto-installer.{search domain}'.
 ///
-/// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint', '-c'
-/// argument or alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located
-/// at 'proxmox-auto-installer-cert-fingerprint.{search domain}'.
+/// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint' argument or
+/// alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located at
+/// 'proxmox-auto-installer-cert-fingerprint.{search domain}'.
 ///
 /// The latter options to provide the TLS fingerprint will only be used if the same method was used
 /// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
 /// no one was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via
 /// the DNS TXT record.
 ///
-/// The behavior of how to fetch an answer file can be overridden with the '--install-mode', '-i'
+/// The behavior of how to fetch an answer file can be overridden with the '--fetch-from',
 /// parameter. The answer file can be{n}
-/// * integrated into the ISO itself ('included'){n}
+/// * integrated into the ISO itself ('iso'){n}
 /// * needs to be present in a partition / file-system with the label 'PROXMOX-INST-SRC'
 ///   ('partition'){n}
 /// * get requested via an HTTP Post request ('http').
 #[derive(Args, Debug)]
 struct CommandPrepareISO {
-    /// Path to the source ISO
-    source: PathBuf,
+    /// Path to the source ISO to prepare
+    input: PathBuf,
 
-    /// Path to store the final ISO to.
+    /// Path to store the final ISO to, defaults to auto-generated depending on mode.
     #[arg(short, long)]
-    target: Option<PathBuf>,
+    output: Option<PathBuf>,
 
-    /// Where to fetch the answer file from.
-    #[arg(short, long, value_enum)]
-    install_mode: AutoInstMode,
+    /// Where the automatic installer should fetch the answer file from.
+    #[arg(long, value_enum)]
+    fetch_from: AutoInstMode,
 
-    /// Include the specified answer file in the ISO. Requires the '--install-mode', '-i' parameter
-    /// to be set to 'included'.
-    #[arg(short, long)]
+    /// Include the specified answer file in the ISO. Requires the '--fetch-from'  parameter
+    /// to be set to 'iso'.
+    #[arg(long)]
     answer_file: Option<PathBuf>,
 
     /// Specify URL for fetching the answer file via HTTP
-    #[arg(short, long)]
+    #[arg(long)]
     url: Option<String>,
 
     /// Pin the ISO to the specified SHA256 TLS certificate fingerprint.
-    #[arg(short, long)]
+    #[arg(long)]
     cert_fingerprint: Option<String>,
 
-    /// Tmp directory to use.
+    /// Staging directory to use for preparing the new ISO file. Defaults to the directory of the
+    /// input ISO file.
     #[arg(long)]
     tmp: Option<String>,
 }
@@ -280,7 +281,7 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
 fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     check_prepare_requirements(args)?;
 
-    if args.install_mode == AutoInstMode::Included {
+    if args.fetch_from == AutoInstMode::Included {
         if args.answer_file.is_none() {
             bail!("Missing path to answer file needed for 'direct' install mode.");
         }
@@ -290,7 +291,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         if args.url.is_some() {
             bail!("No URL needed for direct install mode. Drop the parameter!");
         }
-    } else if args.install_mode == AutoInstMode::Partition {
+    } else if args.fetch_from == AutoInstMode::Partition {
         if args.cert_fingerprint.is_some() {
             bail!(
                 "No certificate fingerprint needed for partition install mode. Drop the parameter!"
@@ -300,7 +301,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
             bail!("No URL needed for partition install mode. Drop the parameter!");
         }
     }
-    if args.answer_file.is_some() && args.install_mode != AutoInstMode::Included {
+    if args.answer_file.is_some() && args.fetch_from != AutoInstMode::Included {
         bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
     }
 
@@ -312,7 +313,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     let mut tmp_base = PathBuf::new();
     match args.tmp.as_ref() {
         Some(tmp_dir) => tmp_base.push(tmp_dir),
-        None => tmp_base.push(args.source.parent().unwrap()),
+        None => tmp_base.push(args.input.parent().unwrap()),
     }
 
     let iso_target = final_iso_location(args);
@@ -325,17 +326,17 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     tmp_iso.push(format!("{iso_target_file_name}.tmp",));
 
     println!("Copying source ISO to temporary location...");
-    fs::copy(&args.source, &tmp_iso)?;
+    fs::copy(&args.input, &tmp_iso)?;
 
     println!("Preparing ISO...");
-    let install_mode = AutoInstSettings {
-        mode: args.install_mode.clone(),
+    let config = AutoInstSettings {
+        mode: args.fetch_from.clone(),
         http_url: args.url.clone(),
         cert_fingerprint: args.cert_fingerprint.clone(),
     };
     let mut instmode_file_tmp = tmp_base.clone();
     instmode_file_tmp.push("auto-installer-mode.toml");
-    fs::write(&instmode_file_tmp, toml::to_string_pretty(&install_mode)?)?;
+    fs::write(&instmode_file_tmp, toml::to_string_pretty(&config)?)?;
 
     inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/auto-installer-mode.toml")?;
 
@@ -351,10 +352,10 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
 }
 
 fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
-    if let Some(specified) = args.target.clone() {
+    if let Some(specified) = args.output.clone() {
         return specified;
     }
-    let mut suffix: String = match args.install_mode {
+    let mut suffix: String = match args.fetch_from {
         AutoInstMode::Http => "auto-http",
         AutoInstMode::Included => "auto-answer-included",
         AutoInstMode::Partition => "auto-part",
@@ -368,8 +369,8 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         suffix.push_str("-fp");
     }
 
-    let base = args.source.parent().unwrap();
-    let iso = args.source.file_stem().unwrap();
+    let base = args.input.parent().unwrap();
+    let iso = args.input.file_stem().unwrap();
 
     let mut target = base.to_path_buf();
     target.push(format!("{}-{}.iso", iso.to_str().unwrap(), suffix));
@@ -531,7 +532,7 @@ fn parse_answer(path: &PathBuf) -> Result<Answer> {
 }
 
 fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
-    match Path::try_exists(&args.source) {
+    match Path::try_exists(&args.input) {
         Ok(true) => (),
         Ok(false) => bail!("Source file does not exist."),
         Err(_) => bail!("Source file does not exist."),
@@ -539,7 +540,7 @@ fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
 
     match Command::new("xorriso")
         .arg("-dev")
-        .arg(&args.source)
+        .arg(&args.input)
         .arg("-find")
         .arg(PROXMOX_ISO_FLAG)
         .stderr(Stdio::null())
