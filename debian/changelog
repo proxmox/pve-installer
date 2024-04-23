@@ -1,3 +1,45 @@
+proxmox-installer (8.2.2) bookworm; urgency=medium
+
+  * auto-installer:
+    - rename `global.password` option to `global.root_password`
+    - move `system.root_ssh_keys` option to `global` section
+    - support UTC as timezone
+    - drop fetch-from auto mode to avoid complexity and querying (potentially
+      untrusted) networks by default
+    - rework the default filename suffix that gets added to the default
+      output filename of the prepared iso
+    - move ssh keys setup to low-level installer, avoiding command injection
+    - rework command line options:
+      - rename 'install-mode' option to 'fetch-from'
+      - rename 'included' fetch-from variant to 'iso'
+      - rename 'source' to 'input' and 'target' to 'output'
+      - drop all short options for now
+      - update help text
+    - report every progress update and include text
+
+  * low level installer:
+    - drop printing about extracting deb packages to stderr
+    - avoid undef warning in progress log when using ZFS
+    - only log about creating SWAP if there's any configured
+
+  * fetch answer tool: allow one to override the fetch-from mode through CLI
+    arguments, which can be useful for debugging or to try the automatic
+    installer without preparing the ISO first
+
+  * installer init: start debug shell if auto-installation is enabled without
+    config
+
+  * assistant: error out on if there's a static network config set together
+    with from-dhcp as source
+
+  * tui: update screen during installation only when necessary
+
+  * less strict regex for matching udev env variables
+
+  * skip new proxmox-secure-boot-support package if secureboot is not enabled
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 23 Apr 2024 21:30:02 +0200
+
 proxmox-installer (8.2.1) bookworm; urgency=medium
 
   * low-level install: add option to automatically rename LVM volumes
