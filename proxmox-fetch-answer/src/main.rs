@@ -6,7 +6,7 @@ use log::{error, info, LevelFilter};
 
 use proxmox_auto_installer::{
     log::AutoInstLogger,
-    utils::{FetchAnswerFrom, AutoInstSettings},
+    utils::{AutoInstSettings, FetchAnswerFrom},
 };
 
 use fetch_plugins::{http::FetchFromHTTP, partition::FetchFromPartition};

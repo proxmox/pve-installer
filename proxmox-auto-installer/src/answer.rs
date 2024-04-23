@@ -161,17 +161,11 @@ impl TryFrom<DiskSetup> for Disks {
         let (fs, fs_options) = match source.filesystem {
             Filesystem::Xfs => {
                 lvm_checks(&source)?;
-                (
-                    FsType::Xfs,
-                    FsOptions::LVM(source.lvm.unwrap_or_default()),
-                )
+                (FsType::Xfs, FsOptions::LVM(source.lvm.unwrap_or_default()))
             }
             Filesystem::Ext4 => {
                 lvm_checks(&source)?;
-                (
-                    FsType::Ext4,
-                    FsOptions::LVM(source.lvm.unwrap_or_default()),
-                )
+                (FsType::Ext4, FsOptions::LVM(source.lvm.unwrap_or_default()))
             }
             Filesystem::Zfs => {
                 if source.lvm.is_some() || source.btrfs.is_some() {

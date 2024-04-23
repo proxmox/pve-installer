@@ -16,8 +16,8 @@ use proxmox_auto_installer::{
     answer::FilterMatch,
     sysinfo::SysInfo,
     utils::{
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index, FetchAnswerFrom,
-        AutoInstSettings, HttpOptions,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstSettings,
+        FetchAnswerFrom, HttpOptions,
     },
 };
 
