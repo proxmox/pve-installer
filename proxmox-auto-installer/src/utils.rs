@@ -280,13 +280,16 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
     if !locales.kmap.keys().any(|i| i == &answer.global.keyboard) {
         bail!("keyboard layout '{}' is not valid", &answer.global.keyboard);
     }
+
     if !locales
         .cczones
         .iter()
         .any(|(_, zones)| zones.contains(&answer.global.timezone))
+        && answer.global.timezone != "UTC"
     {
         bail!("timezone '{}' is not valid", &answer.global.timezone);
     }
+
     Ok(())
 }
 
