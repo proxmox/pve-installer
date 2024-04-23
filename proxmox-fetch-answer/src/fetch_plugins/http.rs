@@ -1,4 +1,4 @@
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use log::info;
 use std::{
     fs::{self, read_to_string},
@@ -81,7 +81,7 @@ impl FetchFromHTTP {
                 }
             }
         }
-        Err(Error::msg("Could not find search domain in resolv.conf."))
+        bail!("Could not find search domain in resolv.conf.");
     }
 
     /// Runs a TXT DNS query on the domain provided

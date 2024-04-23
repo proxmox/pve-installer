@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{bail, format_err, Result};
 use log::{error, info, LevelFilter};
 use std::{
     env,
@@ -26,7 +26,7 @@ pub fn init_log() -> Result<()> {
     AutoInstLogger::init("/tmp/auto_installer.log")?;
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Info))
-        .map_err(|err| anyhow!(err))
+        .map_err(|err| format_err!(err))
 }
 
 fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
@@ -40,7 +40,8 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
         let mut path = path.clone();
         path.push("run-env-udev.json");
 
-        read_json(&path).map_err(|err| anyhow!("Failed to retrieve udev info details: {err}"))?
+        read_json(&path)
+            .map_err(|err| format_err!("Failed to retrieve udev info details: {err}"))?
     };
 
     let mut buffer = String::new();
@@ -51,7 +52,7 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
     }
 
     let answer: Answer =
-        toml::from_str(&buffer).map_err(|err| anyhow!("Failed parsing answer file: {err}"))?;
+        toml::from_str(&buffer).map_err(|err| format_err!("Failed parsing answer file: {err}"))?;
 
     Ok((answer, udev_info))
 }
@@ -137,15 +138,15 @@ fn run_installation(
             .stdout
             .take()
             .map(BufReader::new)
-            .ok_or(anyhow!("failed to get stdout reader"))?;
+            .ok_or(format_err!("failed to get stdout reader"))?;
         let mut writer = child
             .stdin
             .take()
-            .ok_or(anyhow!("failed to get stdin writer"))?;
+            .ok_or(format_err!("failed to get stdin writer"))?;
 
         serde_json::to_writer(&mut writer, &config)
-            .map_err(|err| anyhow!("failed to serialize install config: {err}"))?;
-        writeln!(writer).map_err(|err| anyhow!("failed to write install config: {err}"))?;
+            .map_err(|err| format_err!("failed to serialize install config: {err}"))?;
+        writeln!(writer).map_err(|err| format_err!("failed to write install config: {err}"))?;
 
         for line in reader.lines() {
             let line = match line {
@@ -184,12 +185,7 @@ fn run_installation(
         }
         Ok(())
     };
-    match inner() {
-        Err(err) => Err(Error::msg(format!(
-            "low level installer returned early: {err}"
-        ))),
-        _ => Ok(()),
-    }
+    inner().map_err(|err| format_err!("low level installer returned early: {err}"))
 }
 
 fn run_postinstallation(answer: &Answer) {

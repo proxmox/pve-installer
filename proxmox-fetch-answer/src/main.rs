@@ -1,7 +1,7 @@
 use std::process::ExitCode;
 use std::{fs, path::PathBuf};
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{bail, format_err, Result};
 use log::{error, info, LevelFilter};
 
 use proxmox_auto_installer::{
@@ -20,7 +20,7 @@ pub fn init_log() -> Result<()> {
     AutoInstLogger::init("/tmp/fetch_answer.log")?;
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Info))
-        .map_err(|err| anyhow!(err))
+        .map_err(|err| format_err!(err))
 }
 
 fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
@@ -52,7 +52,7 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
             Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
         },
     }
-    Err(Error::msg("Could not find any answer file!"))
+    bail!("Could not find any answer file!");
 }
 
 fn main() -> ExitCode {

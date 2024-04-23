@@ -1,4 +1,4 @@
-use anyhow::{format_err, Error, Result};
+use anyhow::{bail, format_err, Result};
 use log::{info, warn};
 use std::{
     fs::{self, create_dir_all},
@@ -56,9 +56,7 @@ fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf>
         Ok(false) => info!("Did not detect partition with label '{partlabel}'"),
         Err(err) => info!("Encountered issue, accessing '{path:?}': {err}"),
     }
-    Err(Error::msg(format!(
-        "Could not detect upper or lower case labels for '{partlabel_source}'"
-    )))
+    bail!("Could not detect upper or lower case labels for '{partlabel_source}'");
 }
 
 /// Will search and mount a partition/FS labeled PARTLABEL (proxmox-inst-src) in lower or uppercase
@@ -86,7 +84,7 @@ fn mount_proxmoxinst_part() -> Result<String> {
                 Ok(ANSWER_MP.into())
             }
         }
-        Err(err) => Err(Error::msg(format!("Error mounting: {err}"))),
+        Err(err) => bail!("Error mounting: {err}"),
     }
 }
 
