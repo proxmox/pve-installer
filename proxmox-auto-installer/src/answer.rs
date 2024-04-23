@@ -163,14 +163,14 @@ impl TryFrom<DiskSetup> for Disks {
                 lvm_checks(&source)?;
                 (
                     FsType::Xfs,
-                    FsOptions::LVM(source.lvm.unwrap_or(LvmOptions::default())),
+                    FsOptions::LVM(source.lvm.unwrap_or_default()),
                 )
             }
             Filesystem::Ext4 => {
                 lvm_checks(&source)?;
                 (
                     FsType::Ext4,
-                    FsOptions::LVM(source.lvm.unwrap_or(LvmOptions::default())),
+                    FsOptions::LVM(source.lvm.unwrap_or_default()),
                 )
             }
             Filesystem::Zfs => {

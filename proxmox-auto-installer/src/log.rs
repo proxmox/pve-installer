@@ -29,7 +29,7 @@ impl log::Log for AutoInstLogger {
                 .expect("could not get LOGFILE")
                 .lock()
                 .expect("could not get mutex for LOGFILE");
-            write!(file, "{}: {}\n", record.level(), record.args())
+            writeln!(file, "{}: {}", record.level(), record.args())
                 .expect("could not write to LOGFILE");
         }
     }

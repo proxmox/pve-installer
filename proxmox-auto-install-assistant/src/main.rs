@@ -340,7 +340,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/auto-installer-mode.toml")?;
 
     if let Some(answer_file) = &args.answer_file {
-        inject_file_to_iso(&tmp_iso, &answer_file, "/answer.toml")?;
+        inject_file_to_iso(&tmp_iso, answer_file, "/answer.toml")?;
     }
 
     println!("Moving prepared ISO to target location...");

@@ -303,7 +303,7 @@ impl TimezoneOptions {
         let timezone = locales
             .cczones
             .get(&country)
-            .and_then(|zones| zones.get(0))
+            .and_then(|zones| zones.first())
             .cloned()
             .unwrap_or_else(|| "UTC".to_owned());
 
@@ -352,7 +352,7 @@ pub struct NetworkOptions {
 }
 
 impl NetworkOptions {
-    const DEFAULT_DOMAIN: &str = "example.invalid";
+    const DEFAULT_DOMAIN: &'static str = "example.invalid";
 
     pub fn defaults_from(setup: &SetupInfo, network: &NetworkInfo) -> Self {
         let mut this = Self {

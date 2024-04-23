@@ -16,7 +16,7 @@ fn get_test_resource_path() -> Result<PathBuf, String> {
         .join("tests/resources"))
 }
 fn get_answer(path: PathBuf) -> Result<Answer, String> {
-    let answer_raw = std::fs::read_to_string(&path).unwrap();
+    let answer_raw = std::fs::read_to_string(path).unwrap();
     let answer: answer::Answer = toml::from_str(&answer_raw)
         .map_err(|err| format!("error parsing answer.toml: {err}"))
         .unwrap();

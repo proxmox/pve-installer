@@ -38,7 +38,7 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
         }
         AutoInstModes::Included => {
             let answer_path = PathBuf::from("/cdrom/answer.toml");
-            match fs::read_to_string(&answer_path) {
+            match fs::read_to_string(answer_path) {
                 Ok(answer) => return Ok(answer),
                 Err(err) => info!("Fetching answer file from ISO failed: {err}"),
             }
@@ -86,5 +86,5 @@ fn main() -> ExitCode {
 
     println!("{answer}");
 
-    return ExitCode::SUCCESS;
+    ExitCode::SUCCESS
 }
