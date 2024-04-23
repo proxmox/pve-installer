@@ -358,9 +358,9 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
         return specified;
     }
     let mut suffix: String = match args.fetch_from {
-        AutoInstMode::Http => "auto-http",
-        AutoInstMode::Included => "auto-answer-included",
-        AutoInstMode::Partition => "auto-part",
+        AutoInstMode::Http => "auto-from-http",
+        AutoInstMode::Included => "auto-from-iso",
+        AutoInstMode::Partition => "auto-from-partition",
     }
     .into();
 
