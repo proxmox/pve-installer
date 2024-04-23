@@ -310,19 +310,19 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         parse_answer(file)?;
     }
 
-    let mut tmp_base = PathBuf::new();
-    match args.tmp.as_ref() {
-        Some(tmp_dir) => tmp_base.push(tmp_dir),
-        None => tmp_base.push(args.input.parent().unwrap()),
-    }
-
     let iso_target = final_iso_location(args);
-
-    let mut tmp_iso = tmp_base.clone();
     let iso_target_file_name = match iso_target.file_name() {
         None => bail!("no base filename in target ISO path found"),
         Some(source_file_name) => source_file_name.to_string_lossy(),
     };
+
+    let mut tmp_base = PathBuf::new();
+    match args.tmp.as_ref() {
+        Some(tmp_dir) => tmp_base.push(tmp_dir),
+        None => tmp_base.push(iso_target.parent().unwrap()),
+    }
+
+    let mut tmp_iso = tmp_base.clone();
     tmp_iso.push(format!("{iso_target_file_name}.tmp",));
 
     println!("Copying source ISO to temporary location...");
