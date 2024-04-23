@@ -279,23 +279,20 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
 
     if args.fetch_from == FetchAnswerFrom::Iso {
         if args.answer_file.is_none() {
-            bail!("Missing path to answer file needed for 'included' install mode.");
+            bail!("Missing path to the answer file required for the fetch-from 'iso' mode.");
         }
-        if args.cert_fingerprint.is_some() {
-            bail!("No certificate fingerprint needed for 'included' install mode. Drop the parameter!");
-        }
-        if args.url.is_some() {
-            bail!("No URL needed for 'included' install mode. Drop the parameter!");
-        }
-    } else if args.fetch_from == FetchAnswerFrom::Partition {
-        if args.cert_fingerprint.is_some() {
-            bail!(
-                "No certificate fingerprint needed for partition install mode. Drop the parameter!"
-            );
-        }
-        if args.url.is_some() {
-            bail!("No URL needed for partition install mode. Drop the parameter!");
-        }
+    }
+    if args.url.is_some() && args.fetch_from != FetchAnswerFrom::Http {
+        bail!(
+            "Setting a URL is incompatible with the fetch-from '{:?}' mode, only works with the 'http' mode",
+            args.fetch_from,
+        );
+    }
+    if args.cert_fingerprint.is_some() && args.fetch_from != FetchAnswerFrom::Http {
+        bail!(
+            "Setting a certificate fingerprint incompatible is fetch-from '{:?}' mode, only works for 'http' mode.",
+            args.fetch_from,
+        );
     }
     if args.answer_file.is_some() && args.fetch_from != FetchAnswerFrom::Iso {
         bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
