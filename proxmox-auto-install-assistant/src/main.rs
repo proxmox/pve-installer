@@ -91,13 +91,15 @@ struct CommandValidateAnswer {
 
 /// Prepare an ISO for automated installation.
 ///
-/// The final ISO will try to fetch an answer file automatically. It will first search for a
-/// partition / file-system called "PROXMOX-INST-SRC" (or lowercase) and a file in the root named
-/// "answer.toml".
+/// The behavior of how to fetch an answer file must be set with the '--fetch-from', parameter. The
+/// answer file can be{n}:
+/// * integrated into the ISO itself ('iso'){n}
+/// * needs to be present in a partition / file-system with the label 'PROXMOX-INST-SRC'
+///   ('partition'){n}
+/// * get requested via an HTTP Post request ('http').
 ///
-/// If that is not found, it will try to fetch an answer file via an HTTP Post request. The URL for
-/// it can be defined for the ISO with the '--url' argument. If not present, it will try to get a
-/// URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
+/// The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present,
+/// it will try to get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
 /// 'proxmox-auto-installer.{search domain}'.
 ///
 /// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint' argument or
@@ -108,20 +110,14 @@ struct CommandValidateAnswer {
 /// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
 /// no one was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via
 /// the DNS TXT record.
-///
-/// The behavior of how to fetch an answer file can be overridden with the '--fetch-from',
-/// parameter. The answer file can be{n}
-/// * integrated into the ISO itself ('iso'){n}
-/// * needs to be present in a partition / file-system with the label 'PROXMOX-INST-SRC'
-///   ('partition'){n}
-/// * get requested via an HTTP Post request ('http').
 #[derive(Args, Debug)]
 struct CommandPrepareISO {
     /// Path to the source ISO to prepare
     input: PathBuf,
 
-    /// Path to store the final ISO to, defaults to auto-generated depending on mode.
-    #[arg(short, long)]
+    /// Path to store the final ISO to, defaults to an auto-generated file name depending on mode
+    /// and the same directory as the source file is located in.
+    #[arg(long)]
     output: Option<PathBuf>,
 
     /// Where the automatic installer should fetch the answer file from.
