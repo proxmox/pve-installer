@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "proxmox-auto-installer",
     "proxmox-auto-install-assistant",
