@@ -1098,6 +1098,7 @@ _EOD
 	    # upon upgrade - and conflict with each other - install the fitting one only
 	    next if ($deb =~ /grub-pc_/ && $run_env->{boot_type} ne 'bios');
 	    next if ($deb =~ /grub-efi-amd64_/ && $run_env->{boot_type} ne 'efi');
+	    next if ($deb =~ /^proxmox-secure-boot-support_/ && !$run_env->{secure_boot});
 
 	    update_progress($count/$pkg_count, 0.5, 0.75, "extracting $deb");
 	    print STDERR "extracting: $deb\n";
