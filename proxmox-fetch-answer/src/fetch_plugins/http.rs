@@ -5,7 +5,7 @@ use std::{
     process::Command,
 };
 
-use proxmox_auto_installer::{sysinfo::SysInfo, utils::AutoInstSettings};
+use proxmox_auto_installer::{sysinfo::SysInfo, utils::HttpOptions};
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -37,7 +37,7 @@ impl FetchFromHTTP {
     /// needs to be either trusted by the root certs or a SHA256 fingerprint needs to be provided.
     /// The SHA256 SSL fingerprint can either be defined in the ISO, as DHCP option, or as DNS TXT
     /// record. If provided, the fingerprint provided in the ISO has preference.
-    pub fn get_answer(settings: &AutoInstSettings) -> Result<String> {
+    pub fn get_answer(settings: &HttpOptions) -> Result<String> {
         let mut fingerprint: Option<String> = match settings.cert_fingerprint.clone() {
             Some(fp) => {
                 info!("SSL fingerprint provided through ISO.");
@@ -47,7 +47,7 @@ impl FetchFromHTTP {
         };
 
         let answer_url: String;
-        if let Some(url) = settings.http_url.clone() {
+        if let Some(url) = settings.url.clone() {
             info!("URL specified in ISO");
             answer_url = url;
         } else {

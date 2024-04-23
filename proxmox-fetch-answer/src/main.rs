@@ -37,7 +37,7 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
             Ok(answer) => return Ok(answer),
             Err(err) => info!("Fetching answer file from partition failed: {err}"),
         },
-        AutoInstMode::Http => match FetchFromHTTP::get_answer(&install_settings) {
+        AutoInstMode::Http => match FetchFromHTTP::get_answer(&install_settings.http) {
             Ok(answer) => return Ok(answer),
             Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
         },

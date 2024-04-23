@@ -17,7 +17,7 @@ use proxmox_auto_installer::{
     sysinfo::SysInfo,
     utils::{
         get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstMode,
-        AutoInstSettings,
+        AutoInstSettings, HttpOptions,
     },
 };
 
@@ -331,8 +331,10 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     println!("Preparing ISO...");
     let config = AutoInstSettings {
         mode: args.fetch_from.clone(),
-        http_url: args.url.clone(),
-        cert_fingerprint: args.cert_fingerprint.clone(),
+        http: HttpOptions {
+            url: args.url.clone(),
+            cert_fingerprint: args.cert_fingerprint.clone(),
+        },
     };
     let mut instmode_file_tmp = tmp_base.clone();
     instmode_file_tmp.push("auto-installer-mode.toml");

@@ -75,12 +75,20 @@ pub enum AutoInstMode {
     Partition,
 }
 
+#[derive(Deserialize, Serialize, Clone, Default, PartialEq, Debug)]
+pub struct HttpOptions {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cert_fingerprint: Option<String>,
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub struct AutoInstSettings {
     pub mode: AutoInstMode,
-    pub http_url: Option<String>,
-    pub cert_fingerprint: Option<String>,
+    #[serde(default)]
+    pub http: HttpOptions,
 }
 
 #[derive(Deserialize, Debug)]
