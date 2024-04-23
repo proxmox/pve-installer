@@ -101,8 +101,7 @@ pub fn get_nic_list() -> Result<Vec<String>> {
         .arg("-j")
         .arg("link")
         .output()?;
-    let parsed_links: Vec<IpLinksUdevInfo> =
-        serde_json::from_str(String::from_utf8(ip_output.stdout)?.as_str())?;
+    let parsed_links: Vec<IpLinksUdevInfo> = serde_json::from_slice(&ip_output.stdout)?;
     let mut links: Vec<String> = Vec::new();
 
     for link in parsed_links {

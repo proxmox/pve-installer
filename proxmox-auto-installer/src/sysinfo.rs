@@ -76,22 +76,23 @@ struct SystemDMI {
 
 impl SystemDMI {
     pub(crate) fn get() -> Result<Self> {
-        let system_files = vec![
+        let system_files = [
             "product_serial",
             "product_sku",
             "product_uuid",
             "product_name",
         ];
-        let baseboard_files = vec!["board_asset_tag", "board_serial", "board_name"];
-        let chassis_files = vec!["chassis_serial", "chassis_sku", "chassis_asset_tag"];
+        let baseboard_files = ["board_asset_tag", "board_serial", "board_name"];
+        let chassis_files = ["chassis_serial", "chassis_sku", "chassis_asset_tag"];
 
         Ok(Self {
-            system: Self::get_dmi_infos(system_files)?,
-            baseboard: Self::get_dmi_infos(baseboard_files)?,
-            chassis: Self::get_dmi_infos(chassis_files)?,
+            system: Self::get_dmi_infos(&system_files)?,
+            baseboard: Self::get_dmi_infos(&baseboard_files)?,
+            chassis: Self::get_dmi_infos(&chassis_files)?,
         })
     }
-    fn get_dmi_infos(files: Vec<&str>) -> Result<HashMap<String, String>> {
+
+    fn get_dmi_infos(files: &[&str]) -> Result<HashMap<String, String>> {
         let mut res: HashMap<String, String> = HashMap::new();
 
         for file in files {

@@ -42,9 +42,7 @@ pub fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
 /// * `runinfo` - `RuntimeInfo` instance of currently running system
 /// * `disks` - List of disks designated as bootdisk targets.
 pub fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<(), &str> {
-    let is_blocksize_4096 = |disk: &Disk| disk.block_size.map(|s| s == 4096).unwrap_or(false);
-
-    if boot_type == BootType::Bios && disks.iter().any(is_blocksize_4096) {
+    if boot_type == BootType::Bios && disks.iter().any(|disk| disk.block_size == Some(4096)) {
         return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.");
     }
 

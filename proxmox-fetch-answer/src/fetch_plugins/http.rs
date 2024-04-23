@@ -60,9 +60,8 @@ impl FetchFromHTTP {
             };
         }
 
-        if fingerprint.is_some() {
-            let fp = fingerprint.clone();
-            fs::write("/tmp/cert_fingerprint", fp.unwrap()).ok();
+        if let Some(fingerprint) = &fingerprint {
+            let _ = fs::write("/tmp/cert_fingerprint", fingerprint);
         }
 
         info!("Gathering system information.");

@@ -40,11 +40,11 @@ impl ProxmoxProduct {
 
 impl fmt::Display for ProxmoxProduct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::PVE => write!(f, "pve"),
-            Self::PMG => write!(f, "pmg"),
-            Self::PBS => write!(f, "pbs"),
-        }
+        f.write_str(match self {
+            Self::PVE => "pve",
+            Self::PMG => "pmg",
+            Self::PBS => "pbs",
+        })
     }
 }
 
