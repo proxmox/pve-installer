@@ -87,6 +87,19 @@ impl TryFrom<NetworkInAnswer> for Network {
                 }),
             })
         } else {
+            if network.cidr.is_some() {
+                return Err("Field 'cidr' not supported for 'from-dhcp' config.");
+            }
+            if network.dns.is_some() {
+                return Err("Field 'dns' not supported for 'from-dhcp' config.");
+            }
+            if network.gateway.is_some() {
+                return Err("Field 'gateway' not supported for 'from-dhcp' config.");
+            }
+            if network.filter.is_some() {
+                return Err("Field 'filter' not supported for 'from-dhcp' config.");
+            }
+
             Ok(Network {
                 network_settings: NetworkSettings::FromDhcp,
             })
