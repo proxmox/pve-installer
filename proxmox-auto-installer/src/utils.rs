@@ -281,7 +281,11 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
     {
         bail!("country code '{}' is not valid", &answer.global.country);
     }
-    if !locales.kmap.keys().any(|i| i == &answer.global.keyboard) {
+    if !locales
+        .kmap
+        .keys()
+        .any(|i| i == &answer.global.keyboard.to_string())
+    {
         bail!("keyboard layout '{}' is not valid", &answer.global.keyboard);
     }
 
@@ -328,7 +332,7 @@ pub fn parse_answer(
 
         country: answer.global.country.clone(),
         timezone: answer.global.timezone.clone(),
-        keymap: answer.global.keyboard.clone(),
+        keymap: answer.global.keyboard.to_string(),
 
         password: answer.global.root_password.clone(),
         mailto: answer.global.mailto.clone(),

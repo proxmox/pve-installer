@@ -23,7 +23,7 @@ pub struct Answer {
 pub struct Global {
     pub country: String,
     pub fqdn: Fqdn,
-    pub keyboard: String,
+    pub keyboard: KeyboardLayout,
     pub mailto: String,
     pub timezone: String,
     pub root_password: String,
@@ -269,4 +269,41 @@ pub struct LvmOptions {
 pub struct BtrfsOptions {
     pub hdsize: Option<f64>,
     pub raid: Option<BtrfsRaidLevel>,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum KeyboardLayout {
+    De,
+    DeCh,
+    Dk,
+    EnGb,
+    EnUs,
+    Es,
+    Fi,
+    Fr,
+    FrBe,
+    FrCa,
+    FrCh,
+    Hu,
+    Is,
+    It,
+    Jp,
+    Lt,
+    Mk,
+    Nl,
+    No,
+    Pl,
+    Pt,
+    PtBr,
+    Se,
+    Si,
+    Tr,
+}
+
+impl std::fmt::Display for KeyboardLayout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let keyboard_layout = serde_json::to_value(self).unwrap().to_string();
+        write!(f, "{}", keyboard_layout.trim_matches('\"'))
+    }
 }
