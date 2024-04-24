@@ -94,8 +94,8 @@ struct CommandValidateAnswer {
 /// The behavior of how to fetch an answer file must be set with the '--fetch-from', parameter. The
 /// answer file can be{n}:
 /// * integrated into the ISO itself ('iso'){n}
-/// * needs to be present in a partition / file-system with the label 'PROXMOX-INST-SRC'
-///   ('partition'){n}
+/// * needs to be present in a partition / file-system with the label 'PROXMOX-AIS' (Proxmox
+/// Automated Installer Source) ('partition'){n}
 /// * get requested via an HTTP Post request ('http').
 ///
 /// The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present,

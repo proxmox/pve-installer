@@ -8,7 +8,8 @@ use std::{
 
 static ANSWER_FILE: &str = "answer.toml";
 static ANSWER_MP: &str = "/mnt/answer";
-static PARTLABEL: &str = "proxmox-inst-src";
+// FAT can only handle 11 characters, so shorten Automated Installer Source to AIS
+static PARTLABEL: &str = "proxmox-ais";
 static SEARCH_PATH: &str = "/dev/disk/by-label";
 
 pub struct FetchFromPartition;
@@ -59,7 +60,7 @@ fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf>
     bail!("Could not detect upper or lower case labels for '{partlabel_source}'");
 }
 
-/// Will search and mount a partition/FS labeled PARTLABEL (proxmox-inst-src) in lower or uppercase
+/// Will search and mount a partition/FS labeled PARTLABEL (proxmox-ais) in lower or uppercase
 /// to ANSWER_MP
 fn mount_proxmoxinst_part() -> Result<String> {
     if let Ok(true) = check_if_mounted(ANSWER_MP) {
