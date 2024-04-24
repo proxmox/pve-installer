@@ -293,7 +293,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         );
     }
     if args.answer_file.is_some() && args.fetch_from != FetchAnswerFrom::Iso {
-        bail!("Set '-i', '--install-mode' to 'included' to place the answer file directly in the ISO.");
+        bail!("You must set '--fetch-from' to 'iso' to place the answer file directly in the ISO.");
     }
 
     if let Some(file) = &args.answer_file {
