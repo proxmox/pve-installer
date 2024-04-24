@@ -92,7 +92,7 @@ struct CommandValidateAnswer {
 /// Prepare an ISO for automated installation.
 ///
 /// The behavior of how to fetch an answer file must be set with the '--fetch-from', parameter. The
-/// answer file can be{n}:
+/// answer file can be:{n}
 /// * integrated into the ISO itself ('iso'){n}
 /// * needs to be present in a partition / file-system with the label 'PROXMOX-AIS' (Proxmox
 /// Automated Installer Source) ('partition'){n}
