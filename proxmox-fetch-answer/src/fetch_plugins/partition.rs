@@ -56,7 +56,7 @@ fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
     }
 
     let partlabel_lower_case = partlabel.to_lowercase();
-    if let Some(path) = path_exists_logged(&partlabel_upper_case, search_path) {
+    if let Some(path) = path_exists_logged(&partlabel_lower_case, search_path) {
             info!("Found partition with label '{partlabel_lower_case}'");
             return Ok(path);
     }
