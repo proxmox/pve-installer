@@ -1,3 +1,17 @@
+proxmox-installer (8.2.4) bookworm; urgency=medium
+
+  * auto-installer: shorten partition label to "PROXMOX-AIS" so that it
+    fits in the 11 characters limit for labels when using the FAT file-
+    system
+
+  * assistant: fix newline before ':' in help usage text
+
+  * assistant: updated remaining error messages to reworked CLI
+
+  * answer: perform basic input validation for keyboard
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 24 Apr 2024 10:55:05 +0200
+
 proxmox-installer (8.2.3) bookworm; urgency=medium
 
   * also skip installing the proxmox-grub meta package if not booted in EFI
