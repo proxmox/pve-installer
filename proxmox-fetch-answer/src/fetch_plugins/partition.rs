@@ -10,7 +10,7 @@ static ANSWER_FILE: &str = "answer.toml";
 static ANSWER_MP: &str = "/mnt/answer";
 // FAT can only handle 11 characters, so shorten Automated Installer Source to AIS
 static PARTLABEL: &str = "proxmox-ais";
-static SEARCH_PATH: &str = "/dev/disk/by-label";
+static DISK_BY_ID_PATH: &str = "/dev/disk/by-label";
 
 pub struct FetchFromPartition;
 
@@ -30,34 +30,38 @@ impl FetchFromPartition {
     }
 }
 
+fn path_exists_logged(file_name: &str, search_path: &str) -> Option<PathBuf> {
+    let path = Path::new(search_path).join(&file_name);
+    info!("Testing partition search path {path:?}");
+    match path.try_exists() {
+        Ok(true) => Some(path),
+        Ok(false) => None,
+        Err(err) => {
+            info!("Encountered issue, accessing '{path:?}': {err}");
+            None
+        }
+    }
+}
+
 /// Searches for upper and lower case existence of the partlabel in the search_path
 ///
 /// # Arguemnts
 /// * `partlabel_source` - Partition Label, used as upper and lower case
 /// * `search_path` - Path where to search for the partiiton label
-fn scan_partlabels(partlabel_source: &str, search_path: &str) -> Result<PathBuf> {
-    let partlabel = partlabel_source.to_uppercase();
-    let path = Path::new(search_path).join(&partlabel);
-    match path.try_exists() {
-        Ok(true) => {
-            info!("Found partition with label '{partlabel}'");
+fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
+    let partlabel_upper_case = partlabel.to_uppercase();
+    if let Some(path) = path_exists_logged(&partlabel_upper_case, search_path) {
+            info!("Found partition with label '{partlabel_upper_case}'");
             return Ok(path);
-        }
-        Ok(false) => info!("Did not detect partition with label '{partlabel}'"),
-        Err(err) => info!("Encountered issue, accessing '{path:?}': {err}"),
     }
 
-    let partlabel = partlabel_source.to_lowercase();
-    let path = Path::new(search_path).join(&partlabel);
-    match path.try_exists() {
-        Ok(true) => {
-            info!("Found partition with label '{partlabel}'");
+    let partlabel_lower_case = partlabel.to_lowercase();
+    if let Some(path) = path_exists_logged(&partlabel_upper_case, search_path) {
+            info!("Found partition with label '{partlabel_lower_case}'");
             return Ok(path);
-        }
-        Ok(false) => info!("Did not detect partition with label '{partlabel}'"),
-        Err(err) => info!("Encountered issue, accessing '{path:?}': {err}"),
     }
-    bail!("Could not detect upper or lower case labels for '{partlabel_source}'");
+
+    bail!("Could not detect upper or lower case labels for '{partlabel}'");
 }
 
 /// Will search and mount a partition/FS labeled PARTLABEL (proxmox-ais) in lower or uppercase
@@ -67,7 +71,7 @@ fn mount_proxmoxinst_part() -> Result<String> {
         info!("Skipping: '{ANSWER_MP}' is already mounted.");
         return Ok(ANSWER_MP.into());
     }
-    let part_path = scan_partlabels(PARTLABEL, SEARCH_PATH)?;
+    let part_path = scan_partlabels(PARTLABEL, DISK_BY_ID_PATH)?;
     info!("Mounting partition at {ANSWER_MP}");
     // create dir for mountpoint
     create_dir_all(ANSWER_MP)?;
