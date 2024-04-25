@@ -255,7 +255,7 @@ sub get_zfs_raid_setup {
 	    $cmd .= " @$hd[1]";
 	}
     } elsif ($filesys eq 'zfs (RAID1)') {
-	die "zfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
+	die "zfs (RAID1) needs at least 2 devices\n" if $diskcount < 2;
 	$cmd .= ' mirror ';
 	my $hd = @$devlist[0];
 	my $expected_size = @$hd[2]; # all disks need approximately same size
@@ -265,7 +265,7 @@ sub get_zfs_raid_setup {
 	    $cmd .= " @$hd[1]";
 	}
     } elsif ($filesys eq 'zfs (RAID10)') {
-	die "zfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
+	die "zfs (RAID10) needs at least 4 devices\n" if $diskcount < 4;
 	die "zfs (RAID10) needs an even number of devices\n" if $diskcount & 1;
 
 	for (my $i = 0; $i < $diskcount; $i+=2) {
@@ -329,10 +329,10 @@ sub get_btrfs_raid_setup {
 	if ($filesys eq 'btrfs (RAID0)') {
 	    $mode = 'raid0';
 	} elsif ($filesys eq 'btrfs (RAID1)') {
-	    die "btrfs (RAID1) needs at least 2 device\n" if $diskcount < 2;
+	    die "btrfs (RAID1) needs at least 2 devices\n" if $diskcount < 2;
 	    $mode = 'raid1';
 	} elsif ($filesys eq 'btrfs (RAID10)') {
-	    die "btrfs (RAID10) needs at least 4 device\n" if $diskcount < 4;
+	    die "btrfs (RAID10) needs at least 4 devices\n" if $diskcount < 4;
 	    $mode = 'raid10';
 	} else {
 	    die "unknown btrfs mode '$filesys'\n";
