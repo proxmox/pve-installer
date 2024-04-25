@@ -91,16 +91,16 @@ struct CommandValidateAnswer {
 
 /// Prepare an ISO for automated installation.
 ///
-/// The behavior of how to fetch an answer file must be set with the '--fetch-from', parameter. The
+/// The behavior of how to fetch an answer file must be set with the '--fetch-from' parameter. The
 /// answer file can be:{n}
 /// * integrated into the ISO itself ('iso'){n}
-/// * needs to be present in a partition / file-system with the label 'PROXMOX-AIS' (Proxmox
+/// * present on a partition / file-system with the label 'PROXMOX-AIS' (Proxmox
 /// Automated Installer Source) ('partition'){n}
-/// * get requested via an HTTP Post request ('http').
+/// * requested via an HTTP Post request ('http').
 ///
 /// The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present,
-/// it will try to get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record at
-/// 'proxmox-auto-installer.{search domain}'.
+/// it will try to get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record for the
+/// domain 'proxmox-auto-installer.{search domain}'.
 ///
 /// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint' argument or
 /// alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located at
