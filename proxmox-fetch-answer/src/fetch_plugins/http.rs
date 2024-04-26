@@ -211,7 +211,7 @@ mod http_post {
 
             answer = agent
                 .post(&url)
-                .set("Content-type", "application/json; charset=utf-")
+                .set("Content-type", "application/json; charset=utf-8")
                 .send_string(&payload)?
                 .into_string()?;
         } else {
@@ -231,7 +231,7 @@ mod http_post {
                 .build();
             answer = agent
                 .post(&url)
-                .set("Content-type", "application/json; charset=utf-")
+                .set("Content-type", "application/json; charset=utf-8")
                 .timeout(std::time::Duration::from_secs(60))
                 .send_string(&payload)?
                 .into_string()?;
