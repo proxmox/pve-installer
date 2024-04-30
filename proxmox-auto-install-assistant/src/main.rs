@@ -379,7 +379,7 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
 
 fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str, uuid: &String) -> Result<()> {
     let result = Command::new("xorriso")
-        .arg("--boot_image")
+        .arg("-boot_image")
         .arg("any")
         .arg("keep")
         .arg("-volume_date")
