@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, format_err, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use glob::Pattern;
 use regex::Regex;
@@ -276,6 +276,7 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
 
 fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     check_prepare_requirements(args)?;
+    let uuid = get_iso_uuid(&args.input)?;
 
     if args.fetch_from == FetchAnswerFrom::Iso && args.answer_file.is_none() {
         bail!("Missing path to the answer file required for the fetch-from 'iso' mode.");
@@ -331,10 +332,15 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     instmode_file_tmp.push("auto-installer-mode.toml");
     fs::write(&instmode_file_tmp, toml::to_string_pretty(&config)?)?;
 
-    inject_file_to_iso(&tmp_iso, &instmode_file_tmp, "/auto-installer-mode.toml")?;
+    inject_file_to_iso(
+        &tmp_iso,
+        &instmode_file_tmp,
+        "/auto-installer-mode.toml",
+        &uuid,
+    )?;
 
     if let Some(answer_file) = &args.answer_file {
-        inject_file_to_iso(&tmp_iso, answer_file, "/answer.toml")?;
+        inject_file_to_iso(&tmp_iso, answer_file, "/answer.toml", &uuid)?;
     }
 
     println!("Moving prepared ISO to target location...");
@@ -371,11 +377,14 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
     target.to_path_buf()
 }
 
-fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str) -> Result<()> {
+fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str, uuid: &String) -> Result<()> {
     let result = Command::new("xorriso")
         .arg("--boot_image")
         .arg("any")
         .arg("keep")
+        .arg("-volume_date")
+        .arg("uuid")
+        .arg(uuid)
         .arg("-dev")
         .arg(iso)
         .arg("-map")
@@ -389,6 +398,35 @@ fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str) -> Result<(
         );
     }
     Ok(())
+}
+
+fn get_iso_uuid(iso: &PathBuf) -> Result<String> {
+    let result = Command::new("xorriso")
+        .arg("-dev")
+        .arg(iso)
+        .arg("-report_system_area")
+        .arg("cmd")
+        .output()?;
+    if !result.status.success() {
+        bail!(
+            "Error determining the UUID of the source ISO: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+    let mut uuid = String::new();
+    for line in String::from_utf8(result.stdout)?.lines() {
+        if line.starts_with("-volume_date uuid") {
+            uuid = line
+                .split(' ')
+                .last()
+                .ok_or_else(|| format_err!("xorriso did behave unexpextedly"))?
+                .replace('\'', "")
+                .trim()
+                .into();
+            break;
+        }
+    }
+    Ok(uuid)
 }
 
 fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
