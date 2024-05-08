@@ -1,3 +1,10 @@
+proxmox-installer (8.2.6) bookworm; urgency=medium
+
+  * assistant: ensure the partition UUID stay the same when preparing an ISO
+    to keep it bootable on EFI with flash drives as installer medium
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 08 May 2024 15:53:33 +0200
+
 proxmox-installer (8.2.5) bookworm; urgency=medium
 
   * fetch answer: really try lower-case variant of label too
