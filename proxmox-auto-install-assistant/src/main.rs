@@ -445,13 +445,13 @@ fn get_iso_uuid(iso: impl AsRef<Path>) -> Result<String> {
 }
 
 fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
-    let unwantend_block_devs = vec![
-        "ram[0-9]*",
-        "loop[0-9]*",
-        "md[0-9]*",
-        "dm-*",
-        "fd[0-9]*",
-        "sr[0-9]*",
+    let unwanted_block_devs = [
+        Pattern::new("ram[0-9]*")?,
+        Pattern::new("loop[0-9]*")?,
+        Pattern::new("md[0-9]*")?,
+        Pattern::new("dm-*")?,
+        Pattern::new("fd[0-9]*")?,
+        Pattern::new("sr[0-9]*")?,
     ];
 
     // compile Regex here once and not inside the loop
@@ -468,8 +468,8 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
         let entry = entry.unwrap();
         let filename = entry.file_name().into_string().unwrap();
 
-        for p in &unwantend_block_devs {
-            if Pattern::new(p)?.matches(&filename) {
+        for p in &unwanted_block_devs {
+            if p.matches(&filename) {
                 continue 'outer;
             }
         }
