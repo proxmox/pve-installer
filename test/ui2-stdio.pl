@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use JSON qw(from_json);
-use Test::More;
 
 use Proxmox::Log;
 use Proxmox::UI;
@@ -16,10 +15,11 @@ $parent_writer->autoflush(1);
 $child_writer->autoflush(1);
 $child_reader->autoflush(1);
 
-
 my $child_pid = fork() // die "fork failed - $!\n";
 
 if ($child_pid) {
+    eval 'use Test::More tests => 3;';
+
     # parent, the hypothetical low-level installer
     close($parent_reader);
     close($parent_writer);
@@ -45,8 +45,11 @@ if ($child_pid) {
     Proxmox::UI::progress(1, 0, 1, 'done');
 
     waitpid($child_pid, 0);
+    is($?, 0); # check child exit status
     done_testing();
 } else {
+    eval 'use Test::More tests => 10;';
+
     # child, e.g. the TUI
     close($child_reader);
     close($child_writer);
@@ -90,6 +93,5 @@ if ($child_pid) {
 	'should get 100% done progress message');
 
     done_testing();
-    exit(0);
 }
 
