@@ -29,7 +29,7 @@ use proxmox_installer_common::{
 /// https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
 const ZFS_ARC_MIN_SIZE_MIB: usize = 64; // MiB
 
-/// Convience wrapper when needing to take a (interior-mutable) reference to `BootdiskOptions`.
+/// Convenience wrapper when needing to take a (interior-mutable) reference to `BootdiskOptions`.
 /// Interior mutability is safe for this case, as it is completely single-threaded.
 pub type BootdiskOptionsRef = Rc<RefCell<BootdiskOptions>>;
 
@@ -165,9 +165,9 @@ impl AdvancedBootdiskOptionsView {
         Self { view }
     }
 
-    /// Called when a new filesystem type is choosen by the user.
+    /// Called when a new filesystem type is chosen by the user.
     /// It first creates the inner (filesystem-specific) options view according to the selected
-    /// filesytem type.
+    /// filesystem type.
     /// Further, it replaces the (outer) bootdisk selector in the main dialog, either with a
     /// selector for LVM configurations or a simple label displaying the chosen RAID for ZFS and
     /// Btrfs configurations.
