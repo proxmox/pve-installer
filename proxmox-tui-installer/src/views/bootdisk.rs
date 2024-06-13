@@ -158,7 +158,7 @@ impl AdvancedBootdiskOptionsView {
                 view.add_child(ZfsBootdiskOptionsView::new(runinfo, zfs, &product_conf))
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
-                view.add_child(BtrfsBootdiskOptionsView::new(&runinfo.disks, btrfs))
+                view.add_child(BtrfsBootdiskOptionsView::new(runinfo, btrfs))
             }
         };
 
@@ -210,7 +210,7 @@ impl AdvancedBootdiskOptionsView {
                         &product_conf,
                     )),
                     FsType::Btrfs(_) => {
-                        view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo.disks))
+                        view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo))
                     }
                 }
             }
@@ -520,9 +520,9 @@ struct BtrfsBootdiskOptionsView {
 }
 
 impl BtrfsBootdiskOptionsView {
-    fn new(disks: &[Disk], options: &BtrfsBootdiskOptions) -> Self {
+    fn new(runinfo: &RuntimeInfo, options: &BtrfsBootdiskOptions) -> Self {
         let view = MultiDiskOptionsView::new(
-            disks,
+            &runinfo.disks,
             &options.selected_disks,
             FormView::new().child("hdsize", DiskSizeEditView::new().content(options.disk_size)),
         )
@@ -531,8 +531,11 @@ impl BtrfsBootdiskOptionsView {
         Self { view }
     }
 
-    fn new_with_defaults(disks: &[Disk]) -> Self {
-        Self::new(disks, &BtrfsBootdiskOptions::defaults_from(disks))
+    fn new_with_defaults(runinfo: &RuntimeInfo) -> Self {
+        Self::new(
+            runinfo,
+            &BtrfsBootdiskOptions::defaults_from(&runinfo.disks),
+        )
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
