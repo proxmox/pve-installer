@@ -4,12 +4,12 @@ use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
     views::{
         Button, Dialog, DummyView, LinearLayout, NamedView, PaddedView, Panel, ScrollView,
-        SelectView, TextView,
+        SelectView, TextView, ViewRef,
     },
-    Cursive, View,
+    Cursive, Vec2, View,
 };
 
-use super::{DiskSizeEditView, FormView, IntegerEditView};
+use super::{DiskSizeEditView, FormView, IntegerEditView, TabbedView};
 use crate::options::FS_TYPES;
 use crate::InstallerState;
 
@@ -67,11 +67,15 @@ impl BootdiskOptionsView {
                 let runinfo = runinfo.clone();
                 let options = advanced_options.clone();
                 move |siv| {
-                    siv.add_layer(advanced_options_view(
-                        &runinfo,
-                        options.clone(),
-                        product_conf.clone(),
-                    ));
+                    let mut view =
+                        advanced_options_view(&runinfo, options.clone(), product_conf.clone());
+
+                    // Pre-compute the child's layout, since it might depend on the size. Without this,
+                    // the view will be empty until focused.
+                    // The screen size never changes in our case, so this is completely OK.
+                    view.layout(siv.screen_size());
+
+                    siv.add_layer(view);
                 }
             }));
 
@@ -193,6 +197,7 @@ impl AdvancedBootdiskOptionsView {
             .unwrap_or_else(|| runinfo.disks[0].clone());
 
         // Update the (inner) options view
+        let screen_size = siv.screen_size();
         siv.call_on_name("advanced-bootdisk-options-dialog", |view: &mut Dialog| {
             if let Some(AdvancedBootdiskOptionsView { view }) =
                 view.get_content_mut().downcast_mut()
@@ -203,7 +208,7 @@ impl AdvancedBootdiskOptionsView {
                         view.add_child(LvmBootdiskOptionsView::new_with_defaults(
                             &selected_lvm_disk,
                             &product_conf,
-                        ));
+                        ))
                     }
                     FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new_with_defaults(
                         &runinfo,
@@ -213,6 +218,11 @@ impl AdvancedBootdiskOptionsView {
                         view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo))
                     }
                 }
+
+                // Pre-compute the child's layout, since it might depend on the size. Without this,
+                // the view will be empty until focused.
+                // The screen size never changes in our case, so this is completely OK.
+                view.layout(screen_size);
             }
         });
 
@@ -373,11 +383,98 @@ impl ViewWrapper for LvmBootdiskOptionsView {
 
 struct MultiDiskOptionsView<T> {
     view: LinearLayout,
+    layout_data: Option<(Vec<Disk>, Vec<usize>, T)>,
     phantom: PhantomData<T>,
 }
 
 impl<T: View> MultiDiskOptionsView<T> {
+    const DISK_FORM_VIEW_ID: &'static str = "multidisk-disk-form";
+
     fn new(avail_disks: &[Disk], selected_disks: &[usize], options_view: T) -> Self {
+        Self {
+            view: LinearLayout::vertical().child(DummyView).child(DummyView),
+            layout_data: Some((avail_disks.to_vec(), selected_disks.to_vec(), options_view)),
+            phantom: PhantomData,
+        }
+    }
+
+    fn top_panel(mut self, view: impl View) -> Self {
+        self.view.remove_child(0);
+        self.view.insert_child(0, Panel::new(view));
+        self
+    }
+
+    fn get_options_view(&mut self) -> Option<&T> {
+        let inner = self.view.get_child(1)?;
+
+        if let Some(view) = inner.downcast_ref::<LinearLayout>() {
+            view.get_child(2)?
+                .downcast_ref::<LinearLayout>()?
+                .get_child(2)?
+                .downcast_ref::<T>()
+        } else if let Some(view) = inner.downcast_ref::<TabbedView>() {
+            view.get(1)?
+                .downcast_ref::<PaddedView<T>>()
+                .map(|v| v.get_inner())
+        } else {
+            None
+        }
+    }
+
+    fn get_disk_form(&mut self) -> Option<ViewRef<FormView>> {
+        let inner = self.view.get_child_mut(1)?;
+
+        let view = if let Some(view) = inner.downcast_mut::<LinearLayout>() {
+            view.get_child_mut(0)?
+                .downcast_mut::<LinearLayout>()?
+                .get_child_mut(2)
+        } else if let Some(view) = inner.downcast_mut::<TabbedView>() {
+            view.get_mut(0)?
+                .downcast_mut::<PaddedView<LinearLayout>>()
+                .map(|v| v.get_inner_mut())?
+                .get_child_mut(0)
+        } else {
+            None
+        };
+
+        view?
+            .downcast_mut::<ScrollView<NamedView<FormView>>>()
+            .map(ScrollView::get_inner_mut)
+            .map(NamedView::get_mut)
+    }
+
+    /// This function returns a tuple of vectors. The first vector contains the currently selected
+    /// disks in order of their selection slot. Empty slots are filtered out. The second vector
+    /// contains indices of each slot's selection, which enables us to restore the selection even
+    /// for empty slots.
+    fn get_disks_and_selection(&mut self) -> Option<(Vec<Disk>, Vec<usize>)> {
+        let mut disks = vec![];
+        let mut selected_disks = Vec::new();
+        let disk_form = self.get_disk_form()?;
+
+        for i in 0..disk_form.len() {
+            let disk = disk_form.get_value::<SelectView<Option<Disk>>, _>(i)?;
+
+            // `None` means no disk was selected for this slot
+            if let Some(disk) = disk {
+                disks.push(disk);
+            }
+
+            selected_disks.push(
+                disk_form
+                    .get_child::<SelectView<Option<Disk>>>(i)?
+                    .selected_id()?,
+            );
+        }
+
+        Some((disks, selected_disks))
+    }
+
+    fn do_layout(&mut self, size: Vec2) {
+        let Some((avail_disks, selected_disks, options_view)) = self.layout_data.take() else {
+            panic!("cannot do layout without data!");
+        };
+
         let mut selectable_disks = avail_disks
             .iter()
             .map(|d| (d.to_string(), Some(d.clone())))
@@ -396,15 +493,14 @@ impl<T: View> MultiDiskOptionsView<T> {
             );
         }
 
-        let mut disk_select_view = LinearLayout::vertical()
-            .child(TextView::new("Disk setup").center())
-            .child(DummyView)
-            .child(ScrollView::new(disk_form.with_name("multidisk-disk-form")));
+        let mut disk_select_view = LinearLayout::vertical().child(ScrollView::new(
+            disk_form.with_name(Self::DISK_FORM_VIEW_ID),
+        ));
 
         if avail_disks.len() > 3 {
             let do_not_use_index = selectable_disks.len() - 1;
             let deselect_all_button = Button::new("Deselect all", move |siv| {
-                siv.call_on_name("multidisk-disk-form", |view: &mut FormView| {
+                siv.call_on_name(Self::DISK_FORM_VIEW_ID, |view: &mut FormView| {
                     view.call_on_childs(&|v: &mut SelectView<Option<Disk>>| {
                         // As there is no .on_select() callback defined on the
                         // SelectView's, the returned callback here can be safely
@@ -425,94 +521,50 @@ impl<T: View> MultiDiskOptionsView<T> {
             ));
         }
 
-        let options_view = LinearLayout::vertical()
-            .child(TextView::new("Advanced options").center())
-            .child(DummyView)
-            .child(options_view);
+        self.view.remove_child(1);
 
-        let view = LinearLayout::horizontal()
-            .child(disk_select_view)
-            .child(DummyView.fixed_width(3))
-            .child(options_view);
+        if size.x > 80 {
+            disk_select_view.insert_child(0, DummyView);
+            disk_select_view.insert_child(0, TextView::new("Disk setup").center());
 
-        Self {
-            view: LinearLayout::vertical().child(view),
-            phantom: PhantomData,
+            let view = LinearLayout::horizontal()
+                .child(disk_select_view)
+                .child(DummyView.fixed_width(3))
+                .child(
+                    LinearLayout::vertical()
+                        .child(TextView::new("Advanced options").center())
+                        .child(DummyView)
+                        .child(options_view),
+                );
+
+            self.view.add_child(view);
+        } else {
+            let view = TabbedView::new()
+                .tab("Disk setup", PaddedView::lrtb(0, 0, 1, 0, disk_select_view))
+                .tab(
+                    "Advanced options",
+                    PaddedView::lrtb(0, 0, 1, 0, options_view),
+                );
+
+            self.view.add_child(view);
         }
-    }
-
-    fn top_panel(mut self, view: impl View) -> Self {
-        if self.has_top_panel() {
-            self.view.remove_child(0);
-        }
-
-        self.view.insert_child(0, Panel::new(view));
-        self
-    }
-
-    ///
-    /// This function returns a tuple of vectors. The first vector contains the currently selected
-    /// disks in order of their selection slot. Empty slots are filtered out. The second vector
-    /// contains indices of each slot's selection, which enables us to restore the selection even
-    /// for empty slots.
-    ///
-    fn get_disks_and_selection(&mut self) -> Option<(Vec<Disk>, Vec<usize>)> {
-        let mut disks = vec![];
-        let view_top_index = usize::from(self.has_top_panel());
-
-        let disk_form = self
-            .view
-            .get_child_mut(view_top_index)?
-            .downcast_mut::<LinearLayout>()?
-            .get_child_mut(0)?
-            .downcast_mut::<LinearLayout>()?
-            .get_child_mut(2)?
-            .downcast_mut::<ScrollView<NamedView<FormView>>>()?
-            .get_inner_mut()
-            .get_mut();
-
-        let mut selected_disks = Vec::new();
-
-        for i in 0..disk_form.len() {
-            let disk = disk_form.get_value::<SelectView<Option<Disk>>, _>(i)?;
-
-            // `None` means no disk was selected for this slot
-            if let Some(disk) = disk {
-                disks.push(disk);
-            }
-
-            selected_disks.push(
-                disk_form
-                    .get_child::<SelectView<Option<Disk>>>(i)?
-                    .selected_id()?,
-            );
-        }
-
-        Some((disks, selected_disks))
-    }
-
-    fn inner_mut(&mut self) -> Option<&mut T> {
-        let view_top_index = usize::from(self.has_top_panel());
-
-        self.view
-            .get_child_mut(view_top_index)?
-            .downcast_mut::<LinearLayout>()?
-            .get_child_mut(2)?
-            .downcast_mut::<LinearLayout>()?
-            .get_child_mut(2)?
-            .downcast_mut::<T>()
-    }
-
-    fn has_top_panel(&self) -> bool {
-        // The root view should only ever have one or two children
-        assert!([1, 2].contains(&self.view.len()));
-
-        self.view.len() == 2
     }
 }
 
-impl<T: 'static> ViewWrapper for MultiDiskOptionsView<T> {
+impl<T: 'static + View> ViewWrapper for MultiDiskOptionsView<T> {
     cursive::wrap_impl!(self.view: LinearLayout);
+
+    fn wrap_layout(&mut self, size: Vec2) {
+        if self.layout_data.is_some() {
+            self.do_layout(size);
+        }
+
+        self.view.layout(size)
+    }
+
+    fn wrap_needs_relayout(&self) -> bool {
+        self.layout_data.is_some() || self.view.needs_relayout()
+    }
 }
 
 struct BtrfsBootdiskOptionsView {
@@ -540,7 +592,10 @@ impl BtrfsBootdiskOptionsView {
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
-        let disk_size = self.view.inner_mut()?.get_value::<DiskSizeEditView, _>(0)?;
+        let disk_size = self
+            .view
+            .get_options_view()?
+            .get_value::<DiskSizeEditView, _>(0)?;
 
         Some((
             disks,
@@ -626,7 +681,7 @@ impl ZfsBootdiskOptionsView {
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
-        let view = self.view.inner_mut()?;
+        let view = self.view.get_options_view()?;
         let has_arc_max = view.len() >= 6;
         let disk_size_index = if has_arc_max { 5 } else { 4 };
 
