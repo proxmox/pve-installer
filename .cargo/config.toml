@@ -3,3 +3,6 @@
 directory = "/usr/share/cargo/registry"
 [source.crates-io]
 replace-with = "debian-packages"
+
+[profile.release]
+debug = true
