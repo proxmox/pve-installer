@@ -21,7 +21,7 @@ pub struct InstallProgressView {
 }
 
 impl InstallProgressView {
-    const PROGRESS_TEXT_VIEW_ID: &str = "progress-text";
+    const PROGRESS_TEXT_VIEW_ID: &'static str = "progress-text";
 
     pub fn new(siv: &mut Cursive) -> Self {
         let cb_sink = siv.cb_sink().clone();
