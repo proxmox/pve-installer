@@ -57,7 +57,7 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
 
 fn main() -> ExitCode {
     if let Err(err) = init_log() {
-        panic!("could not initilize logging: {}", err);
+        panic!("could not initialize logging: {}", err);
     }
 
     let in_test_mode = match env::args().nth(1).as_deref() {

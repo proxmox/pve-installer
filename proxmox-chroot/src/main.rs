@@ -14,7 +14,7 @@ static BINDMOUNTS: [&str; 4] = ["dev", "proc", "run", "sys"];
 const TARGET_DIR: &str = "/target";
 const ZPOOL_NAME: &str = "rpool";
 
-/// Helper tool to prepare eveything to `chroot` into an installation
+/// Helper tool to prepare everything to `chroot` into an installation
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
