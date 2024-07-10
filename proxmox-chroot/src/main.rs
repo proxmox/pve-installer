@@ -79,7 +79,7 @@ fn main() {
         Commands::Cleanup(args) => cleanup(args),
     };
     if let Err(err) = res {
-        eprintln!("{err}");
+        eprintln!("{err:#}");
         std::process::exit(1);
     }
 }
@@ -108,7 +108,7 @@ fn cleanup(args: &CommandCleanup) -> Result<()> {
     let fs = get_fs(args.filesystem)?;
 
     if let Err(e) = bind_umount() {
-        eprintln!("{e}")
+        eprintln!("{e:#}")
     }
 
     match fs {
@@ -188,7 +188,7 @@ fn mount_fs() -> Result<()> {
         .arg(product.to_string())
         .output();
     match res {
-        Err(e) => bail!("{e}"),
+        Err(e) => bail!("{e:#}"),
         Ok(output) => {
             if output.status.success() {
                 println!(
