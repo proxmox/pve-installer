@@ -1,4 +1,8 @@
-use std::{fs, io, path, process::Command};
+use std::{
+    fs, io,
+    path::{self, PathBuf},
+    process::Command,
+};
 
 use anyhow::{bail, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -6,6 +10,7 @@ use nix::mount::{mount, umount, MsFlags};
 use proxmox_installer_common::{
     options::FsType,
     setup::{InstallConfig, SetupInfo},
+    RUNTIME_DIR,
 };
 use regex::Regex;
 
@@ -145,8 +150,8 @@ fn get_low_level_config() -> Result<InstallConfig> {
 }
 
 fn get_iso_info() -> Result<SetupInfo> {
-    let file = fs::File::open("/run/proxmox-installer/iso-info.json")?;
-    let reader = io::BufReader::new(file);
+    let path = PathBuf::from(RUNTIME_DIR).join("iso-info.json");
+    let reader = io::BufReader::new(fs::File::open(path)?);
     let setup_info: SetupInfo = serde_json::from_reader(reader)?;
     Ok(setup_info)
 }

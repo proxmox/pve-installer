@@ -161,11 +161,12 @@ pub struct LocaleInfo {
 
 /// Fetches basic information needed for the installer which is required to work
 pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
-    let base_path = if in_test_mode { "./testdir" } else { "/" };
-    let mut path = PathBuf::from(base_path);
-
-    path.push("run");
-    path.push("proxmox-installer");
+    let base_path = if in_test_mode {
+        format!("./testdir/{}", crate::RUNTIME_DIR)
+    } else {
+        crate::RUNTIME_DIR.to_owned()
+    };
+    let path = PathBuf::from(base_path);
 
     let installer_info: SetupInfo = {
         let mut path = path.clone();

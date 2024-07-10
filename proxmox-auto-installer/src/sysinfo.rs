@@ -1,7 +1,10 @@
 use anyhow::{bail, Result};
-use proxmox_installer_common::setup::{IsoInfo, ProductConfig, SetupInfo};
+use proxmox_installer_common::{
+    setup::{IsoInfo, ProductConfig, SetupInfo},
+    RUNTIME_DIR,
+};
 use serde::Serialize;
-use std::{collections::HashMap, fs, io};
+use std::{collections::HashMap, fs, io, path::PathBuf};
 
 use crate::utils::get_nic_list;
 
@@ -17,7 +20,8 @@ pub struct SysInfo {
 
 impl SysInfo {
     pub fn get() -> Result<Self> {
-        let setup_info: SetupInfo = match fs::File::open("/run/proxmox-installer/iso-info.json") {
+        let path = PathBuf::from(RUNTIME_DIR).join("iso-info.json").to_owned();
+        let setup_info: SetupInfo = match fs::File::open(path) {
             Ok(iso_info_file) => {
                 let reader = io::BufReader::new(iso_info_file);
                 serde_json::from_reader(reader)?
