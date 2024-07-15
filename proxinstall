@@ -674,7 +674,7 @@ sub create_password_view {
 
     cleanup_view();
 
-    my $password = Proxmox::Install::Config::get_password();
+    my $password = Proxmox::Install::Config::get_root_password('plain');
 
     my $grid = &$create_basic_grid();
     $gtk_state->{inbox}->pack_start($grid, 0, 0, 0);
@@ -745,7 +745,7 @@ sub create_password_view {
 	    return;
 	}
 
-	Proxmox::Install::Config::set_password($t1);
+	Proxmox::Install::Config::set_root_password('plain', $t1);
 	Proxmox::Install::Config::set_mailto($t3);
 
 	$step_number++;

@@ -90,7 +90,7 @@ my sub init_cfg {
 	keymap => 'en-us',
 
 	# root credentials & details
-	password => undef,
+	root_password => undef,
 	mailto => 'mail@example.invalid',
 	root_ssh_keys => [],
 
@@ -196,8 +196,22 @@ sub get_timezone { return get('timezone'); }
 sub set_keymap { set_key('keymap', $_[0]); }
 sub get_keymap { return get('keymap'); }
 
-sub set_password { set_key('password', $_[0]); }
-sub get_password { return get('password'); }
+sub set_root_password {
+    my ($key) = @_;
+    croak "unknown root password option '$key'"
+	if $key ne 'plain' && $key ne 'hashed';
+
+    set_key('root_password', { $_[0] => $_[1] });
+}
+
+sub get_root_password {
+    my ($key) = @_;
+    croak "unknown root password option '$key'"
+	if $key ne 'plain' && $key ne 'hashed';
+
+    my $password = get('root_password');
+    return defined($password->{$key}) ? $password->{$key} : undef;
+}
 
 sub set_mailto { set_key('mailto', $_[0]); }
 sub get_mailto { return get('mailto'); }

@@ -654,6 +654,27 @@ sub prepare_grub_efi_boot_esp {
     die "failed to prepare EFI boot using Grub on '$espdev': $err" if $err;
 }
 
+my sub setup_root_password {
+    my ($targetdir) = @_;
+
+    my $plain = Proxmox::Install::Config::get_root_password('plain');
+    my $hashed = Proxmox::Install::Config::get_root_password('hashed');
+
+    die "root password must be set!\n"
+	if !defined($plain) && !defined($hashed);
+
+    die "plain and hashed root password cannot be set at the same time!\n"
+	if defined($plain) && defined($hashed);
+
+    if (defined($plain)) {
+	my $octets = encode("utf-8", $plain);
+	run_command("chroot $targetdir /usr/sbin/chpasswd", undef, "root:$octets\n");
+    } elsif (defined($hashed)) {
+	my $octets = encode("utf-8", $hashed);
+	run_command("chroot $targetdir /usr/sbin/chpasswd --encrypted", undef, "root:$octets\n");
+    }
+}
+
 sub extract_data {
     my $iso_env = Proxmox::Install::ISOEnv::get();
     my $run_env = Proxmox::Install::RunEnv::get();
@@ -1302,9 +1323,7 @@ _EOD
 
 	diversion_remove($targetdir, "/sbin/start-stop-daemon");
 
-	# set root password
-	my $octets = encode("utf-8", Proxmox::Install::Config::get_password());
-	run_command("chroot $targetdir /usr/sbin/chpasswd", undef, "root:$octets\n");
+	setup_root_password($targetdir);
 
 	# set root ssh keys
 	my $ssh_keys = Proxmox::Install::Config::get_root_ssh_keys();
