@@ -26,7 +26,8 @@ pub struct Global {
     pub keyboard: KeyboardLayout,
     pub mailto: String,
     pub timezone: String,
-    pub root_password: String,
+    pub root_password: Option<String>,
+    pub root_password_hashed: Option<String>,
     #[serde(default)]
     pub reboot_on_error: bool,
     #[serde(default)]
