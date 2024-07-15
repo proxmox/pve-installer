@@ -10,7 +10,9 @@ use crate::{
 };
 use proxmox_installer_common::{
     options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
-    setup::{InstallConfig, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo},
+    setup::{
+        InstallConfig, InstallRootPassword, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -334,7 +336,10 @@ pub fn parse_answer(
         timezone: answer.global.timezone.clone(),
         keymap: answer.global.keyboard.to_string(),
 
-        password: answer.global.root_password.clone(),
+        root_password: InstallRootPassword {
+            plain: Some(answer.global.root_password.clone()),
+            hashed: None,
+        },
         mailto: answer.global.mailto.clone(),
         root_ssh_keys: answer.global.root_ssh_keys.clone(),
 

@@ -425,6 +425,14 @@ impl Interface {
     }
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+pub struct InstallRootPassword {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub plain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hashed: Option<String>,
+}
+
 pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> {
     let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if test_mode {
         (
@@ -445,7 +453,7 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 }
 
 /// See Proxmox::Install::Config
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct InstallConfig {
     pub autoreboot: usize,
 
@@ -486,7 +494,7 @@ pub struct InstallConfig {
     pub timezone: String,
     pub keymap: String,
 
-    pub password: String,
+    pub root_password: InstallRootPassword,
     pub mailto: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub root_ssh_keys: Vec<String>,

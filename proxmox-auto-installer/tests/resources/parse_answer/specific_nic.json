@@ -12,7 +12,7 @@
   "keymap": "de",
   "mailto": "mail@no.invalid",
   "mngmt_nic": "enp129s0f1np1",
-  "password": "123456",
+  "root_password": { "plain": "123456" },
   "target_hd": "/dev/sda",
   "timezone": "Europe/Vienna"
 }
