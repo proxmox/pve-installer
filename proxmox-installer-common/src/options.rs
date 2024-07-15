@@ -327,21 +327,6 @@ impl TimezoneOptions {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct PasswordOptions {
-    pub email: String,
-    pub root_password: String,
-}
-
-impl Default for PasswordOptions {
-    fn default() -> Self {
-        Self {
-            email: "mail@example.invalid".to_string(),
-            root_password: String::new(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct NetworkOptions {
     pub ifname: String,

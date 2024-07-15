@@ -16,10 +16,10 @@ use cursive::{
 use regex::Regex;
 
 mod options;
-use options::InstallerOptions;
+use options::{InstallerOptions, PasswordOptions};
 
 use proxmox_installer_common::{
-    options::{BootdiskOptions, NetworkOptions, PasswordOptions, TimezoneOptions},
+    options::{BootdiskOptions, NetworkOptions, TimezoneOptions},
     setup::{installer_setup, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
     utils::Fqdn,
 };
