@@ -24,7 +24,7 @@ pub const FS_TYPES: &[FsType] = {
     ]
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct PasswordOptions {
     pub email: String,
     pub root_password: String,
@@ -39,7 +39,7 @@ impl Default for PasswordOptions {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct InstallerOptions {
     pub bootdisk: BootdiskOptions,
     pub timezone: TimezoneOptions,
