@@ -3,10 +3,10 @@ package Proxmox::Sys::ZFS;
 use strict;
 use warnings;
 
-use Proxmox::Sys::Command qw(run_command);
+use Proxmox::Sys::Command qw(run_command syscmd);
 
 use base qw(Exporter);
-our @EXPORT_OK = qw(get_exported_pools);
+our @EXPORT_OK = qw(get_exported_pools rename_pool);
 
 # Parses the output of running `zpool import`, which shows all importable
 # ZFS pools.
@@ -88,6 +88,22 @@ sub get_exported_pools {
     open (my $fh, '<', \$raw) or die 'failed to open in-memory stream';
 
     return zpool_import_parse_output($fh);
+}
+
+# Renames a importable ZFS pool by importing it with a new name and then
+# exporting again.
+#
+# Arguments:
+#
+# $poolid - Unique, numeric identifier of the pool to rename
+# $new_name - New name for the pool
+sub rename_pool {
+    my ($poolid, $new_name) = @_;
+
+    syscmd("zpool import -f $poolid $new_name") == 0 ||
+	die "failed to import zfs pool with id '$poolid' with new name '$new_name'\n";
+    syscmd("zpool export $new_name") == 0 ||
+	warn "failed to export renamed zfs pool '$new_name'\n";
 }
 
 1;

@@ -16,6 +16,7 @@ use Proxmox::Install::StorageConfig;
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_write_all);
+use Proxmox::Sys::ZFS;
 use Proxmox::UI;
 
 # TODO: move somewhere better?
@@ -169,8 +170,40 @@ sub btrfs_create {
     syscmd($cmd);
 }
 
+sub zfs_ask_existing_zpool_rename {
+    my ($pool_name) = @_;
+
+    # At this point, no pools should be imported/active
+    my $exported_pools = Proxmox::Sys::ZFS::get_exported_pools();
+
+    foreach (@$exported_pools) {
+	next if $_->{name} ne $pool_name || $_->{state} ne 'ONLINE';
+	my $renamed_pool = "$_->{name}-OLD-$_->{id}";
+
+	my $do_rename = Proxmox::Install::Config::get_existing_storage_auto_rename();
+	if (!$do_rename) {
+	    $do_rename = Proxmox::UI::prompt(
+		"A ZFS pool named '$_->{name}' (id $_->{id}) already exists on the system.\n\n" .
+		"Do you want to rename the pool to '$renamed_pool' before continuing " .
+		"or cancel the installation?"
+	    );
+	}
+
+	# Import the pool using its id, as that is unique and works even if there are
+	# multiple zpools with the same name.
+	if ($do_rename) {
+	    Proxmox::Sys::ZFS::rename_pool($_->{id}, $renamed_pool);
+	} else {
+	    warn "Canceled installation as requested by user, due to already existing ZFS pool '$pool_name'\n";
+	    die "\n"; # causes abort without re-showing an error dialogue
+	}
+    }
+}
+
 sub zfs_create_rpool {
     my ($vdev, $pool_name, $root_volume_name) = @_;
+
+    zfs_ask_existing_zpool_rename($pool_name);
 
     my $iso_env = Proxmox::Install::ISOEnv::get();
 
