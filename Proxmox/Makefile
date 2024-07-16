@@ -17,6 +17,7 @@ PERL_MODULES=\
     Sys/File.pm \
     Sys/Net.pm \
     Sys/Udev.pm \
+    Sys/ZFS.pm \
     UI.pm \
     UI/Base.pm \
     UI/Gtk3.pm \

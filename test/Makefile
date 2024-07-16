@@ -3,12 +3,13 @@ all:
 export PERLLIB=..
 
 .PHONY: check
-check: test-zfs-arc-max test-run-command test-parse-fqdn test-ui2-stdio
+check: test-zfs-arc-max test-run-command test-parse-fqdn test-ui2-stdio test-zfs-get-pool-list
 
 .PHONY: test-zfs-arc-max
 test-zfs-arc-max:
 	./zfs-arc-max.pl
 
+.PHONY: test-run-command
 test-run-command:
 	./run-command.pl
 
@@ -19,3 +20,7 @@ test-parse-fqdn:
 .PHONY: test-ui2-stdio
 test-ui2-stdio:
 	./ui2-stdio.pl
+
+.PHONY: test-zfs-get-pool-list
+test-zfs-get-pool-list:
+	./zfs-get-pool-list.pl
