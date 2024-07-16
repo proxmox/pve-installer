@@ -82,7 +82,7 @@ my sub init_cfg {
 	# TODO: single disk selection config
 	target_hd => undef,
 	disk_selection => {},
-	lvm_auto_rename => 0,
+	existing_storage_auto_rename => 0,
 
 	# locale
 	country => $country,
@@ -244,7 +244,7 @@ sub get_dns { return get('dns'); }
 sub set_target_cmdline { set_key('target_cmdline', $_[0]); }
 sub get_target_cmdline { return get('target_cmdline'); }
 
-sub set_lvm_auto_rename { set_key('lvm_auto_rename', $_[0]); }
-sub get_lvm_auto_rename { return get('lvm_auto_rename'); }
+sub set_existing_storage_auto_rename { set_key('existing_storage_auto_rename', $_[0]); }
+sub get_existing_storage_auto_rename { return get('existing_storage_auto_rename'); }
 
 1;

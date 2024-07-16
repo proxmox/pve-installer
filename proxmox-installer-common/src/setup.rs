@@ -480,7 +480,7 @@ pub struct InstallConfig {
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub disk_selection: BTreeMap<String, String>,
 
-    pub lvm_auto_rename: usize,
+    pub existing_storage_auto_rename: usize,
 
     pub country: String,
     pub timezone: String,

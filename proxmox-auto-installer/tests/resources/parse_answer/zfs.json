@@ -8,7 +8,7 @@
 	"6": "6",
 	"7": "7"
   },
-  "lvm_auto_rename": 1,
+  "existing_storage_auto_rename": 1,
   "filesys": "zfs (RAID1)",
   "gateway": "192.168.1.1",
   "hdsize": 80.0,

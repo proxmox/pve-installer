@@ -328,7 +328,7 @@ pub fn parse_answer(
         zfs_opts: None,
         target_hd: None,
         disk_selection: BTreeMap::new(),
-        lvm_auto_rename: 1,
+        existing_storage_auto_rename: 1,
 
         country: answer.global.country.clone(),
         timezone: answer.global.timezone.clone(),

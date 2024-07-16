@@ -384,8 +384,8 @@ sub ask_existing_vg_rename_or_abort {
 	$vg->{new_vgname} = "$vgname-OLD-$short_uid";
     }
 
-    my $response_ok = Proxmox::Install::Config::get_lvm_auto_rename();
-    if (!$response_ok) {
+    my $do_rename = Proxmox::Install::Config::get_existing_storage_auto_rename();
+    if (!$do_rename) {
 	my $message = "Detected existing '$vgname' Volume Group(s)! Do you want to:\n";
 
 	for my $vg_uuid (keys %$duplicate_vgs) {
@@ -394,10 +394,10 @@ sub ask_existing_vg_rename_or_abort {
 	}
 	$message .= "or cancel the installation?";
 
-	$response_ok = Proxmox::UI::prompt($message);
+	$do_rename = Proxmox::UI::prompt($message);
     }
 
-    if ($response_ok) {
+    if ($do_rename) {
 	for my $vg_uuid (keys %$duplicate_vgs) {
 	    my $vg = $duplicate_vgs->{$vg_uuid};
 	    my $new_vgname = $vg->{new_vgname};

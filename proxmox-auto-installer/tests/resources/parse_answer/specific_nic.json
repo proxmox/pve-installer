@@ -7,7 +7,7 @@
   "filesys": "ext4",
   "gateway": "10.10.10.1",
   "hdsize": 223.57088470458984,
-  "lvm_auto_rename": 1,
+  "existing_storage_auto_rename": 1,
   "hostname": "pveauto",
   "keymap": "de",
   "mailto": "mail@no.invalid",

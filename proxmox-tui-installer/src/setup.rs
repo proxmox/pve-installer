@@ -17,7 +17,7 @@ impl From<InstallerOptions> for InstallConfig {
             zfs_opts: None,
             target_hd: None,
             disk_selection: BTreeMap::new(),
-            lvm_auto_rename: 0,
+            existing_storage_auto_rename: 0,
 
             country: options.timezone.country,
             timezone: options.timezone.timezone,
