@@ -87,7 +87,7 @@ impl<T: TableViewItem> TableView<T> {
     }
 }
 
-impl<T: TableViewItem + 'static> View for TableView<T> {
+impl<T: TableViewItem + 'static + Send + Sync> View for TableView<T> {
     fn draw(&self, p: &Printer) {
         // Equally split up the columns width, taking into account the scrollbar size and column
         // separator.

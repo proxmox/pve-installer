@@ -8,7 +8,7 @@ exclude = [ "build", "debian" ]
 homepage = "https://www.proxmox.com"
 
 [dependencies]
-cursive = { version = "0.20.0", default-features = false, features = ["crossterm-backend"] }
+cursive = { version = "0.21", default-features = false, features = ["crossterm-backend"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 regex = "1.7"

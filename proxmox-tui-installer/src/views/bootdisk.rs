@@ -1,4 +1,7 @@
-use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use cursive::{
     view::{Nameable, Resizable, ViewWrapper},
@@ -30,8 +33,7 @@ use proxmox_installer_common::{
 const ZFS_ARC_MIN_SIZE_MIB: usize = 64; // MiB
 
 /// Convenience wrapper when needing to take a (interior-mutable) reference to `BootdiskOptions`.
-/// Interior mutability is safe for this case, as it is completely single-threaded.
-pub type BootdiskOptionsRef = Rc<RefCell<BootdiskOptions>>;
+pub type BootdiskOptionsRef = Arc<Mutex<BootdiskOptions>>;
 
 pub struct BootdiskOptionsView {
     view: LinearLayout,
@@ -41,7 +43,7 @@ pub struct BootdiskOptionsView {
 
 impl BootdiskOptionsView {
     pub fn new(siv: &mut Cursive, runinfo: &RuntimeInfo, options: &BootdiskOptions) -> Self {
-        let advanced_options = Rc::new(RefCell::new(options.clone()));
+        let advanced_options = Arc::new(Mutex::new(options.clone()));
 
         let bootdisk_form = FormView::new()
             .child(
@@ -100,7 +102,7 @@ impl BootdiskOptionsView {
         // The simple disk selector, as well as the advanced bootdisk dialog save their
         // info on submit directly to the shared `BootdiskOptionsRef` - so just clone() + return
         // it.
-        let options = (*self.advanced_options).clone().into_inner();
+        let options = self.advanced_options.lock().unwrap().clone();
         check_disks_4kn_legacy_boot(self.boot_type, &options.disks)?;
         Ok(options)
     }
@@ -122,7 +124,7 @@ impl AdvancedBootdiskOptionsView {
     ) -> Self {
         let filter_btrfs =
             |fstype: &&FsType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
-        let options = (*options_ref).borrow();
+        let options = options_ref.lock().unwrap();
 
         let fstype_select = SelectView::new()
             .popup()
@@ -758,7 +760,7 @@ fn advanced_options_view(
             }
 
             siv.pop_layer();
-            *(*options_ref).borrow_mut() = options;
+            *options_ref.lock().unwrap() = options;
         }
     })
     .with_name("advanced-bootdisk-options-dialog")
@@ -787,8 +789,9 @@ fn target_bootdisk_selectview(
         .with_all(avail_disks.iter().map(|d| (d.to_string(), d.clone())))
         .selected(selected_disk_pos)
         .on_submit(move |_, disk| {
-            options_ref.borrow_mut().disks = vec![disk.clone()];
-            options_ref.borrow_mut().advanced =
+            let mut options = options_ref.lock().unwrap();
+            options.disks = vec![disk.clone()];
+            options.advanced =
                 AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(disk));
         })
 }

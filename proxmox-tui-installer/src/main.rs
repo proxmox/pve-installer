@@ -4,7 +4,7 @@ use std::{collections::HashMap, env, net::IpAddr};
 
 use cursive::{
     event::Event,
-    theme::{ColorStyle, Effect, PaletteColor, Style},
+    theme::{ColorStyle, Effect, Effects, PaletteColor, Style},
     view::{Nameable, Offset, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
@@ -50,7 +50,7 @@ impl InstallerView {
     pub fn new<T: View>(
         state: &InstallerState,
         view: T,
-        next_cb: Box<dyn Fn(&mut Cursive)>,
+        next_cb: Box<dyn Fn(&mut Cursive) + Send + Sync>,
         focus_next: bool,
     ) -> Self {
         let mut bbar = LinearLayout::horizontal()
@@ -290,9 +290,9 @@ fn prompt_dialog(
     title: &str,
     text: &str,
     yes_text: &str,
-    callback_yes: Box<dyn Fn(&mut Cursive)>,
+    callback_yes: Box<dyn Fn(&mut Cursive) + Send + Sync>,
     no_text: &str,
-    callback_no: Box<dyn Fn(&mut Cursive)>,
+    callback_no: Box<dyn Fn(&mut Cursive) + Send + Sync>,
 ) {
     siv.add_layer(
         Dialog::around(TextView::new(text))

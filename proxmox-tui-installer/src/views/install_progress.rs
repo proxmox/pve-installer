@@ -204,7 +204,11 @@ impl InstallProgressView {
         }
     }
 
-    fn show_prompt<W: Write + 'static>(siv: &mut Cursive, text: &str, writer: Arc<Mutex<W>>) {
+    fn show_prompt<W: Write + 'static + Send>(
+        siv: &mut Cursive,
+        text: &str,
+        writer: Arc<Mutex<W>>,
+    ) {
         let send_answer = |writer: Arc<Mutex<W>>, answer| {
             if let Ok(mut writer) = writer.lock() {
                 let _ = writeln!(

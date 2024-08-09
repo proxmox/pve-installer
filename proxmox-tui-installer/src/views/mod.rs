@@ -1,4 +1,4 @@
-use std::{net::IpAddr, rc::Rc, str::FromStr};
+use std::{net::IpAddr, str::FromStr, sync::Arc};
 
 use cursive::{
     event::{Event, EventResult},
@@ -105,7 +105,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         self.max_value = Some(max);
     }
 
-    fn check_bounds(&mut self, original: Rc<String>, result: EventResult) -> EventResult {
+    fn check_bounds(&mut self, original: Arc<String>, result: EventResult) -> EventResult {
         // Check if the new value is actually valid according to the max value, if set
         if let Some(max) = self.max_value {
             if let Ok(val) = self.get_content() {
@@ -314,7 +314,7 @@ impl FormViewGetValue<String> for EditView {
     }
 }
 
-impl<T: 'static + Clone> FormViewGetValue<T> for SelectView<T> {
+impl<T: 'static + Clone + Send + Sync> FormViewGetValue<T> for SelectView<T> {
     fn get_value(&self) -> Option<T> {
         self.selection().map(|v| (*v).clone())
     }
