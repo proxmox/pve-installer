@@ -18,7 +18,7 @@ hex = "0.4"
 log = "0.4.20"
 native-tls = "0.2"
 proxmox-auto-installer = { path = "../proxmox-auto-installer" }
-rustls = { version = "0.20", features = [ "dangerous_configuration" ] }
+rustls = { version = "0.21", features = [ "dangerous_configuration" ] }
 rustls-native-certs = "0.6"
 sha2 = "0.10"
 toml = "0.8"
