@@ -21,5 +21,5 @@ proxmox-auto-installer = { path = "../proxmox-auto-installer" }
 rustls = { version = "0.20", features = [ "dangerous_configuration" ] }
 rustls-native-certs = "0.6"
 sha2 = "0.10"
-toml = "0.7"
+toml = "0.8"
 ureq = { version = "2.6", features = [ "native-certs", "native-tls" ] }
