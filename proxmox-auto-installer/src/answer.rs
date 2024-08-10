@@ -9,6 +9,8 @@ use std::{collections::BTreeMap, net::IpAddr};
 // BTreeMap is used to store filters as the order of the filters will be stable, compared to
 // storing them in a HashMap
 
+// ----- Start of `answers.toml` format definition -----
+
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Answer {
@@ -34,16 +36,37 @@ pub struct Global {
     pub root_ssh_keys: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Debug, Default, PartialEq)]
-#[serde(deny_unknown_fields)]
-enum NetworkConfigMode {
-    #[default]
-    #[serde(rename = "from-dhcp")]
-    FromDhcp,
-    #[serde(rename = "from-answer")]
-    FromAnswer,
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum KeyboardLayout {
+    De,
+    DeCh,
+    Dk,
+    EnGb,
+    EnUs,
+    Es,
+    Fi,
+    Fr,
+    FrBe,
+    FrCa,
+    FrCh,
+    Hu,
+    Is,
+    It,
+    Jp,
+    Lt,
+    Mk,
+    Nl,
+    No,
+    Pl,
+    Pt,
+    PtBr,
+    Se,
+    Si,
+    Tr,
 }
 
+// This is the format in `answers.toml` because `Network` is constructed from `NetworkInAnswer`.
 #[derive(Clone, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct NetworkInAnswer {
@@ -55,10 +78,95 @@ struct NetworkInAnswer {
     pub filter: Option<BTreeMap<String, String>>,
 }
 
+#[derive(Clone, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+enum NetworkConfigMode {
+    #[default]
+    #[serde(rename = "from-dhcp")]
+    FromDhcp,
+    #[serde(rename = "from-answer")]
+    FromAnswer,
+}
+
+// This is the format in `answers.toml` because `Disks` is constructed from `DiskSetup`.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiskSetup {
+    pub filesystem: Filesystem,
+    #[serde(default)]
+    pub disk_list: Vec<String>,
+    pub filter: Option<BTreeMap<String, String>>,
+    pub filter_match: Option<FilterMatch>,
+    pub btrfs: Option<BtrfsOptions>,
+    pub lvm: Option<LvmOptions>,
+    pub zfs: Option<ZfsOptions>,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub enum Filesystem {
+    Btrfs,
+    Ext4,
+    Xfs,
+    Zfs,
+}
+
+#[derive(Clone, Deserialize, Debug, PartialEq, ValueEnum)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub enum FilterMatch {
+    Any,
+    All,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct BtrfsOptions {
+    pub hdsize: Option<f64>,
+    pub raid: Option<BtrfsRaidLevel>,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct LvmOptions {
+    pub hdsize: Option<f64>,
+    pub swapsize: Option<f64>,
+    pub maxroot: Option<f64>,
+    pub maxvz: Option<f64>,
+    pub minfree: Option<f64>,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ZfsOptions {
+    pub raid: Option<ZfsRaidLevel>,
+    pub ashift: Option<usize>,
+    pub arc_max: Option<usize>,
+    pub checksum: Option<ZfsChecksumOption>,
+    pub compress: Option<ZfsCompressOption>,
+    pub copies: Option<usize>,
+    pub hdsize: Option<f64>,
+}
+
+// ----- End of `answers.toml` format definition -----
+
 #[derive(Clone, Deserialize, Debug)]
 #[serde(try_from = "NetworkInAnswer", deny_unknown_fields)]
 pub struct Network {
     pub network_settings: NetworkSettings,
+}
+
+#[derive(Clone, Debug)]
+pub enum NetworkSettings {
+    FromDhcp,
+    Manual(NetworkManual),
+}
+
+#[derive(Clone, Debug)]
+pub struct NetworkManual {
+    pub cidr: CidrAddress,
+    pub dns: IpAddr,
+    pub gateway: IpAddr,
+    pub filter: BTreeMap<String, String>,
 }
 
 impl TryFrom<NetworkInAnswer> for Network {
@@ -108,33 +216,6 @@ impl TryFrom<NetworkInAnswer> for Network {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum NetworkSettings {
-    FromDhcp,
-    Manual(NetworkManual),
-}
-
-#[derive(Clone, Debug)]
-pub struct NetworkManual {
-    pub cidr: CidrAddress,
-    pub dns: IpAddr,
-    pub gateway: IpAddr,
-    pub filter: BTreeMap<String, String>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DiskSetup {
-    pub filesystem: Filesystem,
-    #[serde(default)]
-    pub disk_list: Vec<String>,
-    pub filter: Option<BTreeMap<String, String>>,
-    pub filter_match: Option<FilterMatch>,
-    pub zfs: Option<ZfsOptions>,
-    pub lvm: Option<LvmOptions>,
-    pub btrfs: Option<BtrfsOptions>,
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(try_from = "DiskSetup", deny_unknown_fields)]
 pub struct Disks {
@@ -142,6 +223,19 @@ pub struct Disks {
     pub disk_selection: DiskSelection,
     pub filter_match: Option<FilterMatch>,
     pub fs_options: FsOptions,
+}
+
+#[derive(Clone, Debug)]
+pub enum DiskSelection {
+    Selection(Vec<String>),
+    Filter(BTreeMap<String, String>),
+}
+
+#[derive(Clone, Debug)]
+pub enum FsOptions {
+    BTRFS(BtrfsOptions),
+    LVM(LvmOptions),
+    ZFS(ZfsOptions),
 }
 
 impl TryFrom<DiskSetup> for Disks {
@@ -213,93 +307,6 @@ impl TryFrom<DiskSetup> for Disks {
         };
         Ok(res)
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum FsOptions {
-    LVM(LvmOptions),
-    ZFS(ZfsOptions),
-    BTRFS(BtrfsOptions),
-}
-
-#[derive(Clone, Debug)]
-pub enum DiskSelection {
-    Selection(Vec<String>),
-    Filter(BTreeMap<String, String>),
-}
-#[derive(Clone, Deserialize, Debug, PartialEq, ValueEnum)]
-#[serde(rename_all = "lowercase", deny_unknown_fields)]
-pub enum FilterMatch {
-    Any,
-    All,
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
-#[serde(rename_all = "lowercase", deny_unknown_fields)]
-pub enum Filesystem {
-    Ext4,
-    Xfs,
-    Zfs,
-    Btrfs,
-}
-
-#[derive(Clone, Copy, Default, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct ZfsOptions {
-    pub raid: Option<ZfsRaidLevel>,
-    pub ashift: Option<usize>,
-    pub arc_max: Option<usize>,
-    pub checksum: Option<ZfsChecksumOption>,
-    pub compress: Option<ZfsCompressOption>,
-    pub copies: Option<usize>,
-    pub hdsize: Option<f64>,
-}
-
-#[derive(Clone, Copy, Default, Deserialize, Serialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct LvmOptions {
-    pub hdsize: Option<f64>,
-    pub swapsize: Option<f64>,
-    pub maxroot: Option<f64>,
-    pub maxvz: Option<f64>,
-    pub minfree: Option<f64>,
-}
-
-#[derive(Clone, Copy, Default, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct BtrfsOptions {
-    pub hdsize: Option<f64>,
-    pub raid: Option<BtrfsRaidLevel>,
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
-#[serde(rename_all = "kebab-case", deny_unknown_fields)]
-pub enum KeyboardLayout {
-    De,
-    DeCh,
-    Dk,
-    EnGb,
-    EnUs,
-    Es,
-    Fi,
-    Fr,
-    FrBe,
-    FrCa,
-    FrCh,
-    Hu,
-    Is,
-    It,
-    Jp,
-    Lt,
-    Mk,
-    Nl,
-    No,
-    Pl,
-    Pt,
-    PtBr,
-    Se,
-    Si,
-    Tr,
 }
 
 serde_plain::derive_display_from_serialize!(KeyboardLayout);
