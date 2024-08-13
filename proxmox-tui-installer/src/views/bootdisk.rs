@@ -22,8 +22,9 @@ use proxmox_installer_common::{
         check_zfs_raid_config,
     },
     options::{
-        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, BtrfsCompressOption, Disk,
-        FsType, LvmBootdiskOptions, ZfsBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
+        LvmBootdiskOptions, ZfsBootdiskOptions, BTRFS_COMPRESS_OPTIONS, ZFS_CHECKSUM_OPTIONS,
+        ZFS_COMPRESS_OPTIONS,
     },
     setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };
@@ -575,12 +576,23 @@ struct BtrfsBootdiskOptionsView {
 
 impl BtrfsBootdiskOptionsView {
     fn new(runinfo: &RuntimeInfo, options: &BtrfsBootdiskOptions) -> Self {
-        let view = MultiDiskOptionsView::new(
-            &runinfo.disks,
-            &options.selected_disks,
-            FormView::new().child("hdsize", DiskSizeEditView::new().content(options.disk_size)),
-        )
-        .top_panel(TextView::new("Btrfs integration is a technology preview!").center());
+        let inner = FormView::new()
+            .child(
+                "compress",
+                SelectView::new()
+                    .popup()
+                    .with_all(BTRFS_COMPRESS_OPTIONS.iter().map(|o| (o.to_string(), *o)))
+                    .selected(
+                        BTRFS_COMPRESS_OPTIONS
+                            .iter()
+                            .position(|o| *o == options.compress)
+                            .unwrap_or_default(),
+                    ),
+            )
+            .child("hdsize", DiskSizeEditView::new().content(options.disk_size));
+
+        let view = MultiDiskOptionsView::new(&runinfo.disks, &options.selected_disks, inner)
+            .top_panel(TextView::new("Btrfs integration is a technology preview!").center());
 
         Self { view }
     }
@@ -594,17 +606,16 @@ impl BtrfsBootdiskOptionsView {
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, BtrfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
-        let disk_size = self
-            .view
-            .get_options_view()?
-            .get_value::<DiskSizeEditView, _>(0)?;
+        let view = self.view.get_options_view()?;
+        let compress = view.get_value::<SelectView<_>, _>(0)?;
+        let disk_size = view.get_value::<DiskSizeEditView, _>(1)?;
 
         Some((
             disks,
             BtrfsBootdiskOptions {
                 disk_size,
                 selected_disks,
-                compress: BtrfsCompressOption::default(),
+                compress,
             },
         ))
     }
