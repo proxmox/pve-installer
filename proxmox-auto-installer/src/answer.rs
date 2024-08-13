@@ -1,6 +1,9 @@
 use clap::ValueEnum;
 use proxmox_installer_common::{
-    options::{BtrfsRaidLevel, FsType, ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel},
+    options::{
+        BtrfsCompressOption, BtrfsRaidLevel, FsType, ZfsChecksumOption, ZfsCompressOption,
+        ZfsRaidLevel,
+    },
     utils::{CidrAddress, Fqdn},
 };
 use serde::{Deserialize, Serialize};
@@ -270,6 +273,7 @@ pub struct LvmOptions {
 pub struct BtrfsOptions {
     pub hdsize: Option<f64>,
     pub raid: Option<BtrfsRaidLevel>,
+    pub compress: Option<BtrfsCompressOption>,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]

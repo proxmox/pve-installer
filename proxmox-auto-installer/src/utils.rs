@@ -11,7 +11,8 @@ use crate::{
 use proxmox_installer_common::{
     options::{email_validate, FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
     setup::{
-        InstallConfig, InstallRootPassword, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
+        InstallBtrfsOption, InstallConfig, InstallRootPassword, InstallZfsOption, LocaleInfo,
+        RuntimeInfo, SetupInfo,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -406,6 +407,9 @@ pub fn parse_answer(
             config.hdsize = btrfs
                 .hdsize
                 .unwrap_or(runtime_info.disks[first_selected_disk].size);
+            config.btrfs_opts = Some(InstallBtrfsOption {
+                compress: btrfs.compress.unwrap_or_default(),
+            })
         }
     }
     Ok(config)

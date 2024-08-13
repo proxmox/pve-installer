@@ -1,0 +1,17 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "pveauto.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+root_password = "123456"
+
+[network]
+source = "from-dhcp"
+
+[disk-setup]
+filesystem = "btrfs"
+btrfs.raid = "raid1"
+btrfs.compress = "zlib"
+btrfs.hdsize = 80
+disk_list = ["sda", "sdb"]
