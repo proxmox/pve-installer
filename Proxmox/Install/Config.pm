@@ -79,6 +79,9 @@ my sub init_cfg {
 	    copies => 1,
 	    arc_max => Proxmox::Install::RunEnv::default_zfs_arc_max(), # in MiB
 	},
+	btrfs_opts => {
+	    compress => 'off',
+	},
 	# TODO: single disk selection config
 	target_hd => undef,
 	disk_selection => {},
@@ -171,6 +174,18 @@ sub get_zfs_opt {
     my ($k) = @_;
     my $zfs_opts = get('zfs_opts');
     return defined($k) ? $zfs_opts->{$k} : $zfs_opts;
+}
+
+sub set_btrfs_opt {
+    my ($k, $v) = @_;
+    my $opts = get('btrfs_opts');
+    croak "unknown btrfs opts key '$k'" if !exists($opts->{$k});
+    $opts->{$k} = $v;
+}
+sub get_btrfs_opt {
+    my ($k) = @_;
+    my $opts = get('btrfs_opts');
+    return defined($k) ? $opts->{$k} : $opts;
 }
 
 sub set_target_hd { set_key('target_hd', $_[0]); }

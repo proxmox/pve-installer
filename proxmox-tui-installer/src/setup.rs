@@ -18,6 +18,7 @@ impl From<InstallerOptions> for InstallConfig {
             minfree: None,
             maxvz: None,
             zfs_opts: None,
+            btrfs_opts: None,
             target_hd: None,
             disk_selection: BTreeMap::new(),
             existing_storage_auto_rename: 0,
@@ -66,6 +67,7 @@ impl From<InstallerOptions> for InstallConfig {
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
                 config.hdsize = btrfs.disk_size;
+                config.btrfs_opts = Some(btrfs.clone().into());
 
                 for (i, disk) in options.bootdisk.disks.iter().enumerate() {
                     config

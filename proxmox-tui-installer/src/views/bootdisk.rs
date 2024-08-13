@@ -22,8 +22,8 @@ use proxmox_installer_common::{
         check_zfs_raid_config,
     },
     options::{
-        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
-        LvmBootdiskOptions, ZfsBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, BtrfsCompressOption, Disk,
+        FsType, LvmBootdiskOptions, ZfsBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
     },
     setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };
@@ -604,6 +604,7 @@ impl BtrfsBootdiskOptionsView {
             BtrfsBootdiskOptions {
                 disk_size,
                 selected_disks,
+                compress: BtrfsCompressOption::default(),
             },
         ))
     }

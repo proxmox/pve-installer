@@ -345,6 +345,7 @@ pub fn parse_answer(
         minfree: None,
         maxvz: None,
         zfs_opts: None,
+        btrfs_opts: None,
         target_hd: None,
         disk_selection: BTreeMap::new(),
         existing_storage_auto_rename: 1,

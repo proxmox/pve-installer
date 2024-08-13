@@ -12,7 +12,7 @@ use std::{
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    options::{Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption},
+    options::{BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption},
     utils::CidrAddress,
 };
 
@@ -219,6 +219,20 @@ impl From<ZfsBootdiskOptions> for InstallZfsOption {
             checksum: opts.checksum,
             copies: opts.copies,
             arc_max: opts.arc_max,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InstallBtrfsOption {
+    #[serde(serialize_with = "serialize_as_display")]
+    pub compress: BtrfsCompressOption,
+}
+
+impl From<BtrfsBootdiskOptions> for InstallBtrfsOption {
+    fn from(opts: BtrfsBootdiskOptions) -> Self {
+        InstallBtrfsOption {
+            compress: opts.compress,
         }
     }
 }
@@ -486,7 +500,11 @@ pub struct InstallConfig {
     pub zfs_opts: Option<InstallZfsOption>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub btrfs_opts: Option<InstallBtrfsOption>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_hd: Option<String>,
+
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub disk_selection: BTreeMap<String, String>,
 

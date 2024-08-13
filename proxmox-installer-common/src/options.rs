@@ -127,10 +127,40 @@ impl LvmBootdiskOptions {
     }
 }
 
+/// See the accompanying mount option in btrfs(5).
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all(deserialize = "lowercase"))]
+pub enum BtrfsCompressOption {
+    On,
+    #[default]
+    Off,
+    Zlib,
+    Lzo,
+    Zstd,
+}
+
+impl fmt::Display for BtrfsCompressOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{self:?}").to_lowercase())
+    }
+}
+
+impl From<&BtrfsCompressOption> for String {
+    fn from(value: &BtrfsCompressOption) -> Self {
+        value.to_string()
+    }
+}
+
+pub const BTRFS_COMPRESS_OPTIONS: &[BtrfsCompressOption] = {
+    use BtrfsCompressOption::*;
+    &[On, Off, Zlib, Lzo, Zstd]
+};
+
 #[derive(Clone, Debug)]
 pub struct BtrfsBootdiskOptions {
     pub disk_size: f64,
     pub selected_disks: Vec<usize>,
+    pub compress: BtrfsCompressOption,
 }
 
 impl BtrfsBootdiskOptions {
@@ -140,6 +170,7 @@ impl BtrfsBootdiskOptions {
         Self {
             disk_size: disk.size,
             selected_disks: (0..disks.len()).collect(),
+            compress: BtrfsCompressOption::default(),
         }
     }
 }
