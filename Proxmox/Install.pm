@@ -1065,7 +1065,16 @@ sub extract_data {
 
 	    die "unable to detect FS UUID" if !defined($fsuuid);
 
-	    $fstab .= "UUID=$fsuuid / btrfs defaults 0 1\n";
+	    my $btrfs_opts = Proxmox::Install::Config::get_btrfs_opt();
+
+	    my $mountopts = 'defaults';
+	    if ($btrfs_opts->{compress} eq 'on') {
+		$mountopts .= ',compress';
+	    } elsif ($btrfs_opts->{compress} ne 'off') {
+		$mountopts .= ",compress=$btrfs_opts->{compress}";
+	    }
+
+	    $fstab .= "UUID=$fsuuid / btrfs $mountopts 0 1\n";
 	} else {
 	    my $root_mountopt = $fssetup->{$filesys}->{root_mountopt} || 'defaults';
 	    $fstab .= "$rootdev / $filesys ${root_mountopt} 0 1\n";
