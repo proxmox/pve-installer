@@ -1161,6 +1161,21 @@ my $create_raid_advanced_grid = sub {
 my $create_btrfs_raid_advanced_grid = sub {
     my ($hdsize_btn) = @_;
     my $labeled_widgets = [];
+
+    my $combo_compress = Gtk3::ComboBoxText->new();
+    $combo_compress->set_tooltip_text("btrfs compression algorithm for boot volume");
+    my $comp_opts = ["on", "off", "zlib", "lzo", "zstd"];
+    foreach my $opt (@$comp_opts) {
+	$combo_compress->append($opt, $opt);
+    }
+    my $compress = Proxmox::Install::Config::get_btrfs_opt('compress') // 'off';
+    $combo_compress->set_active_id($compress);
+    $combo_compress->signal_connect (changed => sub {
+	my $w = shift;
+	Proxmox::Install::Config::set_btrfs_opt('compress', $w->get_active_text());
+    });
+    push @$labeled_widgets, ['compress', $combo_compress];
+
     push @$labeled_widgets, ['hdsize', $hdsize_btn, 'GB'];
     return $create_label_widget_grid->($labeled_widgets);;
 };
