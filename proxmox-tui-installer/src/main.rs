@@ -99,8 +99,8 @@ struct InstallerBackgroundView {
 impl InstallerBackgroundView {
     pub fn new() -> Self {
         let style = Style {
-            effects: Effect::Bold.into(),
-            color: ColorStyle::back(PaletteColor::View),
+            effects: Effects::only(Effect::Bold),
+            color: ColorStyle::new(PaletteColor::Primary, PaletteColor::View),
         };
 
         let mut view = StackView::new();
@@ -148,7 +148,7 @@ struct InstallerState {
 }
 
 fn main() {
-    let mut siv = cursive::termion();
+    let mut siv = cursive::crossterm();
 
     let in_test_mode = match env::args().nth(1).as_deref() {
         Some("-t") => true,
