@@ -636,7 +636,24 @@ impl ZfsBootdiskOptionsView {
         options: &ZfsBootdiskOptions,
         product_conf: &ProductConfig,
     ) -> Self {
-        let is_pve = product_conf.product == ProxmoxProduct::PVE;
+        let arc_max_view = {
+            let view = IntegerEditView::new_with_suffix("MiB").max_value(runinfo.total_memory);
+
+            // For PVE "force" the default value, for other products place the recommended value
+            // only in the placeholder. This causes for the latter to not write the module option
+            // if the value is never modified by the user.
+            if product_conf.product == ProxmoxProduct::PVE {
+                view.content(options.arc_max)
+            } else {
+                let view = view.placeholder(runinfo.total_memory / 2);
+
+                if options.arc_max != 0 {
+                    view.content(options.arc_max)
+                } else {
+                    view
+                }
+            }
+        };
 
         let inner = FormView::new()
             .child("ashift", IntegerEditView::new().content(options.ashift))
@@ -668,13 +685,7 @@ impl ZfsBootdiskOptionsView {
                 "copies",
                 IntegerEditView::new().content(options.copies).max_value(3),
             )
-            .child_conditional(
-                is_pve,
-                "ARC max size",
-                IntegerEditView::new_with_suffix("MiB")
-                    .max_value(runinfo.total_memory)
-                    .content(options.arc_max),
-            )
+            .child("ARC max size", arc_max_view)
             .child("hdsize", DiskSizeEditView::new().content(options.disk_size));
 
         let view = MultiDiskOptionsView::new(&runinfo.disks, &options.selected_disks, inner)
@@ -696,21 +707,22 @@ impl ZfsBootdiskOptionsView {
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
         let (disks, selected_disks) = self.view.get_disks_and_selection()?;
         let view = self.view.get_options_view()?;
-        let has_arc_max = view.len() >= 6;
-        let disk_size_index = if has_arc_max { 5 } else { 4 };
 
         let ashift = view.get_value::<IntegerEditView, _>(0)?;
         let compress = view.get_value::<SelectView<_>, _>(1)?;
         let checksum = view.get_value::<SelectView<_>, _>(2)?;
         let copies = view.get_value::<IntegerEditView, _>(3)?;
-        let disk_size = view.get_value::<DiskSizeEditView, _>(disk_size_index)?;
+        let disk_size = view.get_value::<DiskSizeEditView, _>(5)?;
 
-        let arc_max = if has_arc_max {
-            view.get_value::<IntegerEditView, _>(4)?
-                .max(ZFS_ARC_MIN_SIZE_MIB)
-        } else {
-            0 // use built-in ZFS default value
-        };
+        // If a value is set, return that and clamp it to at least [`ZFS_ARC_MIN_SIZE_MIB`].
+        //
+        // Otherwise, if no value was set or an error occurred return `0`. The former simply means
+        // that the placeholder value is still there.
+        let arc_max = view
+            .get_child::<IntegerEditView>(4)?
+            .get_content_maybe()
+            .map_or(Ok(0), |v| v.map(|v| v.max(ZFS_ARC_MIN_SIZE_MIB)))
+            .unwrap_or(0);
 
         Some((
             disks,

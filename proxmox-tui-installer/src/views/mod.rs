@@ -96,7 +96,6 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     ///
     /// # Arguments
     /// `placeholder` - The placeholder value to set for this view.
-    #[allow(unused)]
     pub fn placeholder(mut self, placeholder: T) -> Self {
         self.placeholder = Some(placeholder);
         self.allow_empty(true)

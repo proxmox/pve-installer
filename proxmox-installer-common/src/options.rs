@@ -262,7 +262,8 @@ impl ZfsBootdiskOptions {
 /// The default ZFS maximum ARC size in MiB for this system.
 fn default_zfs_arc_max(product: ProxmoxProduct, total_memory: usize) -> usize {
     if product != ProxmoxProduct::PVE {
-        // Use ZFS default for non-PVE
+        // For products other the PVE, just let ZFS decide on its own. Setting `0`
+        // causes the installer to skip writing the `zfs_arc_max` module parameter.
         0
     } else {
         ((total_memory as f64) / 10.)
