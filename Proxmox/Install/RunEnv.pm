@@ -330,7 +330,8 @@ our $ZFS_ARC_SYSMEM_PERCENTAGE = 0.1; # use 10% of available system memory by de
 # Calculates the default upper limit for the ZFS ARC size.
 # Returns the default ZFS maximum ARC size in MiB.
 sub default_zfs_arc_max {
-    # Use ZFS default on non-PVE
+    # For products other the PVE, just let ZFS decide on its own. Setting `0`
+    # causes the installer to skip writing the `zfs_arc_max` module parameter.
     return 0 if Proxmox::Install::ISOEnv::get('product') ne 'pve';
 
     my $default_mib = get('total_memory') * $ZFS_ARC_SYSMEM_PERCENTAGE;
