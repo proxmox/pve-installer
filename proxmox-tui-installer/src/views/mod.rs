@@ -2,9 +2,10 @@ use std::{net::IpAddr, str::FromStr, sync::Arc};
 
 use cursive::{
     event::{Event, EventResult},
+    theme::BaseColor,
     view::{Resizable, ViewWrapper},
     views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
-    Rect, Vec2, View,
+    Printer, Rect, Vec2, View,
 };
 
 use proxmox_installer_common::utils::CidrAddress;
@@ -27,6 +28,7 @@ pub use timezone::*;
 pub struct NumericEditView<T> {
     view: LinearLayout,
     max_value: Option<T>,
+    placeholder: Option<T>,
     max_content_width: Option<usize>,
     allow_empty: bool,
 }
@@ -39,6 +41,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         Self {
             view,
             max_value: None,
+            placeholder: None,
             max_content_width: None,
             allow_empty: false,
         }
@@ -57,6 +60,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         Self {
             view,
             max_value: None,
+            placeholder: None,
             max_content_width: None,
             allow_empty: false,
         }
@@ -87,15 +91,42 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         self
     }
 
-    pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
-        assert!(!self.allow_empty);
-        self.inner().get_content().parse()
+    /// Sets a placeholder value for this view. Implies `allow_empty(true)`.
+    /// Implies `allow_empty(true)`.
+    ///
+    /// # Arguments
+    /// `placeholder` - The placeholder value to set for this view.
+    #[allow(unused)]
+    pub fn placeholder(mut self, placeholder: T) -> Self {
+        self.placeholder = Some(placeholder);
+        self.allow_empty(true)
     }
 
+    /// Returns the current value of the view. If a placeholder is defined and
+    /// no value is currently set, the placeholder value is returned.
+    ///
+    /// **This should only be called when `allow_empty = false` or a placeholder
+    /// is set.**
+    pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
+        let content = self.inner().get_content();
+
+        if content.is_empty() {
+            if let Some(placeholder) = self.placeholder {
+                return Ok(placeholder);
+            }
+        }
+
+        assert!(!(self.allow_empty && self.placeholder.is_none()));
+        content.parse()
+    }
+
+    /// Returns the current value of the view, or [`None`] if the view is
+    /// currently empty.
     pub fn get_content_maybe(&self) -> Option<Result<T, <T as FromStr>::Err>> {
         let content = self.inner().get_content();
+
         if !content.is_empty() {
-            Some(self.inner().get_content().parse())
+            Some(content.parse())
         } else {
             None
         }
@@ -160,6 +191,25 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
         std::mem::swap(self.inner_mut(), &mut inner);
         self
     }
+
+    /// Generic `wrap_draw()` implementation for [`ViewWrapper`].
+    ///
+    /// # Arguments
+    /// * `printer` - The [`Printer`] to draw to the base view.
+    fn wrap_draw_inner(&self, printer: &Printer) {
+        self.view.draw(printer);
+
+        if self.inner().get_content().is_empty() && !printer.focused {
+            if let Some(placeholder) = self.placeholder {
+                let placeholder = placeholder.to_string();
+
+                printer.with_color(
+                    (BaseColor::Blue.light(), BaseColor::Blue.dark()).into(),
+                    |printer| printer.print((0, 0), &placeholder),
+                );
+            }
+        }
+    }
 }
 
 pub type FloatEditView = NumericEditView<f64>;
@@ -167,6 +217,10 @@ pub type IntegerEditView = NumericEditView<usize>;
 
 impl ViewWrapper for FloatEditView {
     cursive::wrap_impl!(self.view: LinearLayout);
+
+    fn wrap_draw(&self, printer: &Printer) {
+        self.wrap_draw_inner(printer);
+    }
 
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
         let original = self.inner_mut().get_content();
@@ -206,6 +260,10 @@ impl FloatEditView {
 
 impl ViewWrapper for IntegerEditView {
     cursive::wrap_impl!(self.view: LinearLayout);
+
+    fn wrap_draw(&self, printer: &Printer) {
+        self.wrap_draw_inner(printer);
+    }
 
     fn wrap_on_event(&mut self, event: Event) -> EventResult {
         let original = self.inner_mut().get_content();
