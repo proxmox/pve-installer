@@ -1,7 +1,8 @@
 use anyhow::{bail, Result};
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{cmp, fmt};
 
@@ -10,55 +11,33 @@ use crate::setup::{
 };
 use crate::utils::{CidrAddress, Fqdn};
 
-#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
 pub enum BtrfsRaidLevel {
     Raid0,
     Raid1,
     Raid10,
 }
 
-impl fmt::Display for BtrfsRaidLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BtrfsRaidLevel::*;
-        match self {
-            Raid0 => write!(f, "RAID0"),
-            Raid1 => write!(f, "RAID1"),
-            Raid10 => write!(f, "RAID10"),
-        }
-    }
-}
+serde_plain::derive_display_from_serialize!(BtrfsRaidLevel);
 
-#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
 pub enum ZfsRaidLevel {
     Raid0,
     Raid1,
     Raid10,
-    #[serde(rename = "raidz-1")]
+    #[serde(rename = "RAIDZ-1")]
     RaidZ,
-    #[serde(rename = "raidz-2")]
+    #[serde(rename = "RAIDZ-2")]
     RaidZ2,
-    #[serde(rename = "raidz-3")]
+    #[serde(rename = "RAIDZ-3")]
     RaidZ3,
 }
 
-impl fmt::Display for ZfsRaidLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use ZfsRaidLevel::*;
-        match self {
-            Raid0 => write!(f, "RAID0"),
-            Raid1 => write!(f, "RAID1"),
-            Raid10 => write!(f, "RAID10"),
-            RaidZ => write!(f, "RAIDZ-1"),
-            RaidZ2 => write!(f, "RAIDZ-2"),
-            RaidZ3 => write!(f, "RAIDZ-3"),
-        }
-    }
-}
+serde_plain::derive_display_from_serialize!(ZfsRaidLevel);
 
-#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FsType {
     Ext4,
     Xfs,
@@ -74,15 +53,58 @@ impl FsType {
 
 impl fmt::Display for FsType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use FsType::*;
+        // Values displayed to the user in the installer UI
         match self {
-            Ext4 => write!(f, "ext4"),
-            Xfs => write!(f, "XFS"),
-            Zfs(level) => write!(f, "ZFS ({level})"),
-            Btrfs(level) => write!(f, "Btrfs ({level})"),
+            FsType::Ext4 => write!(f, "ext4"),
+            FsType::Xfs => write!(f, "XFS"),
+            FsType::Zfs(level) => write!(f, "ZFS ({level})"),
+            FsType::Btrfs(level) => write!(f, "Btrfs ({level})"),
         }
     }
 }
+
+impl Serialize for FsType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // These values must match exactly what the low-level installer expects
+        let value = match self {
+            // proxinstall::$fssetup
+            FsType::Ext4 => "ext4",
+            FsType::Xfs => "xfs",
+            // proxinstall::get_zfs_raid_setup()
+            FsType::Zfs(level) => &format!("zfs ({level})"),
+            // proxinstall::get_btrfs_raid_setup()
+            FsType::Btrfs(level) => &format!("btrfs ({level})"),
+        };
+
+        serializer.collect_str(value)
+    }
+}
+
+impl FromStr for FsType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ext4" => Ok(FsType::Ext4),
+            "xfs" => Ok(FsType::Xfs),
+            "zfs (RAID0)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid0)),
+            "zfs (RAID1)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid1)),
+            "zfs (RAID10)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid10)),
+            "zfs (RAIDZ-1)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ)),
+            "zfs (RAIDZ-2)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ2)),
+            "zfs (RAIDZ-3)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ3)),
+            "btrfs (RAID0)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid0)),
+            "btrfs (RAID1)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid1)),
+            "btrfs (RAID10)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid10)),
+            _ => Err(format!("Could not find file system: {s}")),
+        }
+    }
+}
+
+serde_plain::derive_deserialize_from_fromstr!(FsType, "valid filesystem");
 
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
@@ -122,8 +144,8 @@ impl BtrfsBootdiskOptions {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-#[serde(rename_all(deserialize = "lowercase"))]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ZfsCompressOption {
     #[default]
     On,
@@ -135,11 +157,7 @@ pub enum ZfsCompressOption {
     Zstd,
 }
 
-impl fmt::Display for ZfsCompressOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("{self:?}").to_lowercase())
-    }
-}
+serde_plain::derive_display_from_serialize!(ZfsCompressOption);
 
 impl From<&ZfsCompressOption> for String {
     fn from(value: &ZfsCompressOption) -> Self {
@@ -152,7 +170,7 @@ pub const ZFS_COMPRESS_OPTIONS: &[ZfsCompressOption] = {
     &[On, Off, Lzjb, Lz4, Zle, Gzip, Zstd]
 };
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ZfsChecksumOption {
     #[default]
@@ -161,11 +179,7 @@ pub enum ZfsChecksumOption {
     Sha256,
 }
 
-impl fmt::Display for ZfsChecksumOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("{self:?}").to_lowercase())
-    }
-}
+serde_plain::derive_display_from_serialize!(ZfsChecksumOption);
 
 impl From<&ZfsChecksumOption> for String {
     fn from(value: &ZfsChecksumOption) -> Self {

@@ -12,10 +12,7 @@ use std::{
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    options::{
-        BtrfsRaidLevel, Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
-        ZfsRaidLevel,
-    },
+    options::{Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption},
     utils::CidrAddress,
 };
 
@@ -208,9 +205,7 @@ pub fn load_installer_setup_files(
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InstallZfsOption {
     pub ashift: usize,
-    #[serde(serialize_with = "serialize_as_display")]
     pub compress: ZfsCompressOption,
-    #[serde(serialize_with = "serialize_as_display")]
     pub checksum: ZfsChecksumOption,
     pub copies: usize,
     pub arc_max: usize,
@@ -476,10 +471,6 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 pub struct InstallConfig {
     pub autoreboot: usize,
 
-    #[serde(
-        serialize_with = "serialize_fstype",
-        deserialize_with = "deserialize_fs_type"
-    )]
     pub filesys: FsType,
     pub hdsize: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -536,53 +527,5 @@ where
         serializer.serialize_str(&disk.path)
     } else {
         serializer.serialize_none()
-    }
-}
-
-fn serialize_fstype<S>(value: &FsType, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    use FsType::*;
-    let value = match value {
-        // proxinstall::$fssetup
-        Ext4 => "ext4",
-        Xfs => "xfs",
-        // proxinstall::get_zfs_raid_setup()
-        Zfs(ZfsRaidLevel::Raid0) => "zfs (RAID0)",
-        Zfs(ZfsRaidLevel::Raid1) => "zfs (RAID1)",
-        Zfs(ZfsRaidLevel::Raid10) => "zfs (RAID10)",
-        Zfs(ZfsRaidLevel::RaidZ) => "zfs (RAIDZ-1)",
-        Zfs(ZfsRaidLevel::RaidZ2) => "zfs (RAIDZ-2)",
-        Zfs(ZfsRaidLevel::RaidZ3) => "zfs (RAIDZ-3)",
-        // proxinstall::get_btrfs_raid_setup()
-        Btrfs(BtrfsRaidLevel::Raid0) => "btrfs (RAID0)",
-        Btrfs(BtrfsRaidLevel::Raid1) => "btrfs (RAID1)",
-        Btrfs(BtrfsRaidLevel::Raid10) => "btrfs (RAID10)",
-    };
-
-    serializer.collect_str(value)
-}
-
-pub fn deserialize_fs_type<'de, D>(deserializer: D) -> Result<FsType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    use FsType::*;
-    let de_fs: String = Deserialize::deserialize(deserializer)?;
-
-    match de_fs.as_str() {
-        "ext4" => Ok(Ext4),
-        "xfs" => Ok(Xfs),
-        "zfs (RAID0)" => Ok(Zfs(ZfsRaidLevel::Raid0)),
-        "zfs (RAID1)" => Ok(Zfs(ZfsRaidLevel::Raid1)),
-        "zfs (RAID10)" => Ok(Zfs(ZfsRaidLevel::Raid10)),
-        "zfs (RAIDZ-1)" => Ok(Zfs(ZfsRaidLevel::RaidZ)),
-        "zfs (RAIDZ-2)" => Ok(Zfs(ZfsRaidLevel::RaidZ2)),
-        "zfs (RAIDZ-3)" => Ok(Zfs(ZfsRaidLevel::RaidZ3)),
-        "btrfs (RAID0)" => Ok(Btrfs(BtrfsRaidLevel::Raid0)),
-        "btrfs (RAID1)" => Ok(Btrfs(BtrfsRaidLevel::Raid1)),
-        "btrfs (RAID10)" => Ok(Btrfs(BtrfsRaidLevel::Raid10)),
-        _ => Err(de::Error::custom("could not find file system: {de_fs}")),
     }
 }
