@@ -67,7 +67,7 @@ impl FetchFromHTTP {
         info!("Gathering system information.");
         let payload = SysInfo::as_json()?;
         info!("Sending POST request to '{answer_url}'.");
-        let answer = http_post::call(answer_url, fingerprint.as_deref(), payload)?;
+        let answer = http_post::call(&answer_url, fingerprint.as_deref(), payload)?;
         Ok(answer)
     }
 
@@ -198,7 +198,7 @@ mod http_post {
     /// * `url` - URL to call
     /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
     /// * `payload` - The payload to send to the server. Expected to be a JSON formatted string.
-    pub fn call(url: String, fingerprint: Option<&str>, payload: String) -> Result<String> {
+    pub fn call(url: &str, fingerprint: Option<&str>, payload: String) -> Result<String> {
         let answer;
 
         if let Some(fingerprint) = fingerprint {
@@ -210,7 +210,7 @@ mod http_post {
             let agent: Agent = AgentBuilder::new().tls_config(Arc::new(tls_config)).build();
 
             answer = agent
-                .post(&url)
+                .post(url)
                 .set("Content-type", "application/json; charset=utf-8")
                 .send_string(&payload)?
                 .into_string()?;
@@ -230,7 +230,7 @@ mod http_post {
                 .tls_config(Arc::new(tls_config))
                 .build();
             answer = agent
-                .post(&url)
+                .post(url)
                 .set("Content-type", "application/json; charset=utf-8")
                 .timeout(std::time::Duration::from_secs(60))
                 .send_string(&payload)?
