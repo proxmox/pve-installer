@@ -166,24 +166,29 @@ pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Run
     } else {
         crate::RUNTIME_DIR.to_owned()
     };
-    let path = PathBuf::from(base_path);
 
+    load_installer_setup_files(base_path)
+}
+
+pub fn load_installer_setup_files(
+    base_path: impl AsRef<Path>,
+) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     let installer_info: SetupInfo = {
-        let mut path = path.clone();
+        let mut path = base_path.as_ref().to_path_buf();
         path.push("iso-info.json");
 
         read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
     };
 
     let locale_info = {
-        let mut path = path.clone();
+        let mut path = base_path.as_ref().to_path_buf();
         path.push("locales.json");
 
         read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
     };
 
     let mut runtime_info: RuntimeInfo = {
-        let mut path = path.clone();
+        let mut path = base_path.as_ref().to_path_buf();
         path.push("run-env-info.json");
 
         read_json(&path)

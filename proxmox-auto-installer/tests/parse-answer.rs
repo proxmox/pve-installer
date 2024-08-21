@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use std::fs;
@@ -8,13 +8,16 @@ use proxmox_auto_installer::answer::Answer;
 use proxmox_auto_installer::udevinfo::UdevInfo;
 use proxmox_auto_installer::utils::parse_answer;
 
-use proxmox_installer_common::setup::{read_json, LocaleInfo, RuntimeInfo, SetupInfo};
+use proxmox_installer_common::setup::{
+    load_installer_setup_files, read_json, LocaleInfo, RuntimeInfo, SetupInfo,
+};
 
 fn get_test_resource_path() -> Result<PathBuf, String> {
     Ok(std::env::current_dir()
         .expect("current dir failed")
         .join("tests/resources"))
 }
+
 fn get_answer(path: PathBuf) -> Result<Answer, String> {
     let answer_raw = std::fs::read_to_string(path).unwrap();
     let answer: answer::Answer = toml::from_str(&answer_raw)
@@ -24,46 +27,23 @@ fn get_answer(path: PathBuf) -> Result<Answer, String> {
     Ok(answer)
 }
 
-fn setup_test_basic(path: &PathBuf) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
-    let installer_info: SetupInfo = {
-        let mut path = path.clone();
-        path.push("iso-info.json");
-
-        read_json(&path)
-            .map_err(|err| format!("Failed to retrieve setup info: {err}"))
-            .unwrap()
-    };
-
-    let locale_info = {
-        let mut path = path.clone();
-        path.push("locales.json");
-
-        read_json(&path)
-            .map_err(|err| format!("Failed to retrieve locale info: {err}"))
-            .unwrap()
-    };
-
-    let mut runtime_info: RuntimeInfo = {
-        let mut path = path.clone();
-        path.push("run-env-info.json");
-
-        read_json(&path)
-            .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))
-            .unwrap()
-    };
+pub fn setup_test_basic(path: &Path) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
+    let (installer_info, locale_info, mut runtime_info) = load_installer_setup_files(path).unwrap();
 
     let udev_info: UdevInfo = {
-        let mut path = path.clone();
+        let mut path = path.to_path_buf();
         path.push("run-env-udev.json");
 
         read_json(&path)
             .map_err(|err| format!("Failed to retrieve udev info details: {err}"))
             .unwrap()
     };
+
     runtime_info.disks.sort();
     if runtime_info.disks.is_empty() {
         panic!("disk list is empty!");
     }
+
     (installer_info, locale_info, runtime_info, udev_info)
 }
 
