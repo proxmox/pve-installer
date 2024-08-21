@@ -29,7 +29,7 @@ impl FetchFromPartition {
 }
 
 fn path_exists_logged(file_name: &str, search_path: &str) -> Option<PathBuf> {
-    let path = Path::new(search_path).join(&file_name);
+    let path = Path::new(search_path).join(file_name);
     info!("Testing partition search path {path:?}");
     match path.try_exists() {
         Ok(true) => Some(path),
