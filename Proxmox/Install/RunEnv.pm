@@ -291,7 +291,7 @@ sub query_installation_environment : prototype() {
 	    log_warn("Failed to read secure boot state: $@\n");
 	} else {
 	    my @secureboot = unpack("CCCCC", $content);
-	    $output->{secure_boot} = $secureboot[4] == 1;
+	    $output->{secure_boot} = $secureboot[4] == 1 ? 1 : 0;
 	}
     }
 
