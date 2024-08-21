@@ -24,7 +24,7 @@ pub fn check_for_duplicate_disks(disks: &[Disk]) -> Result<(), &Disk> {
 ///
 /// # Arguments
 ///
-/// * `disks` - A list of disks to check the lenght of.
+/// * `disks` - A list of disks to check the length of.
 /// * `min` - Minimum number of disks
 pub fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
     if disks.len() < min {

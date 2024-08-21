@@ -194,7 +194,7 @@ mod http_post {
     /// openssl s_client -connect <host>:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha256  -noout -in /dev/stdin
     /// ```
     ///
-    /// # Arguemnts
+    /// # Arguments
     /// * `url` - URL to call
     /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
     /// * `payload` - The payload to send to the server. Expected to be a JSON formatted string.

@@ -55,7 +55,7 @@ struct CommandDeviceInfo {
 /// Filters support the following syntax:
 /// ?          Match a single character
 /// *          Match any number of characters
-/// [a], [0-9] Specifc character or range of characters
+/// [a], [0-9] Specific character or range of characters
 /// [!a]       Negate a specific character of range
 ///
 /// To avoid globbing characters being interpreted by the shell, use single quotes.
@@ -429,7 +429,7 @@ fn get_iso_uuid(iso: &PathBuf) -> Result<String> {
             uuid = line
                 .split(' ')
                 .last()
-                .ok_or_else(|| format_err!("xorriso did behave unexpextedly"))?
+                .ok_or_else(|| format_err!("xorriso did behave unexpectedly"))?
                 .replace('\'', "")
                 .trim()
                 .into();

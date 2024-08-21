@@ -166,7 +166,7 @@ export PREVLEVEL=N
 mkdir -p /dev/shm
 mount -t tmpfs tmpfs /dev/shm
 
-# allow pseudo terminals for debuggin in X
+# allow pseudo terminals for debugging in X
 mkdir -p /dev/pts
 mount -vt devpts devpts /dev/pts -o gid=5,mode=620
 
@@ -190,7 +190,7 @@ if command -v dbus-daemon; then
     mkdir /run/dbus
     dbus-daemon --system --syslog-only
 
-    if [ $proxdebug -ne 0 ]; then # FIXME: better intergration, e.g., use iwgtk?
+    if [ $proxdebug -ne 0 ]; then # FIXME: better integration, e.g., use iwgtk?
         handle_wireless # no-op if not wireless dev is found
     fi
 fi
