@@ -236,6 +236,7 @@ my sub detect_country_tracing_to : prototype($$) {
 #     kernel_cmdline = <contents of /proc/cmdline>,
 #     total_memory = <memory size in MiB>,
 #     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
+#     secure_boot = <1 if SecureBoot is enabled>,
 #     boot_type = <either 'efi' or 'bios'>,
 #     disks => <see Proxmox::Sys::Block::hd_list()>,
 #     network => {
