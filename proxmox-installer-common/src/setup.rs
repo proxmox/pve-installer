@@ -485,16 +485,8 @@ pub struct InstallConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub zfs_opts: Option<InstallZfsOption>,
 
-    #[serde(
-        serialize_with = "serialize_disk_opt",
-        skip_serializing_if = "Option::is_none",
-        // only the 'path' property is serialized -> deserialization is problematic
-        // The information would be present in the 'run-env-info-json', but for now there is no
-        // need for it in any code that deserializes the low-level config. Therefore we are
-        // currently skipping it on deserialization
-        skip_deserializing
-    )]
-    pub target_hd: Option<Disk>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_hd: Option<String>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub disk_selection: BTreeMap<String, String>,
 
@@ -517,15 +509,4 @@ pub struct InstallConfig {
     pub cidr: CidrAddress,
     pub gateway: IpAddr,
     pub dns: IpAddr,
-}
-
-fn serialize_disk_opt<S>(value: &Option<Disk>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    if let Some(disk) = value {
-        serializer.serialize_str(&disk.path)
-    } else {
-        serializer.serialize_none()
-    }
 }

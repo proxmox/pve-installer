@@ -48,7 +48,7 @@ impl From<InstallerOptions> for InstallConfig {
         match &options.bootdisk.advanced {
             AdvancedBootdiskOptions::Lvm(lvm) => {
                 config.hdsize = lvm.total_size;
-                config.target_hd = Some(options.bootdisk.disks[0].clone());
+                config.target_hd = Some(options.bootdisk.disks[0].path.clone());
                 config.swapsize = lvm.swap_size;
                 config.maxroot = lvm.max_root_size;
                 config.minfree = lvm.min_lvm_free;

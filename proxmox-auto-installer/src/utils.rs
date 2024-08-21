@@ -174,7 +174,7 @@ fn set_single_disk(
                 .iter()
                 .find(|item| item.path.ends_with(disk_name.as_str()));
             match disk {
-                Some(disk) => config.target_hd = Some(disk.clone()),
+                Some(disk) => config.target_hd = Some(disk.path.clone()),
                 None => bail!("disk in 'disk_selection' not found"),
             }
         }
@@ -184,10 +184,10 @@ fn set_single_disk(
                 .disks
                 .iter()
                 .find(|item| item.index == disk_index);
-            config.target_hd = disk.cloned();
+            config.target_hd = disk.map(|d| d.path.clone());
         }
     }
-    info!("Selected disk: {}", config.target_hd.clone().unwrap().path);
+    info!("Selected disk: {}", config.target_hd.clone().unwrap());
     Ok(())
 }
 
@@ -372,7 +372,14 @@ pub fn parse_answer(
     set_disks(answer, udev_info, runtime_info, &mut config)?;
     match &answer.disks.fs_options {
         answer::FsOptions::LVM(lvm) => {
-            config.hdsize = lvm.hdsize.unwrap_or(config.target_hd.clone().unwrap().size);
+            let disk = runtime_info
+                .disks
+                .iter()
+                .find(|d| Some(&d.path) == config.target_hd.as_ref());
+
+            config.hdsize = lvm
+                .hdsize
+                .unwrap_or_else(|| disk.map(|d| d.size).unwrap_or_default());
             config.swapsize = lvm.swapsize;
             config.maxroot = lvm.maxroot;
             config.maxvz = lvm.maxvz;
