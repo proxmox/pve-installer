@@ -5,6 +5,7 @@ use proxmox_installer_common::{
         BootdiskOptions, BtrfsRaidLevel, FsType, NetworkOptions, TimezoneOptions, ZfsRaidLevel,
     },
     setup::LocaleInfo,
+    EMAIL_DEFAULT_PLACEHOLDER,
 };
 
 pub const FS_TYPES: &[FsType] = {
@@ -33,7 +34,7 @@ pub struct PasswordOptions {
 impl Default for PasswordOptions {
     fn default() -> Self {
         Self {
-            email: "mail@example.invalid".to_string(),
+            email: EMAIL_DEFAULT_PLACEHOLDER.to_string(),
             root_password: String::new(),
         }
     }

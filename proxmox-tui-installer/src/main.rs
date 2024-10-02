@@ -13,13 +13,11 @@ use cursive::{
     Cursive, CursiveRunnable, ScreenId, View, XY,
 };
 
-use regex::Regex;
-
 mod options;
 use options::{InstallerOptions, PasswordOptions};
 
 use proxmox_installer_common::{
-    options::{BootdiskOptions, NetworkOptions, TimezoneOptions},
+    options::{email_validate, BootdiskOptions, NetworkOptions, TimezoneOptions},
     setup::{installer_setup, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
     utils::Fqdn,
 };
@@ -449,18 +447,12 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                     .get_value::<EditView, _>(2)
                     .ok_or("failed to retrieve email")?;
 
-                let email_regex =
-                    Regex::new(r"^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$")
-                        .unwrap();
-
                 if root_password.len() < 5 {
-                    Err("password too short, must be at least 5 characters long")
+                    Err("password too short, must be at least 5 characters long".to_owned())
                 } else if root_password != confirm_password {
-                    Err("passwords do not match")
-                } else if email == "mail@example.invalid" {
-                    Err("invalid email address")
-                } else if !email_regex.is_match(&email) {
-                    Err("Email does not look like a valid address (user@domain.tld)")
+                    Err("passwords do not match".to_owned())
+                } else if let Err(err) = email_validate(&email) {
+                    Err(err.to_string())
                 } else {
                     Ok(PasswordOptions {
                         root_password,
