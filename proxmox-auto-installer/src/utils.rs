@@ -16,7 +16,7 @@ use proxmox_installer_common::{
 };
 use serde::{Deserialize, Serialize};
 
-pub fn get_network_settings(
+fn get_network_settings(
     answer: &Answer,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
@@ -145,7 +145,7 @@ pub fn get_matched_udev_indexes(
     Ok(matches)
 }
 
-pub fn set_disks(
+fn set_disks(
     answer: &Answer,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
@@ -263,7 +263,7 @@ fn set_selected_disks(
     Ok(())
 }
 
-pub fn get_first_selected_disk(config: &InstallConfig) -> usize {
+fn get_first_selected_disk(config: &InstallConfig) -> usize {
     config
         .disk_selection
         .iter()
@@ -274,7 +274,7 @@ pub fn get_first_selected_disk(config: &InstallConfig) -> usize {
         .expect("could not parse key to usize")
 }
 
-pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
+fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
     info!("Verifying locale settings");
     if !locales
         .countries
