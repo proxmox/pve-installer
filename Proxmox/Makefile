@@ -12,6 +12,7 @@ PERL_MODULES=\
     Install/RunEnv.pm \
     Install/StorageConfig.pm \
     Log.pm \
+    Sys.pm \
     Sys/Block.pm \
     Sys/Command.pm \
     Sys/File.pm \

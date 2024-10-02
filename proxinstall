@@ -33,6 +33,7 @@ my $iso_env = Proxmox::Install::ISOEnv::get();
 use Proxmox::Install;
 use Proxmox::Install::Config;
 
+use Proxmox::Sys;
 use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_all file_write_all);
@@ -733,7 +734,7 @@ sub create_password_view {
 	}
 
 	my $t3 = $eme->get_text;
-	if ($t3 !~ m/^[\w\+\-\~]+(\.[\w\+\-\~]+)*@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*$/) {
+	if ($t3 !~ m/$Proxmox::Sys::EMAIL_RE/) {
 	    Proxmox::UI::message("Email does not look like a valid address (user\@domain.tld)");
 	    $eme->grab_focus();
 	    return;
