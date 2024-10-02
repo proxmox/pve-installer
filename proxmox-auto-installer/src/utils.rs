@@ -1,4 +1,4 @@
-use anyhow::{bail, Context as _, Result};
+use anyhow::{bail, Context, Result};
 use clap::ValueEnum;
 use glob::Pattern;
 use log::info;
@@ -9,7 +9,7 @@ use crate::{
     udevinfo::UdevInfo,
 };
 use proxmox_installer_common::{
-    options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
+    options::{email_validate, FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
     setup::{
         InstallConfig, InstallRootPassword, InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
@@ -303,7 +303,11 @@ fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
     Ok(())
 }
 
-fn verify_root_password_settings(answer: &Answer) -> Result<()> {
+fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
+    info!("Verifying email and root password settings");
+
+    email_validate(&answer.global.mailto).with_context(|| answer.global.mailto.clone())?;
+
     if answer.global.root_password.is_some() && answer.global.root_password_hashed.is_some() {
         bail!("`global.root_password` and `global.root_password_hashed` cannot be set at the same time");
     } else if answer.global.root_password.is_none() && answer.global.root_password_hashed.is_none()
@@ -329,7 +333,7 @@ pub fn parse_answer(
     let network_settings = get_network_settings(answer, udev_info, runtime_info, setup_info)?;
 
     verify_locale_settings(answer, locales)?;
-    verify_root_password_settings(answer)?;
+    verify_email_and_root_password_settings(answer)?;
 
     let mut config = InstallConfig {
         autoreboot: 1_usize,
