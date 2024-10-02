@@ -86,7 +86,7 @@ fn main() -> ExitCode {
     match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {
         Ok(_) => info!("Installation done."),
         Err(err) => {
-            error!("Installation failed: {err}");
+            error!("Installation failed: {err:#}");
             return exit_failure(answer.global.reboot_on_error);
         }
     }
