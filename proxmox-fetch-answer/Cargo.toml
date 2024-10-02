@@ -13,7 +13,7 @@ homepage = "https://www.proxmox.com"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0"
+anyhow.workspace = true
 hex = "0.4"
 log = "0.4.20"
 native-tls = "0.2"

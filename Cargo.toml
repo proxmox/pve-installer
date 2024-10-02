@@ -9,3 +9,5 @@ members = [
     "proxmox-tui-installer",
 ]
 
+[workspace.dependencies]
+anyhow = "1.0"

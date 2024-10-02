@@ -8,7 +8,7 @@ exclude = [ "build", "debian" ]
 homepage = "https://www.proxmox.com"
 
 [dependencies]
-anyhow = "1.0"
+anyhow.workspace = true
 clap = { version = "4.0", features = ["derive"] }
 nix = "0.26.1"
 proxmox-installer-common = { path = "../proxmox-installer-common" }

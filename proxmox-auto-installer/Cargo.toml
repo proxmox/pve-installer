@@ -11,7 +11,7 @@ exclude = [ "build", "debian" ]
 homepage = "https://www.proxmox.com"
 
 [dependencies]
-anyhow = "1.0"
+anyhow.workspace = true
 clap = { version = "4.0", features = ["derive"] }
 glob = "0.3"
 log = "0.4.20"
