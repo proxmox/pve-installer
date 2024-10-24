@@ -193,6 +193,8 @@ pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Run
     runtime_info.disks.sort();
     if runtime_info.disks.is_empty() {
         Err("The installer could not find any supported hard disks.".to_owned())
+    } else if runtime_info.network.interfaces.is_empty() {
+        Err("The installer could not find any supported network interface cards.".to_owned())
     } else {
         Ok((installer_info, locale_info, runtime_info))
     }
