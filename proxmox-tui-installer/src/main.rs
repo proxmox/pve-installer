@@ -219,6 +219,7 @@ fn installer_setup_late(siv: &mut Cursive) {
 }
 
 fn initial_setup_error(siv: &mut CursiveRunnable, message: &str) -> ! {
+    siv.add_fullscreen_layer(InstallerBackgroundView::new());
     siv.add_layer(
         Dialog::around(TextView::new(message))
             .title("Installer setup error")
