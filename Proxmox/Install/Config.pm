@@ -44,7 +44,7 @@ my sub parse_kernel_cmdline {
     }
 
     $cmdline =~ s/(?:BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+\s?//gi;
-    $cmdline =~ s/ro|rw|quiet|proxdebug|proxtui|nomodeset//gi;
+    $cmdline =~ s/ro|rw|quiet|proxdebug|proxtui//gi;
 
     $cfg->{target_cmdline}= $cmdline;
 
