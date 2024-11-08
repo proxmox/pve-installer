@@ -94,8 +94,7 @@ struct CommandValidateAnswer {
 /// The behavior of how to fetch an answer file must be set with the '--fetch-from' parameter. The
 /// answer file can be:{n}
 /// * integrated into the ISO itself ('iso'){n}
-/// * present on a partition / file-system with the label 'PROXMOX-AIS' (Proxmox
-/// Automated Installer Source) ('partition'){n}
+/// * present on a partition / file-system, matched by its label ('partition'){n}
 /// * requested via an HTTP Post request ('http').
 ///
 /// The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present,
@@ -110,6 +109,9 @@ struct CommandValidateAnswer {
 /// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
 /// no one was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via
 /// the DNS TXT record.
+///
+/// If the 'partition' mode is used, the '--partition-label' parameter can be used to set the
+/// partition label the auto-installer should search for. This defaults to 'proxmox-ais'.
 #[derive(Args, Debug)]
 struct CommandPrepareISO {
     /// Path to the source ISO to prepare
@@ -141,6 +143,11 @@ struct CommandPrepareISO {
     /// input ISO file.
     #[arg(long)]
     tmp: Option<String>,
+
+    /// Can be used in combination with `--fetch-from partition` to set the partition label
+    /// the auto-installer will search for.
+    #[arg(long, default_value_t = { "proxmox-ais".to_owned() } )]
+    partition_label: String,
 }
 
 /// Show the system information that can be used to identify a host.
@@ -323,6 +330,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     println!("Preparing ISO...");
     let config = AutoInstSettings {
         mode: args.fetch_from.clone(),
+        partition_label: args.partition_label.clone(),
         http: HttpOptions {
             url: args.url.clone(),
             cert_fingerprint: args.cert_fingerprint.clone(),

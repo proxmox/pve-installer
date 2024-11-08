@@ -86,6 +86,7 @@ pub struct HttpOptions {
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub struct AutoInstSettings {
     pub mode: FetchAnswerFrom,
+    pub partition_label: String,
     #[serde(default)]
     pub http: HttpOptions,
 }

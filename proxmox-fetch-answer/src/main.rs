@@ -63,6 +63,7 @@ fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
     }
     Ok(AutoInstSettings {
         mode,
+        partition_label: "proxmox-ais".to_owned(),
         http: HttpOptions {
             url: args.get(2).cloned(),
             cert_fingerprint: args.get(3).cloned(),
