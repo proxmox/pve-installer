@@ -43,12 +43,22 @@ fn path_exists_logged(file_name: &str, search_path: &str) -> Option<PathBuf> {
     }
 }
 
-/// Searches for upper and lower case existence of the partlabel in the search_path
+/// Searches for the exact case, upper and finally lower case existence of the partlabel in the
+/// search_path, in that order.
+///
+/// While some filesystems - such as FAT(32) - might not supported/allow mixed-case labels, some
+/// implementations still handle them correctly, such as Linux. Thus, also search for that variant
+/// first.
 ///
 /// # Arguments
-/// * `partlabel_source` - Partition Label, used as upper and lower case
+/// * `partlabel_source` - Partition Label, used for matching, in the exact, upper and lower case
 /// * `search_path` - Path where to search for the partition label
 fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
+    if let Some(path) = path_exists_logged(partlabel, search_path) {
+        info!("Found partition with label '{partlabel}'");
+        return Ok(path);
+    }
+
     let partlabel_upper_case = partlabel.to_uppercase();
     if let Some(path) = path_exists_logged(&partlabel_upper_case, search_path) {
         info!("Found partition with label '{partlabel_upper_case}'");
@@ -61,7 +71,7 @@ fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
         return Ok(path);
     }
 
-    bail!("Could not detect upper or lower case labels for '{partlabel}'");
+    bail!("Could not find partition for label '{partlabel}'");
 }
 
 /// Will search and mount a partition/FS labeled PARTLABEL (proxmox-ais) in lower or uppercase
