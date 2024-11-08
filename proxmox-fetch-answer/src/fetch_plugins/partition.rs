@@ -8,18 +8,16 @@ use std::{
 
 static ANSWER_FILE: &str = "answer.toml";
 static ANSWER_MP: &str = "/mnt/answer";
-// FAT can only handle 11 characters, so shorten Automated Installer Source to AIS
-static PARTLABEL: &str = "proxmox-ais";
 static DISK_BY_ID_PATH: &str = "/dev/disk/by-label";
 
 pub struct FetchFromPartition;
 
 impl FetchFromPartition {
     /// Returns the contents of the answer file
-    pub fn get_answer() -> Result<String> {
+    pub fn get_answer(part_label: &str) -> Result<String> {
         info!("Checking for answer file on partition.");
 
-        let mut mount_path = PathBuf::from(mount_proxmoxinst_part()?);
+        let mut mount_path = PathBuf::from(mount_proxmoxinst_part(part_label)?);
         mount_path.push(ANSWER_FILE);
         let answer = fs::read_to_string(mount_path)
             .map_err(|err| format_err!("failed to read answer file - {err}"))?;
@@ -74,14 +72,16 @@ fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
     bail!("Could not find partition for label '{partlabel}'");
 }
 
-/// Will search and mount a partition/FS labeled PARTLABEL (proxmox-ais) in lower or uppercase
-/// to ANSWER_MP
-fn mount_proxmoxinst_part() -> Result<String> {
+/// Searches for a partition/filesystem labeled `part_label` mounts it to `ANSWER_MP`, if found.
+///
+/// # Arguments
+///   * `partlabel` - Partition Label, used for matching, in the exact, upper and lower case
+fn mount_proxmoxinst_part(part_label: &str) -> Result<String> {
     if let Ok(true) = check_if_mounted(ANSWER_MP) {
         info!("Skipping: '{ANSWER_MP}' is already mounted.");
         return Ok(ANSWER_MP.into());
     }
-    let part_path = scan_partlabels(PARTLABEL, DISK_BY_ID_PATH)?;
+    let part_path = scan_partlabels(part_label, DISK_BY_ID_PATH)?;
     info!("Mounting partition at {ANSWER_MP}");
     // create dir for mountpoint
     create_dir_all(ANSWER_MP)?;

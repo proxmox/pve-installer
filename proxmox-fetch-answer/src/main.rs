@@ -26,6 +26,7 @@ Commands:
   http        Fetch the answer file via HTTP(S)
               Additional parameters: [<http-url>] [<tls-cert-fingerprint>]
   partition   Fetch the answer file from a mountable partition
+              Additional parameters: [<partition-label>]
 
 Options:
   -h, --help  Print this help menu
@@ -49,10 +50,12 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
                 Err(err) => info!("Fetching answer file from ISO failed: {err}"),
             }
         }
-        FetchAnswerFrom::Partition => match FetchFromPartition::get_answer() {
-            Ok(answer) => return Ok(answer),
-            Err(err) => info!("Fetching answer file from partition failed: {err}"),
-        },
+        FetchAnswerFrom::Partition => {
+            match FetchFromPartition::get_answer(&install_settings.partition_label) {
+                Ok(answer) => return Ok(answer),
+                Err(err) => info!("Fetching answer file from partition failed: {err}"),
+            }
+        }
         FetchAnswerFrom::Http => match FetchFromHTTP::get_answer(&install_settings.http) {
             Ok(answer) => return Ok(answer),
             Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
@@ -74,18 +77,24 @@ fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
     };
 
     match mode {
-        FetchAnswerFrom::Iso | FetchAnswerFrom::Partition if args.len() > 2 => {
-            bail!("'iso' and 'partition' modes do not take any additional arguments")
+        FetchAnswerFrom::Iso if args.len() > 2 => {
+            bail!("'iso' mode does not take any additional arguments")
         }
         FetchAnswerFrom::Http if args.len() > 4 => {
             bail!("'http' mode takes at most 2 additional arguments")
+        }
+        FetchAnswerFrom::Partition if args.len() > 3 => {
+            bail!("'partition' mode takes at most 1 additional argument")
         }
         _ => {}
     };
 
     Ok(AutoInstSettings {
         mode,
-        partition_label: "proxmox-ais".to_owned(),
+        partition_label: args
+            .get(2)
+            .ok_or(format_err!("partition label expected"))
+            .cloned()?,
         http: HttpOptions {
             url: args.get(2).cloned(),
             cert_fingerprint: args.get(3).cloned(),

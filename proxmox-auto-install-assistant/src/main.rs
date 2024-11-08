@@ -146,6 +146,8 @@ struct CommandPrepareISO {
 
     /// Can be used in combination with `--fetch-from partition` to set the partition label
     /// the auto-installer will search for.
+    // FAT can only handle 11 characters (per specification at least, drivers might allow more),
+    // so shorten "Automated Installer Source" to "AIS" to be safe.
     #[arg(long, default_value_t = { "proxmox-ais".to_owned() } )]
     partition_label: String,
 }
