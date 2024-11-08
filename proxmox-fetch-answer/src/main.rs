@@ -16,6 +16,22 @@ mod fetch_plugins;
 static LOGGER: AutoInstLogger = AutoInstLogger;
 static AUTOINST_MODE_FILE: &str = "/cdrom/auto-installer-mode.toml";
 
+const CLI_USAGE_HELPTEXT: &str = concat!(
+    "Usage: ",
+    env!("CARGO_BIN_NAME"),
+    " <command> <additional parameters..>
+
+Commands:
+  iso         Fetch the builtin answer file from the ISO
+  http        Fetch the answer file via HTTP(S)
+              Additional parameters: [<http-url>] [<tls-cert-fingerprint>]
+  partition   Fetch the answer file from a mountable partition
+
+Options:
+  -h, --help  Print this help menu
+"
+);
+
 pub fn init_log() -> Result<()> {
     AutoInstLogger::init("/tmp/fetch_answer.log")?;
     log::set_logger(&LOGGER)
@@ -46,21 +62,27 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
 }
 
 fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
-    // TODO: this was done in a bit of a hurry, needs tidying up
     let mode = match args[1].to_lowercase().as_str() {
         "iso" => FetchAnswerFrom::Iso,
         "http" => FetchAnswerFrom::Http,
         "partition" => FetchAnswerFrom::Partition,
-        "-h" | "--help" => bail!(
-            "usage: {} <http|iso|partition> [<http-url>] [<tls-cert-fingerprint>]",
-            args[0]
-        ),
+        "-h" | "--help" => {
+            eprintln!("{}", CLI_USAGE_HELPTEXT);
+            bail!("invalid usage");
+        }
         _ => bail!("failed to parse fetch-from argument, not one of 'http', 'iso', or 'partition'"),
     };
-    if args.len() > 4 {
-    } else if args.len() > 2 && mode != FetchAnswerFrom::Http {
-        bail!("only 'http' fetch-from mode supports additional url and cert-fingerprint mode");
-    }
+
+    match mode {
+        FetchAnswerFrom::Iso | FetchAnswerFrom::Partition if args.len() > 2 => {
+            bail!("'iso' and 'partition' modes do not take any additional arguments")
+        }
+        FetchAnswerFrom::Http if args.len() > 4 => {
+            bail!("'http' mode takes at most 2 additional arguments")
+        }
+        _ => {}
+    };
+
     Ok(AutoInstSettings {
         mode,
         partition_label: "proxmox-ais".to_owned(),
