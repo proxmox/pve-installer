@@ -43,10 +43,12 @@ my sub parse_kernel_cmdline {
 	}
     }
 
-    $cmdline =~ s/(?:BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+\s?//gi;
-    $cmdline =~ s/ro|rw|quiet|proxdebug|proxtui//gi;
+    my @filtered = grep {
+	$_ !~ m/^(BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+$/ &&
+	$_ !~ m/^(ro|rw|quiet|proxdebug|proxtui)$/
+    } split(/\s+/, $cmdline);
 
-    $cfg->{target_cmdline}= $cmdline;
+    $cfg->{target_cmdline} = join(' ', @filtered);
 
     return $cfg;
 }
