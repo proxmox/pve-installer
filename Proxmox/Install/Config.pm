@@ -11,7 +11,7 @@ use Proxmox::Log;
 use Proxmox::Install::ISOEnv;
 use Proxmox::Sys::Net;
 
-my sub parse_kernel_cmdline {
+sub parse_kernel_cmdline {
     my ($cfg) = @_;
 
     my $cmdline = Proxmox::Install::RunEnv::get('kernel_cmdline');
