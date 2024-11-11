@@ -20,6 +20,8 @@ pub struct Answer {
     pub network: Network,
     #[serde(rename = "disk-setup")]
     pub disks: Disks,
+    #[serde(default)]
+    pub posthook: Option<PostNotificationHookInfo>,
 }
 
 impl Answer {
@@ -49,6 +51,15 @@ pub struct Global {
     pub reboot_on_error: bool,
     #[serde(default)]
     pub root_ssh_keys: Vec<String>,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct PostNotificationHookInfo {
+    /// URL to send a POST request to
+    pub url: String,
+    /// SHA256 cert fingerprint if certificate pinning should be used.
+    pub cert_fingerprint: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Debug, Default, PartialEq)]
