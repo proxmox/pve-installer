@@ -42,16 +42,7 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
             .map_err(|err| format_err!("Failed to retrieve udev info details: {err}"))?
     };
 
-    let mut buffer = String::new();
-    let lines = std::io::stdin().lock().lines();
-    for line in lines {
-        buffer.push_str(&line.unwrap());
-        buffer.push('\n');
-    }
-
-    let answer: Answer =
-        toml::from_str(&buffer).map_err(|err| format_err!("Failed parsing answer file: {err}"))?;
-
+    let answer = Answer::try_from_reader(std::io::stdin().lock())?;
     Ok((answer, udev_info))
 }
 

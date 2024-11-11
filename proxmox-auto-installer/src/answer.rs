@@ -1,3 +1,4 @@
+use anyhow::{format_err, Result};
 use clap::ValueEnum;
 use proxmox_installer_common::{
     options::{
@@ -7,7 +8,7 @@ use proxmox_installer_common::{
     utils::{CidrAddress, Fqdn},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, net::IpAddr};
+use std::{collections::BTreeMap, io::BufRead, net::IpAddr};
 
 // BTreeMap is used to store filters as the order of the filters will be stable, compared to
 // storing them in a HashMap
@@ -19,6 +20,19 @@ pub struct Answer {
     pub network: Network,
     #[serde(rename = "disk-setup")]
     pub disks: Disks,
+}
+
+impl Answer {
+    pub fn try_from_reader(reader: impl BufRead) -> Result<Self> {
+        let mut buffer = String::new();
+        let lines = reader.lines();
+        for line in lines {
+            buffer.push_str(&line.unwrap());
+            buffer.push('\n');
+        }
+
+        toml::from_str(&buffer).map_err(|err| format_err!("Failed parsing answer file: {err}"))
+    }
 }
 
 #[derive(Clone, Deserialize, Debug)]
