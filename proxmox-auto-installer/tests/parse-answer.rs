@@ -40,9 +40,7 @@ pub fn setup_test_basic(path: &Path) -> (SetupInfo, LocaleInfo, RuntimeInfo, Ude
     };
 
     runtime_info.disks.sort();
-    if runtime_info.disks.is_empty() {
-        panic!("disk list is empty!");
-    }
+    assert!(!runtime_info.disks.is_empty(), "disk list cannot be empty");
 
     (installer_info, locale_info, runtime_info, udev_info)
 }
