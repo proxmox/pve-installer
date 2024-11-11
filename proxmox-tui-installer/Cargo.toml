@@ -8,7 +8,9 @@ exclude = [ "build", "debian" ]
 homepage = "https://www.proxmox.com"
 
 [dependencies]
+proxmox-installer-common.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+
 cursive = { version = "0.21", default-features = false, features = ["crossterm-backend"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-proxmox-installer-common = { path = "../proxmox-installer-common" }
