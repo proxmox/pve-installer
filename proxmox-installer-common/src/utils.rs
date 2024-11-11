@@ -114,6 +114,8 @@ impl<'de> Deserialize<'de> for CidrAddress {
     }
 }
 
+serde_plain::derive_serialize_from_display!(CidrAddress);
+
 fn mask_limit(addr: &IpAddr) -> usize {
     if addr.is_ipv4() {
         32

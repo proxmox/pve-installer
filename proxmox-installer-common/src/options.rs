@@ -49,6 +49,11 @@ impl FsType {
     pub fn is_btrfs(&self) -> bool {
         matches!(self, FsType::Btrfs(_))
     }
+
+    /// Returns true if the filesystem is used on top of LVM, e.g. ext4 or XFS.
+    pub fn is_lvm(&self) -> bool {
+        matches!(self, FsType::Ext4 | FsType::Xfs)
+    }
 }
 
 impl fmt::Display for FsType {

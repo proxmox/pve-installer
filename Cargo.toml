@@ -7,6 +7,7 @@ members = [
     "proxmox-fetch-answer",
     "proxmox-installer-common",
     "proxmox-tui-installer",
+    "proxmox-post-hook",
 ]
 
 [workspace.dependencies]

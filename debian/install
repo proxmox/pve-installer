@@ -15,4 +15,5 @@ usr/bin/proxmox-chroot
 usr/bin/proxmox-fetch-answer
 usr/bin/proxmox-low-level-installer
 usr/bin/proxmox-tui-installer
+usr/bin/proxmox-post-hook
 var

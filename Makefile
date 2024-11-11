@@ -24,7 +24,8 @@ USR_BIN := \
 	   proxmox-tui-installer\
 	   proxmox-fetch-answer\
 	   proxmox-auto-install-assistant \
-	   proxmox-auto-installer
+	   proxmox-auto-installer \
+	   proxmox-post-hook
 
 COMPILED_BINS := \
 	$(addprefix $(CARGO_COMPILEDIR)/,$(USR_BIN))
@@ -59,6 +60,7 @@ $(BUILDDIR):
 	  proxmox-chroot \
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
+	  proxmox-post-hook \
 	  test/ \
 	  $(SHELL_SCRIPTS) \
 	  $@.tmp
@@ -132,7 +134,9 @@ cargo-build:
 		--package proxmox-auto-installer --bin proxmox-auto-installer \
 		--package proxmox-fetch-answer --bin proxmox-fetch-answer \
 		--package proxmox-auto-install-assistant --bin proxmox-auto-install-assistant \
-		--package proxmox-chroot --bin proxmox-chroot $(CARGO_BUILD_ARGS)
+		--package proxmox-chroot --bin proxmox-chroot \
+		--package proxmox-post-hook --bin proxmox-post-hook \
+		$(CARGO_BUILD_ARGS)
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<

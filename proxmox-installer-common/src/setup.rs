@@ -363,7 +363,7 @@ pub struct RuntimeInfo {
     pub secure_boot: Option<bool>,
 }
 
-#[derive(Copy, Clone, Eq, Deserialize, PartialEq)]
+#[derive(Copy, Clone, Eq, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BootType {
     Bios,

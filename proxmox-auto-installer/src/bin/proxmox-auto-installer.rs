@@ -82,8 +82,6 @@ fn main() -> ExitCode {
         }
     }
 
-    // TODO: (optionally) do a HTTP post with basic system info, like host SSH public key(s) here
-
     ExitCode::SUCCESS
 }
 

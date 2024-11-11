@@ -1,0 +1,18 @@
+[package]
+name = "proxmox-post-hook"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Christoph Heiss <c.heiss@proxmox.com>",
+    "Proxmox Support Team <support@proxmox.com>",
+]
+license = "AGPL-3"
+exclude = [ "build", "debian" ]
+homepage = "https://www.proxmox.com"
+
+[dependencies]
+anyhow.workspace = true
+proxmox-auto-installer.workspace = true
+proxmox-installer-common = { workspace = true, features = ["http"] }
+serde.workspace = true
+serde_json.workspace = true
