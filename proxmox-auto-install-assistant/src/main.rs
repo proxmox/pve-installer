@@ -5,7 +5,7 @@ use regex::Regex;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
-    fs,
+    fmt, fs,
     io::{self, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -387,7 +387,12 @@ fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
     target.to_path_buf()
 }
 
-fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str, uuid: &String) -> Result<()> {
+fn inject_file_to_iso(
+    iso: impl AsRef<Path> + fmt::Debug,
+    file: &PathBuf,
+    location: &str,
+    uuid: &String,
+) -> Result<()> {
     let result = Command::new("xorriso")
         .arg("-boot_image")
         .arg("any")
@@ -396,7 +401,7 @@ fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str, uuid: &Stri
         .arg("uuid")
         .arg(uuid)
         .arg("-dev")
-        .arg(iso)
+        .arg(iso.as_ref())
         .arg("-map")
         .arg(file)
         .arg(location)
@@ -410,10 +415,10 @@ fn inject_file_to_iso(iso: &PathBuf, file: &PathBuf, location: &str, uuid: &Stri
     Ok(())
 }
 
-fn get_iso_uuid(iso: &PathBuf) -> Result<String> {
+fn get_iso_uuid(iso: impl AsRef<Path>) -> Result<String> {
     let result = Command::new("xorriso")
         .arg("-dev")
-        .arg(iso)
+        .arg(iso.as_ref())
         .arg("-report_system_area")
         .arg("cmd")
         .output()?;
@@ -540,11 +545,11 @@ fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     Ok(nics)
 }
 
-fn get_udev_properties(path: &PathBuf) -> Result<String> {
+fn get_udev_properties(path: impl AsRef<Path> + fmt::Debug) -> Result<String> {
     let udev_output = Command::new("udevadm")
         .arg("info")
         .arg("--path")
-        .arg(path)
+        .arg(path.as_ref())
         .arg("--query")
         .arg("all")
         .output()?;
@@ -554,8 +559,8 @@ fn get_udev_properties(path: &PathBuf) -> Result<String> {
     Ok(String::from_utf8(udev_output.stdout)?)
 }
 
-fn parse_answer(path: &PathBuf) -> Result<Answer> {
-    let mut file = match fs::File::open(path) {
+fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
+    let mut file = match fs::File::open(&path) {
         Ok(file) => file,
         Err(err) => bail!("Opening answer file {path:?} failed: {err}"),
     };
