@@ -11,3 +11,7 @@ members = [
 
 [workspace.dependencies]
 anyhow = "1.0"
+log = "0.4.20"
+toml = "0.8"
+proxmox-auto-installer.path = "./proxmox-auto-installer"
+proxmox-installer-common.path = "./proxmox-installer-common"

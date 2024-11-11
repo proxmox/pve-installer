@@ -13,3 +13,21 @@ regex = "1.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_plain = "1.0"
+
+# `http` feature
+hex = { version = "0.4", optional = true }
+native-tls = { version = "0.2", optional = true }
+rustls = { version = "0.21", features = [ "dangerous_configuration" ], optional = true }
+rustls-native-certs = { version = "0.6", optional = true }
+sha2 = { version = "0.10", optional = true }
+ureq = { version = "2.6", features = [ "native-certs", "native-tls" ], optional = true }
+
+[features]
+http = [
+    "dep:hex",
+    "dep:native-tls",
+    "dep:rustls",
+    "dep:rustls-native-certs",
+    "dep:sha2",
+    "dep:ureq"
+]

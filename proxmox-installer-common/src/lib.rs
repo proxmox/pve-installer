@@ -3,6 +3,9 @@ pub mod options;
 pub mod setup;
 pub mod utils;
 
+#[cfg(feature = "http")]
+pub mod http;
+
 pub const RUNTIME_DIR: &str = "/run/proxmox-installer";
 
 /// Default placeholder value for the administrator email address.
