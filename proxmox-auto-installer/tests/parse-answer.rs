@@ -18,7 +18,7 @@ fn get_test_resource_path() -> Result<PathBuf, String> {
         .join("tests/resources"))
 }
 
-fn get_answer(path: PathBuf) -> Result<Answer, String> {
+fn get_answer(path: impl AsRef<Path>) -> Result<Answer, String> {
     let answer_raw = std::fs::read_to_string(path).unwrap();
     let answer: answer::Answer = toml::from_str(&answer_raw)
         .map_err(|err| format!("error parsing answer.toml: {err}"))
@@ -27,11 +27,12 @@ fn get_answer(path: PathBuf) -> Result<Answer, String> {
     Ok(answer)
 }
 
-pub fn setup_test_basic(path: &Path) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
-    let (installer_info, locale_info, mut runtime_info) = load_installer_setup_files(path).unwrap();
+pub fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
+    let (installer_info, locale_info, mut runtime_info) =
+        load_installer_setup_files(&path).unwrap();
 
     let udev_info: UdevInfo = {
-        let mut path = path.to_path_buf();
+        let mut path = path.as_ref().to_path_buf();
         path.push("run-env-udev.json");
 
         read_json(&path)
