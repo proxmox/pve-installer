@@ -253,7 +253,10 @@ elif [ $start_auto_installer -ne 0 ]; then
         debugsh || true
     fi
     echo "Starting automatic installation"
-    /usr/bin/proxmox-auto-installer </run/automatic-installer-answers
+
+    if /usr/bin/proxmox-auto-installer </run/automatic-installer-answers; then
+	/usr/bin/proxmox-post-hook </run/automatic-installer-answers
+    fi
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
     xinit -- -dpi "$DPI" -s 0 >/dev/tty2 2>&1
