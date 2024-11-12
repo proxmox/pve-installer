@@ -9,7 +9,7 @@ homepage = "https://www.proxmox.com"
 
 [dependencies]
 proxmox-installer-common.workspace = true
-serde.workspace = true
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 regex.workspace = true
 
