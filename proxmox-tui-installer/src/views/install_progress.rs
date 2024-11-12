@@ -273,6 +273,22 @@ mod tests {
     use super::*;
     use std::env;
 
+    fn next_msg<R: BufRead>(reader: &mut R) -> Option<UiMessage> {
+        let mut line = String::new();
+        reader.read_line(&mut line).expect("a line");
+
+        match serde_json::from_str::<UiMessage>(&line) {
+            Ok(msg) => Some(msg),
+            Err(err) => {
+                eprintln!("invalid json: '{err}'");
+                // Skip over all spurious output that may be produced by the low-level
+                // installer, in the same manner as InstallProgressView::progress_task()
+                // above does the actual processing.
+                next_msg(reader)
+            }
+        }
+    }
+
     #[test]
     fn run_low_level_installer_test_session() {
         env::set_current_dir("..").expect("failed to change working directory");
@@ -292,18 +308,8 @@ mod tests {
 
         writeln!(writer).expect("failed to write install config: {err}");
 
-        let mut next_msg = || {
-            let mut line = String::new();
-            reader.read_line(&mut line).expect("a line");
-
-            match serde_json::from_str::<UiMessage>(&line) {
-                Ok(msg) => Some(msg),
-                Err(err) => panic!("unexpected error: '{err}'"),
-            }
-        };
-
         assert_eq!(
-            next_msg(),
+            next_msg(&mut reader),
             Some(UiMessage::Prompt {
                 query: "Reply anything?".to_owned()
             }),
@@ -317,7 +323,7 @@ mod tests {
         writeln!(writer).expect("failed to write prompt answer");
 
         assert_eq!(
-            next_msg(),
+            next_msg(&mut reader),
             Some(UiMessage::Info {
                 message: "Test Message - got ok".to_owned()
             }),
@@ -325,7 +331,7 @@ mod tests {
 
         for i in (1..=1000).step_by(3) {
             assert_eq!(
-                next_msg(),
+                next_msg(&mut reader),
                 Some(UiMessage::Progress {
                     ratio: (i as f32) / 1000.,
                     text: format!("foo {i}"),
@@ -334,7 +340,7 @@ mod tests {
         }
 
         assert_eq!(
-            next_msg(),
+            next_msg(&mut reader),
             Some(UiMessage::Finished {
                 state: "ok".to_owned(),
                 message: "Installation finished - reboot now?".to_owned(),
