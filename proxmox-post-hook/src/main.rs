@@ -156,6 +156,9 @@ impl Default for PostHookInfoMeta {
 }
 
 /// All data sent as request payload with the post-hook POST request.
+///
+/// NOTE: The format is versioned through `hook_meta.version` (`$hook.version` in the resulting
+/// JSON), ensure you update it when this struct or any of its members gets modified.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct PostHookInfo {
