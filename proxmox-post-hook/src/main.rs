@@ -129,10 +129,40 @@ struct CpuInfo {
     sockets: usize,
 }
 
+/// Metadata of the hook, such as schema version of the document.
+#[derive(Serialize)]
+#[serde(rename_all = "kebab-case")]
+struct PostHookInfoMeta {
+    /// major.minor version describing the schema version of this document, in a semanticy-version
+    /// way.
+    ///
+    /// major: Incremented for incompatible/breaking API changes, e.g. removing an existing
+    /// field.
+    /// minor: Incremented when adding functionality in a backwards-compatible matter, e.g.
+    /// adding a new field.
+    version: String,
+}
+
+impl PostHookInfoMeta {
+    const SCHEMA_VERSION: &str = "1.0";
+}
+
+impl Default for PostHookInfoMeta {
+    fn default() -> Self {
+        Self {
+            version: Self::SCHEMA_VERSION.to_owned(),
+        }
+    }
+}
+
 /// All data sent as request payload with the post-hook POST request.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct PostHookInfo {
+    // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
+    // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
+    #[serde(rename = "$hook")]
+    hook_meta: PostHookInfoMeta,
     /// major.minor version of Debian as installed, retrieved from /etc/debian_version
     debian_version: String,
     /// PVE/PMG/PBS version as reported by `pveversion`, `pmgversion` or
@@ -215,6 +245,7 @@ impl PostHookInfo {
         };
 
         Ok(Self {
+            hook_meta: PostHookInfoMeta::default(),
             debian_version: read_file("/etc/debian_version")?,
             product: Self::gather_product_info(&setup_info, &run_cmd)?,
             iso: setup_info.iso_info.clone(),
