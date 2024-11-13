@@ -41,11 +41,6 @@ impl SysInfo {
         let info = Self::get()?;
         Ok(serde_json::to_string_pretty(&info)?)
     }
-
-    pub fn as_json() -> Result<String> {
-        let info = Self::get()?;
-        Ok(serde_json::to_string(&info)?)
-    }
 }
 
 #[derive(Debug, Serialize)]

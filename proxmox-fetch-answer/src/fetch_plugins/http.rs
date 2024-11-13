@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use log::info;
+use serde::Serialize;
 use std::{
     fs::{self, read_to_string},
     process::Command,
@@ -27,6 +28,67 @@ static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint
 static DHCP_URL_OPTION: &str = "proxmox-auto-installer-manifest-url";
 static DHCP_CERT_FP_OPTION: &str = "proxmox-auto-installer-cert-fingerprint";
 static DHCP_LEASE_FILE: &str = "/var/lib/dhcp/dhclient.leases";
+
+/// Metadata of the HTTP POST payload, such as schema version of the document.
+#[derive(Serialize)]
+#[serde(rename_all = "kebab-case")]
+struct HttpFetchInfoMeta {
+    /// major.minor version describing the schema version of this document, in a semanticy-version
+    /// way.
+    ///
+    /// major: Incremented for incompatible/breaking API changes, e.g. removing an existing
+    /// field.
+    /// minor: Incremented when adding functionality in a backwards-compatible matter, e.g.
+    /// adding a new field.
+    version: String,
+}
+
+impl HttpFetchInfoMeta {
+    const SCHEMA_VERSION: &str = "1.0";
+}
+
+impl Default for HttpFetchInfoMeta {
+    fn default() -> Self {
+        Self {
+            version: Self::SCHEMA_VERSION.to_owned(),
+        }
+    }
+}
+
+/// All data sent as request payload with the answerfile fetch POST request.
+///
+/// NOTE: The format is versioned through `fetch_meta.version` (`$fetchinfo.version` in the
+/// resulting JSON), ensure you update it when this struct or any of its members gets modified.
+#[derive(Serialize)]
+#[serde(rename_all = "kebab-case")]
+struct HttpFetchPayload {
+    /// Metadata for the answerfile fetch payload
+    // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
+    // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
+    #[serde(rename = "$fetchinfo")]
+    fetch_meta: HttpFetchInfoMeta,
+    /// Information about the running system, flattened into this structure directly.
+    #[serde(flatten)]
+    sysinfo: SysInfo,
+}
+
+impl HttpFetchPayload {
+    /// Retrieves the required information from the system and constructs the
+    /// full payload including meta data.
+    fn get() -> Result<Self> {
+        Ok(Self {
+            fetch_meta: HttpFetchInfoMeta::default(),
+            sysinfo: SysInfo::get()?,
+        })
+    }
+
+    /// Retrieves the required information from the system and constructs the
+    /// full payload including meta data, serialized as JSON.
+    pub fn as_json() -> Result<String> {
+        let info = Self::get()?;
+        Ok(serde_json::to_string(&info)?)
+    }
+}
 
 pub struct FetchFromHTTP;
 
@@ -65,7 +127,8 @@ impl FetchFromHTTP {
         }
 
         info!("Gathering system information.");
-        let payload = SysInfo::as_json()?;
+        let payload = HttpFetchPayload::as_json()?;
+
         info!("Sending POST request to '{answer_url}'.");
         let answer =
             proxmox_installer_common::http::post(&answer_url, fingerprint.as_deref(), payload)?;

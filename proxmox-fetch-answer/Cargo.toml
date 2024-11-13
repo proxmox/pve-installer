@@ -15,4 +15,6 @@ anyhow.workspace = true
 log.workspace = true
 proxmox-auto-installer.workspace = true
 proxmox-installer-common = { workspace = true, features = ["http"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 toml.workspace = true
