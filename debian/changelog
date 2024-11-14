@@ -1,3 +1,42 @@
+proxmox-installer (8.2.7) bookworm; urgency=medium
+
+  * tui: boot disk: align btrfs dialog interface with ZFS equivalent
+
+  * tui: boot disk: use tabbed view for disk options on small screens
+
+  * auto-installer: fix cut-off answer-request charset to state utf-8
+
+  * low-level: install: check for already-existing `rpool` on install
+
+  * low-level: change root password option to contain either plain-text or hash
+    and add new `global.root_password_hashed` answer option to the
+    auto-installer
+
+  * tui: show background header on fatal setup error
+
+  * tui: use email regex from HTML specification for validation
+
+  * installer-common: do not drop `nomodeset` from target kernel cmdline
+
+  * fetch-answer: allow one to override the partition label the answer file
+    should be searched on through the fetch-config file that is setup when
+    preparing an ISO. This can help with some limited BMCs/IPMIs where one
+    might not be able to control the partition label.
+
+  * fix #5250: allow one to set the compress option for BTRFS
+
+  * expose ZFS ARC size override setting for all products, not just Proxmox VE
+
+  * fix #5536: auto-installer: add `post-installation-webhook` section to
+    answer file. When configured, the installer will send a HTTP notification
+    to the specified URL after the installation finished successfully.
+
+  * add $format-info meta object to fetch-answer and post-hook requests,
+    allowing one to tell when new features can be used in a backward
+    compatible way
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 14 Nov 2024 22:05:11 +0100
+
 proxmox-installer (8.2.6) bookworm; urgency=medium
 
   * assistant: ensure the partition UUID stay the same when preparing an ISO
