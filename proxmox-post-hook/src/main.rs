@@ -157,15 +157,15 @@ impl Default for PostHookInfoMeta {
 
 /// All data sent as request payload with the post-hook POST request.
 ///
-/// NOTE: The format is versioned through `hook_meta.version` (`$hook.version` in the resulting
-/// JSON), ensure you update it when this struct or any of its members gets modified.
+/// NOTE: The format is versioned through `format_info.version` (`$format-info.version` in the
+/// resulting JSON), ensure you update it when this struct or any of its members gets modified.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct PostHookInfo {
     // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
     // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
-    #[serde(rename = "$hook")]
-    hook_meta: PostHookInfoMeta,
+    #[serde(rename = "$format-info")]
+    format_info: PostHookInfoMeta,
     /// major.minor version of Debian as installed, retrieved from /etc/debian_version
     debian_version: String,
     /// PVE/PMG/PBS version as reported by `pveversion`, `pmgversion` or
@@ -248,7 +248,7 @@ impl PostHookInfo {
         };
 
         Ok(Self {
-            hook_meta: PostHookInfoMeta::default(),
+            format_info: PostHookInfoMeta::default(),
             debian_version: read_file("/etc/debian_version")?,
             product: Self::gather_product_info(&setup_info, &run_cmd)?,
             iso: setup_info.iso_info.clone(),

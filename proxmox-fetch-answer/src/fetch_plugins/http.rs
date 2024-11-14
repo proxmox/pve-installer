@@ -57,7 +57,7 @@ impl Default for HttpFetchInfoMeta {
 
 /// All data sent as request payload with the answerfile fetch POST request.
 ///
-/// NOTE: The format is versioned through `fetch_meta.version` (`$fetchinfo.version` in the
+/// NOTE: The format is versioned through `format_info.version` (`$format-info.version` in the
 /// resulting JSON), ensure you update it when this struct or any of its members gets modified.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -65,8 +65,8 @@ struct HttpFetchPayload {
     /// Metadata for the answerfile fetch payload
     // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
     // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
-    #[serde(rename = "$fetchinfo")]
-    fetch_meta: HttpFetchInfoMeta,
+    #[serde(rename = "$format-info")]
+    format_info: HttpFetchInfoMeta,
     /// Information about the running system, flattened into this structure directly.
     #[serde(flatten)]
     sysinfo: SysInfo,
@@ -77,7 +77,7 @@ impl HttpFetchPayload {
     /// full payload including meta data.
     fn get() -> Result<Self> {
         Ok(Self {
-            fetch_meta: HttpFetchInfoMeta::default(),
+            format_info: HttpFetchInfoMeta::default(),
             sysinfo: SysInfo::get()?,
         })
     }
