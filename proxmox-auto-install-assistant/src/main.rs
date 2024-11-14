@@ -1,7 +1,6 @@
 use anyhow::{bail, format_err, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use glob::Pattern;
-use regex::Regex;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
@@ -454,13 +453,9 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
         Pattern::new("sr[0-9]*")?,
     ];
 
-    // compile Regex here once and not inside the loop
-    let re_disk = Regex::new(r"(?m)^E: DEVTYPE=disk")?;
-    let re_cdrom = Regex::new(r"(?m)^E: ID_CDROM")?;
-    let re_iso9660 = Regex::new(r"(?m)^E: ID_FS_TYPE=iso9660")?;
-
-    let re_name = Regex::new(r"(?m)^N: (.*)$")?;
-    let re_props = Regex::new(r"(?m)^E: ([^=]+)=(.*)$")?;
+    const PROP_DEVTYP_PREFIX: &str = "E: DEVTYPE=";
+    const PROP_CDROM: &str = "E: ID_CDROM";
+    const PROP_ISO9660_FS: &str = "E: ID_FS_TYPE=iso9660";
 
     let mut disks: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
 
@@ -482,30 +477,27 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
             }
         };
 
-        if !re_disk.is_match(&output) {
-            continue 'outer;
-        };
-        if re_cdrom.is_match(&output) {
-            continue 'outer;
-        };
-        if re_iso9660.is_match(&output) {
-            continue 'outer;
-        };
-
         let mut name = filename;
-        if let Some(cap) = re_name.captures(&output) {
-            if let Some(res) = cap.get(1) {
-                name = String::from(res.as_str());
-            }
-        }
-
         let mut udev_props: BTreeMap<String, String> = BTreeMap::new();
-
         for line in output.lines() {
-            if let Some(caps) = re_props.captures(line) {
-                let key = String::from(caps.get(1).unwrap().as_str());
-                let value = String::from(caps.get(2).unwrap().as_str());
-                udev_props.insert(key, value);
+            if let Some(prop) = line.strip_prefix(PROP_DEVTYP_PREFIX) {
+                if prop != "disk" {
+                    continue 'outer;
+                }
+            }
+
+            if line.starts_with(PROP_CDROM) || line.starts_with(PROP_ISO9660_FS) {
+                continue 'outer;
+            }
+
+            if let Some(prop) = line.strip_prefix("N: ") {
+                name = prop.to_owned();
+            };
+
+            if let Some(prop) = line.strip_prefix("E: ") {
+                if let Some((key, val)) = prop.split_once('=') {
+                    udev_props.insert(key.to_owned(), val.to_owned());
+                }
             }
         }
 
@@ -515,7 +507,6 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
 }
 
 fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
-    let re_props = Regex::new(r"(?m)^E: (.*)=(.*)$")?;
     let mut nics: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
 
     let links = get_nic_list()?;
@@ -533,10 +524,10 @@ fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
         let mut udev_props: BTreeMap<String, String> = BTreeMap::new();
 
         for line in output.lines() {
-            if let Some(caps) = re_props.captures(line) {
-                let key = String::from(caps.get(1).unwrap().as_str());
-                let value = String::from(caps.get(2).unwrap().as_str());
-                udev_props.insert(key, value);
+            if let Some(prop) = line.strip_prefix("E: ") {
+                if let Some((key, val)) = prop.split_once('=') {
+                    udev_props.insert(key.to_owned(), val.to_owned());
+                }
             }
         }
 
