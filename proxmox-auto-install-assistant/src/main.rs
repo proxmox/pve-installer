@@ -474,7 +474,7 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
             }
         }
 
-        let output = match get_udev_properties(&entry.path()) {
+        let output = match get_udev_properties(entry.path()) {
             Ok(output) => output,
             Err(err) => {
                 eprint!("{err}");
@@ -522,7 +522,7 @@ fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     for link in links {
         let path = format!("/sys/class/net/{link}");
 
-        let output = match get_udev_properties(&PathBuf::from(path)) {
+        let output = match get_udev_properties(PathBuf::from(path)) {
             Ok(output) => output,
             Err(err) => {
                 eprint!("{err}");

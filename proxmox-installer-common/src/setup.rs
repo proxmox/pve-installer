@@ -12,7 +12,10 @@ use std::{
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    options::{BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption},
+    options::{
+        BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, ZfsBootdiskOptions,
+        ZfsChecksumOption, ZfsCompressOption,
+    },
     utils::CidrAddress,
 };
 

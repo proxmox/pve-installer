@@ -182,7 +182,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     ///
     /// # Arguments
     /// * `content` - New, stringified content for the inner [`EditView`]. Must be a valid value
-    /// according to the containet type `T`.
+    ///               according to the container type `T`.
     fn content_inner(mut self, content: &str) -> Self {
         let mut inner = EditView::new();
         std::mem::swap(self.inner_mut(), &mut inner);

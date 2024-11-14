@@ -50,7 +50,7 @@ pub fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, Runti
 fn test_parse_answers() {
     let path = get_test_resource_path().unwrap();
     let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&path);
-    let mut tests_path = path.clone();
+    let mut tests_path = path;
     tests_path.push("parse_answer");
     let test_dir = fs::read_dir(tests_path.clone()).unwrap();
 
