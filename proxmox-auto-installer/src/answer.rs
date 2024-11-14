@@ -21,7 +21,7 @@ pub struct Answer {
     #[serde(rename = "disk-setup")]
     pub disks: Disks,
     #[serde(default)]
-    pub posthook: Option<PostNotificationHookInfo>,
+    pub post_installation_webhook: Option<PostNotificationHookInfo>,
 }
 
 impl Answer {

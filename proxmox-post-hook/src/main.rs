@@ -1,9 +1,9 @@
 //! Post installation hook for the Proxmox installer, mainly for combination
 //! with the auto-installer.
 //!
-//! If a `[posthook]` section is specified in the given answer file, it will
-//! send a HTTP POST request to that URL, with an optional certificate fingerprint
-//! for usage with (self-signed) TLS certificates.
+//! If a `[post-installation-webhook]` section is specified in the given answer file, it will send
+//! a HTTP POST request to that URL, with an optional certificate fingerprint for usage with
+//! (self-signed) TLS certificates.
 //! In the body of the request, information about the newly installed system is sent.
 //!
 //! Relies on `proxmox-chroot` as an external dependency to (bind-)mount the
@@ -155,7 +155,7 @@ impl Default for PostHookInfoMeta {
     }
 }
 
-/// All data sent as request payload with the post-hook POST request.
+/// All data sent as request payload with the post-installation-webhook POST request.
 ///
 /// NOTE: The format is versioned through `format_info.version` (`$format-info.version` in the
 /// resulting JSON), ensure you update it when this struct or any of its members gets modified.
@@ -616,18 +616,18 @@ fn with_chroot<R, F: FnOnce(&str) -> Result<R>>(callback: F) -> Result<R> {
     result
 }
 
-/// Reads the answer file from stdin, checks for a configured post-hook URL (+ optional certificate
-/// fingerprint for HTTPS). If configured, retrieves all relevant information about the installed
-/// system and sends them to the given endpoint.
+/// Reads the answer file from stdin, checks for a configured post-installation-webhook URL (+
+/// optional certificate fingerprint for HTTPS). If configured, retrieves all relevant information
+/// about the installed system and sends them to the given endpoint.
 fn do_main() -> Result<()> {
     let answer = Answer::try_from_reader(std::io::stdin().lock())?;
 
     if let Some(PostNotificationHookInfo {
         url,
         cert_fingerprint,
-    }) = &answer.posthook
+    }) = &answer.post_installation_webhook
     {
-        println!("Found posthook; sending POST request to '{url}'.");
+        println!("Found post-installation-webhook; sending POST request to '{url}'.");
 
         let info = with_chroot(|target_path| PostHookInfo::gather(target_path, &answer))?;
 
@@ -637,7 +637,7 @@ fn do_main() -> Result<()> {
             serde_json::to_string(&info)?,
         )?;
     } else {
-        println!("No posthook found; skipping");
+        println!("No post-installation-webhook configured; skipping");
     }
 
     Ok(())
@@ -647,7 +647,7 @@ fn main() -> ExitCode {
     match do_main() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("\nError occurred during posthook:");
+            eprintln!("\nError occurred during post-installation-webhook:");
             eprintln!("{err:#}");
             ExitCode::FAILURE
         }
