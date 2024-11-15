@@ -723,6 +723,7 @@ sub extract_data {
     }
 
     my $bootloader_err;
+    my $diskcount = 0;
 
     eval {
 	my $maxper = 0.25;
@@ -761,6 +762,7 @@ sub extract_data {
 	} elsif ($use_btrfs) {
 
 	    my ($devlist, $btrfs_mode) = get_btrfs_raid_setup();
+	    $diskcount = scalar(@$devlist);
 
 	    foreach my $hd (@$devlist) {
 		wipe_disk(@$hd[1]);
@@ -795,6 +797,7 @@ sub extract_data {
 	} elsif ($use_zfs) {
 
 	    my ($devlist, $vdev) = get_zfs_raid_setup();
+	    $diskcount = scalar(@$devlist);
 
 	    foreach my $hd (@$devlist) {
 		wipe_disk(@$hd[1]);
@@ -842,6 +845,7 @@ sub extract_data {
 	} else {
 	    my $target_hd = Proxmox::Install::Config::get_target_hd();
 	    die "target '$target_hd' is not a valid block device\n" if ! -b $target_hd;
+	    $diskcount = 1;
 
 	    wipe_disk($target_hd);
 
@@ -1241,7 +1245,9 @@ _EOD
 	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
 	}
 
-	update_progress(0.8, 0.95, 1, "make system bootable");
+	my $ask_for_patience = "";
+	$ask_for_patience = " (multiple disks detected, please be patient)" if $diskcount > 3;
+	update_progress(0.8, 0.95, 1, "make system bootable$ask_for_patience");
 	my $target_cmdline='';
 	if ($target_cmdline = Proxmox::Install::Config::get_target_cmdline()) {
 	    my $target_cmdline_snippet = '';
