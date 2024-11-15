@@ -87,9 +87,14 @@ pub struct HttpOptions {
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub struct AutoInstSettings {
     pub mode: FetchAnswerFrom,
+    #[serde(default = "default_partition_label")]
     pub partition_label: String,
     #[serde(default)]
     pub http: HttpOptions,
+}
+
+fn default_partition_label() -> String {
+    "proxmox-ais".to_owned()
 }
 
 #[derive(Deserialize, Debug)]
