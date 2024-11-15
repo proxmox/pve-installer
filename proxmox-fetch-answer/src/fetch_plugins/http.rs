@@ -32,7 +32,7 @@ static DHCP_LEASE_FILE: &str = "/var/lib/dhcp/dhclient.leases";
 /// Metadata of the HTTP POST payload, such as schema version of the document.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
-struct HttpFetchInfoMeta {
+struct HttpFetchInfoSchema {
     /// major.minor version describing the schema version of this document, in a semanticy-version
     /// way.
     ///
@@ -43,11 +43,11 @@ struct HttpFetchInfoMeta {
     version: String,
 }
 
-impl HttpFetchInfoMeta {
+impl HttpFetchInfoSchema {
     const SCHEMA_VERSION: &str = "1.0";
 }
 
-impl Default for HttpFetchInfoMeta {
+impl Default for HttpFetchInfoSchema {
     fn default() -> Self {
         Self {
             version: Self::SCHEMA_VERSION.to_owned(),
@@ -57,7 +57,7 @@ impl Default for HttpFetchInfoMeta {
 
 /// All data sent as request payload with the answerfile fetch POST request.
 ///
-/// NOTE: The format is versioned through `format_info.version` (`$format-info.version` in the
+/// NOTE: The format is versioned through `schema.version` (`$schema.version` in the
 /// resulting JSON), ensure you update it when this struct or any of its members gets modified.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -65,8 +65,8 @@ struct HttpFetchPayload {
     /// Metadata for the answerfile fetch payload
     // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
     // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
-    #[serde(rename = "$format-info")]
-    format_info: HttpFetchInfoMeta,
+    #[serde(rename = "$schema")]
+    schema: HttpFetchInfoSchema,
     /// Information about the running system, flattened into this structure directly.
     #[serde(flatten)]
     sysinfo: SysInfo,
@@ -77,7 +77,7 @@ impl HttpFetchPayload {
     /// full payload including meta data.
     fn get() -> Result<Self> {
         Ok(Self {
-            format_info: HttpFetchInfoMeta::default(),
+            schema: HttpFetchInfoSchema::default(),
             sysinfo: SysInfo::get()?,
         })
     }

@@ -132,7 +132,7 @@ struct CpuInfo {
 /// Metadata of the hook, such as schema version of the document.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
-struct PostHookInfoMeta {
+struct PostHookInfoSchema {
     /// major.minor version describing the schema version of this document, in a semanticy-version
     /// way.
     ///
@@ -143,11 +143,11 @@ struct PostHookInfoMeta {
     version: String,
 }
 
-impl PostHookInfoMeta {
+impl PostHookInfoSchema {
     const SCHEMA_VERSION: &str = "1.0";
 }
 
-impl Default for PostHookInfoMeta {
+impl Default for PostHookInfoSchema {
     fn default() -> Self {
         Self {
             version: Self::SCHEMA_VERSION.to_owned(),
@@ -157,15 +157,15 @@ impl Default for PostHookInfoMeta {
 
 /// All data sent as request payload with the post-installation-webhook POST request.
 ///
-/// NOTE: The format is versioned through `format_info.version` (`$format-info.version` in the
+/// NOTE: The format is versioned through `schema.version` (`$schema.version` in the
 /// resulting JSON), ensure you update it when this struct or any of its members gets modified.
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct PostHookInfo {
     // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
     // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
-    #[serde(rename = "$format-info")]
-    format_info: PostHookInfoMeta,
+    #[serde(rename = "$schema")]
+    schema: PostHookInfoSchema,
     /// major.minor version of Debian as installed, retrieved from /etc/debian_version
     debian_version: String,
     /// PVE/PMG/PBS version as reported by `pveversion`, `pmgversion` or
@@ -248,7 +248,7 @@ impl PostHookInfo {
         };
 
         Ok(Self {
-            format_info: PostHookInfoMeta::default(),
+            schema: PostHookInfoSchema::default(),
             debian_version: read_file("/etc/debian_version")?,
             product: Self::gather_product_info(&setup_info, &run_cmd)?,
             iso: setup_info.iso_info.clone(),
