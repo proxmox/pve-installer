@@ -177,7 +177,10 @@ sub zfs_ask_existing_zpool_rename {
     my $exported_pools = Proxmox::Sys::ZFS::get_exported_pools();
 
     foreach (@$exported_pools) {
-	next if $_->{name} ne $pool_name || $_->{state} ne 'ONLINE';
+	# Pool will be in degraded state if a subset of the associated disks have been wiped by the
+	# installer, but the pool can still be imported (required for the rename).
+	next if $_->{name} ne $pool_name ||
+	    not ($_->{state} eq 'ONLINE' || $_->{state} eq 'DEGRADED');
 	my $renamed_pool = "$_->{name}-OLD-$_->{id}";
 
 	my $do_rename = Proxmox::Install::Config::get_existing_storage_auto_rename();
