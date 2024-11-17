@@ -1,3 +1,22 @@
+proxmox-installer (8.2.8) bookworm; urgency=medium
+
+  * auto-installer: add default value for partition-label to fix regression
+    from new override mechanism
+
+  * install: show hint when making the system bootable that it might take a
+    while if multiple disks need to be processed to avoid that users think the
+    installer is stuck.
+
+  * install: zfs: rename pre-existing pool named `rpool` also if in degraded
+    state for best-effort to avoid that the user needs to do so after the
+    installation from the limited initrd environment.
+
+  * fetch-answer, post-hook: rename $format-info to the more widely used
+    $schema, now that we still can easily do so without any backwards compat
+    implications.
+
+ -- Proxmox Support Team <support@proxmox.com>  Sun, 17 Nov 2024 17:56:01 +0100
+
 proxmox-installer (8.2.7) bookworm; urgency=medium
 
   * tui: boot disk: align btrfs dialog interface with ZFS equivalent
