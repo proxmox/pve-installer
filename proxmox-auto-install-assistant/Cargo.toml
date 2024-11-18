@@ -13,6 +13,7 @@ homepage = "https://www.proxmox.com"
 [dependencies]
 anyhow.workspace = true
 log.workspace = true
+proxmox-installer-common.workspace = true
 proxmox-auto-installer.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

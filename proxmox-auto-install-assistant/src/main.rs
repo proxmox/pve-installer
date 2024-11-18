@@ -19,6 +19,7 @@ use proxmox_auto_installer::{
         FetchAnswerFrom, HttpOptions,
     },
 };
+use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME};
 
 static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 
@@ -149,6 +150,13 @@ struct CommandPrepareISO {
     // so shorten "Automated Installer Source" to "AIS" to be safe.
     #[arg(long, default_value_t = { "proxmox-ais".to_owned() } )]
     partition_label: String,
+
+    /// Executable file to include, which should be run on the first system boot after the
+    /// installation. Can be used for further bootstrapping the new system.
+    ///
+    /// Must be appropriately enabled in the answer file.
+    #[arg(long)]
+    on_first_boot: Option<PathBuf>,
 }
 
 /// Show the system information that can be used to identify a host.
@@ -201,7 +209,7 @@ fn main() {
         Commands::SystemInfo(args) => show_system_info(args),
     };
     if let Err(err) = res {
-        eprintln!("{err}");
+        eprintln!("Error: {err:?}");
         std::process::exit(1);
     }
 }
@@ -305,6 +313,17 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
         bail!("You must set '--fetch-from' to 'iso' to place the answer file directly in the ISO.");
     }
 
+    if let Some(first_boot) = &args.on_first_boot {
+        let metadata = fs::metadata(first_boot)?;
+
+        if metadata.len() > FIRST_BOOT_EXEC_MAX_SIZE.try_into()? {
+            bail!(
+                "Maximum file size for first-boot executable file is {} MiB",
+                FIRST_BOOT_EXEC_MAX_SIZE / 1024 / 1024
+            )
+        }
+    }
+
     if let Some(file) = &args.answer_file {
         println!("Checking provided answer file...");
         parse_answer(file)?;
@@ -350,6 +369,15 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
 
     if let Some(answer_file) = &args.answer_file {
         inject_file_to_iso(&tmp_iso, answer_file, "/answer.toml", &uuid)?;
+    }
+
+    if let Some(first_boot) = &args.on_first_boot {
+        inject_file_to_iso(
+            &tmp_iso,
+            first_boot,
+            &format!("/{FIRST_BOOT_EXEC_NAME}"),
+            &uuid,
+        )?;
     }
 
     println!("Moving prepared ISO to target location...");
