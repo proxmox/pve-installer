@@ -1,0 +1,113 @@
+# ./.github/workflows/build.yml
+name: Build and Package
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  release:
+    types: [created]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_HOME: "/home/runner/.cargo"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install RPM build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y rpm build-essential
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Create Cargo config directory
+      run: |
+        mkdir -p ~/.cargo
+        cat > ~/.cargo/config.toml << 'EOF'
+        [source.crates-io]
+        registry = "https://github.com/rust-lang/crates.io-index"
+        EOF
+        
+    - name: Build Binary
+      run: |
+        cd proxmox-auto-install-assistant
+        cargo build --verbose --release
+        
+    - name: Prepare RPM structure
+      run: |
+        mkdir -p ~/rpmbuild/{SPECS,SOURCES,BUILD,RPMS,SRPMS}
+        cp proxmox-auto-install-assistant/target/release/proxmox-auto-install-assistant ~/rpmbuild/SOURCES/
+        
+    - name: Create RPM spec file
+      run: |
+        cat > ~/rpmbuild/SPECS/proxmox-auto-install-assistant.spec << 'EOF'
+        Name:           proxmox-auto-install-assistant
+        Version:        0.1.0
+        Release:        1%{?dist}
+        Summary:        Proxmox Auto Install Assistant Tool
+        
+        License:        AGPL-3
+        URL:            https://www.proxmox.com
+        Source0:        proxmox-auto-install-assistant
+        
+        %description
+        This tool can be used to prepare a Proxmox installation ISO for automated installations.
+        Additional uses are to validate the format of an answer file or to test match filters and
+        print information on the properties to match against for the current hardware.
+        
+        %install
+        mkdir -p %{buildroot}%{_bindir}
+        install -m 755 %{SOURCE0} %{buildroot}%{_bindir}/proxmox-auto-install-assistant
+        
+        %files
+        %{_bindir}/proxmox-auto-install-assistant
+        
+        %changelog
+        * Mon Nov 18 2024 Proxmox Support Team <support@proxmox.com> - 0.1.0-1
+        - Initial RPM release
+        EOF
+
+    - name: Build RPM package
+      run: rpmbuild -ba ~/rpmbuild/SPECS/proxmox-auto-install-assistant.spec
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: proxmox-auto-install-assistant-binary
+        path: proxmox-auto-install-assistant/target/release/proxmox-auto-install-assistant
+        
+    - name: Upload RPM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: proxmox-auto-install-assistant-rpm
+        path: ~/rpmbuild/RPMS/x86_64/proxmox-auto-install-assistant-*.rpm
+
+    - name: Upload artifacts to release
+      if: github.event_name == 'release'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.event.release.tag_name }} \
+          proxmox-auto-install-assistant/target/release/proxmox-auto-install-assistant \
+          ~/rpmbuild/RPMS/x86_64/proxmox-auto-install-assistant-*.rpm
