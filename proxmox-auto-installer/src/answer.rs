@@ -22,6 +22,8 @@ pub struct Answer {
     pub disks: Disks,
     #[serde(default)]
     pub post_installation_webhook: Option<PostNotificationHookInfo>,
+    #[serde(default)]
+    pub first_boot: Option<FirstBootHookInfo>,
 }
 
 impl Answer {
@@ -59,6 +61,63 @@ pub struct PostNotificationHookInfo {
     /// URL to send a POST request to
     pub url: String,
     /// SHA256 cert fingerprint if certificate pinning should be used.
+    pub cert_fingerprint: Option<String>,
+}
+
+/// Possible sources for the optional first-boot hook script/executable file.
+#[derive(Clone, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum FirstBootHookSourceMode {
+    /// Fetch the executable file from an URL, specified in the parent.
+    FromUrl,
+    /// The executable file has been baked into the ISO at a known location,
+    /// and should be retrieved from there.
+    FromIso,
+}
+
+/// Possible orderings for the `proxmox-first-boot` systemd service.
+///
+/// Determines the final value of `Unit.Before` and `Unit.Wants` in the service
+/// file.
+// Must be kept in sync with Proxmox::Install::Config and the service files in the
+// proxmox-first-boot package.
+#[derive(Clone, Default, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum FirstBootHookServiceOrdering {
+    /// Needed for bringing up the network itself, runs before any networking is attempted.
+    BeforeNetwork,
+    /// Network needs to be already online, runs after networking was brought up.
+    NetworkOnline,
+    /// Runs after the system has successfully booted up completely.
+    #[default]
+    FullyUp,
+}
+
+impl FirstBootHookServiceOrdering {
+    /// Maps the enum to the appropriate systemd target name, without the '.target' suffix.
+    pub fn as_systemd_target_name(&self) -> &str {
+        match self {
+            FirstBootHookServiceOrdering::BeforeNetwork => "network-pre",
+            FirstBootHookServiceOrdering::NetworkOnline => "network-online",
+            FirstBootHookServiceOrdering::FullyUp => "multi-user",
+        }
+    }
+}
+
+/// Describes from where to fetch the first-boot hook script, either being baked into the ISO or
+/// from a URL.
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct FirstBootHookInfo {
+    /// Mode how to retrieve the first-boot executable file, either from an URL or from the ISO if
+    /// it has been baked-in.
+    pub source: FirstBootHookSourceMode,
+    /// Determines the service order when the hook will run on first boot.
+    #[serde(default)]
+    pub ordering: FirstBootHookServiceOrdering,
+    /// Retrieve the post-install script from a URL, if source == "from-url".
+    pub url: Option<String>,
+    /// SHA256 cert fingerprint if certificate pinning should be used, if source == "from-url".
     pub cert_fingerprint: Option<String>,
 }
 

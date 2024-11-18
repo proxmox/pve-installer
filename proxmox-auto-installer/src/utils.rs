@@ -5,7 +5,7 @@ use log::info;
 use std::{collections::BTreeMap, process::Command};
 
 use crate::{
-    answer::{self, Answer},
+    answer::{self, Answer, FirstBootHookSourceMode},
     udevinfo::UdevInfo,
 };
 use proxmox_installer_common::{
@@ -325,6 +325,18 @@ fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     }
 }
 
+fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
+    info!("Verifying first boot settings");
+
+    if let Some(first_boot) = &answer.first_boot {
+        if first_boot.source == FirstBootHookSourceMode::FromUrl && first_boot.url.is_none() {
+            bail!("first-boot executable source set to URL, but none specified!");
+        }
+    }
+
+    Ok(())
+}
+
 pub fn parse_answer(
     answer: &Answer,
     udev_info: &UdevInfo,
@@ -341,6 +353,7 @@ pub fn parse_answer(
 
     verify_locale_settings(answer, locales)?;
     verify_email_and_root_password_settings(answer)?;
+    verify_first_boot_settings(answer)?;
 
     let mut config = InstallConfig {
         autoreboot: 1_usize,
@@ -419,6 +432,13 @@ pub fn parse_answer(
             })
         }
     }
+
+    if let Some(first_boot) = &answer.first_boot {
+        config.first_boot.enabled = true;
+        config.first_boot.ordering_target =
+            Some(first_boot.ordering.as_systemd_target_name().to_owned());
+    }
+
     Ok(config)
 }
 
