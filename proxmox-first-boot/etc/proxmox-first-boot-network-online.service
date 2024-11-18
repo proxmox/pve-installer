@@ -1,0 +1,17 @@
+[Unit]
+Description=Proxmox First Boot Setup (Network Online)
+After=systemd-remount-fs.service
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/var/lib/proxmox-first-boot/pending-first-boot-setup
+ConditionPathIsReadWrite=/var/lib
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/var/lib/proxmox-first-boot/proxmox-first-boot network-online
+ExecStartPost=/usr/bin/rm -v /var/lib/proxmox-first-boot/pending-first-boot-setup
+
+[Install]
+Alias=proxmox-first-boot.service
+WantedBy=multi-user.target

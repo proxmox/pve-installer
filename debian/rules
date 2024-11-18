@@ -19,3 +19,8 @@ override_dh_strip:
 	    -executable -type f); do \
 	  debian/scripts/elf-strip-unused-dependencies.sh "$$exe" || true; \
 	done
+
+override_dh_installsystemd:
+	# disables all services by default, as we enable them ourselves in
+	# the installer
+	dh_installsystemd --no-stop-on-upgrade --no-start --no-enable

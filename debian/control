@@ -62,3 +62,10 @@ Description: Assistant to help with automated installations
  Provides a helper that can assist with creating an answer file for a automated
  installation of a Proxmox project, and preparing a official ISO image to use
  this answer file.
+
+Package: proxmox-first-boot
+Architecture: any
+Depends: ${misc:Depends},
+Description: Service which runs on the first system boot for additional setup
+ Provides a service which will run on the first boot if the a script was
+ configured through the auto-installer.

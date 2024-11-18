@@ -5,6 +5,10 @@ BUILDDIR ?= $(PACKAGE)-$(DEB_VERSION_UPSTREAM)
 
 DEB=$(PACKAGE)_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
 ASSISTANT_DEB=proxmox-auto-install-assistant_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
+FIRST_BOOT_DEB=proxmox-first-boot_$(DEB_VERSION)_$(DEB_HOST_ARCH).deb
+
+ALL_DEBS = $(DEB) $(ASSISTANT_DEB) $(FIRST_BOOT_DEB)
+
 DSC=$(PACKAGE)_$(DEB_VERSION).dsc
 
 CARGO ?= cargo
@@ -61,6 +65,7 @@ $(BUILDDIR):
 	  proxmox-tui-installer/ \
 	  proxmox-installer-common/ \
 	  proxmox-post-hook \
+	  proxmox-first-boot \
 	  test/ \
 	  $(SHELL_SCRIPTS) \
 	  $@.tmp
@@ -73,9 +78,10 @@ country.dat: country.pl
 
 deb: $(DEB)
 $(ASSISTANT_DEB): $(DEB)
+$(FIRST_BOOT_DEB): $(DEB)
 $(DEB): $(BUILDDIR)
 	cd $(BUILDDIR); dpkg-buildpackage -b -us -uc
-	lintian $(DEB) $(ASSISTANT_DEB)
+	lintian $(ALL_DEBS)
 
 test-$(DEB): $(INSTALLER_SOURCES)
 	rsync --exclude='test*.img' --exclude='*.deb' --exclude='build' -a * build
@@ -114,6 +120,7 @@ HTMLDIR=$(VARLIBDIR)/html/common
 install: $(INSTALLER_SOURCES) $(COMPILED_BINS)
 	$(MAKE) -C banner install
 	$(MAKE) -C Proxmox install
+	$(MAKE) -C proxmox-first-boot install
 	install -D -m 644 interfaces $(DESTDIR)/etc/network/interfaces
 	install -D -m 755 fake-start-stop-daemon $(VARLIBDIR)/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d $(VARLIBDIR)/policy-disable-rc.d
@@ -143,8 +150,8 @@ cargo-build:
 
 .PHONY: upload
 upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
-upload: $(DEB) $(ASSISTANT_DEB)
-	tar cf - $(DEB) $(ASSISTANT_DEB) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
+upload: $(ALL_DEBS)
+	tar cf - $(ALL_DEBS) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
 
 %.img:
 	truncate -s 2G $@

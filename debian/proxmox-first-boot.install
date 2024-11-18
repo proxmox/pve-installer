@@ -1,0 +1,3 @@
+lib/systemd/system/proxmox-first-boot-network-pre.service
+lib/systemd/system/proxmox-first-boot-network-online.service
+lib/systemd/system/proxmox-first-boot-multi-user.service
