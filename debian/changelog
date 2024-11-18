@@ -1,3 +1,14 @@
+proxmox-installer (8.3.0) bookworm; urgency=medium
+
+  * fix #5579: auto-installer: add optional first-boot hook script to be
+    executed when the freshly installed system is started up the first time.
+    One can choose when the script should be started w.r.t. systemd unit
+    ordering, either before the network starts to get configured to allow
+    adapting or even bootstrap the network settings themselves, then once
+    netowrking is available, or once the system is fully booted up.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 18 Nov 2024 22:38:31 +0100
+
 proxmox-installer (8.2.8) bookworm; urgency=medium
 
   * auto-installer: add default value for partition-label to fix regression
