@@ -14,5 +14,6 @@
   "mngmt_nic": "enp65s0f0",
   "root_password": { "plain": "123456" },
   "target_hd": "/dev/sda",
-  "timezone": "Europe/Vienna"
+  "timezone": "Europe/Vienna",
+  "first_boot": { "enabled": 0 }
 }

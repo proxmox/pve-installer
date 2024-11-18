@@ -111,6 +111,14 @@ my sub init_cfg {
 	gateway => undef,
 	dns => undef,
 	target_cmdline => undef,
+
+	# proxmox-first-boot setup
+	first_boot => {
+	    enabled => 0,
+	    # Must be kept in sync with proxmox_auto_installer::answer::FirstBootHookServiceOrdering
+	    # and the service files in the proxmox-first-boot package
+	    ordering_target => 'multi-user', # one of `network-pre`, `network-online` or `multi-user`
+	},
     };
 
     $initial = parse_kernel_cmdline($initial);
@@ -278,5 +286,17 @@ sub get_target_cmdline { return get('target_cmdline'); }
 
 sub set_existing_storage_auto_rename { set_key('existing_storage_auto_rename', $_[0]); }
 sub get_existing_storage_auto_rename { return get('existing_storage_auto_rename'); }
+
+sub set_first_boot_opt {
+    my ($k, $v) = @_;
+    my $opts = get('first_boot');
+    croak "unknown first boot override key '$k'" if !exists($opts->{$k});
+    $opts->{$k} = $v;
+}
+sub get_first_boot_opt {
+    my ($k) = @_;
+    my $opts = get('first_boot');
+    return defined($k) ? $opts->{$k} : $opts;
+}
 
 1;

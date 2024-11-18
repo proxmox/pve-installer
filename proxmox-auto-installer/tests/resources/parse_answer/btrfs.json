@@ -20,5 +20,6 @@
   "timezone": "Europe/Vienna",
   "btrfs_opts": {
     "compress": "zlib"
-  }
+  },
+  "first_boot": { "enabled": 0 }
 }

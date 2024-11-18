@@ -339,6 +339,13 @@ where
     serializer.collect_str(value)
 }
 
+fn serialize_bool_as_u32<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_u32(if *value { 1 } else { 0 })
+}
+
 #[derive(Clone, Deserialize)]
 pub struct RuntimeInfo {
     /// Whether is system was booted in (legacy) BIOS or UEFI mode.
@@ -464,6 +471,14 @@ pub struct InstallRootPassword {
     pub hashed: Option<String>,
 }
 
+#[derive(Clone, Default, Deserialize, Serialize)]
+pub struct InstallFirstBootSetup {
+    #[serde(serialize_with = "serialize_bool_as_u32")]
+    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ordering_target: Option<String>,
+}
+
 pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> {
     let (path, args, envs): (&str, &[&str], Vec<(&str, &str)>) = if test_mode {
         (
@@ -530,4 +545,6 @@ pub struct InstallConfig {
     pub cidr: CidrAddress,
     pub gateway: IpAddr,
     pub dns: IpAddr,
+
+    pub first_boot: InstallFirstBootSetup,
 }

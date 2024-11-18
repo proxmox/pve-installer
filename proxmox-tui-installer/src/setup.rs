@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::options::InstallerOptions;
 use proxmox_installer_common::{
     options::AdvancedBootdiskOptions,
-    setup::{InstallConfig, InstallRootPassword},
+    setup::{InstallConfig, InstallFirstBootSetup, InstallRootPassword},
 };
 
 impl From<InstallerOptions> for InstallConfig {
@@ -44,6 +44,8 @@ impl From<InstallerOptions> for InstallConfig {
             cidr: options.network.address,
             gateway: options.network.gateway,
             dns: options.network.dns_server,
+
+            first_boot: InstallFirstBootSetup::default(),
         };
 
         match &options.bootdisk.advanced {

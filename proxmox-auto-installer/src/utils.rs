@@ -11,8 +11,8 @@ use crate::{
 use proxmox_installer_common::{
     options::{email_validate, FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
     setup::{
-        InstallBtrfsOption, InstallConfig, InstallRootPassword, InstallZfsOption, LocaleInfo,
-        RuntimeInfo, SetupInfo,
+        InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
+        InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -374,6 +374,8 @@ pub fn parse_answer(
         cidr: network_settings.address,
         gateway: network_settings.gateway,
         dns: network_settings.dns_server,
+
+        first_boot: InstallFirstBootSetup::default(),
     };
 
     set_disks(answer, udev_info, runtime_info, &mut config)?;

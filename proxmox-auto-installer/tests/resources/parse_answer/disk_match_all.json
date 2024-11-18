@@ -23,5 +23,6 @@
       "checksum": "on",
       "compress": "on",
       "copies": 1
-  }
+  },
+  "first_boot": { "enabled": 0 }
 }
