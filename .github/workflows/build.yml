@@ -3,9 +3,9 @@ name: Build and Package
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "testing-branch" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "testing-branch" ]
   release:
     types: [created]
 
