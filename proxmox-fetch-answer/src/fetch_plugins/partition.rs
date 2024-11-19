@@ -41,6 +41,19 @@ fn path_exists_logged(file_name: &str, search_path: &str) -> Option<PathBuf> {
     }
 }
 
+fn encode_partlabel(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            if (' '..='~').contains(&c) && !(c.is_ascii_alphanumeric() || "#+-.:=@_".contains(c)) {
+                format!("\\x{:02x}", c as u32)
+            } else {
+                c.to_string()
+            }
+        })
+        .collect()
+}
+
 /// Searches for the exact case, upper and finally lower case existence of the partlabel in the
 /// search_path, in that order.
 ///
@@ -52,19 +65,22 @@ fn path_exists_logged(file_name: &str, search_path: &str) -> Option<PathBuf> {
 /// * `partlabel_source` - Partition Label, used for matching, in the exact, upper and lower case
 /// * `search_path` - Path where to search for the partition label
 fn scan_partlabels(partlabel: &str, search_path: &str) -> Result<PathBuf> {
-    if let Some(path) = path_exists_logged(partlabel, search_path) {
+    let partlabel_enc = encode_partlabel(partlabel);
+    if let Some(path) = path_exists_logged(&partlabel_enc, search_path) {
         info!("Found partition with label '{partlabel}'");
         return Ok(path);
     }
 
     let partlabel_upper_case = partlabel.to_uppercase();
-    if let Some(path) = path_exists_logged(&partlabel_upper_case, search_path) {
+    let partlabel_upper_case_enc = encode_partlabel(&partlabel_upper_case);
+    if let Some(path) = path_exists_logged(&partlabel_upper_case_enc, search_path) {
         info!("Found partition with label '{partlabel_upper_case}'");
         return Ok(path);
     }
 
     let partlabel_lower_case = partlabel.to_lowercase();
-    if let Some(path) = path_exists_logged(&partlabel_lower_case, search_path) {
+    let partlabel_lower_case_enc = encode_partlabel(&partlabel_lower_case);
+    if let Some(path) = path_exists_logged(&partlabel_lower_case_enc, search_path) {
         info!("Found partition with label '{partlabel_lower_case}'");
         return Ok(path);
     }
