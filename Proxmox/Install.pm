@@ -554,10 +554,12 @@ sub create_lvm_volumes {
     } else {
 	my $maxvz = Proxmox::Install::Config::get_maxvz();
 	if ($iso_env->{product} eq 'pve' && !defined($maxvz)) {
-	    Proxmox::UI::message("Skipping auto-creation of LVM thinpool for guest data due to low space.");
+	    Proxmox::UI::message(
+	        "Skipping auto-creation of LVM thinpool for guest data due to low space.");
 	} elsif ($iso_env->{product} eq 'pve' && $maxvz != 0) {
 	    Proxmox::UI::message(
-		"Skipping auto-creation of LVM thinpool for guest data. Maximum data volume size set too low."
+	        "Skipping auto-creation of LVM thinpool for guest data. Maximum data volume size set"
+	        ." too low (<= 4 GiB)."
 	    );
 	}
 	$datadev = undef;
