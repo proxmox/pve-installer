@@ -473,7 +473,10 @@ pub struct InstallRootPassword {
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct InstallFirstBootSetup {
-    #[serde(serialize_with = "serialize_bool_as_u32")]
+    #[serde(
+        serialize_with = "serialize_bool_as_u32",
+        deserialize_with = "deserialize_bool_from_int"
+    )]
     pub enabled: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ordering_target: Option<String>,
