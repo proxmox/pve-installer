@@ -1,6 +1,7 @@
 [Unit]
 Description=Proxmox First Boot Setup (Fully Booted)
-After=systemd-remount-fs.service
+After=systemd-remount-fs.service pveproxy.service pmgproxy.service proxmox-backup-proxy.service
+Wants=pveproxy.service pmgproxy.service proxmox-backup-proxy.service
 ConditionPathExists=/var/lib/proxmox-first-boot/pending-first-boot-setup
 ConditionPathIsReadWrite=/var/lib
 
