@@ -255,7 +255,11 @@ elif [ $start_auto_installer -ne 0 ]; then
     echo "Starting automatic installation"
 
     if /usr/bin/proxmox-auto-installer </run/automatic-installer-answers; then
-	/usr/bin/proxmox-post-hook </run/automatic-installer-answers
+        if ! /usr/bin/proxmox-post-hook </run/automatic-installer-answers; then
+            echo "post installation hook failed to execute."
+            echo "waiting 30s to allow gathering the error before reboot."
+            sleep 30
+        fi
     fi
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
