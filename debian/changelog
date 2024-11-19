@@ -1,3 +1,13 @@
+proxmox-installer (8.3.2) bookworm; urgency=medium
+
+  * fetch-answer: encode unsafe characters in partition label
+
+  * first-boot: multi-user: start after product-specific API proxy
+
+  * install: continue reboot after 30s if post-hook fails
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 19 Nov 2024 18:45:53 +0100
+
 proxmox-installer (8.3.1) bookworm; urgency=medium
 
   * Improve "For more information" paragraph in GUI info bulletin point
