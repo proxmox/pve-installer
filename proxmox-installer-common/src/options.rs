@@ -24,14 +24,17 @@ serde_plain::derive_display_from_serialize!(BtrfsRaidLevel);
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
 pub enum ZfsRaidLevel {
+    #[serde(alias = "RAID0")]
     Raid0,
+    #[serde(alias = "RAID1")]
     Raid1,
+    #[serde(alias = "RAID10")]
     Raid10,
-    #[serde(rename = "RAIDZ-1")]
+    #[serde(alias = "RAIDZ-1", rename(deserialize = "raidz-1", serialize = "RAIDZ-1"))]
     RaidZ,
-    #[serde(rename = "RAIDZ-2")]
+    #[serde(alias = "RAIDZ-2", rename(deserialize = "raidz-2", serialize = "RAIDZ-2"))]
     RaidZ2,
-    #[serde(rename = "RAIDZ-3")]
+    #[serde(alias = "RAIDZ-3", rename(deserialize = "raidz-3", serialize = "RAIDZ-3"))]
     RaidZ3,
 }
 
