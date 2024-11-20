@@ -14,8 +14,11 @@ use crate::utils::{CidrAddress, Fqdn};
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
 pub enum BtrfsRaidLevel {
+    #[serde(alias = "RAID0")]
     Raid0,
+    #[serde(alias = "RAID1")]
     Raid1,
+    #[serde(alias = "RAID10")]
     Raid10,
 }
 
