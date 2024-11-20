@@ -69,7 +69,7 @@ impl fmt::Display for FsType {
             FsType::Ext4 => write!(f, "ext4"),
             FsType::Xfs => write!(f, "XFS"),
             FsType::Zfs(level) => write!(f, "ZFS ({level})"),
-            FsType::Btrfs(level) => write!(f, "Btrfs ({level})"),
+            FsType::Btrfs(level) => write!(f, "BTRFS ({level})"),
         }
     }
 }
