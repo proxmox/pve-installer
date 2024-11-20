@@ -1,3 +1,11 @@
+proxmox-installer (8.3.3) bookworm; urgency=medium
+
+  * common: allow lowercase and uppercase zfs raid levels
+
+  * common: allow lowercase and uppercase btrfs raid levels
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 20 Nov 2024 19:50:33 +0100
+
 proxmox-installer (8.3.2) bookworm; urgency=medium
 
   * fetch-answer: encode unsafe characters in partition label
