@@ -173,6 +173,9 @@ fn run_installation(
         let mut lowlevel_log = File::create("/tmp/install-low-level.log")
             .map_err(|err| format_err!("failed to open low-level installer logfile: {err}"))?;
 
+        let mut last_progress_percentage = 0.;
+        let mut last_progress_text = None;
+
         for line in reader.lines() {
             let line = match line {
                 Ok(line) => line,
@@ -207,8 +210,16 @@ fn run_installation(
                     let percentage = ratio * 100.;
                     if let Some(text) = text {
                         info!("progress {percentage:>5.1} % - {text}");
-                    } else {
-                        info!("progress {percentage:>5.1} %");
+                        last_progress_percentage = percentage;
+                        last_progress_text = Some(text);
+                    } else if (percentage - last_progress_percentage) > 0.1 {
+                        if let Some(text) = &last_progress_text {
+                            info!("progress {percentage:>5.1} % - {text}");
+                        } else {
+                            info!("progress {percentage:>5.1} %");
+                        }
+
+                        last_progress_percentage = percentage;
                     }
                 }
                 LowLevelMessage::Finished { state, message } => {
