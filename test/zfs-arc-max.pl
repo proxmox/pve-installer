@@ -51,6 +51,10 @@ while (my ($total_mem, $expected) = each %default_tests) {
     mock_product('pmg');
     is(Proxmox::Install::RunEnv::default_zfs_arc_max(), 0,
 	"zfs_arc_max should default to `0` for PMG with $total_mem MiB system memory");
+
+    mock_product('pdm');
+    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), 0,
+	"zfs_arc_max should default to `0` for PDM with $total_mem MiB system memory");
 }
 
 my @clamp_tests = (

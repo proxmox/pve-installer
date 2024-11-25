@@ -465,7 +465,7 @@ impl NetworkOptions {
 
         Fqdn::from(&format!("{hostname}.{domain}")).unwrap_or_else(|_| {
             // Safety: This will always result in a valid FQDN, as we control & know
-            // the values of default_hostname (one of "pve", "pmg" or "pbs") and
+            // the values of default_hostname (one of "pve", "pmg", "pbs" or "pdm") and
             // constant-defined DEFAULT_DOMAIN.
             Fqdn::from(&format!("{}.{}", default_hostname, Self::DEFAULT_DOMAIN)).unwrap()
         })
@@ -517,6 +517,7 @@ mod tests {
             );
             assert_eq!(default_zfs_arc_max(ProxmoxProduct::PBS, *total_memory), 0);
             assert_eq!(default_zfs_arc_max(ProxmoxProduct::PMG, *total_memory), 0);
+            assert_eq!(default_zfs_arc_max(ProxmoxProduct::PDM, *total_memory), 0);
         }
     }
 }

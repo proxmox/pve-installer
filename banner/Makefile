@@ -3,6 +3,7 @@ INSTALLER_SOURCES=		\
 	pmg-banner.png		\
 	pve-banner.png		\
 	pbs-banner.png		\
+	pdm-banner.png		\
 
 %-banner.png: %-banner.svg
 	rsvg-convert -o $@ $<

@@ -1455,6 +1455,16 @@ _EOD
 	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
 	    chroot_chown($targetdir, $user_cfg_fn, user => 'root', group => 'backup');
 	    chroot_chmod($targetdir, $user_cfg_fn, mode => '0640');
+	} elsif ($iso_env->{product} eq 'pdm') {
+	    my $base_cfg_path = "/etc/proxmox-datacenter-manager";
+	    mkdir "$targetdir/$base_cfg_path";
+
+	    mkdir "$targetdir/$base_cfg_path/access";
+	    my $user_cfg_fn = "$base_cfg_path/acess/user.cfg";
+	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
+
+	    chroot_chown($targetdir, $base_cfg_path, user => 'www-data', recursive => 1);
+	    chroot_chmod($targetdir, $base_cfg_path, mode => '0700');
 	}
     };
 

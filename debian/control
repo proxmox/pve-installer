@@ -51,9 +51,10 @@ Breaks: pbs-installer (<< 7~), pve-installer (<< 7~),
 Replaces: pbs-installer (<< 7~), pve-installer (<< 7~),
 Description: Installer for Proxmox Projects
  This package contains the graphical installer for:
-  * Proxmox VE.
-  * Proxmox Mail Gateway.
+  * Proxmox VE
+  * Proxmox Mail Gateway
   * Proxmox Backup Server
+  * Proxmox Datacenter Manager
 
 Package: proxmox-auto-install-assistant
 Architecture: any

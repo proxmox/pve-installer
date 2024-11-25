@@ -26,6 +26,7 @@ pub enum ProxmoxProduct {
     PVE,
     PBS,
     PMG,
+    PDM,
 }
 
 impl ProxmoxProduct {
@@ -34,6 +35,7 @@ impl ProxmoxProduct {
             Self::PVE => "pve",
             Self::PMG => "pmg",
             Self::PBS => "pbs",
+            Self::PDM => "pdm",
         }
     }
 }
@@ -44,6 +46,7 @@ impl fmt::Display for ProxmoxProduct {
             Self::PVE => "pve",
             Self::PMG => "pmg",
             Self::PBS => "pbs",
+            Self::PDM => "pdm",
         })
     }
 }

@@ -151,7 +151,7 @@ cargo-build:
 .PHONY: upload
 upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
 upload: $(ALL_DEBS)
-	tar cf - $(ALL_DEBS) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs --dist $(UPLOAD_DIST)
+	tar cf - $(ALL_DEBS) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs,pdm --dist $(UPLOAD_DIST)
 
 %.img:
 	truncate -s 2G $@
@@ -220,6 +220,20 @@ check-pbs: prepare-check-pbs
 	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs-tui: prepare-check-pbs
+	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
+
+prepare-check-pdm: prepare-check-env test.img
+	rm -f cd-info.test; $(MAKE) \
+	    PRODUCT='pdm' \
+	    PRODUCTLONG='Proxmox Datacenter Manager' \
+	    ISONAME='proxmox-datacenter-manager' \
+	    cd-info.test
+	./proxmox-low-level-installer dump-env -t test.img
+
+check-pdm: prepare-check-pdm
+	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+
+check-pdm-tui: prepare-check-pdm
 	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
 
 .phony: clean

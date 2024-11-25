@@ -31,6 +31,12 @@ my $product_cfg = {
 	enable_btrfs => 0,
 	bridged_network => 0,
     },
+    pdm => {
+	fullname => 'Proxmox Datacenter Manager',
+	port => '8443', # TODO: confirm
+	enable_btrfs => 0,
+	bridged_network => 0,
+    },
 };
 
 my sub read_locale_info {

@@ -168,8 +168,8 @@ struct PostHookInfo {
     schema: PostHookInfoSchema,
     /// major.minor version of Debian as installed, retrieved from /etc/debian_version
     debian_version: String,
-    /// PVE/PMG/PBS version as reported by `pveversion`, `pmgversion` or
-    /// `proxmox-backup-manager version`, respectively.
+    /// PVE/PMG/PBS/PDM version as reported by `pveversion`, `pmgversion`,
+    /// `proxmox-backup-manager version` or `proxmox-datacenter-manager version`, respectively.
     product: ProductInfo,
     /// Release information for the ISO used for the installation.
     iso: IsoInfo,
@@ -399,6 +399,7 @@ impl PostHookInfo {
             ProxmoxProduct::PVE => "pve-manager",
             ProxmoxProduct::PMG => "pmg-api",
             ProxmoxProduct::PBS => "proxmox-backup-server",
+            ProxmoxProduct::PDM => "proxmox-datacenter-manager",
         };
 
         let version = run_cmd(&[
