@@ -1,7 +1,8 @@
 use anyhow::{bail, format_err, Result};
 use log::{error, info, LevelFilter};
 use std::{
-    env, fs,
+    env,
+    fs::{self, File},
     io::{BufRead, BufReader, Write},
     path::PathBuf,
     process::ExitCode,
@@ -169,15 +170,29 @@ fn run_installation(
             .map_err(|err| format_err!("failed to serialize install config: {err}"))?;
         writeln!(writer).map_err(|err| format_err!("failed to write install config: {err}"))?;
 
+        let mut lowlevel_log = File::create("/tmp/install-low-level.log")
+            .map_err(|err| format_err!("failed to open low-level installer logfile: {err}"))?;
+
         for line in reader.lines() {
             let line = match line {
                 Ok(line) => line,
                 Err(_) => break,
             };
+
+            // The low-level installer also spews the output of any command it runs on its
+            // stdout. Use a very simple heuricstic to determine whether it is actually JSON
+            // or not.
+            if !line.starts_with('{') || !line.ends_with('}') {
+                let _ = writeln!(lowlevel_log, "{}", line);
+                continue;
+            }
+
             let msg = match serde_json::from_str::<LowLevelMessage>(&line) {
                 Ok(msg) => msg,
-                Err(_) => {
+                Err(err) => {
                     // Not a fatal error, so don't abort the installation by returning
+                    eprintln!("low-level installer: error while parsing message: '{err}'");
+                    eprintln!("    original message was: '{line}'");
                     continue;
                 }
             };
