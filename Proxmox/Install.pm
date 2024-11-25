@@ -1460,7 +1460,7 @@ _EOD
 
     my $err = $@;
 
-    update_progress(1, 0, 1, "");
+    update_progress(1, 0, 1, "installation finished");
 
     print STDERR $err if $err && $err ne "\n";
 
