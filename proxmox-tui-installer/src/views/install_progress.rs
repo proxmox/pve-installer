@@ -127,11 +127,18 @@ impl InstallProgressView {
                     }),
                     LowLevelMessage::Progress { ratio, text } => {
                         counter.set((ratio * 100.).floor() as usize);
-                        cb_sink.send(Box::new(move |siv| {
-                            siv.call_on_name(Self::PROGRESS_TEXT_VIEW_ID, |v: &mut TextView| {
-                                v.set_content(text);
-                            });
-                        }))
+                        if let Some(text) = text {
+                            cb_sink.send(Box::new(move |siv| {
+                                siv.call_on_name(
+                                    Self::PROGRESS_TEXT_VIEW_ID,
+                                    |v: &mut TextView| {
+                                        v.set_content(text);
+                                    },
+                                );
+                            }))
+                        } else {
+                            Ok(())
+                        }
                     }
                     LowLevelMessage::Finished { state, message } => {
                         counter.set(100);
@@ -310,7 +317,7 @@ mod tests {
                 next_msg(&mut reader),
                 Some(LowLevelMessage::Progress {
                     ratio: (i as f32) / 1000.,
-                    text: format!("foo {i}"),
+                    text: Some(format!("foo {i}")),
                 }),
             );
         }

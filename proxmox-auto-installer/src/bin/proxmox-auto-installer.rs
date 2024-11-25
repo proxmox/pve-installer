@@ -205,7 +205,11 @@ fn run_installation(
                 }
                 LowLevelMessage::Progress { ratio, text } => {
                     let percentage = ratio * 100.;
-                    info!("progress {percentage:>5.1} % - {text}");
+                    if let Some(text) = text {
+                        info!("progress {percentage:>5.1} % - {text}");
+                    } else {
+                        info!("progress {percentage:>5.1} %");
+                    }
                 }
                 LowLevelMessage::Finished { state, message } => {
                     if state == "err" {

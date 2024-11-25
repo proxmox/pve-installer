@@ -571,6 +571,6 @@ pub enum LowLevelMessage {
     },
     Progress {
         ratio: f32,
-        text: String,
+        text: Option<String>,
     },
 }

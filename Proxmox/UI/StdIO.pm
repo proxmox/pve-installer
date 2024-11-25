@@ -70,9 +70,11 @@ sub display_html {
 sub progress {
     my ($self, $ratio, $text) = @_;
 
-    $text = '' if !defined($text);
-
-    send_msg('progress', ratio => $ratio, text => $text);
+    if (defined($text)) {
+	send_msg('progress', ratio => $ratio, text => $text);
+    } else {
+	send_msg('progress', ratio => $ratio);
+    }
 }
 
 sub process_events {

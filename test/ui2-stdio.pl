@@ -81,7 +81,7 @@ if ($child_pid) {
 	'should get 20% done progress message');
 
     is_deeply(
-	$next_msg->(), { type => 'progress', ratio => 0.2, text => '' },
+	$next_msg->(), { type => 'progress', ratio => 0.2, },
 	'should get progress continuation message');
 
     is_deeply(
