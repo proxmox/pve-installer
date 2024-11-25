@@ -258,7 +258,12 @@ mod tests {
 
     fn next_msg<R: BufRead>(reader: &mut R) -> Option<LowLevelMessage> {
         let mut line = String::new();
-        reader.read_line(&mut line).expect("a line");
+
+        match reader.read_line(&mut line) {
+            Ok(0) => return None, /* reached EOF */
+            Err(err) => panic!("failed to read message: {err}"),
+            _ => {}
+        }
 
         match serde_json::from_str::<LowLevelMessage>(&line) {
             Ok(msg) => Some(msg),
