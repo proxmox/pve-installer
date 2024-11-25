@@ -10,7 +10,8 @@ use std::{
 use proxmox_installer_common::{
     http,
     setup::{
-        installer_setup, read_json, spawn_low_level_installer, LocaleInfo, RuntimeInfo, SetupInfo,
+        installer_setup, read_json, spawn_low_level_installer, LocaleInfo, LowLevelMessage,
+        RuntimeInfo, SetupInfo,
     },
     FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, RUNTIME_DIR,
 };
@@ -19,7 +20,7 @@ use proxmox_auto_installer::{
     answer::{Answer, FirstBootHookInfo, FirstBootHookSourceMode},
     log::AutoInstLogger,
     udevinfo::UdevInfo,
-    utils::{parse_answer, LowLevelMessage},
+    utils::parse_answer,
 };
 
 static LOGGER: AutoInstLogger = AutoInstLogger;

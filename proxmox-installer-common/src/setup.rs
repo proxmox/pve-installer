@@ -551,3 +551,26 @@ pub struct InstallConfig {
 
     pub first_boot: InstallFirstBootSetup,
 }
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum LowLevelMessage {
+    #[serde(rename = "message")]
+    Info {
+        message: String,
+    },
+    Error {
+        message: String,
+    },
+    Prompt {
+        query: String,
+    },
+    Finished {
+        state: String,
+        message: String,
+    },
+    Progress {
+        ratio: f32,
+        text: String,
+    },
+}

@@ -4,7 +4,6 @@ use cursive::{
     views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextView},
     CbSink, Cursive,
 };
-use serde::Deserialize;
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -14,7 +13,7 @@ use std::{
 };
 
 use crate::{abort_install_button, prompt_dialog, InstallerState};
-use proxmox_installer_common::setup::{spawn_low_level_installer, InstallConfig};
+use proxmox_installer_common::setup::{spawn_low_level_installer, InstallConfig, LowLevelMessage};
 
 pub struct InstallProgressView {
     view: PaddedView<LinearLayout>,
@@ -105,7 +104,7 @@ impl InstallProgressView {
                     continue;
                 }
 
-                let msg = match serde_json::from_str::<UiMessage>(&line) {
+                let msg = match serde_json::from_str::<LowLevelMessage>(&line) {
                     Ok(msg) => msg,
                     Err(err) => {
                         // Not a fatal error, so don't abort the installation by returning
@@ -116,17 +115,17 @@ impl InstallProgressView {
                 };
 
                 let result = match msg.clone() {
-                    UiMessage::Info { message } => cb_sink.send(Box::new(|siv| {
+                    LowLevelMessage::Info { message } => cb_sink.send(Box::new(|siv| {
                         siv.add_layer(Dialog::info(message).title("Information"));
                     })),
-                    UiMessage::Error { message } => cb_sink.send(Box::new(|siv| {
+                    LowLevelMessage::Error { message } => cb_sink.send(Box::new(|siv| {
                         siv.add_layer(Dialog::info(message).title("Error"));
                     })),
-                    UiMessage::Prompt { query } => cb_sink.send({
+                    LowLevelMessage::Prompt { query } => cb_sink.send({
                         let writer = writer.clone();
                         Box::new(move |siv| Self::show_prompt(siv, &query, writer))
                     }),
-                    UiMessage::Progress { ratio, text } => {
+                    LowLevelMessage::Progress { ratio, text } => {
                         counter.set((ratio * 100.).floor() as usize);
                         cb_sink.send(Box::new(move |siv| {
                             siv.call_on_name(Self::PROGRESS_TEXT_VIEW_ID, |v: &mut TextView| {
@@ -134,7 +133,7 @@ impl InstallProgressView {
                             });
                         }))
                     }
-                    UiMessage::Finished { state, message } => {
+                    LowLevelMessage::Finished { state, message } => {
                         counter.set(100);
                         cb_sink.send(Box::new(move |siv| {
                             siv.call_on_name(Self::PROGRESS_TEXT_VIEW_ID, |v: &mut TextView| {
@@ -245,39 +244,16 @@ impl ViewWrapper for InstallProgressView {
     cursive::wrap_impl!(self.view: PaddedView<LinearLayout>);
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "lowercase")]
-enum UiMessage {
-    #[serde(rename = "message")]
-    Info {
-        message: String,
-    },
-    Error {
-        message: String,
-    },
-    Prompt {
-        query: String,
-    },
-    Finished {
-        state: String,
-        message: String,
-    },
-    Progress {
-        ratio: f32,
-        text: String,
-    },
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::env;
 
-    fn next_msg<R: BufRead>(reader: &mut R) -> Option<UiMessage> {
+    fn next_msg<R: BufRead>(reader: &mut R) -> Option<LowLevelMessage> {
         let mut line = String::new();
         reader.read_line(&mut line).expect("a line");
 
-        match serde_json::from_str::<UiMessage>(&line) {
+        match serde_json::from_str::<LowLevelMessage>(&line) {
             Ok(msg) => Some(msg),
             Err(err) => {
                 eprintln!("invalid json: '{err}'");
@@ -310,7 +286,7 @@ mod tests {
 
         assert_eq!(
             next_msg(&mut reader),
-            Some(UiMessage::Prompt {
+            Some(LowLevelMessage::Prompt {
                 query: "Reply anything?".to_owned()
             }),
         );
@@ -324,7 +300,7 @@ mod tests {
 
         assert_eq!(
             next_msg(&mut reader),
-            Some(UiMessage::Info {
+            Some(LowLevelMessage::Info {
                 message: "Test Message - got ok".to_owned()
             }),
         );
@@ -332,7 +308,7 @@ mod tests {
         for i in (1..=1000).step_by(3) {
             assert_eq!(
                 next_msg(&mut reader),
-                Some(UiMessage::Progress {
+                Some(LowLevelMessage::Progress {
                     ratio: (i as f32) / 1000.,
                     text: format!("foo {i}"),
                 }),
@@ -341,7 +317,7 @@ mod tests {
 
         assert_eq!(
             next_msg(&mut reader),
-            Some(UiMessage::Finished {
+            Some(LowLevelMessage::Finished {
                 state: "ok".to_owned(),
                 message: "Installation finished - reboot now?".to_owned(),
             }),
