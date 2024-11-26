@@ -281,6 +281,16 @@ fn get_first_selected_disk(config: &InstallConfig) -> usize {
         .expect("could not parse key to usize")
 }
 
+fn verify_filesystem_settings(answer: &Answer, setup_info: &SetupInfo) -> Result<()> {
+    info!("Verifying filesystem settings");
+
+    if answer.disks.fs_type.is_btrfs() && !setup_info.config.enable_btrfs {
+        bail!("BTRFS is not supported as a root filesystem for the product or the release of this ISO.");
+    }
+
+    Ok(())
+}
+
 fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
     info!("Verifying locale settings");
     if !locales
@@ -345,6 +355,9 @@ pub fn parse_answer(
     setup_info: &SetupInfo,
 ) -> Result<InstallConfig> {
     info!("Parsing answer file");
+
+    verify_filesystem_settings(answer, setup_info)?;
+
     info!("Setting File system");
     let filesystem = answer.disks.fs_type;
     info!("File system selected: {}", filesystem);
