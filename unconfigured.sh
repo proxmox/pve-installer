@@ -233,6 +233,9 @@ chronyd || echo "starting chrony failed ($?)"
 echo "Starting a root shell on tty3."
 setsid /sbin/agetty -a root --noclear tty3 &
 
+echo "Setting console loglevel to warn."
+sysctl -w kernel.printk='4 4 1 7'
+
 /usr/bin/proxmox-low-level-installer dump-env
 
 if [ $proxtui -ne 0 ]; then
