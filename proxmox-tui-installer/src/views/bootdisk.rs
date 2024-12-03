@@ -30,7 +30,7 @@ use proxmox_installer_common::{
 };
 
 /// OpenZFS specifies 64 MiB as the absolute minimum:
-/// https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
+/// <https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max>
 const ZFS_ARC_MIN_SIZE_MIB: usize = 64; // MiB
 
 /// Convenience wrapper when needing to take a (interior-mutable) reference to `BootdiskOptions`.

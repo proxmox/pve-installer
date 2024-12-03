@@ -151,22 +151,29 @@ impl fmt::Display for FqdnParseError {
 /// A type for safely representing fully-qualified domain names (FQDNs).
 ///
 /// It considers following RFCs:
-/// https://www.ietf.org/rfc/rfc952.txt (sec. "ASSUMPTIONS", 1.)
-/// https://www.ietf.org/rfc/rfc1035.txt (sec. 2.3. "Conventions")
-/// https://www.ietf.org/rfc/rfc1123.txt (sec. 2.1. "Host Names and Numbers")
-/// https://www.ietf.org/rfc/rfc3492.txt
-/// https://www.ietf.org/rfc/rfc4343.txt
+/// - [RFC952] (sec. "ASSUMPTIONS", 1.)
+/// - [RFC1035] (sec. 2.3. "Conventions")
+/// - [RFC1123] (sec. 2.1. "Host Names and Numbers")
+/// - [RFC3492]
+/// - [RFC4343]
 ///
 /// .. and applies some restriction given by Debian, e.g. 253 instead of 255
-/// maximum total length and maximum 63 characters per label.
-/// https://manpages.debian.org/stable/manpages/hostname.7.en.html
+/// maximum total length and maximum 63 characters per label, per the
+/// [hostname(7)].
 ///
 /// Additionally:
 /// - It enforces the restriction as per Bugzilla #1054, in that
 ///   purely numeric hostnames are not allowed - against RFC1123 sec. 2.1.
 ///
 /// Some terminology:
-/// - "label" - a single part of a FQDN, e.g. <label>.<label>.<tld>
+/// - "label" - a single part of a FQDN, e.g. {label}.{label}.{tld}
+///
+/// [RFC952]: <https://www.ietf.org/rfc/rfc952.txt>
+/// [RFC1035]: <https://www.ietf.org/rfc/rfc1035.txt>
+/// [RFC1123]: <https://www.ietf.org/rfc/rfc1123.txt>
+/// [RFC3492]: <https://www.ietf.org/rfc/rfc3492.txt>
+/// [RFC4343]: <https://www.ietf.org/rfc/rfc4343.txt>
+/// [hostname(7)]: <https://manpages.debian.org/stable/manpages/hostname.7.en.html>
 #[derive(Clone, Debug, Eq)]
 pub struct Fqdn {
     parts: Vec<String>,

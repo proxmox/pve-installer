@@ -53,10 +53,10 @@ struct CommandDeviceInfo {
 /// Test which devices the given filter matches against
 ///
 /// Filters support the following syntax:
-/// ?          Match a single character
-/// *          Match any number of characters
-/// [a], [0-9] Specific character or range of characters
-/// [!a]       Negate a specific character of range
+/// - `?`               Match a single character
+/// - `*`               Match any number of characters
+/// - `[a]`, `[0-9]`  Specific character or range of characters
+/// - `[!a]`          Negate a specific character of range
 ///
 /// To avoid globbing characters being interpreted by the shell, use single quotes.
 /// Multiple filters can be defined.
@@ -64,7 +64,9 @@ struct CommandDeviceInfo {
 /// Examples:
 /// Match disks against the serial number and device name, both must match:
 ///
+/// ```sh
 /// proxmox-auto-install-assistant match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
+/// ```
 #[derive(Args, Debug)]
 #[command(verbatim_doc_comment)]
 struct CommandDeviceMatch {

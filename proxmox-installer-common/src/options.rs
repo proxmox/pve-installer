@@ -463,13 +463,13 @@ impl NetworkOptions {
     }
 }
 
-/// Validates an email address using the regex for <input type="email" /> elements
-/// as defined in the HTML specification [0].
+/// Validates an email address using the regex for `<input type="email" />` elements
+/// as defined in the [HTML specification].
 /// Using that /should/ cover all possible cases that are encountered in the wild.
 ///
 /// It additionally checks whether the email our default email placeholder value.
 ///
-/// [0] https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
+/// [HTML specification]: <https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address>
 pub fn email_validate(email: &str) -> Result<()> {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {

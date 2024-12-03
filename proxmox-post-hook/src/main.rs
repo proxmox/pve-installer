@@ -99,7 +99,7 @@ struct ProductInfo {
 }
 
 /// The current kernel version.
-/// Aligns with the format as used by the /nodes/<node>/status API of each product.
+/// Aligns with the format as used by the `/nodes/<node>/status` API of each product.
 #[derive(Serialize)]
 struct KernelVersionInformation {
     /// The systemname/nodename
@@ -421,14 +421,14 @@ impl PostHookInfo {
     ///
     /// First, it determines the exact path to the kernel image (aka. `/boot/vmlinuz-<version>`)
     /// by looking at the installed kernel package, then reads the string directly from the image
-    /// from the well-defined kernel header. See also [0] for details.
-    ///
-    /// [0] https://www.kernel.org/doc/html/latest/arch/x86/boot.html
+    /// from the [well-defined kernel header].
     ///
     /// # Arguments
     ///
     /// * `run_cmd` - Callback to run a command inside the target chroot.
     /// * `open_file` - Callback to open a file inside the target chroot.
+    ///
+    /// [well-defined kernel header]: https://www.kernel.org/doc/html/latest/arch/x86/boot.html
     #[cfg(target_arch = "x86_64")]
     fn gather_kernel_version(
         run_cmd: &dyn Fn(&[&str]) -> Result<String>,
