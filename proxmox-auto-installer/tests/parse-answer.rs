@@ -19,7 +19,7 @@ fn get_test_resource_path() -> Result<PathBuf, String> {
 }
 
 fn get_answer(path: impl AsRef<Path>) -> Result<Answer, String> {
-    let answer_raw = std::fs::read_to_string(path).unwrap();
+    let answer_raw = fs::read_to_string(path).unwrap();
     let answer: answer::Answer = toml::from_str(&answer_raw)
         .map_err(|err| format!("error parsing answer.toml: {err}"))
         .unwrap();
@@ -27,7 +27,7 @@ fn get_answer(path: impl AsRef<Path>) -> Result<Answer, String> {
     Ok(answer)
 }
 
-pub fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
+fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
     let (installer_info, locale_info, mut runtime_info) =
         load_installer_setup_files(&path).unwrap();
 
@@ -46,40 +46,51 @@ pub fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, Runti
     (installer_info, locale_info, runtime_info, udev_info)
 }
 
-#[test]
-fn test_parse_answers() {
-    let path = get_test_resource_path().unwrap();
-    let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&path);
-    let mut tests_path = path;
-    tests_path.push("parse_answer");
-    let test_dir = fs::read_dir(tests_path.clone()).unwrap();
+fn run_named_test(name: &str) {
+    let resource_path = get_test_resource_path().unwrap();
+    let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&resource_path);
 
-    for file_entry in test_dir {
-        let file = file_entry.unwrap();
-        if !file.file_type().unwrap().is_file() || file.file_name() == "readme" {
-            continue;
+    let answer_path = resource_path.join(format!("parse_answer/{name}.toml"));
+
+    let answer = get_answer(&answer_path).unwrap();
+    let config = &parse_answer(&answer, &udev_info, &runtime_info, &locales, &setup_info).unwrap();
+
+    let config_json = serde_json::to_string(config);
+    let config: Value = serde_json::from_str(config_json.unwrap().as_str()).unwrap();
+
+    let json_path = resource_path.join(format!("parse_answer/{name}.json"));
+    let compare_raw = fs::read_to_string(&json_path).unwrap();
+    let compare: Value = serde_json::from_str(&compare_raw).unwrap();
+    assert_eq!(config, compare);
+}
+
+mod tests {
+    mod parse_answer {
+        use super::super::run_named_test;
+
+        macro_rules! declare_named_tests {
+            ($name:ident, $( $rest:ident ),* $(,)?) => { declare_named_tests!($name); declare_named_tests!($( $rest ),+); };
+            ($name:ident) => {
+                #[test]
+                fn $name() {
+                    run_named_test(&stringify!($name));
+                }
+            };
         }
-        let p = file.path();
-        let name = p.file_stem().unwrap().to_str().unwrap();
-        let extension = p.extension().unwrap().to_str().unwrap();
-        if extension == "toml" {
-            println!("Test: {name}");
-            let answer = get_answer(p.clone()).unwrap();
-            let config =
-                &parse_answer(&answer, &udev_info, &runtime_info, &locales, &setup_info).unwrap();
-            println!("Selected disks: {:#?}", &config.disk_selection);
-            let config_json = serde_json::to_string(config);
-            let config: Value = serde_json::from_str(config_json.unwrap().as_str()).unwrap();
-            let mut path = tests_path.clone();
-            path.push(format!("{name}.json"));
-            let compare_raw = std::fs::read_to_string(&path).unwrap();
-            let compare: Value = serde_json::from_str(&compare_raw).unwrap();
-            if config != compare {
-                panic!(
-                    "Test {} failed:\nleft:  {:#?}\nright: {:#?}\n",
-                    name, config, compare
-                );
-            }
-        }
+
+        declare_named_tests!(
+            btrfs,
+            btrfs_raid_level_uppercase,
+            disk_match,
+            disk_match_all,
+            disk_match_any,
+            first_boot,
+            hashed_root_password,
+            minimal,
+            nic_matching,
+            specific_nic,
+            zfs,
+            zfs_raid_level_uppercase,
+        );
     }
 }
