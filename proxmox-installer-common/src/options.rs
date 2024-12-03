@@ -33,11 +33,20 @@ pub enum ZfsRaidLevel {
     Raid1,
     #[serde(alias = "RAID10")]
     Raid10,
-    #[serde(alias = "RAIDZ-1", rename(deserialize = "raidz-1", serialize = "RAIDZ-1"))]
+    #[serde(
+        alias = "RAIDZ-1",
+        rename(deserialize = "raidz-1", serialize = "RAIDZ-1")
+    )]
     RaidZ,
-    #[serde(alias = "RAIDZ-2", rename(deserialize = "raidz-2", serialize = "RAIDZ-2"))]
+    #[serde(
+        alias = "RAIDZ-2",
+        rename(deserialize = "raidz-2", serialize = "RAIDZ-2")
+    )]
     RaidZ2,
-    #[serde(alias = "RAIDZ-3", rename(deserialize = "raidz-3", serialize = "RAIDZ-3"))]
+    #[serde(
+        alias = "RAIDZ-3",
+        rename(deserialize = "raidz-3", serialize = "RAIDZ-3")
+    )]
     RaidZ3,
 }
 
