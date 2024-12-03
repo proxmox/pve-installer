@@ -1,7 +1,6 @@
-use std::path::{Path, PathBuf};
-
 use serde_json::Value;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use proxmox_auto_installer::answer;
 use proxmox_auto_installer::answer::Answer;
@@ -61,7 +60,8 @@ fn run_named_test(name: &str) {
     let json_path = resource_path.join(format!("parse_answer/{name}.json"));
     let compare_raw = fs::read_to_string(&json_path).unwrap();
     let compare: Value = serde_json::from_str(&compare_raw).unwrap();
-    assert_eq!(config, compare);
+
+    pretty_assertions::assert_eq!(config, compare);
 }
 
 mod tests {

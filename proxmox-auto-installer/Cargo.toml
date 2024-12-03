@@ -21,3 +21,6 @@ toml.workspace = true
 
 clap = { version = "4.0", features = ["derive"] }
 glob = "0.3"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
