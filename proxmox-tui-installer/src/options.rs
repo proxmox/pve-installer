@@ -144,7 +144,7 @@ mod tests {
             hostname: Some("foo".to_owned()),
         };
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
@@ -156,7 +156,7 @@ mod tests {
         );
 
         info.hostname = None;
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
@@ -168,7 +168,7 @@ mod tests {
         );
 
         info.dns.domain = None;
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
@@ -180,7 +180,7 @@ mod tests {
         );
 
         info.hostname = Some("foo".to_owned());
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             NetworkOptions::defaults_from(&setup, &info),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
