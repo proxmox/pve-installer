@@ -10,6 +10,9 @@ members = [
     "proxmox-post-hook",
 ]
 
+[workspace.package]
+version = "8.3.4"
+
 [workspace.dependencies]
 anyhow = "1.0"
 log = "0.4.20"

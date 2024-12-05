@@ -1,6 +1,6 @@
 [package]
 name = "proxmox-post-hook"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 authors = [
     "Christoph Heiss <c.heiss@proxmox.com>",
