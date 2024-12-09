@@ -19,7 +19,7 @@ else
 CARGO_COMPILEDIR := target/debug
 endif
 
-INSTALLER_SOURCES=$(shell git ls-files) country.dat
+INSTALLER_SOURCES=$(shell git ls-files) locale-info.json
 
 PREFIX = /usr
 BINDIR = $(PREFIX)/bin
@@ -72,9 +72,9 @@ $(BUILDDIR):
 	cp -a debian $@.tmp/
 	mv $@.tmp $@
 
-country.dat: country.pl
-	./country.pl > country.dat.tmp
-	mv country.dat.tmp country.dat
+locale-info.json: country.pl
+	./country.pl > $@.tmp
+	mv $@.tmp $@
 
 deb: $(DEB)
 $(ASSISTANT_DEB): $(DEB)
@@ -100,10 +100,10 @@ sbuild: $(DSC)
 	sbuild $(DSC)
 
 .PHONY: prepare-test-env
-prepare-test-env: cd-info.test country.dat test.img
+prepare-test-env: cd-info.test locale-info.json test.img
 	rm -rf testdir
 	mkdir -p testdir/var/lib/proxmox-installer/
-	cp -v country.dat testdir/var/lib/proxmox-installer/
+	cp -v locale-info.json testdir/var/lib/proxmox-installer/
 	./proxmox-low-level-installer -t test.img dump-env
 
 .PHONY: test
@@ -124,7 +124,7 @@ install: $(INSTALLER_SOURCES) $(COMPILED_BINS)
 	install -D -m 644 interfaces $(DESTDIR)/etc/network/interfaces
 	install -D -m 755 fake-start-stop-daemon $(VARLIBDIR)/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d $(VARLIBDIR)/policy-disable-rc.d
-	install -D -m 644 country.dat $(VARLIBDIR)/country.dat
+	install -D -m 644 locale-info.json $(VARLIBDIR)/locale-info.json
 	install -D -m 755 unconfigured.sh $(DESTDIR)/sbin/unconfigured.sh
 	install -D -m 755 proxinstall $(DESTDIR)/usr/bin/proxinstall
 	install -D -m 755 proxmox-low-level-installer $(DESTDIR)/$(BINDIR)/proxmox-low-level-installer
@@ -226,5 +226,5 @@ check-pbs-tui: prepare-check-pbs
 clean:
 	rm -rf target build $(PACKAGE)-[0-9]* testdir
 	rm -f $(PACKAGE)*.tar* *.deb packages packages.tmp *.build *.dsc *.buildinfo *.changes
-	rm -f test*.img pve-final.pkglist country.dat final.pkglist cd-info.test
+	rm -f test*.img pve-final.pkglist locale-info.json final.pkglist cd-info.test
 	find . -name '*~' -exec rm {} ';'

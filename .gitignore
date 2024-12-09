@@ -8,4 +8,4 @@
 /test*.img
 /testdir/
 Cargo.lock
-country.dat
+locale-info.json

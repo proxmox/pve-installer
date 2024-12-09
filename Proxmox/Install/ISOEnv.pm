@@ -5,6 +5,9 @@ use warnings;
 
 use Carp;
 use Cwd ();
+use JSON qw(from_json);
+
+use Proxmox::Sys::File qw(file_read_all);
 
 use base qw(Exporter);
 our @EXPORT = qw(is_test_mode);
@@ -33,57 +36,8 @@ my $product_cfg = {
 my sub read_locale_info {
     my ($lib_dir) = @_;
 
-    my $countryfn = "${lib_dir}/country.dat";
-    open (my $COUNTRY_MAP_FH, "<:encoding(utf8)", "$countryfn") || die "unable to open '$countryfn' - $!\n";
-
-    my ($country, $countryhash, $kmap, $kmaphash) = ({}, {}, {}, {});
-    while (defined (my $line = <$COUNTRY_MAP_FH>)) {
-	if ($line =~ m|^map:([^\s:]+):([^:]+):([^:]+):([^:]+):([^:]+):([^:]*):$|) {
-	    $kmap->{$1} = {
-		name => $2,
-		kvm => $3,
-		console => $4,
-		x11 => $5,
-		x11var => $6,
-	    };
-	    $kmaphash->{$2} = $1;
-	} elsif ($line =~ m|^([a-z]{2}):([^:]+):([^:]*):([^:]*):$|) {
-	    $country->{$1} = {
-		name => $2,
-		kmap => $3,
-		mirror => $4,
-	    };
-	    $countryhash->{lc($2)} = $1;
-	} else {
-	    warn "unable to parse 'country.dat' line: $line";
-	}
-    }
-    close ($COUNTRY_MAP_FH);
-
-    my $zonefn = "/usr/share/zoneinfo/zone.tab";
-    open (my $ZONE_TAB_FH, '<', "$zonefn") || die "unable to open '$zonefn' - $!\n";
-
-    my ($zones, $cczones) = ({}, {});
-    while (defined (my $line = <$ZONE_TAB_FH>)) {
-	next if $line =~ m/^\s*(?:#|$)/;
-	if ($line =~ m|^([A-Z][A-Z])\s+\S+\s+(([^/]+)/\S+)\s|) {
-	    my $cc = lc($1);
-	    $cczones->{$cc}->{$2} = 1;
-	    $country->{$cc}->{zone} = $2 if !defined ($country->{$cc}->{zone});
-	    $zones->{$2} = 1;
-
-	}
-    }
-    close ($ZONE_TAB_FH);
-
-    return {
-	zones => $zones,
-	cczones => $cczones,
-	country => $country,
-	countryhash => $countryhash,
-	kmap => $kmap,
-	kmaphash => $kmaphash,
-    }
+    my $json = file_read_all("${lib_dir}/locale-info.json");
+    return from_json($json, { utf8 => 1 });
 }
 
 my sub get_cd_info {
