@@ -187,22 +187,28 @@ pub fn load_installer_setup_files(
         let mut path = runtime_dir.as_ref().to_path_buf();
         path.push("iso-info.json");
 
-        read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
+        read_json(&path)
+            .map_err(|err| format!("Failed to retrieve setup info: {}: {err}", path.display()))?
     };
 
     let locale_info = {
         let mut path = installer_info.locations.lib.clone();
         path.push("locale-info.json");
 
-        read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
+        read_json(&path)
+            .map_err(|err| format!("Failed to retrieve locale info: {}: {err}", path.display()))?
     };
 
     let mut runtime_info: RuntimeInfo = {
         let mut path = runtime_dir.as_ref().to_path_buf();
         path.push("run-env-info.json");
 
-        read_json(&path)
-            .map_err(|err| format!("Failed to retrieve runtime environment info: {err}"))?
+        read_json(&path).map_err(|err| {
+            format!(
+                "Failed to retrieve runtime environment info: {}: {err}",
+                path.display()
+            )
+        })?
     };
 
     runtime_info.disks.sort();
