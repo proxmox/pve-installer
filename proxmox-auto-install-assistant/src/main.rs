@@ -15,13 +15,17 @@ use proxmox_auto_installer::{
     sysinfo::SysInfo,
     utils::{
         get_matched_udev_indexes, get_nic_list, get_single_udev_index,
-        verify_email_and_root_password_settings, AutoInstSettings,
-        FetchAnswerFrom, HttpOptions,
+        verify_email_and_root_password_settings, verify_first_boot_settings,
+        verify_locale_settings, AutoInstSettings, FetchAnswerFrom, HttpOptions,
     },
 };
 use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME};
 
 static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
+
+/// Locale information as raw JSON, can be parsed into a
+/// [LocaleInfo](`proxmox_installer_common::setup::LocaleInfo`) struct.
+const LOCALE_INFO: &str = include_str!("../../locale-info.json");
 
 /// This tool can be used to prepare a Proxmox installation ISO for automated installations.
 /// Additional uses are to validate the format of an answer file or to test match filters and
@@ -589,8 +593,11 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
     if let Err(err) = file.read_to_string(&mut contents) {
         bail!("Reading from file {path:?} failed: {err}");
     }
+
     match toml::from_str(&contents) {
         Ok(answer) => {
+            verify_locale_settings(&answer, &serde_json::from_str(LOCALE_INFO)?)?;
+            verify_first_boot_settings(&answer)?;
             verify_email_and_root_password_settings(&answer)?;
             println!("The answer file was parsed successfully, no errors found!");
             Ok(answer)

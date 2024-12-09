@@ -291,7 +291,7 @@ fn verify_filesystem_settings(answer: &Answer, setup_info: &SetupInfo) -> Result
     Ok(())
 }
 
-fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
+pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
     info!("Verifying locale settings");
     if !locales
         .countries
@@ -335,7 +335,7 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     }
 }
 
-fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
+pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
     info!("Verifying first boot settings");
 
     if let Some(first_boot) = &answer.first_boot {
