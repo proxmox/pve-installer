@@ -87,13 +87,23 @@ impl IsoInfo {
 #[derive(Clone, Deserialize)]
 pub struct IsoLocations {
     pub iso: PathBuf,
+    pub lib: PathBuf,
 }
 
 impl IsoLocations {
     /// A mocked location, uses the current working directory by default
     pub fn mocked() -> Self {
+        let lib = match std::env::current_dir() {
+            Ok(mut dir) => {
+                dir.push("run");
+                dir
+            }
+            Err(_) => "/dev/null".into(),
+        };
+
         Self {
             iso: std::env::current_dir().unwrap_or("/dev/null".into()),
+            lib,
         }
     }
 }
@@ -171,24 +181,24 @@ pub fn installer_setup(in_test_mode: bool) -> Result<(SetupInfo, LocaleInfo, Run
 }
 
 pub fn load_installer_setup_files(
-    base_path: impl AsRef<Path>,
+    runtime_dir: impl AsRef<Path>,
 ) -> Result<(SetupInfo, LocaleInfo, RuntimeInfo), String> {
     let installer_info: SetupInfo = {
-        let mut path = base_path.as_ref().to_path_buf();
+        let mut path = runtime_dir.as_ref().to_path_buf();
         path.push("iso-info.json");
 
         read_json(&path).map_err(|err| format!("Failed to retrieve setup info: {err}"))?
     };
 
     let locale_info = {
-        let mut path = base_path.as_ref().to_path_buf();
-        path.push("locales.json");
+        let mut path = installer_info.locations.lib.clone();
+        path.push("locale-info.json");
 
         read_json(&path).map_err(|err| format!("Failed to retrieve locale info: {err}"))?
     };
 
     let mut runtime_info: RuntimeInfo = {
-        let mut path = base_path.as_ref().to_path_buf();
+        let mut path = runtime_dir.as_ref().to_path_buf();
         path.push("run-env-info.json");
 
         read_json(&path)

@@ -100,9 +100,6 @@ if ($cmd eq 'dump-env') {
     make_path($out_dir);
     die "failed to create output directory '$out_dir'\n" if !-d $out_dir;
 
-    my $locales_serialized = to_json($env->{locales}, {canonical => 1, utf8 => 1}) ."\n";
-    file_write_all("$out_dir/locales.json", $locales_serialized);
-
     my $iso_info = {
 	'iso-info' => $env->{iso},
 	'product' => $env->{product},
