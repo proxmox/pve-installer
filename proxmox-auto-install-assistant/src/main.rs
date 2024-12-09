@@ -11,11 +11,11 @@ use std::{
 };
 
 use proxmox_auto_installer::{
-    answer::Answer,
-    answer::FilterMatch,
+    answer::{Answer, FilterMatch},
     sysinfo::SysInfo,
     utils::{
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index, AutoInstSettings,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index,
+        verify_email_and_root_password_settings, AutoInstSettings,
         FetchAnswerFrom, HttpOptions,
     },
 };
@@ -591,7 +591,8 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
     }
     match toml::from_str(&contents) {
         Ok(answer) => {
-            println!("The file was parsed successfully, no syntax errors found!");
+            verify_email_and_root_password_settings(&answer)?;
+            println!("The answer file was parsed successfully, no errors found!");
             Ok(answer)
         }
         Err(err) => bail!("Error parsing answer file: {err}"),

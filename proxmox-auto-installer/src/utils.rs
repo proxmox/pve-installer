@@ -320,7 +320,7 @@ fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
     Ok(())
 }
 
-fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
+pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     info!("Verifying email and root password settings");
 
     email_validate(&answer.global.mailto).with_context(|| answer.global.mailto.clone())?;
