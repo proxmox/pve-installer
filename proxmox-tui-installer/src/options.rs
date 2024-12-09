@@ -84,35 +84,15 @@ impl InstallerOptions {
 mod tests {
     use super::*;
     use proxmox_installer_common::{
-        setup::{
-            Dns, Gateway, Interface, InterfaceState, IsoInfo, IsoLocations, NetworkInfo,
-            ProductConfig, ProxmoxProduct, Routes, SetupInfo,
-        },
+        setup::{Dns, Gateway, Interface, InterfaceState, NetworkInfo, Routes, SetupInfo},
         utils::{CidrAddress, Fqdn},
     };
+    use std::collections::BTreeMap;
     use std::net::{IpAddr, Ipv4Addr};
-    use std::{collections::BTreeMap, path::PathBuf};
-
-    fn dummy_setup_info() -> SetupInfo {
-        SetupInfo {
-            config: ProductConfig {
-                fullname: "Proxmox VE".to_owned(),
-                product: ProxmoxProduct::PVE,
-                enable_btrfs: true,
-            },
-            iso_info: IsoInfo {
-                release: String::new(),
-                isorelease: String::new(),
-            },
-            locations: IsoLocations {
-                iso: PathBuf::new(),
-            },
-        }
-    }
 
     #[test]
     fn network_options_from_setup_network_info() {
-        let setup = dummy_setup_info();
+        let setup = SetupInfo::mocked();
 
         let mut interfaces = BTreeMap::new();
         interfaces.insert(
