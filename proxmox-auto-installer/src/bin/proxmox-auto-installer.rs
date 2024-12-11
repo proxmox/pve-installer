@@ -38,14 +38,18 @@ fn setup_first_boot_executable(first_boot: &FirstBootHookInfo) -> Result<()> {
         FirstBootHookSourceMode::FromUrl => {
             if let Some(url) = &first_boot.url {
                 info!("Fetching first-boot hook from {url} ..");
-                Some(http::get(url, first_boot.cert_fingerprint.as_deref())?)
+                Some(http::get_as_bytes(
+                    url,
+                    first_boot.cert_fingerprint.as_deref(),
+                    FIRST_BOOT_EXEC_MAX_SIZE,
+                )?)
             } else {
                 bail!("first-boot hook source set to URL, but none specified!");
             }
         }
-        FirstBootHookSourceMode::FromIso => Some(fs::read_to_string(format!(
-            "/cdrom/{FIRST_BOOT_EXEC_NAME}"
-        ))?),
+        FirstBootHookSourceMode::FromIso => {
+            Some(fs::read(format!("/cdrom/{FIRST_BOOT_EXEC_NAME}"))?)
+        }
     };
 
     if let Some(content) = content {

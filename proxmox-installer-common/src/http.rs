@@ -1,6 +1,7 @@
 use anyhow::Result;
 use rustls::ClientConfig;
 use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::sync::Arc;
 use ureq::{Agent, AgentBuilder};
 
@@ -53,12 +54,21 @@ fn build_agent(fingerprint: Option<&str>) -> Result<Agent> {
 /// # Arguments
 /// * `url` - URL to fetch
 /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
-pub fn get(url: &str, fingerprint: Option<&str>) -> Result<String> {
-    Ok(build_agent(fingerprint)?
+/// * `max_size` - Maximum amount of bytes that will be read.
+pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Result<Vec<u8>> {
+    let mut result: Vec<u8> = Vec::new();
+
+    let response = build_agent(fingerprint)?
         .get(url)
         .timeout(std::time::Duration::from_secs(60))
-        .call()?
-        .into_string()?)
+        .call()?;
+
+    response
+        .into_reader()
+        .take(max_size as u64)
+        .read_to_end(&mut result)?;
+
+    Ok(result)
 }
 
 /// Issues a POST request with the payload (JSON). Optionally a SHA256 fingerprint can be used to
