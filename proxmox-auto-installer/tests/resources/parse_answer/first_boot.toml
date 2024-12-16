@@ -4,7 +4,7 @@ country = "at"
 fqdn = "pveauto.testinstall"
 mailto = "mail@no.invalid"
 timezone = "Europe/Vienna"
-root_password = "123456"
+root_password = "12345678"
 
 [first-boot]
 source = "from-iso"

@@ -17,7 +17,7 @@
   "keymap": "de",
   "mailto": "mail@no.invalid",
   "mngmt_nic": "eno1",
-  "root_password": { "plain": "123456" },
+  "root_password": { "plain": "12345678" },
   "timezone": "Europe/Vienna",
   "zfs_opts": {
     "arc_max": 2048,

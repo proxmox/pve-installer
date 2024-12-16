@@ -14,6 +14,7 @@ use proxmox_installer_common::{
         InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
         InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
+    ROOT_PASSWORD_MIN_LENGTH,
 };
 use serde::{Deserialize, Serialize};
 
@@ -320,18 +321,33 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
     Ok(())
 }
 
+/// Validates the following options of an user-provided answer:
+///
+/// - `global.root_password`
+/// - `global.root_password_hashed`
+/// - `global.mailto`
+///
+/// Ensures that the provided email-address is of valid format and that one
+/// of the two root password options is set appropriately.
 pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     info!("Verifying email and root password settings");
 
     email_validate(&answer.global.mailto).with_context(|| answer.global.mailto.clone())?;
 
-    if answer.global.root_password.is_some() && answer.global.root_password_hashed.is_some() {
-        bail!("`global.root_password` and `global.root_password_hashed` cannot be set at the same time");
-    } else if answer.global.root_password.is_none() && answer.global.root_password_hashed.is_none()
-    {
-        bail!("One of `global.root_password` or `global.root_password_hashed` must be set");
-    } else {
-        Ok(())
+    match (
+        &answer.global.root_password,
+        &answer.global.root_password_hashed,
+    ) {
+        (Some(_), Some(_)) => {
+            bail!("`global.root_password` and `global.root_password_hashed` cannot be set at the same time");
+        }
+        (None, None) => {
+            bail!("One of `global.root_password` or `global.root_password_hashed` must be set");
+        }
+        (Some(password), None) if password.len() < ROOT_PASSWORD_MIN_LENGTH => {
+            bail!("`global.root_password` must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long");
+        }
+        _ => Ok(()),
     }
 }
 

@@ -12,7 +12,7 @@
   "keymap": "de",
   "mailto": "mail@no.invalid",
   "mngmt_nic": "eno1",
-  "root_password": { "plain": "123456" },
+  "root_password": { "plain": "12345678" },
   "target_hd": "/dev/sda",
   "timezone": "Europe/Vienna",
   "first_boot": { "enabled": 0 }
