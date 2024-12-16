@@ -1464,7 +1464,9 @@ _EOD
 	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
 
 	    chroot_chown($targetdir, $base_cfg_path, user => 'www-data', recursive => 1);
-	    chroot_chmod($targetdir, $base_cfg_path, mode => '0700');
+	    chroot_chmod($targetdir, $base_cfg_path, mode => '01770');
+	    chroot_chmod($targetdir, "$base_cfg_path/access", mode => '0750');
+	    chroot_chown($targetdir, "$base_cfg_path/access/user.cfg", user => 'root', group => 'www-data');
 	}
     };
 
