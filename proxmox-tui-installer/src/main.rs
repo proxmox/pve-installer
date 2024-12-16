@@ -20,6 +20,7 @@ use proxmox_installer_common::{
     options::{email_validate, BootdiskOptions, NetworkOptions, TimezoneOptions},
     setup::{installer_setup, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
     utils::Fqdn,
+    ROOT_PASSWORD_MIN_LENGTH,
 };
 
 mod setup;
@@ -422,7 +423,10 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
     let options = &state.options.password;
 
     let inner = FormView::new()
-        .child("Root password", EditView::new().secret())
+        .child(
+            "Root password [at least 8 characters]",
+            EditView::new().secret(),
+        )
         .child("Confirm root password", EditView::new().secret())
         .child(
             "Administrator email",
@@ -447,8 +451,8 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
                     .get_value::<EditView, _>(2)
                     .ok_or("failed to retrieve email")?;
 
-                if root_password.len() < 5 {
-                    Err("password too short, must be at least 5 characters long".to_owned())
+                if root_password.len() < ROOT_PASSWORD_MIN_LENGTH {
+                    Err(format!("password too short, must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long"))
                 } else if root_password != confirm_password {
                     Err("passwords do not match".to_owned())
                 } else if let Err(err) = email_validate(&email) {

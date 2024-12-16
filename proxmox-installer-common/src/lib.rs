@@ -17,3 +17,6 @@ pub const FIRST_BOOT_EXEC_NAME: &str = "proxmox-first-boot";
 
 /// Maximum file size for the first-boot hook executable.
 pub const FIRST_BOOT_EXEC_MAX_SIZE: usize = 1024 * 1024; // 1 MiB
+
+/// Minimum length for the root password
+pub const ROOT_PASSWORD_MIN_LENGTH: usize = 8;
