@@ -730,8 +730,11 @@ sub create_password_view {
 	my $t1 = $pwe1->get_text;
 	my $t2 = $pwe2->get_text;
 
-	if (length ($t1) < 5) {
-	    Proxmox::UI::message("Password is too short.");
+	if (length ($t1) < $Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH) {
+	    Proxmox::UI::message(
+		"Password too short, must be at least " .
+		"$Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH characters long"
+	    );
 	    $pwe1->grab_focus();
 	    return;
 	}
