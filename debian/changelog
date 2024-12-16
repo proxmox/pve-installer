@@ -1,15 +1,13 @@
-proxmox-installer (8.3.6) bookworm; urgency=medium
-
-  * update GUI banner for new PDM project.
-
- -- Proxmox Support Team <support@proxmox.com>  Mon, 16 Dec 2024 22:04:23 +0100
-
-proxmox-installer (8.3.5) bookworm; urgency=medium
+proxmox-installer (8.3.7) bookworm; urgency=medium
 
   * add preliminary support for new, in-development, PDM for which we plan an
     Alpha release
 
- -- Proxmox Support Team <support@proxmox.com>  Mon, 16 Dec 2024 20:40:08 +0100
+  * update GUI banner for new PDM project.
+
+  * releases 8.3.5 to 8.3.6 have been folded into this changelog entry.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 16 Dec 2024 22:25:09 +0100
 
 proxmox-installer (8.3.4) bookworm; urgency=medium
 
