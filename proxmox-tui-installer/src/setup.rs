@@ -27,10 +27,7 @@ impl From<InstallerOptions> for InstallConfig {
             timezone: options.timezone.timezone,
             keymap: options.timezone.kb_layout,
 
-            root_password: InstallRootPassword {
-                plain: Some(options.password.root_password),
-                hashed: None,
-            },
+            root_password: InstallRootPassword::Plain(options.password.root_password),
             mailto: options.password.email,
             root_ssh_keys: vec![],
 

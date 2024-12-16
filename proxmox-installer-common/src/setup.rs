@@ -482,12 +482,14 @@ impl Interface {
     }
 }
 
+/// Root password which can either be in plain-text or hashed format.
+///
+/// The serialized format is suitable for passing to the low-level installer.
 #[derive(Clone, Deserialize, Serialize)]
-pub struct InstallRootPassword {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plain: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hashed: Option<String>,
+#[serde(rename_all = "lowercase")]
+pub enum InstallRootPassword {
+    Plain(String),
+    Hashed(String),
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]

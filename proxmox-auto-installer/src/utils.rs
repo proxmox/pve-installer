@@ -368,6 +368,16 @@ pub fn parse_answer(
     verify_email_and_root_password_settings(answer)?;
     verify_first_boot_settings(answer)?;
 
+    let root_password = match (
+        &answer.global.root_password,
+        &answer.global.root_password_hashed,
+    ) {
+        (Some(password), None) => InstallRootPassword::Plain(password.to_owned()),
+        (None, Some(hashed)) => InstallRootPassword::Hashed(hashed.to_owned()),
+        // Make the compiler happy, won't be reached anyway due to above checks
+        _ => bail!("invalid root password setting"),
+    };
+
     let mut config = InstallConfig {
         autoreboot: 1_usize,
         filesys: filesystem,
@@ -386,10 +396,7 @@ pub fn parse_answer(
         timezone: answer.global.timezone.clone(),
         keymap: answer.global.keyboard.to_string(),
 
-        root_password: InstallRootPassword {
-            plain: answer.global.root_password.clone(),
-            hashed: answer.global.root_password_hashed.clone(),
-        },
+        root_password,
         mailto: answer.global.mailto.clone(),
         root_ssh_keys: answer.global.root_ssh_keys.clone(),
 
