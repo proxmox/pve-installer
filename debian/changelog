@@ -1,3 +1,10 @@
+proxmox-installer (8.3.5) bookworm; urgency=medium
+
+  * add preliminary support for new, in-development, PDM for which we plan an
+    Alpha release
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 16 Dec 2024 20:40:08 +0100
+
 proxmox-installer (8.3.4) bookworm; urgency=medium
 
   * auto installer: log non-json low-level messages into separate file to
