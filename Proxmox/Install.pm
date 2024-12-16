@@ -1460,7 +1460,7 @@ _EOD
 	    mkdir "$targetdir/$base_cfg_path";
 
 	    mkdir "$targetdir/$base_cfg_path/access";
-	    my $user_cfg_fn = "$base_cfg_path/acess/user.cfg";
+	    my $user_cfg_fn = "$base_cfg_path/access/user.cfg";
 	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
 
 	    chroot_chown($targetdir, $base_cfg_path, user => 'www-data', recursive => 1);
