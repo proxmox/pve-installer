@@ -492,7 +492,16 @@ pub enum InstallRootPassword {
     Hashed(String),
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+impl fmt::Debug for InstallRootPassword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InstallRootPassword::Plain(_) => write!(f, "********"),
+            InstallRootPassword::Hashed(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct InstallFirstBootSetup {
     #[serde(
         serialize_with = "serialize_bool_as_u32",
@@ -523,7 +532,7 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 }
 
 /// See Proxmox::Install::Config
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct InstallConfig {
     pub autoreboot: usize,
 

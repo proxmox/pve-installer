@@ -58,27 +58,51 @@ fn run_named_test(name: &str) {
     let config: Value = serde_json::from_str(config_json.unwrap().as_str()).unwrap();
 
     let json_path = resource_path.join(format!("parse_answer/{name}.json"));
-    let compare_raw = fs::read_to_string(&json_path).unwrap();
-    let compare: Value = serde_json::from_str(&compare_raw).unwrap();
+    let compare: Value = read_json(json_path).unwrap();
 
     pretty_assertions::assert_eq!(config, compare);
 }
 
+fn run_named_fail_parse_test(name: &str) {
+    let resource_path = get_test_resource_path().unwrap();
+    let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&resource_path);
+
+    let answer_path = resource_path.join(format!("parse_answer_fail/{name}.toml"));
+
+    let answer = get_answer(&answer_path).unwrap();
+    let config = parse_answer(&answer, &udev_info, &runtime_info, &locales, &setup_info);
+
+    let err_json: Value = {
+        let path = resource_path.join(format!("parse_answer_fail/{name}.json"));
+        read_json(path).unwrap()
+    };
+
+    assert!(config.is_err());
+    assert_eq!(
+        config.unwrap_err().to_string(),
+        err_json.get("error").unwrap().as_str().unwrap()
+    );
+}
+
 mod tests {
+    macro_rules! declare_tests {
+        ($fn:ident, $name:ident, $( $rest:ident ),* $(,)?) => {
+            declare_tests!($fn, $name);
+            declare_tests!($fn, $( $rest ),+);
+        };
+        ($fn:ident, $name:ident) => {
+            #[test]
+            fn $name() {
+                $fn(&stringify!($name));
+            }
+        };
+    }
+
     mod parse_answer {
         use super::super::run_named_test;
 
-        macro_rules! declare_named_tests {
-            ($name:ident, $( $rest:ident ),* $(,)?) => { declare_named_tests!($name); declare_named_tests!($( $rest ),+); };
-            ($name:ident) => {
-                #[test]
-                fn $name() {
-                    run_named_test(&stringify!($name));
-                }
-            };
-        }
-
-        declare_named_tests!(
+        declare_tests!(
+            run_named_test,
             btrfs,
             btrfs_raid_level_uppercase,
             disk_match,
@@ -91,6 +115,17 @@ mod tests {
             specific_nic,
             zfs,
             zfs_raid_level_uppercase,
+        );
+    }
+
+    mod parse_answer_fail {
+        use super::super::run_named_fail_parse_test;
+
+        declare_tests!(
+            run_named_fail_parse_test,
+            both_password_and_hashed_set,
+            no_root_password_set,
+            short_password
         );
     }
 }
