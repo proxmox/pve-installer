@@ -407,9 +407,9 @@ sub create_ipconf_view {
 	    &$device_change_handler($device_cb);
 	    $ipconf_first_view = 0;
 	}
-	$device_cb->signal_connect('changed' => $device_change_handler);
 	$i++;
     }
+    $device_cb->signal_connect('changed' => $device_change_handler);
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
 	$device_cb->set_active($device_active_reverse_map->{$nic} // 0);
