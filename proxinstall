@@ -319,8 +319,6 @@ sub create_cidr_inputs {
     return ($label, $hbox, $ip_el, $cidr_el);
 }
 
-my $ipconf_first_view = 1;
-
 my $create_basic_grid = sub {
     my $grid =  Gtk3::Grid->new();
     $grid->set_visible(1);
@@ -392,6 +390,8 @@ sub create_ipconf_view {
     };
 
     my $active_device_pos = 0;
+    my $addr = undef;
+    my $mask = undef;
 
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
@@ -404,9 +404,10 @@ sub create_ipconf_view {
 	);
 	$device_active_map->{$i} = $index;
 	$device_active_reverse_map->{$iface->{name}} = $i;
-	if ($ipconf_first_view && $index == $ipconf->{default}) {
+	if ($index == $ipconf->{default}) {
 	    $active_device_pos = $i;
-	    $ipconf_first_view = 0;
+	    $addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+	    $mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
 	}
 	$i++;
     }
@@ -415,8 +416,17 @@ sub create_ipconf_view {
 	$active_device_pos = $device_active_reverse_map->{$nic};
     }
 
-    $device_cb->signal_connect('changed' => $device_change_handler);
+    if (my $cidr = Proxmox::Install::Config::get_cidr()) {
+	my ($default_ip, $default_mask) = split('/', $cidr);
+	$addr = $default_ip if $default_ip;
+	$mask = $default_mask if $default_mask;
+    }
+
     $device_cb->set_active($active_device_pos);
+    $ipconf_entry_addr->set_text($addr) if $addr;
+    $ipconf_entry_mask->set_text($mask) if $mask;
+
+    $device_cb->signal_connect('changed' => $device_change_handler);
 
     my $label = Gtk3::Label->new("Management Interface");
     $label->set_size_request(150, -1);
