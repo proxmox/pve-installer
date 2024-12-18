@@ -1458,15 +1458,17 @@ _EOD
 	} elsif ($iso_env->{product} eq 'pdm') {
 	    my $base_cfg_path = "/etc/proxmox-datacenter-manager";
 	    mkdir "$targetdir/$base_cfg_path";
-
 	    mkdir "$targetdir/$base_cfg_path/access";
-	    my $user_cfg_fn = "$base_cfg_path/access/user.cfg";
+
+	    my $access_dir_fn = "$base_cfg_path/access";
+	    my $user_cfg_fn = "$access_dir_fn/user.cfg";
 	    file_write_all("$targetdir/$user_cfg_fn", "user: root\@pam\n\temail ${mailto}\n");
 
 	    chroot_chown($targetdir, $base_cfg_path, user => 'www-data', recursive => 1);
 	    chroot_chmod($targetdir, $base_cfg_path, mode => '01770');
-	    chroot_chmod($targetdir, "$base_cfg_path/access", mode => '0750');
-	    chroot_chown($targetdir, "$base_cfg_path/access/user.cfg", user => 'root', group => 'www-data');
+	    chroot_chown($targetdir, $access_dir_fn, user => 'root', group => 'www-data', recursive => 1);
+	    chroot_chmod($targetdir, $access_dir_fn, mode => '0750');
+	    chroot_chmod($targetdir, $user_cfg_fn, mode => '0640');
 	}
     };
 
