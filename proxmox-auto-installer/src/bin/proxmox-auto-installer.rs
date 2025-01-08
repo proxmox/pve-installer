@@ -117,24 +117,19 @@ fn main() -> ExitCode {
         }
     };
 
-    match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {
-        Ok(_) => info!("Installation done."),
-        Err(err) => {
-            error!("Installation failed: {err:#}");
-            return exit_failure(answer.global.reboot_on_error);
-        }
+    if answer.global.reboot_on_error {
+        let _ = File::create("/run/proxmox-reboot-on-error");
     }
 
-    ExitCode::SUCCESS
-}
-
-/// When we exit with a failure, the installer will not automatically reboot.
-/// Default value for reboot_on_error is false
-fn exit_failure(reboot_on_error: bool) -> ExitCode {
-    if reboot_on_error {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
+    match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {
+        Ok(_) => {
+            info!("Installation done.");
+            ExitCode::SUCCESS
+        },
+        Err(err) => {
+            error!("Installation failed: {err:#}");
+            ExitCode::FAILURE
+        }
     }
 }
 
