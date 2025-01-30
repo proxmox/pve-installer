@@ -389,9 +389,7 @@ sub create_ipconf_view {
 	    if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
     };
 
-    my $active_device_pos = 0;
-    my $addr = undef;
-    my $mask = undef;
+    my ($initial_active_device_pos, $initial_addr, $initial_mask) = (-1, undef, undef);
 
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
@@ -405,26 +403,26 @@ sub create_ipconf_view {
 	$device_active_map->{$i} = $index;
 	$device_active_reverse_map->{$iface->{name}} = $i;
 	if ($index == $ipconf->{default}) {
-	    $active_device_pos = $i;
-	    $addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-	    $mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
+	    $initial_active_device_pos = $i;
+	    $initial_addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+	    $initial_mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
 	}
 	$i++;
     }
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
-	$active_device_pos = $device_active_reverse_map->{$nic};
+	$initial_active_device_pos = $device_active_reverse_map->{$nic};
     }
 
     if (my $cidr = Proxmox::Install::Config::get_cidr()) {
 	my ($default_ip, $default_mask) = split('/', $cidr);
-	$addr = $default_ip if $default_ip;
-	$mask = $default_mask if $default_mask;
+	$initial_addr = $default_ip if $default_ip;
+	$initial_mask = $default_mask if $default_mask;
     }
 
-    $device_cb->set_active($active_device_pos);
-    $ipconf_entry_addr->set_text($addr) if $addr;
-    $ipconf_entry_mask->set_text($mask) if $mask;
+    $device_cb->set_active($initial_active_device_pos) if $initial_active_device_pos >= 0;
+    $ipconf_entry_addr->set_text($initial_addr) if $initial_addr;
+    $ipconf_entry_mask->set_text($initial_mask) if $initial_mask;
 
     $device_cb->signal_connect('changed' => $device_change_handler);
 
