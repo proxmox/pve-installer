@@ -10,6 +10,9 @@ use proxmox_installer_common::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, io::BufRead, net::IpAddr};
 
+// NOTE New answer file properties must use kebab-case, but should allow snake_case for backwards
+// compatibility. TODO Remove the snake_cased variants in a future major version (e.g. PVE 10).
+
 // BTreeMap is used to store filters as the order of the filters will be stable, compared to
 // storing them in a HashMap
 
@@ -40,27 +43,30 @@ impl Answer {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Global {
     pub country: String,
     pub fqdn: Fqdn,
     pub keyboard: KeyboardLayout,
     pub mailto: String,
     pub timezone: String,
+    #[serde(alias = "root_password")]
     pub root_password: Option<String>,
+    #[serde(alias = "root_password_hashed")]
     pub root_password_hashed: Option<String>,
-    #[serde(default)]
+    #[serde(alias = "reboot_on_error", default)]
     pub reboot_on_error: bool,
-    #[serde(default)]
+    #[serde(alias = "root_ssh_keys", default)]
     pub root_ssh_keys: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct PostNotificationHookInfo {
     /// URL to send a POST request to
     pub url: String,
     /// SHA256 cert fingerprint if certificate pinning should be used.
+    #[serde(alias = "cert_fingerprint")]
     pub cert_fingerprint: Option<String>,
 }
 
@@ -118,21 +124,20 @@ pub struct FirstBootHookInfo {
     /// Retrieve the post-install script from a URL, if source == "from-url".
     pub url: Option<String>,
     /// SHA256 cert fingerprint if certificate pinning should be used, if source == "from-url".
+    #[serde(alias = "cert_fingerprint")]
     pub cert_fingerprint: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Debug, Default, PartialEq)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 enum NetworkConfigMode {
     #[default]
-    #[serde(rename = "from-dhcp")]
     FromDhcp,
-    #[serde(rename = "from-answer")]
     FromAnswer,
 }
 
 #[derive(Clone, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct NetworkInAnswer {
     #[serde(default)]
     pub source: NetworkConfigMode,
@@ -210,12 +215,13 @@ pub struct NetworkManual {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct DiskSetup {
     pub filesystem: Filesystem,
-    #[serde(default)]
+    #[serde(alias = "disk_list", default)]
     pub disk_list: Vec<String>,
     pub filter: Option<BTreeMap<String, String>>,
+    #[serde(alias = "filter_match")]
     pub filter_match: Option<FilterMatch>,
     pub zfs: Option<ZfsOptions>,
     pub lvm: Option<LvmOptions>,
@@ -331,10 +337,11 @@ pub enum Filesystem {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ZfsOptions {
     pub raid: Option<ZfsRaidLevel>,
     pub ashift: Option<usize>,
+    #[serde(alias = "arc_max")]
     pub arc_max: Option<usize>,
     pub checksum: Option<ZfsChecksumOption>,
     pub compress: Option<ZfsCompressOption>,
@@ -343,7 +350,7 @@ pub struct ZfsOptions {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Serialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LvmOptions {
     pub hdsize: Option<f64>,
     pub swapsize: Option<f64>,
@@ -353,7 +360,7 @@ pub struct LvmOptions {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct BtrfsOptions {
     pub hdsize: Option<f64>,
     pub raid: Option<BtrfsRaidLevel>,
