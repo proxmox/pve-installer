@@ -256,21 +256,23 @@ elif [ $start_auto_installer -ne 0 ]; then
     fi
     echo "Starting automatic installation"
 
-    # creates "/run/proxmox-reboot-on-error" if `global.reboot_on_error = true`
+    # the auto-installer creates "/run/proxmox-reboot-on-error" if `global.reboot_on_error = true`
     if /usr/bin/proxmox-auto-installer </run/automatic-installer-answers; then
         if ! /usr/bin/proxmox-post-hook </run/automatic-installer-answers; then
-            echo "post installation hook failed to execute."
-
-	    # drop into debug shell if it shouldn't reboot on error
+            echo "Post-installation hook failed (exit-code $?) - see above for errors."
+            # drop into debug shell if we shouldn't reboot on error
             if [ ! -f /run/proxmox-reboot-on-error ]; then
                 err_reboot
             else
-                echo "waiting 30s to allow gathering the error before reboot."
+                echo "Waiting 30s to allow gathering the error before reboot."
                 sleep 30
             fi
         fi
-    elif [ ! -f /run/proxmox-reboot-on-error ]; then
-        err_reboot
+    else
+        echo "Auto-installation failed (exit-code $?) - see above for errors."
+        if [ ! -f /run/proxmox-reboot-on-error ]; then
+            err_reboot
+        fi
     fi
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
