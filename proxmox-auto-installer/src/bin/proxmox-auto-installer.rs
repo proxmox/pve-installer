@@ -118,7 +118,9 @@ fn main() -> ExitCode {
     };
 
     if answer.global.reboot_on_error {
-        let _ = File::create("/run/proxmox-reboot-on-error");
+        if let Err(err) = File::create("/run/proxmox-reboot-on-error") {
+            error!("failed to create reboot-on-error flag-file: {err}");
+        }
     }
 
     match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {
