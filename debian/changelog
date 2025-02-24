@@ -1,3 +1,31 @@
+proxmox-installer (8.4.0) bookworm; urgency=medium
+
+  * early init: set kernel.printk to level warn to avoid that more verbose
+    kernel log info messages interfere with the terminal user interface.
+
+  * fix #2502: gtk ui: network settings: fix setting the correct default CIDR
+    network when navigating from the network setting step backwards and then
+    forwards again.
+
+  * raise minimum root password length to 8 characters following current NIST
+    SP 800-63B-4 recommendation.
+
+  * auto-installer: allow snake_case and kebab-case for the property names in
+    installation answer files. We plan to deprecate snake_case in the long
+    term for a more unified and consistent behavior with our newer API and CLI
+    endpoints.
+
+  * fix #5984: init: correctly honor reboot-on-error flag if the execution of
+    the auto-installer or the post-installation hook fails.
+
+  * init: print more details when auto-installation fails
+
+  * auto-installer: treat first-boot executable as binary data on download to
+    ensure that not only text based scripts but also compiled executables can
+    work.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 24 Feb 2025 17:18:28 +0100
+
 proxmox-installer (8.3.9) bookworm; urgency=medium
 
   * add preliminary support for new, in-development, PDM for which we plan an
