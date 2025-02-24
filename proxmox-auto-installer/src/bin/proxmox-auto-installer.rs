@@ -131,7 +131,7 @@ fn main() -> ExitCode {
         Ok(_) => {
             info!("Installation done.");
             ExitCode::SUCCESS
-        },
+        }
         Err(err) => {
             error!("Installation failed: {err:#}");
             ExitCode::FAILURE
