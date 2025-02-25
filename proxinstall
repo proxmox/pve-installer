@@ -412,6 +412,11 @@ sub create_ipconf_view {
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
 	$initial_active_device_pos = $device_active_reverse_map->{$nic};
+    } elsif ($initial_active_device_pos >= 0) {
+	my $iface_id = $device_active_map->{$initial_active_device_pos};
+	Proxmox::Install::Config::set_mngmt_nic_id($iface_id);
+	my $iface = $ipconf->{ifaces}->{$iface_id};
+	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
     }
 
     if (my $cidr = Proxmox::Install::Config::get_cidr()) {
