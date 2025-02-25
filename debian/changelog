@@ -1,3 +1,9 @@
+proxmox-installer (8.4.1) bookworm; urgency=medium
+
+  * gtk: relay initial interface to install config again.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 25 Feb 2025 22:52:28 +0100
+
 proxmox-installer (8.4.0) bookworm; urgency=medium
 
   * early init: set kernel.printk to level warn to avoid that more verbose
