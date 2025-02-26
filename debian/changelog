@@ -1,3 +1,17 @@
+proxmox-installer (8.4.2) bookworm; urgency=medium
+
+  * always leave 1 GiB for system when clamping non-default ZFS ARC size
+
+  * always reduce max ARC size to 10 % of total memory or 16 GiB, whatever is
+    lower, for systems that have less memory installed than recommended for a
+    basic system, which is for now 2 GiB for PBS and PDM and 4 GiB for PMG.
+    PVE is unchanged as it already use the lower default since the 8.1 point
+    release.
+
+  * pmg: improve wording in installation HTML text used in the GTK UI
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 26 Feb 2025 16:54:47 +0100
+
 proxmox-installer (8.4.1) bookworm; urgency=medium
 
   * gtk: relay initial interface to install config again.
