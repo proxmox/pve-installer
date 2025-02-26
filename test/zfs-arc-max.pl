@@ -45,15 +45,15 @@ while (my ($total_mem, $expected) = each %default_tests) {
 	"$expected MiB should be zfs_arc_max for PVE with $total_mem MiB system memory");
 
     mock_product('pbs');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), 0,
+    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 2048 ? $expected : 0,
 	"zfs_arc_max should default to `0` for PBS with $total_mem MiB system memory");
 
     mock_product('pmg');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), 0,
+    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 4096 ? $expected : 0,
 	"zfs_arc_max should default to `0` for PMG with $total_mem MiB system memory");
 
     mock_product('pdm');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), 0,
+    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 2048 ? $expected : 0,
 	"zfs_arc_max should default to `0` for PDM with $total_mem MiB system memory");
 }
 

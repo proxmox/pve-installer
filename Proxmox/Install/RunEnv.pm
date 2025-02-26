@@ -330,9 +330,15 @@ our $ZFS_ARC_SYSMEM_PERCENTAGE = 0.1; # use 10% of available system memory by de
 # Calculates the default upper limit for the ZFS ARC size.
 # Returns the default ZFS maximum ARC size in MiB.
 sub default_zfs_arc_max {
-    # For products other the PVE, just let ZFS decide on its own. Setting `0`
-    # causes the installer to skip writing the `zfs_arc_max` module parameter.
-    return 0 if Proxmox::Install::ISOEnv::get('product') ne 'pve';
+    my $product = Proxmox::Install::ISOEnv::get('product');
+    my $total_memory = get('total_memory');
+
+    # By default limit PVE and low-memory systems, for all others let ZFS decide on its own by
+    # returning `0`, which causes the installer to skip writing the `zfs_arc_max` module parameter.
+    if ($product ne 'pve') {
+	return 0 if $total_memory >= 2048 && $product ne 'pmg';
+	return 0 if $total_memory >= 4096; # PMG's base memory requirement is much higer
+    }
 
     my $default_mib = get('total_memory') * $ZFS_ARC_SYSMEM_PERCENTAGE;
     my $rounded_mib = int(sprintf('%.0f', $default_mib));
