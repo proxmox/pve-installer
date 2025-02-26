@@ -354,10 +354,13 @@ sub clamp_zfs_arc_max {
 
     return $mib if $mib == 0;
 
-    my $total_mem_mib = get('total_memory');
-    if ($mib > $total_mem_mib) {
-	return $total_mem_mib;
-    } elsif ($mib < $ZFS_ARC_MIN_SIZE_MIB) {
+    # upper limit is total system memory with a GiB headroom for the base system
+    my $total_mem_with_headroom_mib = get('total_memory') - 1024;
+    if ($mib > $total_mem_with_headroom_mib) {
+	$mib = $total_mem_with_headroom_mib; # do not return directly here, to catch < min ARC size
+    }
+    # lower limit is the ARC min size, else ZFS ignores the setting and uses 50% of total memory again
+    if ($mib < $ZFS_ARC_MIN_SIZE_MIB) {
 	return $ZFS_ARC_MIN_SIZE_MIB;
     }
 
