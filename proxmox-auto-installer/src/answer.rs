@@ -1,4 +1,4 @@
-use anyhow::{format_err, Result};
+use anyhow::{Result, format_err};
 use clap::ValueEnum;
 use proxmox_installer_common::{
     options::{
@@ -280,7 +280,7 @@ impl TryFrom<DiskSetup> for Disks {
                 }
                 match source.zfs {
                     None | Some(ZfsOptions { raid: None, .. }) => {
-                        return Err("ZFS raid level 'zfs.raid' must be set")
+                        return Err("ZFS raid level 'zfs.raid' must be set");
                     }
                     Some(opts) => (FsType::Zfs(opts.raid.unwrap()), FsOptions::ZFS(opts)),
                 }
@@ -291,7 +291,7 @@ impl TryFrom<DiskSetup> for Disks {
                 }
                 match source.btrfs {
                     None | Some(BtrfsOptions { raid: None, .. }) => {
-                        return Err("BTRFS raid level 'btrfs.raid' must be set")
+                        return Err("BTRFS raid level 'btrfs.raid' must be set");
                     }
                     Some(opts) => (FsType::Btrfs(opts.raid.unwrap()), FsOptions::BTRFS(opts)),
                 }

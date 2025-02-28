@@ -1,5 +1,5 @@
-use anyhow::{bail, format_err, Result};
-use log::{error, info, LevelFilter};
+use anyhow::{Result, bail, format_err};
+use log::{LevelFilter, error, info};
 use std::{
     env,
     fs::{self, File},
@@ -9,12 +9,11 @@ use std::{
 };
 
 use proxmox_installer_common::{
-    http,
+    FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, RUNTIME_DIR, http,
     setup::{
-        installer_setup, read_json, spawn_low_level_installer, LocaleInfo, LowLevelMessage,
-        RuntimeInfo, SetupInfo,
+        LocaleInfo, LowLevelMessage, RuntimeInfo, SetupInfo, installer_setup, read_json,
+        spawn_low_level_installer,
     },
-    FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, RUNTIME_DIR,
 };
 
 use proxmox_auto_installer::{

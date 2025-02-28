@@ -9,7 +9,7 @@ use std::{
     process::{self, Command, Stdio},
 };
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::{
     options::{

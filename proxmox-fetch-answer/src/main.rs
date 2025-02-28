@@ -1,8 +1,8 @@
 use std::process::ExitCode;
 use std::{fs, path::PathBuf};
 
-use anyhow::{bail, format_err, Result};
-use log::{error, info, LevelFilter};
+use anyhow::{Result, bail, format_err};
+use log::{LevelFilter, error, info};
 
 use proxmox_auto_installer::{
     log::AutoInstLogger,

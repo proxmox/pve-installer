@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::ValueEnum;
 use glob::Pattern;
 use log::info;
@@ -9,12 +9,12 @@ use crate::{
     udevinfo::UdevInfo,
 };
 use proxmox_installer_common::{
-    options::{email_validate, FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption},
+    ROOT_PASSWORD_MIN_LENGTH,
+    options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption, email_validate},
     setup::{
         InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
         InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
-    ROOT_PASSWORD_MIN_LENGTH,
 };
 use serde::{Deserialize, Serialize};
 
@@ -286,7 +286,9 @@ fn verify_filesystem_settings(answer: &Answer, setup_info: &SetupInfo) -> Result
     info!("Verifying filesystem settings");
 
     if answer.disks.fs_type.is_btrfs() && !setup_info.config.enable_btrfs {
-        bail!("BTRFS is not supported as a root filesystem for the product or the release of this ISO.");
+        bail!(
+            "BTRFS is not supported as a root filesystem for the product or the release of this ISO."
+        );
     }
 
     Ok(())
@@ -339,13 +341,17 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
         &answer.global.root_password_hashed,
     ) {
         (Some(_), Some(_)) => {
-            bail!("`global.root_password` and `global.root_password_hashed` cannot be set at the same time");
+            bail!(
+                "`global.root_password` and `global.root_password_hashed` cannot be set at the same time"
+            );
         }
         (None, None) => {
             bail!("One of `global.root_password` or `global.root_password_hashed` must be set");
         }
         (Some(password), None) if password.len() < ROOT_PASSWORD_MIN_LENGTH => {
-            bail!("`global.root_password` must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long");
+            bail!(
+                "`global.root_password` must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long"
+            );
         }
         _ => Ok(()),
     }

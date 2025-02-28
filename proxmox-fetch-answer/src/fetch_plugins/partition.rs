@@ -1,4 +1,4 @@
-use anyhow::{bail, format_err, Result};
+use anyhow::{Result, bail, format_err};
 use log::{info, warn};
 use std::{
     fs::{self, create_dir_all},

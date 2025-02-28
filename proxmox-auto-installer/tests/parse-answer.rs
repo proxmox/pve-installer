@@ -8,7 +8,7 @@ use proxmox_auto_installer::udevinfo::UdevInfo;
 use proxmox_auto_installer::utils::parse_answer;
 
 use proxmox_installer_common::setup::{
-    load_installer_setup_files, read_json, LocaleInfo, RuntimeInfo, SetupInfo,
+    LocaleInfo, RuntimeInfo, SetupInfo, load_installer_setup_files, read_json,
 };
 
 fn get_test_resource_path() -> Result<PathBuf, String> {

@@ -4,13 +4,13 @@ use std::{
     process::Command,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use nix::mount::{mount, umount, MsFlags};
+use nix::mount::{MsFlags, mount, umount};
 use proxmox_installer_common::{
+    RUNTIME_DIR,
     options::FsType,
     setup::{InstallConfig, SetupInfo},
-    RUNTIME_DIR,
 };
 use regex::Regex;
 
@@ -132,7 +132,9 @@ fn get_fs(filesystem: Option<Filesystems>) -> Result<Filesystems> {
         None => {
             let low_level_config = match get_low_level_config() {
                 Ok(c) => c,
-                Err(_) => bail!("Could not fetch config from previous installation. Please specify file system with -f."),
+                Err(_) => bail!(
+                    "Could not fetch config from previous installation. Please specify file system with -f."
+                ),
             };
             Filesystems::from(low_level_config.filesys)
         }
@@ -292,7 +294,9 @@ fn get_btrfs_uuid() -> Result<String> {
             let uuid_list = uuids
                 .iter()
                 .fold(String::new(), |acc, &arg| format!("{acc}\n{arg}"));
-            bail!("Found {i} UUIDs:{uuid_list}\nPlease specify the UUID to use with the --btrfs-uuid parameter")
+            bail!(
+                "Found {i} UUIDs:{uuid_list}\nPlease specify the UUID to use with the --btrfs-uuid parameter"
+            )
         }
         _ => (),
     }

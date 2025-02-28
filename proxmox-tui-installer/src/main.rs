@@ -3,6 +3,7 @@
 use std::{collections::HashMap, env, net::IpAddr};
 
 use cursive::{
+    Cursive, CursiveRunnable, ScreenId, View, XY,
     event::Event,
     theme::{ColorStyle, Effect, Effects, PaletteColor, Style},
     view::{Nameable, Offset, Resizable, ViewWrapper},
@@ -10,17 +11,16 @@ use cursive::{
         Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
         ResizedView, ScrollView, SelectView, StackView, TextView,
     },
-    Cursive, CursiveRunnable, ScreenId, View, XY,
 };
 
 mod options;
 use options::{InstallerOptions, PasswordOptions};
 
 use proxmox_installer_common::{
-    options::{email_validate, BootdiskOptions, NetworkOptions, TimezoneOptions},
-    setup::{installer_setup, LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo},
-    utils::Fqdn,
     ROOT_PASSWORD_MIN_LENGTH,
+    options::{BootdiskOptions, NetworkOptions, TimezoneOptions, email_validate},
+    setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo, installer_setup},
+    utils::Fqdn,
 };
 
 mod setup;

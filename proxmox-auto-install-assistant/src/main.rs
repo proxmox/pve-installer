@@ -1,4 +1,4 @@
-use anyhow::{bail, format_err, Result};
+use anyhow::{Result, bail, format_err};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use glob::Pattern;
 use serde::Serialize;
@@ -14,9 +14,9 @@ use proxmox_auto_installer::{
     answer::{Answer, FilterMatch},
     sysinfo::SysInfo,
     utils::{
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index,
-        verify_email_and_root_password_settings, verify_first_boot_settings,
-        verify_locale_settings, AutoInstSettings, FetchAnswerFrom, HttpOptions,
+        AutoInstSettings, FetchAnswerFrom, HttpOptions, get_matched_udev_indexes, get_nic_list,
+        get_single_udev_index, verify_email_and_root_password_settings, verify_first_boot_settings,
+        verify_locale_settings,
     },
 };
 use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME};
@@ -624,7 +624,9 @@ fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
     {
         Ok(v) => {
             if !v.success() {
-                bail!("The source ISO file is not able to be installed automatically. Please try a more current one.");
+                bail!(
+                    "The source ISO file is not able to be installed automatically. Please try a more current one."
+                );
             }
         }
         Err(err) if err.kind() == io::ErrorKind::NotFound => {

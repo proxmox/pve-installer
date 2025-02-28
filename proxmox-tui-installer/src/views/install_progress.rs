@@ -1,8 +1,8 @@
 use cursive::{
+    CbSink, Cursive,
     utils::Counter,
     view::{Nameable, Resizable, ViewWrapper},
     views::{Dialog, DummyView, LinearLayout, PaddedView, ProgressBar, TextView},
-    CbSink, Cursive,
 };
 use std::{
     fs::File,
@@ -12,8 +12,8 @@ use std::{
     time::Duration,
 };
 
-use crate::{abort_install_button, prompt_dialog, InstallerState};
-use proxmox_installer_common::setup::{spawn_low_level_installer, InstallConfig, LowLevelMessage};
+use crate::{InstallerState, abort_install_button, prompt_dialog};
+use proxmox_installer_common::setup::{InstallConfig, LowLevelMessage, spawn_low_level_installer};
 
 pub struct InstallProgressView {
     view: PaddedView<LinearLayout>,

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use log::{Level, Metadata, Record};
 use std::{fs::File, io::Write, sync::Mutex, sync::OnceLock};
 

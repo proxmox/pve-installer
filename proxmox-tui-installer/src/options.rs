@@ -1,11 +1,11 @@
 use crate::SummaryOption;
 
 use proxmox_installer_common::{
+    EMAIL_DEFAULT_PLACEHOLDER,
     options::{
         BootdiskOptions, BtrfsRaidLevel, FsType, NetworkOptions, TimezoneOptions, ZfsRaidLevel,
     },
     setup::LocaleInfo,
-    EMAIL_DEFAULT_PLACEHOLDER,
 };
 
 pub const FS_TYPES: &[FsType] = {
@@ -103,7 +103,7 @@ mod tests {
                 state: InterfaceState::Up,
                 mac: "01:23:45:67:89:ab".to_owned(),
                 addresses: Some(vec![
-                    CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap()
+                    CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 ]),
             },
         );

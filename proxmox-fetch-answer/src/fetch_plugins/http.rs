@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use log::info;
 use serde::Serialize;
 use std::{

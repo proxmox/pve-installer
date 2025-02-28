@@ -1,8 +1,8 @@
 use cursive::{
+    Printer, Rect, Vec2, View,
     direction::Direction,
     event::{Event, EventResult},
-    view::{scroll, CannotFocus},
-    Printer, Rect, Vec2, View,
+    view::{CannotFocus, scroll},
 };
 
 const HEADER_HEIGHT: usize = 2;

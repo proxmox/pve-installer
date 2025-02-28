@@ -1,11 +1,11 @@
 use cursive::{
+    Cursive,
     view::{Nameable, ViewWrapper},
     views::{Dialog, NamedView, SelectView},
-    Cursive,
 };
 
 use super::FormView;
-use crate::{system, InstallerState};
+use crate::{InstallerState, system};
 use proxmox_installer_common::{
     options::TimezoneOptions,
     setup::{KeyboardMapping, LocaleInfo},

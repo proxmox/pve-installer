@@ -19,7 +19,7 @@ use std::{
     process::{Command, ExitCode},
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use proxmox_auto_installer::{
     answer::{Answer, PostNotificationHookInfo},
     udevinfo::{UdevInfo, UdevProperties},
@@ -27,8 +27,8 @@ use proxmox_auto_installer::{
 use proxmox_installer_common::{
     options::{Disk, FsType},
     setup::{
-        load_installer_setup_files, BootType, InstallConfig, IsoInfo, ProxmoxProduct, RuntimeInfo,
-        SetupInfo,
+        BootType, InstallConfig, IsoInfo, ProxmoxProduct, RuntimeInfo, SetupInfo,
+        load_installer_setup_files,
     },
     sysinfo::SystemDMI,
     utils::CidrAddress,

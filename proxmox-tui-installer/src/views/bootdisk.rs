@@ -4,17 +4,17 @@ use std::{
 };
 
 use cursive::{
+    Cursive, Vec2, View,
     view::{Nameable, Resizable, ViewWrapper},
     views::{
         Button, Dialog, DummyView, LinearLayout, NamedView, PaddedView, Panel, ScrollView,
         SelectView, TextView, ViewRef,
     },
-    Cursive, Vec2, View,
 };
 
 use super::{DiskSizeEditView, FormView, IntegerEditView, TabbedView};
-use crate::options::FS_TYPES;
 use crate::InstallerState;
+use crate::options::FS_TYPES;
 
 use proxmox_installer_common::{
     disk_checks::{
@@ -22,9 +22,9 @@ use proxmox_installer_common::{
         check_zfs_raid_config,
     },
     options::{
-        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, FsType,
-        LvmBootdiskOptions, ZfsBootdiskOptions, BTRFS_COMPRESS_OPTIONS, ZFS_CHECKSUM_OPTIONS,
-        ZFS_COMPRESS_OPTIONS,
+        AdvancedBootdiskOptions, BTRFS_COMPRESS_OPTIONS, BootdiskOptions, BtrfsBootdiskOptions,
+        Disk, FsType, LvmBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+        ZfsBootdiskOptions,
     },
     setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };

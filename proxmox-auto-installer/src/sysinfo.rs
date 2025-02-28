@@ -1,8 +1,8 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use proxmox_installer_common::{
+    RUNTIME_DIR,
     setup::{IsoInfo, ProductConfig, SetupInfo},
     sysinfo::SystemDMI,
-    RUNTIME_DIR,
 };
 use serde::Serialize;
 use std::{fs, io, path::PathBuf};

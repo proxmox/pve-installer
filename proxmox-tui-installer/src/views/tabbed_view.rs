@@ -1,12 +1,12 @@
 use std::borrow::{Borrow, BorrowMut};
 
 use cursive::{
+    Printer, Vec2, View,
     direction::Direction,
     event::{AnyCb, Event, EventResult, Key},
     theme::{ColorStyle, PaletteColor},
     utils::{markup::StyledString, span::SpannedStr},
     view::{CannotFocus, IntoBoxedView, Selector, ViewNotFound},
-    Printer, Vec2, View,
 };
 
 pub struct TabbedView {

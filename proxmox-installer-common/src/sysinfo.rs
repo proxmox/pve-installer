@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::Serialize;
 
 const DMI_PATH: &str = "/sys/devices/virtual/dmi/id";

@@ -1,11 +1,11 @@
 use std::{net::IpAddr, str::FromStr, sync::Arc};
 
 use cursive::{
+    Printer, Rect, Vec2, View,
     event::{Event, EventResult},
     theme::BaseColor,
     view::{Resizable, ViewWrapper},
     views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
-    Printer, Rect, Vec2, View,
 };
 
 use proxmox_installer_common::utils::CidrAddress;
