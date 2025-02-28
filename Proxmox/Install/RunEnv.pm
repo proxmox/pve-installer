@@ -238,6 +238,7 @@ my sub detect_country_tracing_to : prototype($$) {
 #     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
 #     secure_boot = <1 if SecureBoot is enabled>,
 #     boot_type = <either 'efi' or 'bios'>,
+#     default_zfs_arc_max => <default upper limit for the ZFS ARC size in MiB>,
 #     disks => <see Proxmox::Sys::Block::hd_list()>,
 #     network => {
 #         interfaces => <see query_netdevs()>,
@@ -285,6 +286,7 @@ sub query_installation_environment : prototype() {
     $output->{total_memory} = query_total_memory();
     $output->{hvm_supported} = query_cpu_hvm_support();
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
+    $output->{default_zfs_arc_max} = default_zfs_arc_max();
 
     if ($output->{boot_type} eq 'efi') {
 	my $content = eval { file_read_all("/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c") };
@@ -329,9 +331,11 @@ our $ZFS_ARC_SYSMEM_PERCENTAGE = 0.1; # use 10% of available system memory by de
 
 # Calculates the default upper limit for the ZFS ARC size.
 # Returns the default ZFS maximum ARC size in MiB.
+# See also <https://bugzilla.proxmox.com/show_bug.cgi?id=4829> and
+# https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
 sub default_zfs_arc_max {
     my $product = Proxmox::Install::ISOEnv::get('product');
-    my $total_memory = get('total_memory');
+    my $total_memory = query_total_memory();
 
     # By default limit PVE and low-memory systems, for all others let ZFS decide on its own by
     # returning `0`, which causes the installer to skip writing the `zfs_arc_max` module parameter.
@@ -340,7 +344,7 @@ sub default_zfs_arc_max {
 	return 0 if $total_memory >= 4096; # PMG's base memory requirement is much higer
     }
 
-    my $default_mib = get('total_memory') * $ZFS_ARC_SYSMEM_PERCENTAGE;
+    my $default_mib = $total_memory * $ZFS_ARC_SYSMEM_PERCENTAGE;
     my $rounded_mib = int(sprintf('%.0f', $default_mib));
 
     if ($rounded_mib > $ZFS_ARC_MAX_SIZE_MIB) {
@@ -361,7 +365,7 @@ sub clamp_zfs_arc_max {
     return $mib if $mib == 0;
 
     # upper limit is total system memory with a GiB headroom for the base system
-    my $total_mem_with_headroom_mib = get('total_memory') - 1024;
+    my $total_mem_with_headroom_mib = query_total_memory() - 1024;
     if ($mib > $total_mem_with_headroom_mib) {
 	$mib = $total_mem_with_headroom_mib; # do not return directly here, to catch < min ARC size
     }

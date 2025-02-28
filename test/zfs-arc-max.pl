@@ -33,11 +33,7 @@ my %default_tests = (
 
 while (my ($total_mem, $expected) = each %default_tests) {
     $proxmox_install_runenv->redefine(
-	get => sub {
-	    my ($k) = @_;
-	    return $total_mem if $k eq 'total_memory';
-	    die "runtime environment key $k not mocked!\n";
-	},
+	query_total_memory => sub { return $total_mem; },
     );
 
     mock_product('pve');
@@ -71,11 +67,7 @@ foreach (@clamp_tests) {
     my ($input, $total_mem, $expected) = @$_;
 
     $proxmox_install_runenv->redefine(
-	get => sub {
-	    my ($k) = @_;
-	    return $total_mem if $k eq 'total_memory';
-	    die "runtime environment key $k not mocked!\n";
-	},
+	query_total_memory => sub { return $total_mem; },
     );
 
     is(Proxmox::Install::RunEnv::clamp_zfs_arc_max($input), $expected,
