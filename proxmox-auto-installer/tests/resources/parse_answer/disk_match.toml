@@ -12,5 +12,6 @@ source = "from-dhcp"
 [disk-setup]
 filesystem = "zfs"
 zfs.raid = "raid10"
+zfs.arc_max = 2048
 #disk_list = ['sda']
 filter.ID_SERIAL = "*MZ7KM240HAGR*"

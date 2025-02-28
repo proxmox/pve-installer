@@ -17,4 +17,5 @@ zfs.checksum = "on"
 zfs.compress = "lz4"
 zfs.copies = 2
 zfs.hdsize = 80
+zfs.arc_max = 2048
 disk_list = ["sda", "sdb"]

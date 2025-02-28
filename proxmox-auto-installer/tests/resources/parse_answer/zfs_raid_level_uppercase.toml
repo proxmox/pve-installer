@@ -13,3 +13,4 @@ source = "from-dhcp"
 filesystem = "zfs"
 disk_list = ["sda", "sdb", "sdc"]
 zfs.raid = "RAIDZ-1"
+zfs.arc_max = 2048

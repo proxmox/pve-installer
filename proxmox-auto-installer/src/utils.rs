@@ -457,7 +457,7 @@ pub fn parse_answer(
                 .unwrap_or(runtime_info.disks[first_selected_disk].size);
             config.zfs_opts = Some(InstallZfsOption {
                 ashift: zfs.ashift.unwrap_or(12),
-                arc_max: zfs.arc_max.unwrap_or(2048),
+                arc_max: zfs.arc_max.unwrap_or(runtime_info.default_zfs_arc_max),
                 compress: zfs.compress.unwrap_or(ZfsCompressOption::On),
                 checksum: zfs.checksum.unwrap_or(ZfsChecksumOption::On),
                 copies: zfs.copies.unwrap_or(1),

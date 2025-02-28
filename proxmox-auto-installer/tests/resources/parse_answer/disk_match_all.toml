@@ -12,6 +12,7 @@ source = "from-dhcp"
 [disk-setup]
 filesystem = "zfs"
 zfs.raid = "raid0"
+zfs.arc_max = 2048
 filter_match = "all"
 filter.ID_SERIAL = "*MZ7KM240HAGR*"
 filter.ID_SERIAL_SHORT = "S2HRNX0J403419"
