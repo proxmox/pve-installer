@@ -6,9 +6,7 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{cmp, fmt};
 
-use crate::setup::{
-    LocaleInfo, NetworkInfo, ProductConfig, ProxmoxProduct, RuntimeInfo, SetupInfo,
-};
+use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
 use crate::utils::{CidrAddress, Fqdn};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -256,39 +254,17 @@ pub struct ZfsBootdiskOptions {
 
 impl ZfsBootdiskOptions {
     /// Panics if the disk list is empty.
-    pub fn defaults_from(runinfo: &RuntimeInfo, product_conf: &ProductConfig) -> Self {
+    pub fn defaults_from(runinfo: &RuntimeInfo) -> Self {
         let disk = &runinfo.disks[0];
         Self {
             ashift: 12,
             compress: ZfsCompressOption::default(),
             checksum: ZfsChecksumOption::default(),
             copies: 1,
-            arc_max: default_zfs_arc_max(product_conf.product, runinfo.total_memory),
+            arc_max: runinfo.default_zfs_arc_max,
             disk_size: disk.size,
             selected_disks: (0..runinfo.disks.len()).collect(),
         }
-    }
-}
-
-/// Calculates the default upper limit for the ZFS ARC size.
-/// See also <https://bugzilla.proxmox.com/show_bug.cgi?id=4829> and
-/// https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max
-///
-/// # Arguments
-/// * `product` - The product to be installed
-/// * `total_memory` - Total memory installed in the system, in MiB
-///
-/// # Returns
-/// The default ZFS maximum ARC size in MiB for this system.
-fn default_zfs_arc_max(product: ProxmoxProduct, total_memory: usize) -> usize {
-    if product != ProxmoxProduct::PVE {
-        // For products other the PVE, just let ZFS decide on its own. Setting `0`
-        // causes the installer to skip writing the `zfs_arc_max` module parameter.
-        0
-    } else {
-        ((total_memory as f64) / 10.)
-            .round()
-            .clamp(64., 16. * 1024.) as usize
     }
 }
 
@@ -492,32 +468,4 @@ pub fn email_validate(email: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn zfs_arc_limit() {
-        const TESTS: &[(usize, usize)] = &[
-            (16, 64), // at least 64 MiB
-            (1024, 102),
-            (4 * 1024, 410),
-            (8 * 1024, 819),
-            (150 * 1024, 15360),
-            (160 * 1024, 16384),
-            (1024 * 1024, 16384), // maximum of 16 GiB
-        ];
-
-        for (total_memory, expected) in TESTS {
-            assert_eq!(
-                default_zfs_arc_max(ProxmoxProduct::PVE, *total_memory),
-                *expected
-            );
-            assert_eq!(default_zfs_arc_max(ProxmoxProduct::PBS, *total_memory), 0);
-            assert_eq!(default_zfs_arc_max(ProxmoxProduct::PMG, *total_memory), 0);
-            assert_eq!(default_zfs_arc_max(ProxmoxProduct::PDM, *total_memory), 0);
-        }
-    }
 }

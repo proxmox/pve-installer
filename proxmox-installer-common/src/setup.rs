@@ -390,6 +390,9 @@ pub struct RuntimeInfo {
     /// Whether the system was booted with SecureBoot enabled
     #[serde(default, deserialize_with = "deserialize_bool_from_int_maybe")]
     pub secure_boot: Option<bool>,
+
+    /// Default upper limit for the ZFS ARC size, in MiB.
+    pub default_zfs_arc_max: usize,
 }
 
 #[derive(Copy, Clone, Eq, Deserialize, PartialEq, Serialize)]

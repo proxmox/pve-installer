@@ -162,7 +162,7 @@ impl AdvancedBootdiskOptionsView {
                 &product_conf,
             )),
             AdvancedBootdiskOptions::Zfs(zfs) => {
-                view.add_child(ZfsBootdiskOptionsView::new(runinfo, zfs, &product_conf))
+                view.add_child(ZfsBootdiskOptionsView::new(runinfo, zfs))
             }
             AdvancedBootdiskOptions::Btrfs(btrfs) => {
                 view.add_child(BtrfsBootdiskOptionsView::new(runinfo, btrfs))
@@ -213,10 +213,9 @@ impl AdvancedBootdiskOptionsView {
                             &product_conf,
                         ))
                     }
-                    FsType::Zfs(_) => view.add_child(ZfsBootdiskOptionsView::new_with_defaults(
-                        &runinfo,
-                        &product_conf,
-                    )),
+                    FsType::Zfs(_) => {
+                        view.add_child(ZfsBootdiskOptionsView::new_with_defaults(&runinfo))
+                    }
                     FsType::Btrfs(_) => {
                         view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo))
                     }
@@ -631,27 +630,20 @@ struct ZfsBootdiskOptionsView {
 
 impl ZfsBootdiskOptionsView {
     // TODO: Re-apply previous disk selection from `options` correctly
-    fn new(
-        runinfo: &RuntimeInfo,
-        options: &ZfsBootdiskOptions,
-        product_conf: &ProductConfig,
-    ) -> Self {
+    fn new(runinfo: &RuntimeInfo, options: &ZfsBootdiskOptions) -> Self {
         let arc_max_view = {
             let view = IntegerEditView::new_with_suffix("MiB").max_value(runinfo.total_memory);
 
-            // For PVE "force" the default value, for other products place the recommended value
-            // only in the placeholder. This causes for the latter to not write the module option
-            // if the value is never modified by the user.
-            if product_conf.product == ProxmoxProduct::PVE {
+            // If the runtime environment provides a non-zero value, that is
+            // also not the built-in ZFS default of half the system memory, use
+            // that as default.
+            // Otherwise, just place the ZFS default into the placeholder.
+            if runinfo.default_zfs_arc_max > 0
+                && runinfo.default_zfs_arc_max != runinfo.total_memory / 2
+            {
                 view.content(options.arc_max)
             } else {
-                let view = view.placeholder(runinfo.total_memory / 2);
-
-                if options.arc_max != 0 {
-                    view.content(options.arc_max)
-                } else {
-                    view
-                }
+                view.placeholder(runinfo.total_memory / 2)
             }
         };
 
@@ -696,12 +688,8 @@ impl ZfsBootdiskOptionsView {
         Self { view }
     }
 
-    fn new_with_defaults(runinfo: &RuntimeInfo, product_conf: &ProductConfig) -> Self {
-        Self::new(
-            runinfo,
-            &ZfsBootdiskOptions::defaults_from(runinfo, product_conf),
-            product_conf,
-        )
+    fn new_with_defaults(runinfo: &RuntimeInfo) -> Self {
+        Self::new(runinfo, &ZfsBootdiskOptions::defaults_from(runinfo))
     }
 
     fn get_values(&mut self) -> Option<(Vec<Disk>, ZfsBootdiskOptions)> {
