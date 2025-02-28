@@ -632,7 +632,9 @@ impl ZfsBootdiskOptionsView {
     // TODO: Re-apply previous disk selection from `options` correctly
     fn new(runinfo: &RuntimeInfo, options: &ZfsBootdiskOptions) -> Self {
         let arc_max_view = {
-            let view = IntegerEditView::new_with_suffix("MiB").max_value(runinfo.total_memory);
+            // Always leave a GiB of headroom for the OS.
+            let view =
+                IntegerEditView::new_with_suffix("MiB").max_value(runinfo.total_memory - 1024);
 
             // If the runtime environment provides a non-zero value, that is
             // also not the built-in ZFS default of half the system memory, use

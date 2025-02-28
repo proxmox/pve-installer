@@ -1158,9 +1158,10 @@ my $create_raid_advanced_grid = sub {
     my $total_memory = Proxmox::Install::RunEnv::get('total_memory');
     my $arc_max = Proxmox::Install::Config::get_zfs_opt('arc_max') || ($total_memory * 0.5);
 
+    # always leave a GiB as headroom for the OS
     my $arc_max_adjustment = Gtk3::Adjustment->new(
 	$arc_max, $Proxmox::Install::RunEnv::ZFS_ARC_MIN_SIZE_MIB,
-	$total_memory, 1, 10, 0);
+	$total_memory - 1024, 1, 10, 0);
     my $spinbutton_arc_max = Gtk3::SpinButton->new($arc_max_adjustment, 1, 0);
     $spinbutton_arc_max->set_tooltip_text('Maximum ARC size in megabytes');
     $spinbutton_arc_max->signal_connect('value-changed' => sub {
