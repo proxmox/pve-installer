@@ -1206,6 +1206,7 @@ postfix postfix/main_mailer_type select No configuration
 keyboard-configuration keyboard-configuration/xkb-keymap select $xkmap
 d-i debian-installer/locale select en_US.UTF-8
 grub-pc grub-pc/install_devices select $grub_install_devices_txt
+grub-efi-amd64 grub2/force_efi_extra_removable boolean true
 _EOD
 
 	my $pkg_count = 0;
