@@ -1,12 +1,11 @@
 use std::{
     fs, io,
-    path::{self, PathBuf},
+    path::{self, Path, PathBuf},
     process::Command,
 };
 
 use anyhow::{Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use nix::mount::{MsFlags, mount, umount};
 use proxmox_installer_common::{
     RUNTIME_DIR,
     options::FsType,
@@ -118,9 +117,7 @@ fn cleanup(args: &CommandCleanup) -> Result<()> {
 
     match fs {
         Filesystems::Zfs => umount_zpool(),
-        Filesystems::Xfs => umount_fs()?,
-        Filesystems::Ext4 => umount_fs()?,
-        _ => (),
+        Filesystems::Btrfs | Filesystems::Xfs | Filesystems::Ext4 => umount(Path::new(TARGET_DIR))?,
     }
 
     println!("Chroot cleanup done. You can now reboot or leave the shell.");
@@ -213,7 +210,7 @@ fn mount_fs() -> Result<()> {
 
     match Command::new("mount")
         .arg(format!("/dev/mapper/{product}-root"))
-        .arg("/target")
+        .arg(TARGET_DIR)
         .output()
     {
         Err(e) => bail!("{e}"),
@@ -232,9 +229,25 @@ fn mount_fs() -> Result<()> {
     Ok(())
 }
 
-fn umount_fs() -> Result<()> {
-    umount(TARGET_DIR)?;
-    Ok(())
+fn umount(path: &Path) -> Result<()> {
+    match Command::new("umount")
+        .arg("--recursive")
+        .arg("--verbose")
+        .arg(path)
+        .output()
+    {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(())
+            } else {
+                bail!(
+                    "unmounting of {path:?} failed: {}",
+                    String::from_utf8(output.stderr)?
+                )
+            }
+        }
+        Err(err) => bail!("unmounting of {path:?} failed: {:#}", err),
+    }
 }
 
 fn mount_btrfs(btrfs_uuid: Option<String>) -> Result<()> {
@@ -246,7 +259,7 @@ fn mount_btrfs(btrfs_uuid: Option<String>) -> Result<()> {
     match Command::new("mount")
         .arg("--uuid")
         .arg(uuid)
-        .arg("/target")
+        .arg(TARGET_DIR)
         .output()
     {
         Err(e) => bail!("{e}"),
@@ -303,36 +316,48 @@ fn get_btrfs_uuid() -> Result<String> {
     Ok(uuids[0].into())
 }
 
-fn bindmount() -> Result<()> {
-    println!("Bind mounting");
-    // https://github.com/nix-rust/nix/blob/7badbee1e388618457ed0d725c1091359f253012/test/test_mount.rs#L19
-    // https://github.com/nix-rust/nix/blob/7badbee1e388618457ed0d725c1091359f253012/test/test_mount.rs#L146
-    const NONE: Option<&'static [u8]> = None;
+fn do_bindmount(source: &Path, target: &Path) -> Result<()> {
+    match Command::new("mount")
+        .arg("--bind")
+        .arg(source)
+        .arg(target)
+        .output()
+    {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(())
+            } else {
+                bail!(
+                    "bind-mount of {source:?} to {target:?} failed: {}",
+                    String::from_utf8(output.stderr)?
+                )
+            }
+        }
+        Err(err) => bail!("bind-mount of {source:?} to {target:?} failed: {:#}", err),
+    }
+}
 
-    let flags = MsFlags::MS_BIND;
+fn bindmount() -> Result<()> {
+    println!("Bind-mounting virtual filesystems");
+
     for item in BINDMOUNTS {
         let source = path::Path::new("/").join(item);
         let target = path::Path::new(TARGET_DIR).join(item);
 
-        println!("Bindmount {source:?} to {target:?}");
-        mount(Some(source.as_path()), target.as_path(), NONE, flags, NONE)?;
+        println!("Bind-mounting {source:?} to {target:?}");
+        do_bindmount(&source, &target)?;
     }
 
     let answer_path = path::Path::new("/mnt").join(ANSWER_MP);
+
     if answer_path.exists() {
         let target = path::Path::new(TARGET_DIR).join("mnt").join(ANSWER_MP);
 
-        println!("Create dir {target:?}");
+        println!("Creating target directory {target:?}");
         fs::create_dir_all(&target)?;
 
-        println!("Bindmount {answer_path:?} to {target:?}");
-        mount(
-            Some(answer_path.as_path()),
-            target.as_path(),
-            NONE,
-            flags,
-            NONE,
-        )?;
+        println!("Bind-mounting {answer_path:?} to {target:?}");
+        do_bindmount(&answer_path, &target)?;
     }
     Ok(())
 }
@@ -349,7 +374,7 @@ fn bind_umount() -> Result<()> {
     let answer_target = path::Path::new(TARGET_DIR).join("mnt").join(ANSWER_MP);
     if answer_target.exists() {
         println!("Unmounting and removing answer mountpoint");
-        if let Err(e) = umount(answer_target.as_os_str()) {
+        if let Err(e) = umount(&answer_target) {
             eprintln!("{e}");
         }
         if let Err(e) = fs::remove_dir(answer_target) {
