@@ -102,9 +102,6 @@ my sub init_cfg {
 
 	# network related
 	mngmt_nic => undef,
-	# FIXME: fix call sites and remove below, it's just an ugly relict of GTK GUI and time
-	# pressure on creating the single source of truth for installation config
-	mngmt_nic_id => undef,
 	hostname => undef,
 	domain => undef,
 	cidr => undef,
@@ -247,9 +244,6 @@ sub get_root_ssh_keys { return get('root_ssh_keys'); }
 
 sub set_mngmt_nic { set_key('mngmt_nic', $_[0]); }
 sub get_mngmt_nic { return get('mngmt_nic'); }
-
-sub set_mngmt_nic_id { set_key('mngmt_nic_id', $_[0]); }
-sub get_mngmt_nic_id { return get('mngmt_nic_id'); }
 
 sub set_hostname { set_key('hostname', $_[0]); }
 sub get_hostname { return get('hostname'); }

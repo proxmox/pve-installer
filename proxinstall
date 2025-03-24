@@ -377,11 +377,11 @@ sub create_ipconf_view {
 	my $current = shift;
 
 	my $new = $device_active_map->{$current->get_active()};
-	my $selected = Proxmox::Install::Config::get_mngmt_nic_id();
-	return if defined($selected) && $new eq $selected;
-
-	Proxmox::Install::Config::set_mngmt_nic_id($new);
 	my $iface = $ipconf->{ifaces}->{$new};
+
+	my $selected = Proxmox::Install::Config::get_mngmt_nic();
+	return if defined($selected) && $iface->{name} eq $selected;
+
 	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
 	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
 	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
@@ -414,7 +414,6 @@ sub create_ipconf_view {
 	$initial_active_device_pos = $device_active_reverse_map->{$nic};
     } elsif ($initial_active_device_pos >= 0) {
 	my $iface_id = $device_active_map->{$initial_active_device_pos};
-	Proxmox::Install::Config::set_mngmt_nic_id($iface_id);
 	my $iface = $ipconf->{ifaces}->{$iface_id};
 	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
     }
