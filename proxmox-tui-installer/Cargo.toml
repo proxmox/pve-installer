@@ -14,6 +14,3 @@ serde_json.workspace = true
 regex.workspace = true
 
 cursive = { version = "0.21", default-features = false, features = ["crossterm-backend"] }
-
-[dev-dependencies]
-pretty_assertions = "1.4"

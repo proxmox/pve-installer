@@ -31,3 +31,6 @@ http = [
     "dep:sha2",
     "dep:ureq"
 ]
+
+[dev-dependencies]
+pretty_assertions = "1.4"
