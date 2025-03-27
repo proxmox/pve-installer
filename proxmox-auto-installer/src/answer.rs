@@ -46,7 +46,8 @@ impl Answer {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Global {
     pub country: String,
-    pub fqdn: Fqdn,
+    /// FQDN to set for the installed system.
+    pub fqdn: FqdnConfig,
     pub keyboard: KeyboardLayout,
     pub mailto: String,
     pub timezone: String,
@@ -68,6 +69,39 @@ pub enum RebootMode {
     #[default]
     Reboot,
     PowerOff,
+}
+
+/// Allow the user to either set the FQDN of the installation to either some
+/// fixed value or retrieve it dynamically via e.g.DHCP.
+#[derive(Clone, Deserialize, Debug)]
+#[serde(
+    untagged,
+    expecting = "either a fully-qualified domain name or extendend configuration for usage with DHCP must be specified"
+)]
+pub enum FqdnConfig {
+    /// Sets the FQDN to the exact value.
+    Simple(Fqdn),
+    /// Extended configuration, e.g. to use hostname and domain from DHCP.
+    Extended(FqdnExtendedConfig),
+}
+
+/// Extended configuration for retrieving the FQDN from external sources.
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct FqdnExtendedConfig {
+    /// Source to gather the FQDN from.
+    #[serde(default)]
+    pub source: FqdnSourceMode,
+    /// Domain to use if none is received via DHCP.
+    pub domain: Option<String>,
+}
+
+/// Describes the source to retrieve the FQDN of the installation.
+#[derive(Clone, Deserialize, Debug, Default, PartialEq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum FqdnSourceMode {
+    #[default]
+    FromDhcp,
 }
 
 #[derive(Clone, Deserialize, Debug)]

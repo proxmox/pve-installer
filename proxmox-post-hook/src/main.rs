@@ -21,11 +21,14 @@ use std::{
 
 use anyhow::{Context, Result, anyhow, bail};
 use proxmox_auto_installer::{
-    answer::{Answer, PostNotificationHookInfo, RebootMode},
+    answer::{
+        Answer, FqdnConfig, FqdnExtendedConfig, FqdnSourceMode, PostNotificationHookInfo,
+        RebootMode,
+    },
     udevinfo::{UdevInfo, UdevProperties},
 };
 use proxmox_installer_common::{
-    options::{Disk, FsType},
+    options::{Disk, FsType, NetworkOptions},
     setup::{
         BootType, InstallConfig, IsoInfo, ProxmoxProduct, RuntimeInfo, SetupInfo,
         load_installer_setup_files,
@@ -249,6 +252,19 @@ impl PostHookInfo {
                 .and_then(|r| Ok(String::from_utf8(r.stdout)?))
         };
 
+        let fqdn = match &answer.global.fqdn {
+            FqdnConfig::Simple(name) => name.to_string(),
+            FqdnConfig::Extended(FqdnExtendedConfig {
+                source: FqdnSourceMode::FromDhcp,
+                domain,
+            }) => NetworkOptions::construct_fqdn(
+                &run_env.network,
+                setup_info.config.product.default_hostname(),
+                domain.as_deref(),
+            )
+            .to_string(),
+        };
+
         Ok(Self {
             schema: PostHookInfoSchema::default(),
             debian_version: read_file("/etc/debian_version")?,
@@ -262,7 +278,7 @@ impl PostHookInfo {
             cpu_info: Self::gather_cpu_info(&run_env)?,
             dmi: SystemDMI::get()?,
             filesystem: answer.disks.fs_type,
-            fqdn: answer.global.fqdn.to_string(),
+            fqdn,
             machine_id: read_file("/etc/machine-id")?,
             disks: Self::gather_disks(&config, &run_env, &udev)?,
             network_interfaces: Self::gather_nic(&config, &run_env, &udev)?,

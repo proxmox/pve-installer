@@ -1,0 +1,3 @@
+{
+    "error": "`global.fqdn.source` set to \"from-dhcp\", but DHCP server did not provide a hostname!"
+}

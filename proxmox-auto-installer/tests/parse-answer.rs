@@ -116,12 +116,16 @@ mod tests {
 
         declare_tests!(
             run_named_test,
+            // Keep below entries alphabetically sorted
             btrfs,
             btrfs_raid_level_uppercase,
             disk_match,
             disk_match_all,
             disk_match_any,
             first_boot,
+            fqdn_from_dhcp,
+            fqdn_from_dhcp_no_dhcp_domain_with_default_domain,
+            full_fqdn_from_dhcp_with_default_domain,
             hashed_root_password,
             minimal,
             nic_matching,
@@ -136,7 +140,11 @@ mod tests {
 
         declare_tests!(
             run_named_fail_parse_test,
+            // Keep below entries alphabetically sorted
             both_password_and_hashed_set,
+            fqdn_from_dhcp_no_default_domain,
+            fqdn_hostname_only,
+            no_fqdn_from_dhcp,
             no_root_password_set,
             short_password
         );

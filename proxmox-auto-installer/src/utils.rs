@@ -5,7 +5,9 @@ use log::info;
 use std::{collections::BTreeMap, process::Command};
 
 use crate::{
-    answer::{self, Answer, FirstBootHookSourceMode},
+    answer::{
+        self, Answer, FirstBootHookSourceMode, FqdnConfig, FqdnExtendedConfig, FqdnSourceMode,
+    },
     udevinfo::UdevInfo,
 };
 use proxmox_installer_common::{
@@ -24,12 +26,37 @@ fn get_network_settings(
     runtime_info: &RuntimeInfo,
     setup_info: &SetupInfo,
 ) -> Result<NetworkOptions> {
-    let mut network_options = NetworkOptions::defaults_from(setup_info, &runtime_info.network, None);
+    info!("Setting up network configuration");
 
-    info!("Setting network configuration");
+    let mut network_options = match &answer.global.fqdn {
+        // If the user set a static FQDN in the answer file, override it
+        FqdnConfig::Simple(name) => {
+            let mut opts = NetworkOptions::defaults_from(setup_info, &runtime_info.network, None);
+            opts.fqdn = name.to_owned();
+            opts
+        }
+        FqdnConfig::Extended(FqdnExtendedConfig {
+            source: FqdnSourceMode::FromDhcp,
+            domain,
+        }) => {
+            // A FQDN from DHCP information and/or defaults is constructed in
+            // `NetworkOptions::defaults_from()` below, just check that the DHCP server actually
+            // provided a hostname.
+            if runtime_info.network.hostname.is_none() {
+                bail!(
+                    "`global.fqdn.source` set to \"from-dhcp\", but DHCP server did not provide a hostname!"
+                );
+            }
 
-    // Always use the FQDN from the answer file
-    network_options.fqdn = answer.global.fqdn.clone();
+            // Either a domain must be received from the DHCP server or it must be set manually
+            // (even just as fallback) in the answer file.
+            if runtime_info.network.dns.domain.is_none() && domain.is_none() {
+                bail!("no domain received from DHCP server and `global.fqdn.domain` is unset!");
+            }
+
+            NetworkOptions::defaults_from(setup_info, &runtime_info.network, domain.as_deref())
+        }
+    };
 
     if let answer::NetworkSettings::Manual(settings) = &answer.network.network_settings {
         network_options.address = settings.cidr.clone();
