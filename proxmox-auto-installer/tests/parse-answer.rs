@@ -47,7 +47,12 @@ fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, RuntimeIn
 
 fn run_named_test(name: &str) {
     let resource_path = get_test_resource_path().unwrap();
-    let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&resource_path);
+    let (setup_info, locales, mut runtime_info, udev_info) = setup_test_basic(&resource_path);
+
+    let test_run_env_path = resource_path.join(format!("parse_answer/{name}.run-env.json"));
+    if test_run_env_path.exists() {
+        runtime_info = read_json(test_run_env_path).unwrap()
+    }
 
     let answer_path = resource_path.join(format!("parse_answer/{name}.toml"));
 
@@ -65,7 +70,12 @@ fn run_named_test(name: &str) {
 
 fn run_named_fail_parse_test(name: &str) {
     let resource_path = get_test_resource_path().unwrap();
-    let (setup_info, locales, runtime_info, udev_info) = setup_test_basic(&resource_path);
+    let (setup_info, locales, mut runtime_info, udev_info) = setup_test_basic(&resource_path);
+
+    let test_run_env_path = resource_path.join(format!("parse_answer_fail/{name}.run-env.json"));
+    if test_run_env_path.exists() {
+        runtime_info = read_json(test_run_env_path).unwrap()
+    }
 
     let answer_path = resource_path.join(format!("parse_answer_fail/{name}.toml"));
 
