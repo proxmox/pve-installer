@@ -424,7 +424,11 @@ pub fn parse_answer(
 
         mngmt_nic: network_settings.ifname,
 
-        hostname: network_settings.fqdn.host().unwrap().to_string(),
+        hostname: network_settings
+            .fqdn
+            .host()
+            .unwrap_or(setup_info.config.product.default_hostname())
+            .to_string(),
         domain: network_settings.fqdn.domain(),
         cidr: network_settings.address,
         gateway: network_settings.gateway,
