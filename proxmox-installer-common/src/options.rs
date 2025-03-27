@@ -384,10 +384,18 @@ pub struct NetworkOptions {
 impl NetworkOptions {
     const DEFAULT_DOMAIN: &'static str = "example.invalid";
 
-    pub fn defaults_from(setup: &SetupInfo, network: &NetworkInfo) -> Self {
+    pub fn defaults_from(
+        setup: &SetupInfo,
+        network: &NetworkInfo,
+        default_domain: Option<&str>,
+    ) -> Self {
         let mut this = Self {
             ifname: String::new(),
-            fqdn: Self::construct_fqdn(network, setup.config.product.default_hostname()),
+            fqdn: Self::construct_fqdn(
+                network,
+                setup.config.product.default_hostname(),
+                default_domain,
+            ),
             // Safety: The provided mask will always be valid.
             address: CidrAddress::new(Ipv4Addr::UNSPECIFIED, 0).unwrap(),
             gateway: Ipv4Addr::UNSPECIFIED.into(),
@@ -430,14 +438,23 @@ impl NetworkOptions {
         this
     }
 
-    fn construct_fqdn(network: &NetworkInfo, default_hostname: &str) -> Fqdn {
+    pub fn construct_fqdn(
+        network: &NetworkInfo,
+        default_hostname: &str,
+        default_domain: Option<&str>,
+    ) -> Fqdn {
         let hostname = network.hostname.as_deref().unwrap_or(default_hostname);
 
-        let domain = network
-            .dns
-            .domain
-            .as_deref()
-            .unwrap_or(Self::DEFAULT_DOMAIN);
+        // First, use the provided default domain if provided. If that is unset,
+        // use the one from the host network configuration, i.e. as and if provided by DHCP.
+        // As last fallback, use [`Self::DEFAULT_DOMAIN`].
+        let domain = default_domain.unwrap_or_else(|| {
+            network
+                .dns
+                .domain
+                .as_deref()
+                .unwrap_or(Self::DEFAULT_DOMAIN)
+        });
 
         Fqdn::from(&format!("{hostname}.{domain}")).unwrap_or_else(|_| {
             // Safety: This will always result in a valid FQDN, as we control & know
@@ -480,10 +497,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::net::{IpAddr, Ipv4Addr};
 
-    #[test]
-    fn network_options_from_setup_network_info() {
-        let setup = SetupInfo::mocked();
-
+    fn mock_setup_network() -> (SetupInfo, NetworkInfo) {
         let mut interfaces = BTreeMap::new();
         interfaces.insert(
             "eth0".to_owned(),
@@ -498,7 +512,7 @@ mod tests {
             },
         );
 
-        let mut info = NetworkInfo {
+        let info = NetworkInfo {
             dns: Dns {
                 domain: Some("bar.com".to_owned()),
                 dns: Vec::new(),
@@ -514,8 +528,15 @@ mod tests {
             hostname: Some("foo".to_owned()),
         };
 
+        (SetupInfo::mocked(), info)
+    }
+
+    #[test]
+    fn network_options_from_setup_network_info() {
+        let (setup, mut info) = mock_setup_network();
+
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info),
+            NetworkOptions::defaults_from(&setup, &info, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
@@ -527,7 +548,7 @@ mod tests {
 
         info.hostname = None;
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info),
+            NetworkOptions::defaults_from(&setup, &info, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.bar.com").unwrap(),
@@ -539,7 +560,7 @@ mod tests {
 
         info.dns.domain = None;
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info),
+            NetworkOptions::defaults_from(&setup, &info, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
@@ -551,10 +572,50 @@ mod tests {
 
         info.hostname = Some("foo".to_owned());
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info),
+            NetworkOptions::defaults_from(&setup, &info, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.example.invalid").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+    }
+
+    #[test]
+    fn network_options_correctly_handles_user_supplied_default_domain() {
+        let (setup, mut info) = mock_setup_network();
+
+        pretty_assertions::assert_eq!(
+            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.bar.com").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+
+        info.dns.domain = None;
+        pretty_assertions::assert_eq!(
+            NetworkOptions::defaults_from(&setup, &info, Some("custom.local")),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.custom.local").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            }
+        );
+
+        info.dns.domain = Some("some.domain.local".to_owned());
+        pretty_assertions::assert_eq!(
+            NetworkOptions::defaults_from(&setup, &info, Some("custom.local")),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.custom.local").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::UNSPECIFIED.into(),

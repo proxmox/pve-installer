@@ -24,7 +24,7 @@ fn get_network_settings(
     runtime_info: &RuntimeInfo,
     setup_info: &SetupInfo,
 ) -> Result<NetworkOptions> {
-    let mut network_options = NetworkOptions::defaults_from(setup_info, &runtime_info.network);
+    let mut network_options = NetworkOptions::defaults_from(setup_info, &runtime_info.network, None);
 
     info!("Setting network configuration");
 

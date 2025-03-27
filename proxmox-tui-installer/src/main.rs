@@ -169,7 +169,7 @@ fn main() {
             bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: Default::default(),
-            network: NetworkOptions::defaults_from(&setup_info, &runtime_info.network),
+            network: NetworkOptions::defaults_from(&setup_info, &runtime_info.network, None),
             autoreboot: true,
         },
         setup_info,
