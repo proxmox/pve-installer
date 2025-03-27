@@ -2,7 +2,6 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use proxmox_auto_installer::answer;
 use proxmox_auto_installer::answer::Answer;
 use proxmox_auto_installer::udevinfo::UdevInfo;
 use proxmox_auto_installer::utils::parse_answer;
@@ -19,11 +18,8 @@ fn get_test_resource_path() -> Result<PathBuf, String> {
 
 fn get_answer(path: impl AsRef<Path>) -> Result<Answer, String> {
     let answer_raw = fs::read_to_string(path).unwrap();
-    let answer: answer::Answer = toml::from_str(&answer_raw)
-        .map_err(|err| format!("error parsing answer.toml: {err}"))
-        .unwrap();
-
-    Ok(answer)
+    toml::from_str(&answer_raw)
+        .map_err(|err| format!("error parsing answer.toml: {}", err.message()))
 }
 
 fn setup_test_basic(path: impl AsRef<Path>) -> (SetupInfo, LocaleInfo, RuntimeInfo, UdevInfo) {
@@ -79,13 +75,20 @@ fn run_named_fail_parse_test(name: &str) {
 
     let answer_path = resource_path.join(format!("parse_answer_fail/{name}.toml"));
 
-    let answer = get_answer(&answer_path).unwrap();
-    let config = parse_answer(&answer, &udev_info, &runtime_info, &locales, &setup_info);
-
     let err_json: Value = {
         let path = resource_path.join(format!("parse_answer_fail/{name}.json"));
         read_json(path).unwrap()
     };
+
+    let answer = match get_answer(&answer_path) {
+        Ok(answer) => answer,
+        Err(err) => {
+            assert_eq!(err, err_json.get("parse-error").unwrap().as_str().unwrap());
+            return;
+        }
+    };
+
+    let config = parse_answer(&answer, &udev_info, &runtime_info, &locales, &setup_info);
 
     assert!(config.is_err());
     assert_eq!(
