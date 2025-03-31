@@ -21,7 +21,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow, bail};
 use proxmox_auto_installer::{
-    answer::{Answer, PostNotificationHookInfo},
+    answer::{Answer, PostNotificationHookInfo, RebootMode},
     udevinfo::{UdevInfo, UdevProperties},
 };
 use proxmox_installer_common::{
@@ -144,7 +144,7 @@ struct PostHookInfoSchema {
 }
 
 impl PostHookInfoSchema {
-    const SCHEMA_VERSION: &str = "1.0";
+    const SCHEMA_VERSION: &str = "1.1";
 }
 
 impl Default for PostHookInfoSchema {
@@ -193,6 +193,8 @@ struct PostHookInfo {
     network_interfaces: Vec<NetworkInterfaceInfo>,
     /// Public parts of SSH host keys of the installed system
     ssh_public_host_keys: SshPublicHostKeys,
+    /// Action to will be performed, i.e. either reboot or power off the machine.
+    reboot_mode: RebootMode,
 }
 
 /// Defines the size of a gibibyte in bytes.
@@ -269,6 +271,7 @@ impl PostHookInfo {
                 ed25519: read_file("/etc/ssh/ssh_host_ed25519_key.pub")?,
                 rsa: read_file("/etc/ssh/ssh_host_rsa_key.pub")?,
             },
+            reboot_mode: answer.global.reboot_mode,
         })
     }
 

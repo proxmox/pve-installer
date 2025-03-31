@@ -62,7 +62,7 @@ pub struct Global {
     pub root_ssh_keys: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Debug, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Deserialize, Serialize, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub enum RebootMode {
     #[default]
