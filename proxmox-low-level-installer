@@ -74,9 +74,10 @@ sub read_and_merge_config {
 
 sub send_reboot_ui_message {
     if (Proxmox::Install::Config::get_autoreboot()) {
+	my $action = -f '/run/proxmox-poweroff-after-install' ? 'powering off' : 'rebooting';
 	my $secs = 5;
 	while ($secs > 0) {
-	    Proxmox::UI::finished(1, "Installation finished - auto-rebooting in $secs seconds ..");
+	    Proxmox::UI::finished(1, "Installation finished - auto $action in $secs seconds ..");
 	    sleep 1;
 	    $secs -= 1;
 	}

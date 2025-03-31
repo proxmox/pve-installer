@@ -17,7 +17,7 @@ use proxmox_installer_common::{
 };
 
 use proxmox_auto_installer::{
-    answer::{Answer, FirstBootHookInfo, FirstBootHookSourceMode},
+    answer::{Answer, FirstBootHookInfo, FirstBootHookSourceMode, RebootMode},
     log::AutoInstLogger,
     udevinfo::UdevInfo,
     utils::parse_answer,
@@ -124,6 +124,16 @@ fn main() -> ExitCode {
         if let Err(err) = File::create("/run/proxmox-reboot-on-error") {
             error!("failed to create reboot-on-error flag-file: {err}");
         }
+    }
+
+    if answer.global.reboot_mode == RebootMode::PowerOff {
+        if let Err(err) = File::create("/run/proxmox-poweroff-after-install") {
+            error!("failed to create poweroff-after-install flag-file: {err}");
+        } else {
+            info!("Powering off system after successful installation");
+        }
+    } else {
+        info!("Rebooting system after successful installation");
     }
 
     match run_installation(&answer, &locales, &runtime_info, &udevadm_info, &setup_info) {

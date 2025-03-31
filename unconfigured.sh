@@ -1,5 +1,7 @@
 #!/bin/bash
 
+reboot_action="reboot"
+
 trap "err_reboot" ERR
 
 # NOTE: we nowadays get exec'd by the initrd's PID 1, so we're the new PID 1
@@ -52,9 +54,17 @@ eject_and_reboot() {
 
     umount -l -n /dev
 
-    echo "rebooting - please remove the ISO boot media"
-    sleep 3
-    reboot -nf
+    # at this stage, all disks are sync'd & unmounted, so `-n/--no-sync` is safe to use here
+    if [ "$reboot_action" = "poweroff" ]; then
+	echo "powering off - please remove the ISO boot media"
+	sleep 3
+	poweroff -nf
+    else
+	echo "rebooting - please remove the ISO boot media"
+	sleep 3
+	reboot -nf
+    fi
+
     sleep 5
     echo "trigger reset system request"
     # we do not expect the reboot above to fail, so rather to avoid kpanic when pid 1 exits
@@ -103,9 +113,12 @@ real_reboot() {
     exit 0 # shouldn't be reached, kernel will panic in that case
 }
 
-# reachable through the ERR trap
 err_reboot() {
     printf "\nInstallation aborted - unable to continue (type exit or CTRL-D to reboot)\n"
+
+    # in case of error, always default to rebooting
+    reboot_action="reboot"
+
     debugsh || true
     real_reboot
 }
@@ -274,6 +287,10 @@ elif [ $start_auto_installer -ne 0 ]; then
             err_reboot
         fi
     fi
+
+    if [ -f /run/proxmox-poweroff-after-install ]; then
+	reboot_action="poweroff"
+    fi
 else
     echo "Starting the installer GUI - see tty2 (CTRL+ALT+F2) for any errors..."
     xinit -- -dpi "$DPI" -s 0 >/dev/tty2 2>&1
@@ -287,7 +304,11 @@ if [ $proxdebug -ne 0 ]; then
     debugsh || true
 fi
 
-echo "Installation done, rebooting... "
+if [ "$reboot_action" = "poweroff" ]; then
+    echo 'Installation done, powering off...'
+else
+    echo 'Installation done, rebooting...'
+fi
 
 killall5 -15
 

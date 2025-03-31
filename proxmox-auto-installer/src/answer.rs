@@ -56,8 +56,18 @@ pub struct Global {
     pub root_password_hashed: Option<String>,
     #[serde(alias = "reboot_on_error", default)]
     pub reboot_on_error: bool,
+    #[serde(alias = "reboot_mode", default)]
+    pub reboot_mode: RebootMode,
     #[serde(alias = "root_ssh_keys", default)]
     pub root_ssh_keys: Vec<String>,
+}
+
+#[derive(Clone, Deserialize, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub enum RebootMode {
+    #[default]
+    Reboot,
+    PowerOff,
 }
 
 #[derive(Clone, Deserialize, Debug)]
