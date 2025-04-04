@@ -1358,6 +1358,7 @@ sub create_hdoption_view {
 	    $options_stack->set_visible_child_name("raiddisk");
 	} else {
 	    $target_hd_label->set_text("Target Harddisk");
+	    $options_stack->set_visible_child_name("hdsize");
 	}
 
 	if ($raid) {
