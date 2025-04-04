@@ -626,26 +626,27 @@ impl ViewWrapper for BtrfsBootdiskOptionsView {
 
 struct ZfsBootdiskOptionsView {
     view: MultiDiskOptionsView<FormView>,
+    zfs_arc_max_default: usize,
 }
 
 impl ZfsBootdiskOptionsView {
     // TODO: Re-apply previous disk selection from `options` correctly
     fn new(runinfo: &RuntimeInfo, options: &ZfsBootdiskOptions) -> Self {
+        let zfs_arc_max_default = runinfo.total_memory.div_ceil(2);
+
         let arc_max_view = {
             // Always leave a GiB of headroom for the OS.
             let view =
                 IntegerEditView::new_with_suffix("MiB").max_value(runinfo.total_memory - 1024);
 
-            // If the runtime environment provides a non-zero value, that is
-            // also not the built-in ZFS default of half the system memory, use
-            // that as default.
-            // Otherwise, just place the ZFS default into the placeholder.
-            if runinfo.default_zfs_arc_max > 0
-                && runinfo.default_zfs_arc_max != runinfo.total_memory / 2
-            {
+            // If the runtime environment provides a value that is not the (ZFS) default of
+            // half the system memory, use that as default.
+            // Otherwise, just place the (ZFS) default of 50% of available system memory into the
+            // placeholder.
+            if runinfo.default_zfs_arc_max != zfs_arc_max_default {
                 view.content(options.arc_max)
             } else {
-                view.placeholder(runinfo.total_memory / 2)
+                view.placeholder(zfs_arc_max_default)
             }
         };
 
@@ -687,7 +688,10 @@ impl ZfsBootdiskOptionsView {
                 "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
             ).center());
 
-        Self { view }
+        Self {
+            view,
+            zfs_arc_max_default,
+        }
     }
 
     fn new_with_defaults(runinfo: &RuntimeInfo) -> Self {
@@ -706,13 +710,15 @@ impl ZfsBootdiskOptionsView {
 
         // If a value is set, return that and clamp it to at least [`ZFS_ARC_MIN_SIZE_MIB`].
         //
-        // Otherwise, if no value was set or an error occurred return `0`. The former simply means
-        // that the placeholder value is still there.
+        // Otherwise, if no value was set or an error occurred return the default value. The former
+        // simply means that the placeholder value is still there.
         let arc_max = view
             .get_child::<IntegerEditView>(4)?
             .get_content_maybe()
-            .map_or(Ok(0), |v| v.map(|v| v.max(ZFS_ARC_MIN_SIZE_MIB)))
-            .unwrap_or(0);
+            .map_or(Ok(self.zfs_arc_max_default), |v| {
+                v.map(|v| v.max(ZFS_ARC_MIN_SIZE_MIB))
+            })
+            .unwrap_or(self.zfs_arc_max_default);
 
         Some((
             disks,
