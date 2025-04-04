@@ -21,8 +21,10 @@ sub mock_product {
     );
 }
 
-my %default_tests = (
-    16 => 64, # at least 64 MiB
+use constant ZFS_ARC_MIN_MIB => 64;
+
+my %default_tests_pve = (
+    16 => ZFS_ARC_MIN_MIB, # at least 64 MiB
     1024 => 102,
     4 * 1024 => 410,
     8 * 1024 => 819,
@@ -31,26 +33,36 @@ my %default_tests = (
     1024 * 1024 => 16384, # maximum of 16 GiB
 );
 
-while (my ($total_mem, $expected) = each %default_tests) {
+my %default_tests_others = (
+    16 => ZFS_ARC_MIN_MIB, # at least 64 MiB
+    1024 => 102,
+    4 * 1024 => 2048,
+    8 * 1024 => 4096,
+    150 * 1024 => 76800,
+    160 * 1024 => 81920,
+    1024 * 1024 => 524288,
+);
+
+mock_product('pve');
+while (my ($total_mem, $expected) = each %default_tests_pve) {
     $proxmox_install_runenv->redefine(
 	query_total_memory => sub { return $total_mem; },
     );
 
-    mock_product('pve');
     is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $expected,
-	"$expected MiB should be zfs_arc_max for PVE with $total_mem MiB system memory");
+	"zfs_arc_max should default to $expected for pve with $total_mem MiB system memory");
+}
 
-    mock_product('pbs');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 2048 ? $expected : 0,
-	"zfs_arc_max should default to `0` for PBS with $total_mem MiB system memory");
+while (my ($total_mem, $expected) = each %default_tests_others) {
+    $proxmox_install_runenv->redefine(
+	query_total_memory => sub { return $total_mem; },
+    );
 
-    mock_product('pmg');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 4096 ? $expected : 0,
-	"zfs_arc_max should default to `0` for PMG with $total_mem MiB system memory");
-
-    mock_product('pdm');
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $total_mem < 2048 ? $expected : 0,
-	"zfs_arc_max should default to `0` for PDM with $total_mem MiB system memory");
+    foreach my $product ('pbs', 'pmg', 'pdm') {
+	mock_product($product);
+	is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $expected,
+	    "zfs_arc_max should default to $expected for $product with $total_mem MiB system memory");
+    }
 }
 
 my @clamp_tests = (
