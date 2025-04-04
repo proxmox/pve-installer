@@ -340,9 +340,7 @@ my sub zfs_setup_module_conf {
     my $arc_max_mib = Proxmox::Install::Config::get_zfs_opt('arc_max');
     my $arc_max = Proxmox::Install::RunEnv::clamp_zfs_arc_max($arc_max_mib) * 1024 * 1024;
 
-    if ($arc_max > 0) {
-	file_write_all("$targetdir/etc/modprobe.d/zfs.conf", "options zfs zfs_arc_max=$arc_max\n")
-    }
+    file_write_all("$targetdir/etc/modprobe.d/zfs.conf", "options zfs zfs_arc_max=$arc_max\n");
 }
 
 sub get_btrfs_raid_setup {
@@ -1329,9 +1327,12 @@ _EOD
 	    file_write_all("$targetdir/etc/default/grub.d/zfs.cfg", $zfs_snippet);
 
 	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs $target_cmdline\n");
-
-	    zfs_setup_module_conf($targetdir);
 	}
+
+	# Always write zfs module parameter - even if the user did not select ZFS-on-root.
+	# It still makes sense to provide a sensible default for zfs_arc_max, in case a
+	# separate zfs pool is created afterwards.
+	zfs_setup_module_conf($targetdir);
 
 	diversion_remove($targetdir, "/usr/sbin/update-grub");
 	diversion_remove($targetdir, "/usr/sbin/update-initramfs");
