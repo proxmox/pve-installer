@@ -1,3 +1,32 @@
+proxmox-installer (8.4.3) bookworm; urgency=medium
+
+  * grub: set debconf value to indicate --removable install to ensure all GRUB
+    components in /boot will be kept in sync.
+
+  * gtk, tui: leave 1 GiB headroom for OS in pre-filled ZFS ARC max size value
+    in edit view.
+
+  * gui: always set visible-child-name on disk dialog to avoid visual glitch
+    on btrfs RAID edit.
+
+  * fix #5880: auto-installer add answer-file option to power off the machine
+    instead of reboot.
+
+  * post-installation webhook: include info about the host getting rebooted or
+    powered off after installation.
+
+  * fix #6285: install: always set up zfs modprobe configuration for the case
+    where the user creates/mounts a ZFS pool after the installation while the
+    root file system itself is using a other file system.
+
+  * fix #5811: auto: add option to retrieve FQDN from DHCP configuration.
+    Adds a new option to the answer file for specifying to use the
+    DHCP-provided hostname and domain. For the domain, an additional
+    fallback/default can be specified, in case the DHCP server only provides
+    hostnames. The hostname is always required in this mode.
+
+ -- Proxmox Support Team <support@proxmox.com>  Fri, 04 Apr 2025 18:29:53 +0200
+
 proxmox-installer (8.4.2) bookworm; urgency=medium
 
   * always leave 1 GiB for system when clamping non-default ZFS ARC size
