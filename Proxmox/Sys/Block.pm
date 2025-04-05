@@ -171,6 +171,8 @@ sub get_partition_dev {
 	return "${dev}$partnum";
     } elsif ($dev =~ m|^/dev/nvme\d+n\d+$|) {
 	return "${dev}p$partnum";
+    } elsif ($dev =~ m|^/dev/mmcblk\d+$|) {
+	return "${dev}p$partnum";
     } else {
 	die "unable to get device for partition $partnum on device $dev\n";
     }
