@@ -1301,6 +1301,10 @@ _EOD
 	    # save installer settings
 	    my $ucc = uc ($country);
 	    debconfig_set($targetdir, "pve-manager pve-manager/country string $ucc\n");
+
+	    # do run a potentially unconfigured/unisolated network accessible routing daemon
+	    unlink "$targetdir/etc/systemd/system/multi-user.target.wants/frr.service"
+		or $!{ENOENT} or warn "failed to disable frr.service - $!\n";
 	}
 
 	my $ask_for_patience = "";
