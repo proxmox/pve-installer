@@ -389,6 +389,8 @@ impl NetworkOptions {
         network: &NetworkInfo,
         default_domain: Option<&str>,
     ) -> Self {
+        // Sets up sensible defaults as much as possible, such that even in the
+        // worse case nothing breaks down *completely*.
         let mut this = Self {
             ifname: String::new(),
             fqdn: Self::construct_fqdn(
@@ -396,10 +398,11 @@ impl NetworkOptions {
                 setup.config.product.default_hostname(),
                 default_domain,
             ),
-            // Safety: The provided mask will always be valid.
-            address: CidrAddress::new(Ipv4Addr::UNSPECIFIED, 0).unwrap(),
-            gateway: Ipv4Addr::UNSPECIFIED.into(),
-            dns_server: Ipv4Addr::UNSPECIFIED.into(),
+            // Safety: The provided IP address/mask is always valid.
+            // These are the same as used in the GTK-based installer.
+            address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
+            gateway: Ipv4Addr::new(192, 168, 100, 1).into(),
+            dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
         };
 
         if let Some(ip) = network.dns.dns.first() {
@@ -432,6 +435,16 @@ impl NetworkOptions {
                         }
                     }
                 }
+            }
+        }
+
+        // In case no there are no routes defined at all (e.g. no DHCP lease),
+        // try to set the interface name to *some* valid values. At least one
+        // NIC should always be present here, as the installation will abort
+        // earlier in that case, so use the first one enumerated.
+        if this.ifname.is_empty() {
+            if let Some(iface) = network.interfaces.values().min_by_key(|v| v.index) {
+                this.ifname.clone_from(&iface.name);
             }
         }
 
@@ -542,7 +555,7 @@ mod tests {
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
 
@@ -554,7 +567,7 @@ mod tests {
                 fqdn: Fqdn::from("pve.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
 
@@ -566,7 +579,7 @@ mod tests {
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
 
@@ -578,7 +591,7 @@ mod tests {
                 fqdn: Fqdn::from("foo.example.invalid").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
     }
@@ -594,7 +607,7 @@ mod tests {
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
 
@@ -606,7 +619,7 @@ mod tests {
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
 
@@ -618,7 +631,45 @@ mod tests {
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
-                dns_server: Ipv4Addr::UNSPECIFIED.into(),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+            }
+        );
+    }
+
+    #[test]
+    fn network_options_default_addresses_are_sane() {
+        let mut interfaces = BTreeMap::new();
+        interfaces.insert(
+            "eth0".to_owned(),
+            Interface {
+                name: "eth0".to_owned(),
+                index: 0,
+                state: InterfaceState::Up,
+                mac: "01:23:45:67:89:ab".to_owned(),
+                addresses: None,
+            },
+        );
+
+        let info = NetworkInfo {
+            dns: Dns {
+                domain: None,
+                dns: vec![],
+            },
+            routes: None,
+            interfaces,
+            hostname: None,
+        };
+
+        let setup = SetupInfo::mocked();
+
+        pretty_assertions::assert_eq!(
+            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("pve.example.invalid").unwrap(),
+                address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
+                gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 100, 1)),
+                dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             }
         );
     }
