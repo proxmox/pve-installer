@@ -389,7 +389,7 @@ sub create_ipconf_view {
 	    if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
     };
 
-    my ($initial_active_device_pos, $initial_addr, $initial_mask) = (-1, undef, undef);
+    my ($initial_active_device_pos, $initial_addr, $initial_mask) = (0, undef, undef);
 
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
@@ -402,7 +402,8 @@ sub create_ipconf_view {
 	);
 	$device_active_map->{$i} = $index;
 	$device_active_reverse_map->{$iface->{name}} = $i;
-	if ($index == $ipconf->{default}) {
+
+	if (defined($ipconf->{default}) && $index == $ipconf->{default}) {
 	    $initial_active_device_pos = $i;
 	    $initial_addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
 	    $initial_mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
@@ -412,7 +413,7 @@ sub create_ipconf_view {
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
 	$initial_active_device_pos = $device_active_reverse_map->{$nic};
-    } elsif ($initial_active_device_pos >= 0) {
+    } else {
 	my $iface_id = $device_active_map->{$initial_active_device_pos};
 	my $iface = $ipconf->{ifaces}->{$iface_id};
 	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
