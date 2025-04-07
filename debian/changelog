@@ -1,3 +1,17 @@
+proxmox-installer (8.4.4) bookworm; urgency=medium
+
+  * installation: disable frr.service unit by default, these should always be
+    manually enabled after ensuring its correctly isolated and configured.
+
+  * btrfs: use proxmox-boot-tool to sync ESPs for RAID installs to keep them
+    in sync, just like we do for ZFS.
+
+  * gtk gui: fall back to first found NIC if no default could be determined
+
+  * use more sensible fallback values for network options.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 07 Apr 2025 18:03:11 +0200
+
 proxmox-installer (8.4.3) bookworm; urgency=medium
 
   * grub: set debconf value to indicate --removable install to ensure all GRUB
