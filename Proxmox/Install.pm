@@ -1144,7 +1144,7 @@ sub extract_data {
 	# Note: this is required by current grub, but really dangerous, because
 	# vfat does not have journaling, so it triggers manual fsck after each crash
 	# so we only mount /boot/efi if really required (efi systems).
-	if ($run_env->{boot_type} eq 'efi' && !$use_zfs) {
+	if ($run_env->{boot_type} eq 'efi' && !($use_zfs || $use_btrfs)) {
 	    if (scalar(@$bootdevinfo)) {
 		my $di = @$bootdevinfo[0]; # simply use first disk
 
@@ -1368,7 +1368,7 @@ _EOD
 
 		foreach my $di (@$bootdevinfo) {
 		    my $dev = $di->{devname};
-		    if ($use_zfs) {
+		    if ($use_zfs || $use_btrfs) {
 			prepare_proxmox_boot_esp($di->{esp}, $targetdir, $run_env->{secure_boot});
 		    } else {
 			if (!$native_4k_disk_bootable) {
