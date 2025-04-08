@@ -88,7 +88,7 @@ my sub parse_zoneinfo {
 # country codes from:
 my $country_codes_file = "/usr/share/iso-codes/json/iso_3166-1.json";
 
-my $iso_3166_codes = from_json(PVE::Tools::file_get_contents($country_codes_file, 64 * 1024));
+my $iso_3166_codes = from_json(PVE::Tools::file_get_contents($country_codes_file, 64 * 1024), { utf8 => 1 });
 
 my $country_codes = { map { lc($_->{'alpha_2'}) => $_->{'common_name'} // $_->{'name'} } @{$iso_3166_codes->{'3166-1'}} };
 
