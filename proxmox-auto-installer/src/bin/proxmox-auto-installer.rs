@@ -1,4 +1,4 @@
-use anyhow::{Result, bail, format_err};
+use anyhow::{Context, Result, bail, format_err};
 use log::{LevelFilter, error, info};
 use std::{
     env,
@@ -47,7 +47,9 @@ fn setup_first_boot_executable(first_boot: &FirstBootHookInfo) -> Result<()> {
             }
         }
         FirstBootHookSourceMode::FromIso => {
-            Some(fs::read(format!("/cdrom/{FIRST_BOOT_EXEC_NAME}"))?)
+            let content = fs::read(format!("/cdrom/{FIRST_BOOT_EXEC_NAME}"))
+                .context("failed loading first-boot executable from ISO (was ISO prepared with `--on-first-boot` specified?)")?;
+            Some(content)
         }
     };
 
@@ -115,7 +117,7 @@ fn main() -> ExitCode {
     let (answer, udevadm_info) = match auto_installer_setup(in_test_mode) {
         Ok(result) => result,
         Err(err) => {
-            error!("Autoinstaller setup error: {err}");
+            error!("Autoinstaller setup error: {err:?}");
             return ExitCode::FAILURE;
         }
     };
