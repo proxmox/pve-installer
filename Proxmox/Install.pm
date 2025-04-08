@@ -751,6 +751,7 @@ sub extract_data {
 
     my ($swapfile, $rootdev, $datadev);
     my ($use_zfs, $use_btrfs) = (0, 0);
+    my $btrfs_uuid;
 
     my $filesys = Proxmox::Install::Config::get_filesys();
     my $hdsize = Proxmox::Install::Config::get_hdsize();
@@ -1125,6 +1126,9 @@ sub extract_data {
 
 	    die "unable to detect FS UUID" if !defined($fsuuid);
 
+	    # needed for /etc/kernel/cmdline when making the system bootable.
+	    $btrfs_uuid = $fsuuid;
+
 	    my $btrfs_opts = Proxmox::Install::Config::get_btrfs_opt();
 
 	    my $mountopts = 'defaults';
@@ -1331,6 +1335,11 @@ _EOD
 	    file_write_all("$targetdir/etc/default/grub.d/zfs.cfg", $zfs_snippet);
 
 	    file_write_all("$targetdir/etc/kernel/cmdline", "root=ZFS=$zfs_pool_name/ROOT/$zfs_root_volume_name boot=zfs $target_cmdline\n");
+	}
+
+	if ($use_btrfs) {
+	    # add root= option to /etc/kernel/cmdline as well (for systemd-boot+btrfs)
+	    file_write_all("$targetdir/etc/kernel/cmdline", "root=UUID=$btrfs_uuid $target_cmdline\n");
 	}
 
 	# Always write zfs module parameter - even if the user did not select ZFS-on-root.
