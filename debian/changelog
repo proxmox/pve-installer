@@ -1,3 +1,12 @@
+proxmox-installer (8.4.5) bookworm; urgency=medium
+
+  * locale: load iso 3166 country codes file as UTF8
+
+  * auto installer: add some error context when failing to load the first-boot
+    executable to point to a somewhat common mistake.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 08 Apr 2025 15:02:38 +0200
+
 proxmox-installer (8.4.4) bookworm; urgency=medium
 
   * installation: disable frr.service unit by default, these should always be
