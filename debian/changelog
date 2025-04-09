@@ -1,3 +1,11 @@
+proxmox-installer (8.4.6) bookworm; urgency=medium
+
+  * btrfs: pass UUID of root file system to sd-boot via kernel cmdline fixing
+    a very recent regression for booting a btrfs based system with EFI and
+    without secure boot, as that's where we currently use systemd-boot.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 09 Apr 2025 08:29:47 +0200
+
 proxmox-installer (8.4.5) bookworm; urgency=medium
 
   * locale: load iso 3166 country codes file as UTF8
