@@ -1,25 +1,31 @@
-use anyhow::{Result, bail, format_err};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+//! This tool can be used to prepare a Proxmox installation ISO for automated installations.
+//! Additional uses are to validate the format of an answer file or to test match filters and print
+//! information on the properties to match against for the current hardware.
+
+#![forbid(unsafe_code)]
+
+use anyhow::{Context, Result, bail, format_err};
 use glob::Pattern;
-use serde::Serialize;
 use std::{
     collections::BTreeMap,
     fmt, fs,
     io::{self, Read},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{self, Command, Stdio},
+    str::FromStr,
 };
 
 use proxmox_auto_installer::{
     answer::{Answer, FilterMatch},
     sysinfo::SysInfo,
     utils::{
-        AutoInstSettings, FetchAnswerFrom, HttpOptions, get_matched_udev_indexes, get_nic_list,
-        get_single_udev_index, verify_email_and_root_password_settings, verify_first_boot_settings,
+        AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index,
+        verify_email_and_root_password_settings, verify_first_boot_settings,
         verify_locale_settings,
     },
 };
-use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME};
+use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, cli};
 
 static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 
@@ -27,225 +33,439 @@ static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 /// [LocaleInfo](`proxmox_installer_common::setup::LocaleInfo`) struct.
 const LOCALE_INFO: &str = include_str!("../../locale-info.json");
 
-/// This tool can be used to prepare a Proxmox installation ISO for automated installations.
-/// Additional uses are to validate the format of an answer file or to test match filters and
-/// print information on the properties to match against for the current hardware.
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
+/// Arguments for the `device-info` command.
+struct CommandDeviceInfoArgs {
+    /// Device type for which information should be shown.
+    device_type: AllDeviceTypes,
 }
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    PrepareIso(CommandPrepareISO),
-    ValidateAnswer(CommandValidateAnswer),
-    DeviceMatch(CommandDeviceMatch),
-    DeviceInfo(CommandDeviceInfo),
-    SystemInfo(CommandSystemInfo),
+impl cli::Subcommand for CommandDeviceInfoArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            device_type: args
+                .opt_value_from_str(["-t", "--type"])?
+                .unwrap_or(AllDeviceTypes::All),
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Show device information that can be used for filters.
+
+USAGE:
+  {} device-info [OPTIONS]
+
+OPTIONS:
+  -t, --type <type>  For which device type information should be shown [default: all] [possible values: all, network, disk]
+  -h, --help         Print this help
+  -V, --version      Print version
+    "#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        info(self)
+    }
 }
 
-/// Show device information that can be used for filters
-#[derive(Args, Debug)]
-struct CommandDeviceInfo {
-    /// For which device type information should be shown
-    #[arg(name="type", short, long, value_enum, default_value_t=AllDeviceTypes::All)]
-    device: AllDeviceTypes,
-}
-
-/// Test which devices the given filter matches against
-///
-/// Filters support the following syntax:
-/// - `?`               Match a single character
-/// - `*`               Match any number of characters
-/// - `[a]`, `[0-9]`  Specific character or range of characters
-/// - `[!a]`          Negate a specific character of range
-///
-/// To avoid globbing characters being interpreted by the shell, use single quotes.
-/// Multiple filters can be defined.
-///
-/// Examples:
-/// Match disks against the serial number and device name, both must match:
-///
-/// ```sh
-/// proxmox-auto-install-assistant match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
-/// ```
-#[derive(Args, Debug)]
-#[command(verbatim_doc_comment)]
-struct CommandDeviceMatch {
-    /// Device type to match the filter against
-    r#type: Devicetype,
+/// Arguments for the `device-match` command.
+struct CommandDeviceMatchArgs {
+    /// Device type to match the filter against.
+    device_type: DeviceType,
 
     /// Filter in the format KEY=VALUE where the key is the UDEV key and VALUE the filter string.
     /// Multiple filters are possible, separated by a space.
     filter: Vec<String>,
 
     /// Defines if any filter or all filters must match.
-    #[arg(long, value_enum, default_value_t=FilterMatch::Any)]
     filter_match: FilterMatch,
 }
 
-/// Validate if an answer file is formatted correctly.
-#[derive(Args, Debug)]
-struct CommandValidateAnswer {
-    /// Path to the answer file
+impl cli::Subcommand for CommandDeviceMatchArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        let filter_match = args
+            .opt_value_from_str("--filter-match")?
+            .unwrap_or(FilterMatch::Any);
+
+        let device_type = args.free_from_str().context("parsing device type")?;
+        let mut filter = vec![];
+        while let Some(s) = args.opt_free_from_str()? {
+            filter.push(s);
+        }
+
+        Ok(Self {
+            device_type,
+            filter,
+            filter_match,
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Test which devices the given filter matches against.
+
+Filters support the following syntax:
+- `?`               Match a single character
+- `*`               Match any number of characters
+- `[a]`, `[0-9]`  Specific character or range of characters
+- `[!a]`          Negate a specific character of range
+
+To avoid globbing characters being interpreted by the shell, use single quotes.
+Multiple filters can be defined.
+
+Examples:
+Match disks against the serial number and device name, both must match:
+
+$ proxmox-auto-install-assistant match --filter-match all disk 'ID_SERIAL_SHORT=*2222*' 'DEVNAME=*nvme*'
+
+USAGE:
+  {} device-match [OPTIONS] <TYPE> [FILTER]...
+
+ARGUMENTS:
+  <TYPE>
+          Device type to match the filter against
+
+          [possible values: network, disk]
+
+  [FILTER]...
+          Filter in the format KEY=VALUE where the key is the UDEV key and VALUE the filter string. Multiple filters are possible, separated by a space.
+
+OPTIONS:
+      --filter-match <FILTER_MATCH>
+          Defines if any filter or all filters must match [default: any] [possible values: any, all]
+
+  -h, --help         Print this help
+  -V, --version      Print version
+    "#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        match_filter(self)
+    }
+}
+
+/// Arguments for the `validate-answer` command.
+struct CommandValidateAnswerArgs {
+    /// Path to the answer file.
     path: PathBuf,
-    #[arg(short, long, default_value_t = false)]
+    /// Whether to also show the full answer as parsed.
     debug: bool,
 }
 
-/// Prepare an ISO for automated installation.
-///
-/// The behavior of how to fetch an answer file must be set with the '--fetch-from' parameter. The
-/// answer file can be:{n}
-/// * integrated into the ISO itself ('iso'){n}
-/// * present on a partition / file-system, matched by its label ('partition'){n}
-/// * requested via an HTTP Post request ('http').
-///
-/// The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present,
-/// it will try to get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record for the
-/// domain 'proxmox-auto-installer.{search domain}'.
-///
-/// The TLS certificate fingerprint can either be defined via the '--cert-fingerprint' argument or
-/// alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located at
-/// 'proxmox-auto-installer-cert-fingerprint.{search domain}'.
-///
-/// The latter options to provide the TLS fingerprint will only be used if the same method was used
-/// to retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if
-/// no one was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via
-/// the DNS TXT record.
-///
-/// If the 'partition' mode is used, the '--partition-label' parameter can be used to set the
-/// partition label the auto-installer should search for. This defaults to 'proxmox-ais'.
-#[derive(Args, Debug)]
-struct CommandPrepareISO {
-    /// Path to the source ISO to prepare
+impl cli::Subcommand for CommandValidateAnswerArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            debug: args.contains(["-d", "--debug"]),
+            // Needs to be last
+            path: args.free_from_str()?,
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Validate if an answer file is formatted correctly.
+
+USAGE:
+  {} validate-answer [OPTIONS] <PATH>
+
+ARGUMENTS:
+  <PATH>  Path to the answer file.
+
+OPTIONS:
+  -d, --debug        Also show the full answer as parsed.
+  -h, --help         Print this help
+  -V, --version      Print version
+    "#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        validate_answer(self)
+    }
+}
+
+/// Arguments for the `prepare-iso` command.
+struct CommandPrepareISOArgs {
+    /// Path to the source ISO to prepare.
     input: PathBuf,
 
     /// Path to store the final ISO to, defaults to an auto-generated file name depending on mode
     /// and the same directory as the source file is located in.
-    #[arg(long)]
     output: Option<PathBuf>,
 
     /// Where the automatic installer should fetch the answer file from.
-    #[arg(long, value_enum)]
     fetch_from: FetchAnswerFrom,
 
     /// Include the specified answer file in the ISO. Requires the '--fetch-from'  parameter
     /// to be set to 'iso'.
-    #[arg(long)]
     answer_file: Option<PathBuf>,
 
-    /// Specify URL for fetching the answer file via HTTP
-    #[arg(long)]
+    /// Specify URL for fetching the answer file via HTTP.
     url: Option<String>,
 
     /// Pin the ISO to the specified SHA256 TLS certificate fingerprint.
-    #[arg(long)]
     cert_fingerprint: Option<String>,
 
     /// Staging directory to use for preparing the new ISO file. Defaults to the directory of the
     /// input ISO file.
-    #[arg(long)]
     tmp: Option<String>,
 
     /// Can be used in combination with `--fetch-from partition` to set the partition label
     /// the auto-installer will search for.
     // FAT can only handle 11 characters (per specification at least, drivers might allow more),
     // so shorten "Automated Installer Source" to "AIS" to be safe.
-    #[arg(long, default_value_t = { "proxmox-ais".to_owned() } )]
     partition_label: String,
 
     /// Executable file to include, which should be run on the first system boot after the
     /// installation. Can be used for further bootstrapping the new system.
     ///
     /// Must be appropriately enabled in the answer file.
-    #[arg(long)]
     on_first_boot: Option<PathBuf>,
 }
 
-/// Show the system information that can be used to identify a host.
-///
-/// The shown information is sent as POST HTTP request when fetching the answer file for the
-/// automatic installation through HTTP, You can, for example, use this to return a dynamically
-/// assembled answer file.
-#[derive(Args, Debug)]
-struct CommandSystemInfo {}
+impl cli::Subcommand for CommandPrepareISOArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            output: args.opt_value_from_str("--output")?,
+            fetch_from: args.value_from_str("--fetch-from")?,
+            answer_file: args.opt_value_from_str("--answer-file")?,
+            url: args.opt_value_from_str("--url")?,
+            cert_fingerprint: args.opt_value_from_str("--cert-fingerprint")?,
+            tmp: args.opt_value_from_str("--tmp")?,
+            partition_label: args
+                .opt_value_from_str("--partition-label")?
+                .unwrap_or_else(default_partition_label),
+            on_first_boot: args.opt_value_from_str("--on-first-boot")?,
+            // Needs to be last
+            input: args.free_from_str()?,
+        })
+    }
 
-#[derive(Args, Debug)]
-struct GlobalOpts {
-    /// Output format
-    #[arg(long, short, value_enum)]
-    format: OutputFormat,
+    fn print_usage() {
+        eprintln!(
+            r#"Prepare an ISO for automated installation.
+
+The behavior of how to fetch an answer file must be set with the '--fetch-from' parameter.
+The answer file can be:
+ * integrated into the ISO itself ('iso')
+ * present on a partition / file-system, matched by its label ('partition')
+ * requested via an HTTP Post request ('http').
+
+The URL for the HTTP mode can be defined for the ISO with the '--url' argument. If not present, it
+will try to get a URL from a DHCP option (250, TXT) or by querying a DNS TXT record for the domain
+'proxmox-auto-installer.{{search domain}}'.
+
+The TLS certificate fingerprint can either be defined via the '--cert-fingerprint' argument or
+alternatively via the custom DHCP option (251, TXT) or in a DNS TXT record located at
+'proxmox-auto-installer-cert-fingerprint.{{search domain}}'.
+
+The latter options to provide the TLS fingerprint will only be used if the same method was used to
+retrieve the URL. For example, the DNS TXT record for the fingerprint will only be used, if no one
+was configured with the '--cert-fingerprint' parameter and if the URL was retrieved via the DNS TXT
+record.
+
+If the 'partition' mode is used, the '--partition-label' parameter can be used to set the partition
+label the auto-installer should search for. This defaults to 'proxmox-ais'.
+
+USAGE:
+  {} prepare-iso [OPTIONS] --fetch-from <FETCH_FROM> <INPUT>
+
+ARGUMENTS:
+  <INPUT>
+          Path to the source ISO to prepare
+
+OPTIONS:
+      --output <OUTPUT>
+          Path to store the final ISO to, defaults to an auto-generated file name depending on mode
+          and the same directory as the source file is located in.
+
+      --fetch-from <FETCH_FROM>
+          Where the automatic installer should fetch the answer file from.
+
+          [possible values: iso, http, partition]
+
+      --answer-file <ANSWER_FILE>
+          Include the specified answer file in the ISO. Requires the '--fetch-from' parameter to
+          be set to 'iso'.
+
+      --url <URL>
+          Specify URL for fetching the answer file via HTTP.
+
+      --cert-fingerprint <CERT_FINGERPRINT>
+          Pin the ISO to the specified SHA256 TLS certificate fingerprint.
+
+      --tmp <TMP>
+          Staging directory to use for preparing the new ISO file. Defaults to the directory of the
+          input ISO file.
+
+      --partition-label <PARTITION_LABEL>
+          Can be used in combination with `--fetch-from partition` to set the partition label the
+          auto-installer will search for.
+
+          [default: proxmox-ais]
+
+      --on-first-boot <ON_FIRST_BOOT>
+          Executable file to include, which should be run on the first system boot after the
+          installation. Can be used for further bootstrapping the new system.
+
+          Must be appropriately enabled in the answer file.
+
+  -h, --help         Print this help
+  -V, --version      Print version
+    "#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        prepare_iso(self)
+    }
 }
 
-#[derive(Clone, Debug, ValueEnum, PartialEq)]
+/// Arguments for the `system-info` command.
+struct CommandSystemInfoArgs;
+
+impl cli::Subcommand for CommandSystemInfoArgs {
+    fn parse(_: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self)
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Show the system information that can be used to identify a host.
+
+The shown information is sent as POST HTTP request when fetching the answer file for the
+automatic installation through HTTP, You can, for example, use this to return a dynamically
+assembled answer file.
+
+USAGE:
+  {} system-info [OPTIONS]
+
+OPTIONS:
+  -h, --help         Print this help
+  -V, --version      Print version
+    "#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        show_system_info(self)
+    }
+}
+
+#[derive(PartialEq)]
 enum AllDeviceTypes {
     All,
     Network,
     Disk,
 }
 
-#[derive(Clone, Debug, ValueEnum)]
-enum Devicetype {
+impl FromStr for AllDeviceTypes {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_ref() {
+            "all" => Ok(AllDeviceTypes::All),
+            "network" => Ok(AllDeviceTypes::Network),
+            "disk" => Ok(AllDeviceTypes::Disk),
+            _ => bail!("unknown device type '{s}'"),
+        }
+    }
+}
+
+enum DeviceType {
     Network,
     Disk,
 }
 
-#[derive(Clone, Debug, ValueEnum)]
-enum OutputFormat {
-    Pretty,
-    Json,
-}
+impl FromStr for DeviceType {
+    type Err = anyhow::Error;
 
-#[derive(Serialize)]
-struct Devs {
-    disks: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    nics: Option<BTreeMap<String, BTreeMap<String, String>>>,
-}
-
-fn main() {
-    let args = Cli::parse();
-    let res = match &args.command {
-        Commands::PrepareIso(args) => prepare_iso(args),
-        Commands::ValidateAnswer(args) => validate_answer(args),
-        Commands::DeviceInfo(args) => info(args),
-        Commands::DeviceMatch(args) => match_filter(args),
-        Commands::SystemInfo(args) => show_system_info(args),
-    };
-    if let Err(err) = res {
-        eprintln!("Error: {err:?}");
-        std::process::exit(1);
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_ref() {
+            "network" => Ok(DeviceType::Network),
+            "disk" => Ok(DeviceType::Disk),
+            _ => bail!("unknown device type '{s}'"),
+        }
     }
 }
 
-fn info(args: &CommandDeviceInfo) -> Result<()> {
-    let mut devs = Devs {
-        disks: None,
-        nics: None,
-    };
+fn main() -> process::ExitCode {
+    cli::run(cli::AppInfo {
+        global_help: &format!(
+            r#"This tool can be used to prepare a Proxmox installation ISO for automated installations.
+Additional uses are to validate the format of an answer file or to test match filters and
+print information on the properties to match against for the current hardware
 
-    if args.device == AllDeviceTypes::Network || args.device == AllDeviceTypes::All {
+USAGE:
+  {} <COMMAND>
+
+COMMANDS:
+  prepare-iso      Prepare an ISO for automated installation
+  validate-answer  Validate if an answer file is formatted correctly
+  device-match     Test which devices the given filter matches against
+  device-info      Show device information that can be used for filters
+  system-info      Show the system information that can be used to identify a host
+
+GLOBAL OPTIONS:
+  -h, --help       Print help
+  -V, --version    Print version
+"#,
+            env!("CARGO_PKG_NAME")
+        ),
+        on_command: |s, args| match s {
+            Some("prepare-iso") => cli::handle_command::<CommandPrepareISOArgs>(args),
+            Some("validate-answer") => cli::handle_command::<CommandValidateAnswerArgs>(args),
+            Some("device-match") => cli::handle_command::<CommandDeviceMatchArgs>(args),
+            Some("device-info") => cli::handle_command::<CommandDeviceInfoArgs>(args),
+            Some("system-info") => cli::handle_command::<CommandSystemInfoArgs>(args),
+            Some(s) => bail!("unknown subcommand '{s}'"),
+            None => bail!("subcommand required"),
+        },
+    })
+}
+
+fn info(args: &CommandDeviceInfoArgs) -> Result<()> {
+    let nics = if matches!(
+        args.device_type,
+        AllDeviceTypes::All | AllDeviceTypes::Network
+    ) {
         match get_nics() {
-            Ok(res) => devs.nics = Some(res),
+            Ok(res) => Some(res),
             Err(err) => bail!("Error getting NIC data: {err}"),
         }
-    }
-    if args.device == AllDeviceTypes::Disk || args.device == AllDeviceTypes::All {
+    } else {
+        None
+    };
+
+    let disks = if matches!(args.device_type, AllDeviceTypes::All | AllDeviceTypes::Disk) {
         match get_disks() {
-            Ok(res) => devs.disks = Some(res),
+            Ok(res) => Some(res),
             Err(err) => bail!("Error getting disk data: {err}"),
         }
-    }
-    println!("{}", serde_json::to_string_pretty(&devs).unwrap());
+    } else {
+        None
+    };
+
+    serde_json::to_writer_pretty(
+        std::io::stdout(),
+        &serde_json::json!({
+            "disks": disks,
+            "nics": nics,
+        }),
+    )?;
     Ok(())
 }
 
-fn match_filter(args: &CommandDeviceMatch) -> Result<()> {
-    let devs: BTreeMap<String, BTreeMap<String, String>> = match args.r#type {
-        Devicetype::Disk => get_disks().unwrap(),
-        Devicetype::Network => get_nics().unwrap(),
+fn match_filter(args: &CommandDeviceMatchArgs) -> Result<()> {
+    let devs: BTreeMap<String, BTreeMap<String, String>> = match args.device_type {
+        DeviceType::Disk => get_disks().unwrap(),
+        DeviceType::Network => get_nics().unwrap(),
     };
     // parse filters
 
@@ -266,21 +486,21 @@ fn match_filter(args: &CommandDeviceMatch) -> Result<()> {
     }
 
     // align return values
-    let result = match args.r#type {
-        Devicetype::Disk => {
+    let result = match args.device_type {
+        DeviceType::Disk => {
             get_matched_udev_indexes(&filters, &devs, args.filter_match == FilterMatch::All)
         }
-        Devicetype::Network => get_single_udev_index(&filters, &devs).map(|r| vec![r]),
+        DeviceType::Network => get_single_udev_index(&filters, &devs).map(|r| vec![r]),
     };
 
     match result {
-        Ok(result) => println!("{}", serde_json::to_string_pretty(&result).unwrap()),
+        Ok(result) => serde_json::to_writer_pretty(std::io::stdout(), &result)?,
         Err(err) => bail!("Error matching filters: {err}"),
     }
     Ok(())
 }
 
-fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
+fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
     let answer = parse_answer(&args.path)?;
     if args.debug {
         println!("Parsed data from answer file:\n{:#?}", answer);
@@ -288,7 +508,7 @@ fn validate_answer(args: &CommandValidateAnswer) -> Result<()> {
     Ok(())
 }
 
-fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
+fn show_system_info(_args: &CommandSystemInfoArgs) -> Result<()> {
     match SysInfo::as_json_pretty() {
         Ok(res) => println!("{res}"),
         Err(err) => eprintln!("Error fetching system info: {err}"),
@@ -296,7 +516,7 @@ fn show_system_info(_args: &CommandSystemInfo) -> Result<()> {
     Ok(())
 }
 
-fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
+fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
     check_prepare_requirements(args)?;
     let uuid = get_iso_uuid(&args.input)?;
 
@@ -393,7 +613,7 @@ fn prepare_iso(args: &CommandPrepareISO) -> Result<()> {
     Ok(())
 }
 
-fn final_iso_location(args: &CommandPrepareISO) -> PathBuf {
+fn final_iso_location(args: &CommandPrepareISOArgs) -> PathBuf {
     if let Some(specified) = args.output.clone() {
         return specified;
     }
@@ -606,11 +826,11 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
     }
 }
 
-fn check_prepare_requirements(args: &CommandPrepareISO) -> Result<()> {
+fn check_prepare_requirements(args: &CommandPrepareISOArgs) -> Result<()> {
     match Path::try_exists(&args.input) {
         Ok(true) => (),
-        Ok(false) => bail!("Source file does not exist."),
-        Err(_) => bail!("Source file does not exist."),
+        Ok(false) => bail!("Source file {:?} does not exist.", args.input),
+        Err(err) => bail!("Failed to stat source file {:?}: {err:#}", args.input),
     }
 
     match Command::new("xorriso")

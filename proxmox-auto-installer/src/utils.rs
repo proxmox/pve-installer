@@ -1,5 +1,4 @@
 use anyhow::{Context, Result, bail};
-use clap::ValueEnum;
 use glob::Pattern;
 use log::info;
 use std::{collections::BTreeMap, process::Command};
@@ -95,13 +94,15 @@ pub fn get_single_udev_index(
     Ok(dev_index.unwrap())
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, ValueEnum, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub enum FetchAnswerFrom {
     Iso,
     Http,
     Partition,
 }
+
+serde_plain::derive_fromstr_from_deserialize!(FetchAnswerFrom);
 
 #[derive(Deserialize, Serialize, Clone, Default, PartialEq, Debug)]
 pub struct HttpOptions {
@@ -121,7 +122,7 @@ pub struct AutoInstSettings {
     pub http: HttpOptions,
 }
 
-fn default_partition_label() -> String {
+pub fn default_partition_label() -> String {
     "proxmox-ais".to_owned()
 }
 

@@ -1,5 +1,4 @@
 use anyhow::{Result, format_err};
-use clap::ValueEnum;
 use proxmox_installer_common::{
     options::{
         BtrfsCompressOption, BtrfsRaidLevel, FsType, ZfsChecksumOption, ZfsCompressOption,
@@ -364,12 +363,15 @@ pub enum DiskSelection {
     Selection(Vec<String>),
     Filter(BTreeMap<String, String>),
 }
-#[derive(Clone, Deserialize, Debug, PartialEq, ValueEnum)]
+
+#[derive(Clone, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 pub enum FilterMatch {
     Any,
     All,
 }
+
+serde_plain::derive_fromstr_from_deserialize!(FilterMatch);
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
