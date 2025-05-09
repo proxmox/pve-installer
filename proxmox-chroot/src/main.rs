@@ -1,13 +1,20 @@
+//! Tool to help prepare a successfully installed target environment for
+//! chroot'ing.
+//!
+//! Can also be used in the rescue environment for mounting an existing system.
+
+#![forbid(unsafe_code)]
+
 use std::{
-    fs, io,
+    env, fs, io,
     path::{self, Path, PathBuf},
-    process::Command,
+    process::{self, Command},
+    str::FromStr,
 };
 
 use anyhow::{Result, bail};
-use clap::{Args, Parser, Subcommand, ValueEnum};
 use proxmox_installer_common::{
-    RUNTIME_DIR,
+    RUNTIME_DIR, cli,
     options::FsType,
     setup::{InstallConfig, SetupInfo},
 };
@@ -18,46 +25,87 @@ static BINDMOUNTS: [&str; 4] = ["dev", "proc", "run", "sys"];
 const TARGET_DIR: &str = "/target";
 const ZPOOL_NAME: &str = "rpool";
 
-/// Helper tool to prepare everything to `chroot` into an installation
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Prepare(CommandPrepare),
-    Cleanup(CommandCleanup),
-}
-
-/// Mount the root file system and bind mounts in preparation to chroot into the installation
-#[derive(Args, Debug)]
-struct CommandPrepare {
+/// Arguments for the `prepare` command.
+struct CommandPrepareArgs {
     /// Filesystem used for the installation. Will try to automatically detect it after a
     /// successful installation.
-    #[arg(short, long, value_enum)]
     filesystem: Option<Filesystems>,
 
-    /// Numerical ID of `rpool` ZFS pool to import. Needed if multiple pools of name `rpool` are present.
-    #[arg(long)]
+    /// Numerical ID of the `rpool` ZFS pool to import. Needed if multiple pools of name `rpool`
+    /// are present.
     rpool_id: Option<u64>,
 
     /// UUID of the BTRFS file system to mount. Needed if multiple BTRFS file systems are present.
-    #[arg(long)]
     btrfs_uuid: Option<String>,
 }
 
-/// Unmount everything. Use once done with chroot.
-#[derive(Args, Debug)]
-struct CommandCleanup {
+impl cli::Subcommand for CommandPrepareArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            filesystem: args.opt_value_from_str(["-f", "--filesystem"])?,
+            rpool_id: args.opt_value_from_fn("--rpool-id", str::parse)?,
+            btrfs_uuid: args.opt_value_from_str("--btrfs-uuid")?,
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Mount the root file system and bind mounts in preparation to chroot into the installation.
+
+USAGE:
+  {} prepare <OPTIONS>
+
+OPTIONS:
+  -f, --filesystem <FILESYSTEM>  Filesystem used for the installation. Will try to automatically detect it after a successful installation. [possible values: zfs, ext4, xfs, btrfs]
+      --rpool-id <RPOOL_ID>      Numerical ID of `rpool` ZFS pool to import. Needed if multiple pools of name `rpool` are present.
+      --btrfs-uuid <BTRFS_UUID>  UUID of the BTRFS file system to mount. Needed if multiple BTRFS file systems are present.
+  -h, --help                       Print this help
+  -V, --version                    Print version
+"#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        prepare(self)
+    }
+}
+
+/// Arguments for the `cleanup` command.
+struct CommandCleanupArgs {
     /// Filesystem used for the installation. Will try to automatically detect it by default.
-    #[arg(short, long, value_enum)]
     filesystem: Option<Filesystems>,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum)]
+impl cli::Subcommand for CommandCleanupArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            filesystem: args.opt_value_from_str(["-f", "--filesystem"])?,
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Unmount everything. Use once done with the chroot.
+
+USAGE:
+  {} cleanup <OPTIONS>
+
+OPTIONS:
+  -f, --filesystem <FILESYSTEM>    Filesystem used for the installation. Will try to automatically detect it after a successful installation. [possible values: zfs, ext4, xfs, btrfs]
+  -h, --help                       Print this help
+  -V, --version                    Print version
+"#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        cleanup(self)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 enum Filesystems {
     Zfs,
     Ext4,
@@ -76,19 +124,48 @@ impl From<FsType> for Filesystems {
     }
 }
 
-fn main() {
-    let args = Cli::parse();
-    let res = match &args.command {
-        Commands::Prepare(args) => prepare(args),
-        Commands::Cleanup(args) => cleanup(args),
-    };
-    if let Err(err) = res {
-        eprintln!("{err:#}");
-        std::process::exit(1);
+impl FromStr for Filesystems {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "ext4" => Ok(Filesystems::Ext4),
+            "xfs" => Ok(Filesystems::Xfs),
+            _ if s.starts_with("zfs") => Ok(Filesystems::Zfs),
+            _ if s.starts_with("btrfs") => Ok(Filesystems::Btrfs),
+            _ => bail!("unknown filesystem"),
+        }
     }
 }
 
-fn prepare(args: &CommandPrepare) -> Result<()> {
+fn main() -> process::ExitCode {
+    cli::run(cli::AppInfo {
+        global_help: &format!(
+            r#"Helper tool to set up a `chroot` into an existing installation.
+
+USAGE:
+  {} <COMMAND> <OPTIONS>
+
+COMMANDS:
+  prepare            Mount the root file system and bind mounts in preparation to chroot into the installation.
+  cleanup            Unmount everything. Use once done with the chroot.
+
+GLOBAL OPTIONS:
+  -h, --help         Print help
+  -V, --version      Print version information
+"#,
+            env!("CARGO_PKG_NAME")
+        ),
+        on_command: |s, args| match s {
+            Some("prepare") => cli::handle_command::<CommandPrepareArgs>(args),
+            Some("cleanup") => cli::handle_command::<CommandCleanupArgs>(args),
+            Some(s) => bail!("unknown subcommand '{s}'"),
+            None => bail!("subcommand required"),
+        },
+    })
+}
+
+fn prepare(args: &CommandPrepareArgs) -> Result<()> {
     let fs = get_fs(args.filesystem)?;
 
     fs::create_dir_all(TARGET_DIR)?;
@@ -108,7 +185,7 @@ fn prepare(args: &CommandPrepare) -> Result<()> {
     Ok(())
 }
 
-fn cleanup(args: &CommandCleanup) -> Result<()> {
+fn cleanup(args: &CommandCleanupArgs) -> Result<()> {
     let fs = get_fs(args.filesystem)?;
 
     if let Err(e) = bind_umount() {

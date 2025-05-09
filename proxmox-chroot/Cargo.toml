@@ -9,8 +9,6 @@ homepage = "https://www.proxmox.com"
 
 [dependencies]
 anyhow.workspace = true
-proxmox-installer-common.workspace = true
-serde_json.workspace = true
 regex.workspace = true
-
-clap = { version = "4.0", features = ["derive"] }
+proxmox-installer-common = { workspace = true, features = [ "cli" ] }
+serde_json.workspace = true
