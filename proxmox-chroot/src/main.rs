@@ -18,7 +18,7 @@ use proxmox_installer_common::{
     options::FsType,
     setup::{InstallConfig, SetupInfo},
 };
-use regex::Regex;
+use serde::Deserialize;
 
 const ANSWER_MP: &str = "answer";
 static BINDMOUNTS: [&str; 4] = ["dev", "proc", "run", "sys"];
@@ -355,29 +355,49 @@ fn mount_btrfs(btrfs_uuid: Option<String>) -> Result<()> {
     Ok(())
 }
 
+/// Searches for all Btrfs filesystems present on the system.
+///
+/// # Returns
+///
+/// The UUID of that filesystem, if a single Btrfs filesystem is found.
+/// If multiple are found, returns a (human-readable) error with all possible
+/// filesystem UUIDs.
 fn get_btrfs_uuid() -> Result<String> {
-    let output = Command::new("btrfs")
-        .arg("filesystem")
-        .arg("show")
+    let output = Command::new("lsblk")
+        .args(["--json", "--fs", "--list", "--output", "fstype,uuid"])
         .output()?;
+
     if !output.status.success() {
         bail!(
             "Error checking for BTRFS file systems: {}",
             String::from_utf8(output.stderr)?
         );
     }
-    let out = String::from_utf8(output.stdout)?;
-    let mut uuids = Vec::new();
 
-    let re_uuid =
-        Regex::new(r"uuid: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$")?;
-    for line in out.lines() {
-        if let Some(cap) = re_uuid.captures(line) {
-            if let Some(uuid) = cap.get(1) {
-                uuids.push(uuid.as_str());
-            }
-        }
+    #[derive(Deserialize)]
+    struct Entry {
+        fstype: Option<String>,
+        uuid: Option<String>,
     }
+
+    #[derive(Deserialize)]
+    struct LsblkOutput {
+        blockdevices: Vec<Entry>,
+    }
+
+    let out: LsblkOutput = serde_json::from_slice(&output.stdout)?;
+    let uuids = out
+        .blockdevices
+        .iter()
+        .filter_map(|entry| match entry {
+            Entry {
+                fstype: Some(fstype),
+                uuid: Some(uuid),
+            } if fstype == "btrfs" => Some(uuid),
+            _ => None,
+        })
+        .collect::<Vec<&String>>();
+
     match uuids.len() {
         0 => bail!("Could not find any BTRFS UUID"),
         i if i > 1 => {
