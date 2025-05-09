@@ -22,6 +22,9 @@ rustls-native-certs = { version = "0.6", optional = true }
 sha2 = { version = "0.10", optional = true }
 ureq = { version = "2.6", features = [ "native-certs", "native-tls" ], optional = true }
 
+# `cli` feature
+pico-args = { workspace = true, optional = true }
+
 [features]
 http = [
     "dep:hex",
@@ -31,6 +34,7 @@ http = [
     "dep:sha2",
     "dep:ureq"
 ]
+cli = [ "dep:pico-args" ]
 
 [dev-dependencies]
 pretty_assertions = "1.4"
