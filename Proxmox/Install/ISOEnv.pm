@@ -19,6 +19,12 @@ my $product_cfg = {
 	enable_btrfs => 1,
 	bridged_network => 1,
     },
+    itPVE => {
+	fullname => 'itPVE',
+	port => '8006',
+	enable_btrfs => 1,
+	bridged_network => 1,
+    },
     pmg => {
 	fullname => 'Proxmox Mail Gateway',
 	port => '8006',

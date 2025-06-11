@@ -49,12 +49,6 @@ my $step_number = 0; # Init number for global function list
 my @steps = (
     {
 	step => 'intro',
-	html => 'license.htm',
-	next_button => 'I a_gree',
-	function => \&create_intro_view,
-    },
-    {
-	step => 'intro',
 	html => 'page1.htm',
 	function => \&create_hdsel_view,
     },
@@ -1615,44 +1609,7 @@ sub create_extract_view {
     }
 }
 
-sub create_intro_view {
-
-    $gtk_state->{prev_btn}->set_sensitive(0);
-
-    cleanup_view();
-
-    my $run_env = Proxmox::Install::RunEnv::get();
-    if (int($run_env->{total_memory}) < 1024) {
-	Proxmox::UI::error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
-	    "See 'System Requirements' in the $iso_env->{cfg}->{fullname} documentation.");
-    }
-
-    if ($iso_env->{product} eq 'pve' && !$run_env->{hvm_supported}) {
-	Proxmox::UI::error(
-	    "No support for hardware-accelerated KVM virtualization detected.\n\n"
-	    ."Check BIOS settings for Intel VT / AMD-V / SVM."
-	);
-    }
-
-    Proxmox::UI::display_html('license.htm', sub {
-	my ($raw_html, $iso_env) = @_;
-
-	my $proxmox_cddir = $iso_env->{locations}->{iso};
-	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
-	if (my $err = $@) {
-	    die $err if !is_test_mode();
-	    $license = "TESTMODE: Ignore non existent EULA...\n";
-	}
-	my $title = "END USER LICENSE AGREEMENT (EULA)";
-	$raw_html =~ s/__LICENSE__/$license/;
-	$raw_html =~ s/__LICENSE_TITLE__/$title/;
-
-	return $raw_html;
-    });
-
-    $step_number++;
-    set_next("I a_gree", \&create_hdsel_view);
-}
+# The create_intro_view subroutine was removed as its corresponding step was deleted.
 
 log_info("initializing GTK and creating main window...");
 Gtk3::init();
@@ -1685,7 +1642,9 @@ if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
     set_next("Reboot", sub { app_quit(0); } );
 }
 
-create_intro_view () if !$initial_error;
+# create_intro_view () if !$initial_error; # Call removed as the function is removed
+# Now, the first step is create_hdsel_view(), which should be called instead.
+create_hdsel_view() if !$initial_error;
 
 Gtk3->main;
 
