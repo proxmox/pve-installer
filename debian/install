@@ -4,7 +4,7 @@
 banner/pbs-banner.png /var/lib/proxmox-installer
 banner/pdm-banner.png /var/lib/proxmox-installer
 banner/pmg-banner.png /var/lib/proxmox-installer
-banner/pve-banner.png /var/lib/proxmox-installer
+banner/itPVE-banner.png /var/lib/proxmox-installer
 etc
 html /var/lib/proxmox-installer/
 sbin

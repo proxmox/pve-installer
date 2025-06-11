@@ -1,7 +1,7 @@
 DESTFILE=
 INSTALLER_SOURCES=		\
 	pmg-banner.png		\
-	pve-banner.png		\
+	itPVE-banner.png		\
 	pbs-banner.png		\
 	pdm-banner.png		\
 
