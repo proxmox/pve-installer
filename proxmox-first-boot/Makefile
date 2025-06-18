@@ -1,7 +1,7 @@
 all:
 
 DESTDIR =
-LIBSYSTEMD_DIR = $(DESTDIR)/lib/systemd/system
+LIBSYSTEMD_DIR = $(DESTDIR)/usr/lib/systemd/system
 
 .PHONY: install
 install:
