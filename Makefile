@@ -76,6 +76,11 @@ locale-info.json: country.pl
 	./country.pl > $@.tmp
 	mv $@.tmp $@
 
+.PHONY: tidy
+tidy:
+	git ls-files ':*.p[ml]'| xargs -n4 -P0 proxmox-perltidy
+	proxmox-perltidy proxmox-low-level-installer proxinstall
+
 deb: $(DEB)
 $(ASSISTANT_DEB): $(DEB)
 $(FIRST_BOOT_DEB): $(DEB)
