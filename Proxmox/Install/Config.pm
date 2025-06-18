@@ -17,36 +17,36 @@ sub parse_kernel_cmdline {
     my $cmdline = Proxmox::Install::RunEnv::get('kernel_cmdline');
 
     if ($cmdline =~ s/\b(ext4|xfs)\s?//i) {
-	$cfg->{filesys} = $1;
+        $cfg->{filesys} = $1;
     }
 
     if ($cmdline =~ s/\bhdsize=(\d+(\.\d+)?)\s?//i) {
-	$cfg->{hdsize} = $1;
+        $cfg->{hdsize} = $1;
     }
 
     if ($cmdline =~ s/\bswapsize=(\d+(\.\d+)?)\s?//i) {
-	$cfg->{swapsize} = $1;
+        $cfg->{swapsize} = $1;
     }
 
     if ($cmdline =~ s/\bmaxroot=(\d+(\.\d+)?)\s?//i) {
-	$cfg->{maxroot} = $1;
+        $cfg->{maxroot} = $1;
     }
 
     if ($cmdline =~ s/\bminfree=(\d+(\.\d+)?)\s?//i) {
-	$cfg->{minfree} = $1;
+        $cfg->{minfree} = $1;
     }
 
     my $iso_env = Proxmox::Install::ISOEnv::get();
     if ($iso_env->{product} eq 'pve') {
-	if ($cmdline =~ s/\bmaxvz=(\d+(\.\d+)?)\s?//i) {
-	    $cfg->{maxvz} = $1;
-	}
+        if ($cmdline =~ s/\bmaxvz=(\d+(\.\d+)?)\s?//i) {
+            $cfg->{maxvz} = $1;
+        }
     }
 
     my @filtered = grep {
-	$_ !~ m/^(BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+$/ &&
-	$_ !~ m/^(ro|rw|quiet)$/ &&
-	$_ !~ m/^(prox(debug|tui|auto)|proxmox-\S+)$/
+        $_ !~ m/^(BOOT_IMAGE|root|ramdisk_size|splash|vga)=\S+$/
+            && $_ !~ m/^(ro|rw|quiet)$/
+            && $_ !~ m/^(prox(debug|tui|auto)|proxmox-\S+)$/
     } split(/\s+/, $cmdline);
 
     $cfg->{target_cmdline} = join(' ', @filtered);
@@ -54,68 +54,67 @@ sub parse_kernel_cmdline {
     return $cfg;
 }
 
-
 my sub init_cfg {
     my $iso_env = Proxmox::Install::ISOEnv::get();
 
     my $country = Proxmox::Install::RunEnv::get('country');
     if (defined($country) && !defined($iso_env->{locales}->{country}->{$country})) {
-	log_warn("ignoring detected country '$country', invalid or unknown\n");
-	$country = undef;
+        log_warn("ignoring detected country '$country', invalid or unknown\n");
+        $country = undef;
     }
 
     my $initial = {
-	# installer behavior related
-	autoreboot => 1,
+        # installer behavior related
+        autoreboot => 1,
 
-	# disk and filesystem related
-	filesys => 'ext4',
-	hdsize => undef,
-	swapsize => undef,
-	maxroot => undef,
-	minfree => undef,
-	maxvz => undef,
-	zfs_opts => {
-	    ashift => 12,
-	    compress => 'on',
-	    checksum => 'on',
-	    copies => 1,
-	    arc_max => Proxmox::Install::RunEnv::default_zfs_arc_max(), # in MiB
-	},
-	btrfs_opts => {
-	    compress => 'off',
-	},
-	# TODO: single disk selection config
-	target_hd => undef,
-	disk_selection => {},
-	existing_storage_auto_rename => 0,
+        # disk and filesystem related
+        filesys => 'ext4',
+        hdsize => undef,
+        swapsize => undef,
+        maxroot => undef,
+        minfree => undef,
+        maxvz => undef,
+        zfs_opts => {
+            ashift => 12,
+            compress => 'on',
+            checksum => 'on',
+            copies => 1,
+            arc_max => Proxmox::Install::RunEnv::default_zfs_arc_max(), # in MiB
+        },
+        btrfs_opts => {
+            compress => 'off',
+        },
+        # TODO: single disk selection config
+        target_hd => undef,
+        disk_selection => {},
+        existing_storage_auto_rename => 0,
 
-	# locale
-	country => $country,
-	timezone => 'Europe/Vienna',
-	keymap => 'en-us',
+        # locale
+        country => $country,
+        timezone => 'Europe/Vienna',
+        keymap => 'en-us',
 
-	# root credentials & details
-	root_password => undef,
-	mailto => 'mail@example.invalid',
-	root_ssh_keys => [],
+        # root credentials & details
+        root_password => undef,
+        mailto => 'mail@example.invalid',
+        root_ssh_keys => [],
 
-	# network related
-	mngmt_nic => undef,
-	hostname => undef,
-	domain => undef,
-	cidr => undef,
-	gateway => undef,
-	dns => undef,
-	target_cmdline => undef,
+        # network related
+        mngmt_nic => undef,
+        hostname => undef,
+        domain => undef,
+        cidr => undef,
+        gateway => undef,
+        dns => undef,
+        target_cmdline => undef,
 
-	# proxmox-first-boot setup
-	first_boot => {
-	    enabled => 0,
-	    # Must be kept in sync with proxmox_auto_installer::answer::FirstBootHookServiceOrdering
-	    # and the service files in the proxmox-first-boot package
-	    ordering_target => 'multi-user', # one of `network-pre`, `network-online` or `multi-user`
-	},
+        # proxmox-first-boot setup
+        first_boot => {
+            enabled => 0,
+            # Must be kept in sync with proxmox_auto_installer::answer::FirstBootHookServiceOrdering
+            # and the service files in the proxmox-first-boot package
+            ordering_target => 'multi-user', # one of `network-pre`, `network-online` or `multi-user`
+        },
     };
 
     $initial = parse_kernel_cmdline($initial);
@@ -130,7 +129,7 @@ sub merge {
     my $current = get();
 
     for my $k (sort keys $new->%*) { # first check all
-	croak "unknown key '$k'" if !exists($current->{$k})
+        croak "unknown key '$k'" if !exists($current->{$k});
     }
     $current->{$_} = $new->{$_} for sort keys $new->%*; # then merge
 
@@ -138,6 +137,7 @@ sub merge {
 }
 
 my $_cfg = undef; # NOTE: global singleton
+
 sub get {
     my ($k) = @_;
     $_cfg = init_cfg() if !defined($_cfg);
@@ -178,6 +178,7 @@ sub set_zfs_opt {
     croak "unknown zfs opts key '$k'" if !exists($zfs_opts->{$k});
     $zfs_opts->{$k} = $v;
 }
+
 sub get_zfs_opt {
     my ($k) = @_;
     my $zfs_opts = get('zfs_opts');
@@ -190,6 +191,7 @@ sub set_btrfs_opt {
     croak "unknown btrfs opts key '$k'" if !exists($opts->{$k});
     $opts->{$k} = $v;
 }
+
 sub get_btrfs_opt {
     my ($k) = @_;
     my $opts = get('btrfs_opts');
@@ -204,6 +206,7 @@ sub set_disk_selection {
     my $disk_selection = get('disk_selection');
     $disk_selection->{$id} = $v;
 }
+
 sub get_disk_selection {
     my ($id) = @_;
     my $disk_selection = get('disk_selection');
@@ -222,7 +225,7 @@ sub get_keymap { return get('keymap'); }
 sub set_root_password {
     my ($key) = @_;
     croak "unknown root password option '$key'"
-	if $key ne 'plain' && $key ne 'hashed';
+        if $key ne 'plain' && $key ne 'hashed';
 
     set_key('root_password', { $_[0] => $_[1] });
 }
@@ -230,7 +233,7 @@ sub set_root_password {
 sub get_root_password {
     my ($key) = @_;
     croak "unknown root password option '$key'"
-	if $key ne 'plain' && $key ne 'hashed';
+        if $key ne 'plain' && $key ne 'hashed';
 
     my $password = get('root_password');
     return defined($password->{$key}) ? $password->{$key} : undef;
@@ -264,6 +267,7 @@ sub get_ip_addr { #'virtual config
     my ($ip, $mask) = split('/', $cidr);
     return $ip;
 }
+
 sub get_ip_version { # virtual config
     my $ip = get_ip_addr() // return;
     return Proxmox::Sys::Net::parse_ip_address($ip);
@@ -287,6 +291,7 @@ sub set_first_boot_opt {
     croak "unknown first boot override key '$k'" if !exists($opts->{$k});
     $opts->{$k} = $v;
 }
+
 sub get_first_boot_opt {
     my ($k) = @_;
     my $opts = get('first_boot');

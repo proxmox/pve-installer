@@ -18,7 +18,7 @@ Proxmox::Log::init("/tmp/install.log");
 { # NOTE: order is important here
     my $test_image;
     GetOptions(
-	'test-image|t=s' => \$test_image
+        'test-image|t=s' => \$test_image,
     ) or die "usage error\n";
 
     Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
@@ -40,7 +40,7 @@ use Proxmox::Sys::File qw(file_read_all file_write_all);
 use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
 use Proxmox::UI;
 
-if (!$ENV{G_SLICE} ||  $ENV{G_SLICE} ne "always-malloc") {
+if (!$ENV{G_SLICE} || $ENV{G_SLICE} ne "always-malloc") {
     die "do not use slice allocator (run with 'G_SLICE=always-malloc ./proxinstall ...')\n";
 }
 
@@ -48,41 +48,41 @@ my $step_number = 0; # Init number for global function list
 
 my @steps = (
     {
-	step => 'intro',
-	html => 'license.htm',
-	next_button => 'I a_gree',
-	function => \&create_intro_view,
+        step => 'intro',
+        html => 'license.htm',
+        next_button => 'I a_gree',
+        function => \&create_intro_view,
     },
     {
-	step => 'intro',
-	html => 'page1.htm',
-	function => \&create_hdsel_view,
+        step => 'intro',
+        html => 'page1.htm',
+        function => \&create_hdsel_view,
     },
     {
-	step => 'country',
-	html => 'country.htm',
-	function => \&create_country_view,
+        step => 'country',
+        html => 'country.htm',
+        function => \&create_country_view,
     },
     {
-	step => 'password',
-	html => 'passwd.htm',
-	function => \&create_password_view,
+        step => 'password',
+        html => 'passwd.htm',
+        function => \&create_password_view,
     },
     {
-	step => 'ipconf',
-	html => 'ipconf.htm',
-	function => \&create_ipconf_view,
+        step => 'ipconf',
+        html => 'ipconf.htm',
+        function => \&create_ipconf_view,
     },
     {
-	step => 'ack',
-	html => 'ack.htm',
-	next_button => '_Install',
-	function => \&create_ack_view,
+        step => 'ack',
+        html => 'ack.htm',
+        next_button => '_Install',
+        function => \&create_ack_view,
     },
     {
-	step => 'extract',
-	next_button => '_Reboot',
-	function => \&create_extract_view,
+        step => 'extract',
+        next_button => '_Reboot',
+        function => \&create_extract_view,
     },
 );
 
@@ -98,7 +98,7 @@ sub app_quit {
 
     # reap left over zombie processes
     while ((my $child = waitpid(-1, POSIX::WNOHANG)) > 0) {
-	print STDERR "reaped child $child\n";
+        print STDERR "reaped child $child\n";
     }
     exit($exit_code);
 }
@@ -144,7 +144,7 @@ sub create_main_window {
 
     my $provider = Gtk3::CssProvider->new();
     my $theming = "* {\nbackground: #171717;\n}";
-    $provider->load_from_data ([map ord, split //, $theming]);
+    $provider->load_from_data([map ord, split //, $theming]);
     my $context = $image->get_style_context();
     $context->add_provider($provider, 600);
 
@@ -153,9 +153,9 @@ sub create_main_window {
     my $hbox = Gtk3::Box->new('horizontal', 0);
     $vbox->pack_start($hbox, 1, 1, 0);
 
- #  my $f1 = Gtk3::Frame->new ('test');
- #  $f1->set_shadow_type ('none');
- #  $hbox->pack_start ($f1, 1, 1, 0);
+    #  my $f1 = Gtk3::Frame->new ('test');
+    #  $f1->set_shadow_type ('none');
+    #  $hbox->pack_start ($f1, 1, 1, 0);
 
     my $sep1 = Gtk3::Separator->new('horizontal');
     $vbox->pack_start($sep1, 0, 0, 0);
@@ -164,36 +164,43 @@ sub create_main_window {
     $vbox->pack_start($cmdbox, 0, 0, 10);
 
     my $next_btn = Gtk3::Button->new('_Next');
-    $next_btn->signal_connect(clicked => sub {
-	Proxmox::Install::reset_last_display_change();
-	$gtk_state->{next_btn_callback}->();
-    });
+    $next_btn->signal_connect(
+        clicked => sub {
+            Proxmox::Install::reset_last_display_change();
+            $gtk_state->{next_btn_callback}->();
+        },
+    );
     $cmdbox->pack_end($next_btn, 0, 0, 10);
 
     my $prev_btn = Gtk3::Button->new('_Previous');
-    $prev_btn->signal_connect(clicked => sub {
-	Proxmox::Install::reset_last_display_change();
-	prev_function();
-    });
+    $prev_btn->signal_connect(
+        clicked => sub {
+            Proxmox::Install::reset_last_display_change();
+            prev_function();
+        },
+    );
     $cmdbox->pack_end($prev_btn, 0, 0, 10);
-
 
     my $abort = Gtk3::Button->new('_Abort');
     $abort->set_can_focus(0);
     $cmdbox->pack_start($abort, 0, 0, 10);
-    $abort->signal_connect(clicked => sub {
-	my $msg = 'Abort Installation';
-	my $secondary_text = 'Are you sure you want to abort the installation?';
-	my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'yes-no', $msg);
-	$dialog->format_secondary_text($secondary_text);
-	$dialog->signal_connect(response => sub {
-	    my ($dialog, $response) = @_;
+    $abort->signal_connect(
+        clicked => sub {
+            my $msg = 'Abort Installation';
+            my $secondary_text = 'Are you sure you want to abort the installation?';
+            my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'yes-no', $msg);
+            $dialog->format_secondary_text($secondary_text);
+            $dialog->signal_connect(
+                response => sub {
+                    my ($dialog, $response) = @_;
 
-	    $dialog->close();
-	    app_quit(-1) if $response eq 'yes';
-	});
-	$dialog->present();
-    });
+                    $dialog->close();
+                    app_quit(-1) if $response eq 'yes';
+                },
+            );
+            $dialog->present();
+        },
+    );
 
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
@@ -237,8 +244,8 @@ sub create_main_window {
 
 sub cleanup_view {
     $gtk_state->{inbox}->foreach(sub {
-	my $child = shift;
-	$gtk_state->{inbox}->remove ($child);
+        my $child = shift;
+        $gtk_state->{inbox}->remove($child);
     });
 }
 
@@ -262,18 +269,20 @@ sub check_number {
 
     my $val = $event->get_keyval;
 
-    if (($float && $val == ord '.') ||
-	$val == Gtk3::Gdk::KEY_ISO_Left_Tab ||
-	$val == Gtk3::Gdk::KEY_Shift_L ||
-	$val == Gtk3::Gdk::KEY_Tab ||
-	$val == Gtk3::Gdk::KEY_Left ||
-	$val == Gtk3::Gdk::KEY_Right ||
-	$val == Gtk3::Gdk::KEY_BackSpace ||
-	$val == Gtk3::Gdk::KEY_Delete ||
-	($val >= ord '0' && $val <= ord '9') ||
-	($val >= Gtk3::Gdk::KEY_KP_0 &&
-	 $val <= Gtk3::Gdk::KEY_KP_9)) {
-	return undef;
+    if (
+        ($float && $val == ord '.')
+        || $val == Gtk3::Gdk::KEY_ISO_Left_Tab
+        || $val == Gtk3::Gdk::KEY_Shift_L
+        || $val == Gtk3::Gdk::KEY_Tab
+        || $val == Gtk3::Gdk::KEY_Left
+        || $val == Gtk3::Gdk::KEY_Right
+        || $val == Gtk3::Gdk::KEY_BackSpace
+        || $val == Gtk3::Gdk::KEY_Delete
+        || ($val >= ord '0' && $val <= ord '9')
+        || ($val >= Gtk3::Gdk::KEY_KP_0
+            && $val <= Gtk3::Gdk::KEY_KP_9)
+    ) {
+        return undef;
     }
 
     return 1;
@@ -291,6 +300,7 @@ sub create_text_input {
 
     return ($label, $e1);
 }
+
 sub create_cidr_inputs {
     my ($cidr) = @_;
 
@@ -320,7 +330,7 @@ sub create_cidr_inputs {
 }
 
 my $create_basic_grid = sub {
-    my $grid =  Gtk3::Grid->new();
+    my $grid = Gtk3::Grid->new();
     $grid->set_visible(1);
     $grid->set_column_spacing(10);
     $grid->set_row_spacing(10);
@@ -364,8 +374,8 @@ sub create_ipconf_view {
     $device_cb->add_attribute($cell, 'text', 1);
 
     my $get_device_desc = sub {
-	my $iface = shift;
-	return "$iface->{name} - $iface->{mac} ($iface->{driver})";
+        my $iface = shift;
+        return "$iface->{name} - $iface->{mac} ($iface->{driver})";
     };
 
     my $run_env = Proxmox::Install::RunEnv::get();
@@ -374,55 +384,56 @@ sub create_ipconf_view {
     my ($device_active_map, $device_active_reverse_map) = ({}, {});
 
     my $device_change_handler = sub {
-	my $current = shift;
+        my $current = shift;
 
-	my $new = $device_active_map->{$current->get_active()};
-	my $iface = $ipconf->{ifaces}->{$new};
+        my $new = $device_active_map->{ $current->get_active() };
+        my $iface = $ipconf->{ifaces}->{$new};
 
-	my $selected = Proxmox::Install::Config::get_mngmt_nic();
-	return if defined($selected) && $iface->{name} eq $selected;
+        my $selected = Proxmox::Install::Config::get_mngmt_nic();
+        return if defined($selected) && $iface->{name} eq $selected;
 
-	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
-	$ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
-	    if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-	$ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
-	    if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
+        Proxmox::Install::Config::set_mngmt_nic($iface->{name});
+        $ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
+            if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+        $ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
+            if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
     };
 
     my ($initial_active_device_pos, $initial_addr, $initial_mask) = (0, undef, undef);
 
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
-	my $iface = $ipconf->{ifaces}->{$index};
-	my $iter = $device_model->append();
-	my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
-	$device_model->set($iter,
-	   0 => $symbol,
-	   1 => $get_device_desc->($iface),
-	);
-	$device_active_map->{$i} = $index;
-	$device_active_reverse_map->{$iface->{name}} = $i;
+        my $iface = $ipconf->{ifaces}->{$index};
+        my $iter = $device_model->append();
+        my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
+        $device_model->set(
+            $iter,
+            0 => $symbol,
+            1 => $get_device_desc->($iface),
+        );
+        $device_active_map->{$i} = $index;
+        $device_active_reverse_map->{ $iface->{name} } = $i;
 
-	if (defined($ipconf->{default}) && $index == $ipconf->{default}) {
-	    $initial_active_device_pos = $i;
-	    $initial_addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-	    $initial_mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
-	}
-	$i++;
+        if (defined($ipconf->{default}) && $index == $ipconf->{default}) {
+            $initial_active_device_pos = $i;
+            $initial_addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
+            $initial_mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
+        }
+        $i++;
     }
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
-	$initial_active_device_pos = $device_active_reverse_map->{$nic};
+        $initial_active_device_pos = $device_active_reverse_map->{$nic};
     } else {
-	my $iface_id = $device_active_map->{$initial_active_device_pos};
-	my $iface = $ipconf->{ifaces}->{$iface_id};
-	Proxmox::Install::Config::set_mngmt_nic($iface->{name});
+        my $iface_id = $device_active_map->{$initial_active_device_pos};
+        my $iface = $ipconf->{ifaces}->{$iface_id};
+        Proxmox::Install::Config::set_mngmt_nic($iface->{name});
     }
 
     if (my $cidr = Proxmox::Install::Config::get_cidr()) {
-	my ($default_ip, $default_mask) = split('/', $cidr);
-	$initial_addr = $default_ip if $default_ip;
-	$initial_mask = $default_mask if $default_mask;
+        my ($default_ip, $default_mask) = split('/', $cidr);
+        $initial_addr = $default_ip if $default_ip;
+        $initial_mask = $default_mask if $default_mask;
     }
 
     $device_cb->set_active($initial_active_device_pos) if $initial_active_device_pos >= 0;
@@ -466,71 +477,77 @@ sub create_ipconf_view {
     $grid->attach($ipconf_entry_dns, 1, 4, 1, 1);
 
     $gtk_state->{inbox}->show_all;
-    set_next(undef, sub {
-	# verify hostname
-	my $text = $hostentry->get_text();
-	$text =~ s/^\s+//;
-	$text =~ s/\s+$//;
+    set_next(
+        undef,
+        sub {
+            # verify hostname
+            my $text = $hostentry->get_text();
+            $text =~ s/^\s+//;
+            $text =~ s/\s+$//;
 
-	my ($hostname, $domainname) = eval { Proxmox::Sys::Net::parse_fqdn($text) };
-	my $err = $@;
+            my ($hostname, $domainname) = eval { Proxmox::Sys::Net::parse_fqdn($text) };
+            my $err = $@;
 
-	if ($err || $text =~ m/.example.invalid$/) {
-	    Proxmox::UI::message($err || 'Hostname does not look like a valid fully qualified domain name');
-	    $hostentry->grab_focus();
-	    return;
-	} else {
-	    Proxmox::Install::Config::set_hostname($hostname);
-	    Proxmox::Install::Config::set_domain($domainname);
-	}
+            if ($err || $text =~ m/.example.invalid$/) {
+                Proxmox::UI::message($err
+                    || 'Hostname does not look like a valid fully qualified domain name');
+                $hostentry->grab_focus();
+                return;
+            } else {
+                Proxmox::Install::Config::set_hostname($hostname);
+                Proxmox::Install::Config::set_domain($domainname);
+            }
 
-	# verify ip address
-	$text = $ipconf_entry_addr->get_text();
-	my ($ipaddress, $ipversion) = parse_ip_address($text);
-	if (!defined($ipaddress)) {
-	    Proxmox::UI::message("IP address is not valid.");
-	    $ipconf_entry_addr->grab_focus();
-	    return;
-	}
+            # verify ip address
+            $text = $ipconf_entry_addr->get_text();
+            my ($ipaddress, $ipversion) = parse_ip_address($text);
+            if (!defined($ipaddress)) {
+                Proxmox::UI::message("IP address is not valid.");
+                $ipconf_entry_addr->grab_focus();
+                return;
+            }
 
-	$text = $ipconf_entry_mask->get_text();
-	my $netmask = parse_ip_mask($text, $ipversion);
-	if (!defined($netmask)) {
-	    Proxmox::UI::message("Netmask is not valid.");
-	    $ipconf_entry_mask->grab_focus();
-	    return;
-	}
-	Proxmox::Install::Config::set_cidr("$ipaddress/$netmask");
+            $text = $ipconf_entry_mask->get_text();
+            my $netmask = parse_ip_mask($text, $ipversion);
+            if (!defined($netmask)) {
+                Proxmox::UI::message("Netmask is not valid.");
+                $ipconf_entry_mask->grab_focus();
+                return;
+            }
+            Proxmox::Install::Config::set_cidr("$ipaddress/$netmask");
 
-	$text = $ipconf_entry_gw->get_text();
-	my ($gateway_ip, $gateway_ip_version) = parse_ip_address($text);
-	if (!defined($gateway_ip) || $gateway_ip_version != $ipversion) {
-	    my $msg = defined($gateway_ip)
-	        ? "Gateway and host IP version must not differ (IPv$gateway_ip_version != IPv$ipversion)."
-	        : "Gateway is not valid.";
-	    Proxmox::UI::message($msg);
-	    $ipconf_entry_gw->grab_focus();
-	    return;
-	}
-	Proxmox::Install::Config::set_gateway($gateway_ip);
+            $text = $ipconf_entry_gw->get_text();
+            my ($gateway_ip, $gateway_ip_version) = parse_ip_address($text);
+            if (!defined($gateway_ip) || $gateway_ip_version != $ipversion) {
+                my $msg =
+                    defined($gateway_ip)
+                    ? "Gateway and host IP version must not differ (IPv$gateway_ip_version != IPv$ipversion)."
+                    : "Gateway is not valid.";
+                Proxmox::UI::message($msg);
+                $ipconf_entry_gw->grab_focus();
+                return;
+            }
+            Proxmox::Install::Config::set_gateway($gateway_ip);
 
-	$text = $ipconf_entry_dns->get_text();
-	my ($dns_ip, $dns_ip_version) = parse_ip_address($text);
-	if (!defined($dns_ip) || $dns_ip_version != $ipversion) {
-	    my $msg = defined($dns_ip)
-	        ? "DNS and host IP version must not differ (IPv$dns_ip_version != IPv$ipversion)."
-	        : "DNS IP is not valid.";
-	    Proxmox::UI::message($msg);
-	    $ipconf_entry_dns->grab_focus();
-	    return;
-	}
-	Proxmox::Install::Config::set_dns($dns_ip);
+            $text = $ipconf_entry_dns->get_text();
+            my ($dns_ip, $dns_ip_version) = parse_ip_address($text);
+            if (!defined($dns_ip) || $dns_ip_version != $ipversion) {
+                my $msg =
+                    defined($dns_ip)
+                    ? "DNS and host IP version must not differ (IPv$dns_ip_version != IPv$ipversion)."
+                    : "DNS IP is not valid.";
+                Proxmox::UI::message($msg);
+                $ipconf_entry_dns->grab_focus();
+                return;
+            }
+            Proxmox::Install::Config::set_dns($dns_ip);
 
-	#print STDERR "TEST $ipaddress/$netmask $gateway_ip $dns_ip\n";
+            #print STDERR "TEST $ipaddress/$netmask $gateway_ip $dns_ip\n";
 
-	$step_number++;
-	create_ack_view();
-    });
+            $step_number++;
+            create_ack_view();
+        },
+    );
 
     $hostentry->grab_focus();
 }
@@ -539,15 +556,18 @@ sub create_ack_view {
 
     cleanup_view();
 
-    my $vbox =  Gtk3::Box->new('vertical', 0);
+    my $vbox = Gtk3::Box->new('vertical', 0);
     $gtk_state->{inbox}->pack_start($vbox, 1, 0, 0);
 
-    my $reboot_checkbox = Gtk3::CheckButton->new('Automatically reboot after successful installation');
+    my $reboot_checkbox =
+        Gtk3::CheckButton->new('Automatically reboot after successful installation');
     $reboot_checkbox->set_active(1);
-    $reboot_checkbox->signal_connect ("toggled" => sub {
-	my $cb = shift;
-	Proxmox::Install::Config::set_autoreboot(!!$cb->get_active());
-    });
+    $reboot_checkbox->signal_connect(
+        "toggled" => sub {
+            my $cb = shift;
+            Proxmox::Install::Config::set_autoreboot(!!$cb->get_active());
+        },
+    );
     $vbox->pack_start($reboot_checkbox, 0, 0, 2);
 
     my $proxmox_libdir = $iso_env->{locations}->{lib};
@@ -558,29 +578,29 @@ sub create_ack_view {
     my $country = Proxmox::Install::Config::get_country();
 
     my %config_values = (
-	__target_hd__ => join(' | ', $target_hds->@*),
-	__target_fs__ => Proxmox::Install::Config::get_filesys(),
-	__country__ => $iso_env->{locales}->{country}->{$country}->{name},
-	__timezone__ => Proxmox::Install::Config::get_timezone(),
-	__keymap__ => Proxmox::Install::Config::get_keymap(),
-	__mailto__ => Proxmox::Install::Config::get_mailto(),
-	__interface__ =>  Proxmox::Install::Config::get_mngmt_nic(),
-	__hostname__ => Proxmox::Install::Config::get_hostname(),
-	__cidr__ => Proxmox::Install::Config::get_cidr(),
-	__gateway__ => Proxmox::Install::Config::get_gateway(),
-	__dnsserver__ => Proxmox::Install::Config::get_dns(),
+        __target_hd__ => join(' | ', $target_hds->@*),
+        __target_fs__ => Proxmox::Install::Config::get_filesys(),
+        __country__ => $iso_env->{locales}->{country}->{$country}->{name},
+        __timezone__ => Proxmox::Install::Config::get_timezone(),
+        __keymap__ => Proxmox::Install::Config::get_keymap(),
+        __mailto__ => Proxmox::Install::Config::get_mailto(),
+        __interface__ => Proxmox::Install::Config::get_mngmt_nic(),
+        __hostname__ => Proxmox::Install::Config::get_hostname(),
+        __cidr__ => Proxmox::Install::Config::get_cidr(),
+        __gateway__ => Proxmox::Install::Config::get_gateway(),
+        __dnsserver__ => Proxmox::Install::Config::get_dns(),
     );
 
     while (my ($k, $v) = each %config_values) {
-	$html_data =~ s/$k/$v/g;
+        $html_data =~ s/$k/$v/g;
     }
 
     eval {
-	my $config = Proxmox::Install::Config::get();
-	file_write_all(
-	    "$iso_env->{locations}->{run}/config-ack.json",
-	    to_json($config, { utf8 => 1, canonical => 1 }) ."\n",
-	);
+        my $config = Proxmox::Install::Config::get();
+        file_write_all(
+            "$iso_env->{locations}->{run}/config-ack.json",
+            to_json($config, { utf8 => 1, canonical => 1 }) . "\n",
+        );
     };
     warn "failed to write config-for-ack -  $@" if $@;
 
@@ -590,42 +610,46 @@ sub create_ack_view {
 
     $gtk_state->{inbox}->show_all;
 
-    set_next(undef, sub {
-	$step_number++;
-	create_extract_view();
-    });
+    set_next(
+        undef,
+        sub {
+            $step_number++;
+            create_extract_view();
+        },
+    );
 }
 
 sub get_device_desc {
     my ($devname, $size, $model) = @_;
 
     if ($size && ($size > 0)) {
-	$size = int($size/2048); # size in MiB, from 512B "sectors"
+        $size = int($size / 2048); # size in MiB, from 512B "sectors"
 
-	my $text = "$devname (";
-	if ($size >= 1024) {
-	    $size = $size/1024; # size in GiB
-	    if ($size >= 1024) {
-		$size = $size/1024; # size in TiB
-		$text .= sprintf("%.2f", $size) . "TiB";
-	    } else {
-		$text .= sprintf("%.2f", $size) . "GiB";
-	    }
-	} else {
-	    $text .= "${size}MiB";
-	}
+        my $text = "$devname (";
+        if ($size >= 1024) {
+            $size = $size / 1024; # size in GiB
+            if ($size >= 1024) {
+                $size = $size / 1024; # size in TiB
+                $text .= sprintf("%.2f", $size) . "TiB";
+            } else {
+                $text .= sprintf("%.2f", $size) . "GiB";
+            }
+        } else {
+            $text .= "${size}MiB";
+        }
 
-	$text .= ", $model" if $model;
-	$text .= ")";
-	return $text;
+        $text .= ", $model" if $model;
+        $text .= ")";
+        return $text;
 
     } else {
-	return $devname;
+        return $devname;
     }
 }
 
 my $last_layout;
 my $country_layout;
+
 sub update_layout {
     my ($cb, $kmap) = @_;
 
@@ -634,46 +658,50 @@ sub update_layout {
     my $i = 0;
     my $kmaphash = $iso_env->{locales}->{kmaphash};
     foreach my $layout (sort keys %$kmaphash) {
-	$def = $i if $kmaphash->{$layout} eq 'en-us';
-	$ind = $i if $kmap && $kmaphash->{$layout} eq $kmap;
-	$i++;
+        $def = $i if $kmaphash->{$layout} eq 'en-us';
+        $ind = $i if $kmap && $kmaphash->{$layout} eq $kmap;
+        $i++;
     }
 
     my $val = $ind || $def || 0;
 
     if (!defined($kmap)) {
-	$last_layout //= $val;
+        $last_layout //= $val;
     } elsif (!defined($country_layout) || $country_layout != $val) {
-	$last_layout = $country_layout = $val;
+        $last_layout = $country_layout = $val;
     }
     $cb->set_active($last_layout);
 }
 
 my $lastzonecb;
+
 sub update_zonelist {
     my ($grid, $cc) = @_;
 
     my $sel = Proxmox::Install::Config::get_timezone(); # initial default
     if ($lastzonecb) {
-	$sel = $lastzonecb->get_active_text();
-	$grid->remove($lastzonecb);
+        $sel = $lastzonecb->get_active_text();
+        $grid->remove($lastzonecb);
     }
 
     my $cb = $lastzonecb = Gtk3::ComboBoxText->new();
     $cb->set_size_request(200, -1);
-    $cb->signal_connect('changed' => sub {
-	my $timezone = $cb->get_active_text();
-	Proxmox::Install::Config::set_timezone($timezone);
-    });
+    $cb->signal_connect(
+        'changed' => sub {
+            my $timezone = $cb->get_active_text();
+            Proxmox::Install::Config::set_timezone($timezone);
+        },
+    );
 
-    my ($cczones, $zones) = $iso_env->{locales}->@{'cczones', 'zones'};
-    my @available_zones = $cc && defined($cczones->{$cc}) ? keys %{$cczones->{$cc}} : keys %$zones;
+    my ($cczones, $zones) = $iso_env->{locales}->@{ 'cczones', 'zones' };
+    my @available_zones =
+        $cc && defined($cczones->{$cc}) ? keys %{ $cczones->{$cc} } : keys %$zones;
 
     my ($i, $selected_index) = (0, undef);
     for my $zone (sort @available_zones) {
-	$selected_index = $i if $sel && $zone eq $sel;
-	$cb->append_text($zone);
-	$i++;
+        $selected_index = $i if $sel && $zone eq $sel;
+        $cb->append_text($zone);
+        $i++;
     }
 
     # Append UTC here, so it is always the last item and never the default for any country.
@@ -730,51 +758,54 @@ sub create_password_view {
 
     Proxmox::UI::display_html('passwd.htm');
 
-    set_next (undef,  sub {
+    set_next(
+        undef,
+        sub {
 
-	my $t1 = $pwe1->get_text;
-	my $t2 = $pwe2->get_text;
+            my $t1 = $pwe1->get_text;
+            my $t2 = $pwe2->get_text;
 
-	if (length ($t1) < $Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH) {
-	    Proxmox::UI::message(
-		"Password too short, must be at least " .
-		"$Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH characters long"
-	    );
-	    $pwe1->grab_focus();
-	    return;
-	}
+            if (length($t1) < $Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH) {
+                Proxmox::UI::message("Password too short, must be at least "
+                    . "$Proxmox::Sys::ROOT_PASSWORD_MIN_LENGTH characters long");
+                $pwe1->grab_focus();
+                return;
+            }
 
-	if ($t1 ne $t2) {
-	    Proxmox::UI::message("Password does not match.");
-	    $pwe1->grab_focus();
-	    return;
-	}
+            if ($t1 ne $t2) {
+                Proxmox::UI::message("Password does not match.");
+                $pwe1->grab_focus();
+                return;
+            }
 
-	my $t3 = $eme->get_text;
-	if ($t3 !~ m/$Proxmox::Sys::EMAIL_RE/) {
-	    Proxmox::UI::message("Email does not look like a valid address (user\@domain.tld)");
-	    $eme->grab_focus();
-	    return;
-	}
+            my $t3 = $eme->get_text;
+            if ($t3 !~ m/$Proxmox::Sys::EMAIL_RE/) {
+                Proxmox::UI::message(
+                    "Email does not look like a valid address (user\@domain.tld)");
+                $eme->grab_focus();
+                return;
+            }
 
-	if ($t3 eq 'mail@example.invalid') {
-	    Proxmox::UI::message("Please enter a valid Email address");
-	    $eme->grab_focus();
-	    return;
-	}
+            if ($t3 eq 'mail@example.invalid') {
+                Proxmox::UI::message("Please enter a valid Email address");
+                $eme->grab_focus();
+                return;
+            }
 
-	Proxmox::Install::Config::set_root_password('plain', $t1);
-	Proxmox::Install::Config::set_mailto($t3);
+            Proxmox::Install::Config::set_root_password('plain', $t1);
+            Proxmox::Install::Config::set_mailto($t3);
 
-	$step_number++;
-	create_ipconf_view();
-    });
+            $step_number++;
+            create_ipconf_view();
+        },
+    );
 
     $pwe1->grab_focus();
 
 }
 
 my $installer_kmap;
+
 sub create_country_view {
 
     cleanup_view();
@@ -797,7 +828,7 @@ sub create_country_view {
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
     $grid->attach($label, 0, 1, 1, 1);
-    update_zonelist ($grid);
+    update_zonelist($grid);
 
     $label = Gtk3::Label->new("Keyboard Layout");
     $label->set_size_request(150, -1);
@@ -805,108 +836,114 @@ sub create_country_view {
     $grid->attach($label, 0, 2, 1, 1);
 
     my $kmapcb = Gtk3::ComboBoxText->new();
-    $kmapcb->set_size_request (200, -1);
-    for my $layout (sort keys %{$locales->{kmaphash}}) {
-	$kmapcb->append_text($layout);
+    $kmapcb->set_size_request(200, -1);
+    for my $layout (sort keys %{ $locales->{kmaphash} }) {
+        $kmapcb->append_text($layout);
     }
 
     update_layout($kmapcb);
     $grid->attach($kmapcb, 1, 2, 1, 1);
 
-    $kmapcb->signal_connect ('changed' => sub {
-	my $sel = $kmapcb->get_active_text();
-	$last_layout = $kmapcb->get_active();
-	if (my $kmap = $locales->{kmaphash}->{$sel}) {
-	    my $xkmap = $locales->{kmap}->{$kmap}->{x11};
-	    my $xvar = $locales->{kmap}->{$kmap}->{x11var};
+    $kmapcb->signal_connect(
+        'changed' => sub {
+            my $sel = $kmapcb->get_active_text();
+            $last_layout = $kmapcb->get_active();
+            if (my $kmap = $locales->{kmaphash}->{$sel}) {
+                my $xkmap = $locales->{kmap}->{$kmap}->{x11};
+                my $xvar = $locales->{kmap}->{$kmap}->{x11var};
 
-	    Proxmox::Install::Config::set_keymap($kmap);
+                Proxmox::Install::Config::set_keymap($kmap);
 
-	    return if (defined($installer_kmap) && $installer_kmap eq $kmap);
-	    $installer_kmap = $kmap;
+                return if (defined($installer_kmap) && $installer_kmap eq $kmap);
+                $installer_kmap = $kmap;
 
-	    if (!is_test_mode()) {
-		syscmd("setxkbmap $xkmap $xvar");
+                if (!is_test_mode()) {
+                    syscmd("setxkbmap $xkmap $xvar");
 
-		my $kbd_config = qq{
+                    my $kbd_config = qq{
 		    XKBLAYOUT="$xkmap"
 		    XKBVARIANT="$xvar"
 		    BACKSPACE="guess"
 		};
-		$kbd_config =~ s/^\s+//gm;
+                    $kbd_config =~ s/^\s+//gm;
 
-		Proxmox::Sys::Command::run_in_background(sub {
-		    file_write_all('/etc/default/keyboard', $kbd_config);
-		    system("setupcon");
-		});
-	    }
-	}
-    });
+                    Proxmox::Sys::Command::run_in_background(sub {
+                        file_write_all('/etc/default/keyboard', $kbd_config);
+                        system("setupcon");
+                    });
+                }
+            }
+        },
+    );
 
-    $w->signal_connect ('changed' => sub {
-	my ($entry, $event) = @_;
-	my $text = $entry->get_text;
+    $w->signal_connect(
+        'changed' => sub {
+            my ($entry, $event) = @_;
+            my $text = $entry->get_text;
 
-	if (my $cc = $locales->{countryhash}->{lc($text)}) {
-	    update_zonelist($grid, $cc);
-	    my $kmap = $locales->{country}->{$cc}->{kmap} || 'en-us';
-	    update_layout($kmapcb, $kmap);
-	}
-    });
+            if (my $cc = $locales->{countryhash}->{ lc($text) }) {
+                update_zonelist($grid, $cc);
+                my $kmap = $locales->{country}->{$cc}->{kmap} || 'en-us';
+                update_layout($kmapcb, $kmap);
+            }
+        },
+    );
 
-    $w->signal_connect (key_press_event => sub {
-	my ($entry, $event) = @_;
-	my $text = $entry->get_text;
+    $w->signal_connect(
+        key_press_event => sub {
+            my ($entry, $event) = @_;
+            my $text = $entry->get_text;
 
-	my $val = $event->get_keyval;
+            my $val = $event->get_keyval;
 
-	if ($val == Gtk3::Gdk::KEY_Tab) {
-	    my $cc = $locales->{countryhash}->{lc($text)};
+            if ($val == Gtk3::Gdk::KEY_Tab) {
+                my $cc = $locales->{countryhash}->{ lc($text) };
 
-	    my $found = 0;
-	    my $compl;
+                my $found = 0;
+                my $compl;
 
-	    if ($cc) {
-		$found = 1;
-		$compl = $locales->{country}->{$cc}->{name};
-	    } else {
-		for my $country (values $locales->{country}->%*) {
-		    if ($country->{name} =~ m/^\Q$text\E.*$/i) {
-			$found++;
-			$compl = $country->{name};
-		    }
-		    last if $found > 1;
-		}
-	    }
+                if ($cc) {
+                    $found = 1;
+                    $compl = $locales->{country}->{$cc}->{name};
+                } else {
+                    for my $country (values $locales->{country}->%*) {
+                        if ($country->{name} =~ m/^\Q$text\E.*$/i) {
+                            $found++;
+                            $compl = $country->{name};
+                        }
+                        last if $found > 1;
+                    }
+                }
 
-	    if ($found == 1) {
-		$entry->set_text($compl);
-		$c->complete();
-		return undef;
-	    } else {
-		# beep ?
-	    }
+                if ($found == 1) {
+                    $entry->set_text($compl);
+                    $c->complete();
+                    return undef;
+                } else {
+                    # beep ?
+                }
 
-	    $c->complete();
+                $c->complete();
 
-	    my $buf = $w->get_buffer();
-	    $buf->insert_text(-1, '', -1); # popup selection
+                my $buf = $w->get_buffer();
+                $buf->insert_text(-1, '', -1); # popup selection
 
-	    return 1;
-	}
+                return 1;
+            }
 
-	return undef;
-    });
+            return undef;
+        },
+    );
 
     my $country_store = Gtk3::ListStore->new('Glib::String');
     my $countries = $locales->{country};
     for my $cc (sort { $countries->{$a}->{name} cmp $countries->{$b}->{name} } keys %$countries) {
-	my $iter = $country_store->append();
-	$country_store->set($iter, 0, $countries->{$cc}->{name});
+        my $iter = $country_store->append();
+        $country_store->set($iter, 0, $countries->{$cc}->{name});
     }
     $c->set_model($country_store);
 
-    $w->set_completion ($c);
+    $w->set_completion($c);
 
     $label = Gtk3::Label->new("Country");
     $label->set_xalign(1.0);
@@ -916,26 +953,29 @@ sub create_country_view {
 
     my $country = Proxmox::Install::Config::get_country();
     if ($country && (my $entry = $locales->{country}->{$country})) {
-	$w->set_text($entry->{name});
+        $w->set_text($entry->{name});
     }
 
     $gtk_state->{inbox}->show_all;
 
     Proxmox::UI::display_html('country.htm');
-    set_next (undef,  sub {
+    set_next(
+        undef,
+        sub {
 
-	my $text = $w->get_text;
+            my $text = $w->get_text;
 
-	if (my $cc = $locales->{countryhash}->{lc($text)}) {
-	    Proxmox::Install::Config::set_country($cc);
-	    $step_number++;
-	    create_password_view();
-	    return;
-	} else {
-	    Proxmox::UI::message("Please select a country first.");
-	    $w->grab_focus();
-	}
-    });
+            if (my $cc = $locales->{countryhash}->{ lc($text) }) {
+                Proxmox::Install::Config::set_country($cc);
+                $step_number++;
+                create_password_view();
+                return;
+            } else {
+                Proxmox::UI::message("Please select a country first.");
+                $w->grab_focus();
+            }
+        },
+    );
 
     $w->grab_focus();
 }
@@ -953,22 +993,22 @@ my $create_label_widget_grid = sub {
     my $grid = &$create_basic_grid();
 
     for (my $row = 0; $row < scalar($labeled_widgets->@*); $row++) {
-	my ($label_text, $widget, $suffix_label) = $labeled_widgets->[$row]->@*;
+        my ($label_text, $widget, $suffix_label) = $labeled_widgets->[$row]->@*;
 
-	my $label = Gtk3::Label->new($label_text);
-	$label->set_visible(1);
-	$label->set_xalign(1.0);
-	$grid->attach($label, 0, $row, 1, 1);
+        my $label = Gtk3::Label->new($label_text);
+        $label->set_visible(1);
+        $label->set_xalign(1.0);
+        $grid->attach($label, 0, $row, 1, 1);
 
-	$widget->set_visible(1);
-	$grid->attach($widget, 1, $row, 1, 1);
+        $widget->set_visible(1);
+        $grid->attach($widget, 1, $row, 1, 1);
 
-	if ($suffix_label) {
-	    my $suffix_label = Gtk3::Label->new($suffix_label);
-	    $suffix_label->set_visible(1);
-	    $suffix_label->set_xalign(1.0);
-	    $grid->attach($suffix_label, 2, $row, 1, 1);
-	}
+        if ($suffix_label) {
+            my $suffix_label = Gtk3::Label->new($suffix_label);
+            $suffix_label->set_visible(1);
+            $suffix_label->set_xalign(1.0);
+            $grid->attach($suffix_label, 2, $row, 1, 1);
+        }
     }
 
     return $grid;
@@ -983,15 +1023,15 @@ my $get_selected_hdsize = sub {
     my $cached_disks = get_cached_disks();
     my $disk_count = scalar(@$cached_disks);
     for (my $i = 0; $i < $disk_count; $i++) {
-	my $cur_hd = $gtk_state->{disk_selection}->{$i} // next;
-	my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
-	$hdsize //= $disksize;
-	$hdsize = $disksize if $disksize < $hdsize;
+        my $cur_hd = $gtk_state->{disk_selection}->{$i} // next;
+        my $disksize = int(@$cur_hd[2] / (2 * 1024 * 1024.0)); # size in GB
+        $hdsize //= $disksize;
+        $hdsize = $disksize if $disksize < $hdsize;
     }
 
     if (my $cfg_hdsize = Proxmox::Install::Config::get_hdsize()) {
-	# had the dialog open previously and set an even lower size than the disk selection allows
-	$hdsize = $cfg_hdsize if $cfg_hdsize < $hdsize;
+        # had the dialog open previously and set an even lower size than the disk selection allows
+        $hdsize = $cfg_hdsize if $cfg_hdsize < $hdsize;
     }
     return $hdsize // 0; # fall back to zero, e.g., if none is selected hdsize cannot be any size
 };
@@ -1010,7 +1050,7 @@ my sub create_hdsize_adjustment {
     $hdsize = $get_selected_hdsize->($hdsize);
     my $cfg_hdsize = Proxmox::Install::Config::get_hdsize();
     # params are: initial value, lower, upper, step increment, page increment, page size
-    return Gtk3::Adjustment->new($cfg_hdsize || $hdsize, 0, $hdsize+1, 1, 1, 1);
+    return Gtk3::Adjustment->new($cfg_hdsize || $hdsize, 0, $hdsize + 1, 1, 1, 1);
 }
 
 my sub get_hdsize_spin_button {
@@ -1022,9 +1062,10 @@ my sub get_hdsize_spin_button {
     my $spinbutton_hdsize = Gtk3::SpinButton->new($hdsize_size_adj, 1, 1);
     $spinbutton_hdsize->set_buffer($hdsize_entry_buffer);
     $spinbutton_hdsize->set_adjustment($hdsize_size_adj);
-    $spinbutton_hdsize->set_tooltip_text("only use specified size of the harddisk (rest left unpartitioned)");
+    $spinbutton_hdsize->set_tooltip_text(
+        "only use specified size of the harddisk (rest left unpartitioned)");
     return $spinbutton_hdsize;
-};
+}
 
 my $create_raid_disk_grid = sub {
     my ($hdsize_buttons) = @_;
@@ -1033,54 +1074,60 @@ my $create_raid_disk_grid = sub {
     my $disk_count = scalar(@$cached_disks);
     my $disk_labeled_widgets = [];
     for (my $i = 0; $i < $disk_count; $i++) {
-	my $disk_selector = Gtk3::ComboBoxText->new();
-	$disk_selector->append_text("-- do not use --");
-	$disk_selector->set_active(0);
-	$disk_selector->set_visible(1);
+        my $disk_selector = Gtk3::ComboBoxText->new();
+        $disk_selector->append_text("-- do not use --");
+        $disk_selector->set_active(0);
+        $disk_selector->set_visible(1);
 
-	for my $hd (@$cached_disks) {
-	    my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	    $disk_selector->append_text(get_device_desc($devname, $size, $model));
-	}
+        for my $hd (@$cached_disks) {
+            my ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
+            $disk_selector->append_text(get_device_desc($devname, $size, $model));
+        }
 
-	$disk_selector->{pve_disk_id} = $i;
-	$disk_selector->signal_connect(changed => sub {
-	    my $w = shift;
-	    my $diskid = $w->{pve_disk_id};
-	    my $a = $w->get_active - 1;
-	    $gtk_state->{disk_selection}->{$diskid} = ($a >= 0) ? $cached_disks->[$a] : undef;
-	    for my $btn (@$hdsize_buttons) {
-		update_hdsize_adjustment($btn->get_adjustment());
-	    }
-	});
+        $disk_selector->{pve_disk_id} = $i;
+        $disk_selector->signal_connect(
+            changed => sub {
+                my $w = shift;
+                my $diskid = $w->{pve_disk_id};
+                my $a = $w->get_active - 1;
+                $gtk_state->{disk_selection}->{$diskid} =
+                    ($a >= 0) ? $cached_disks->[$a] : undef;
+                for my $btn (@$hdsize_buttons) {
+                    update_hdsize_adjustment($btn->get_adjustment());
+                }
+            },
+        );
 
-	if ($hdoption_first_setup) {
-	    $disk_selector->set_active ($i+1) if $cached_disks->[$i];
-	} else {
-	    my $hdind = 0;
-	    if (my $cur_hd = $gtk_state->{disk_selection}->{$i}) {
-		foreach my $hd (@$cached_disks) {
-		    if (@$hd[1] eq @$cur_hd[1]) {
-			$disk_selector->set_active($hdind+1);
-			last;
-		    }
-		    $hdind++;
-		}
-	    }
-	}
+        if ($hdoption_first_setup) {
+            $disk_selector->set_active($i + 1) if $cached_disks->[$i];
+        } else {
+            my $hdind = 0;
+            if (my $cur_hd = $gtk_state->{disk_selection}->{$i}) {
+                foreach my $hd (@$cached_disks) {
+                    if (@$hd[1] eq @$cur_hd[1]) {
+                        $disk_selector->set_active($hdind + 1);
+                        last;
+                    }
+                    $hdind++;
+                }
+            }
+        }
 
-	push @$disk_labeled_widgets, ["Harddisk $i", $disk_selector];
+        push @$disk_labeled_widgets, ["Harddisk $i", $disk_selector];
     }
 
     my $clear_all_button = Gtk3::Button->new('_Deselect All');
     if ($disk_count > 3) {
-	$clear_all_button->signal_connect('clicked', sub {
-	    my $is_widget = 0;
-	    for my $disk_selector (@$disk_labeled_widgets) {
-		$disk_selector->[1]->set_active(0);
-	    }
-	});
-	$clear_all_button->set_visible(1);
+        $clear_all_button->signal_connect(
+            'clicked',
+            sub {
+                my $is_widget = 0;
+                for my $disk_selector (@$disk_labeled_widgets) {
+                    $disk_selector->[1]->set_active(0);
+                }
+            },
+        );
+        $clear_all_button->set_visible(1);
     }
 
     my $scrolled_window = Gtk3::ScrolledWindow->new();
@@ -1109,49 +1156,59 @@ my $create_raid_advanced_grid = sub {
     my ($hdsize_btn) = @_;
     my $labeled_widgets = [];
     my $spinbutton_ashift = Gtk3::SpinButton->new_with_range(9, 13, 1);
-    $spinbutton_ashift->set_tooltip_text("zpool ashift property (pool sector size, default 2^12)");
-    $spinbutton_ashift->signal_connect ("value-changed" => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_zfs_opt('ashift', $w->get_value_as_int());
-    });
+    $spinbutton_ashift->set_tooltip_text(
+        "zpool ashift property (pool sector size, default 2^12)");
+    $spinbutton_ashift->signal_connect(
+        "value-changed" => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_zfs_opt('ashift', $w->get_value_as_int());
+        },
+    );
     my $ashift = Proxmox::Install::Config::get_zfs_opt('ashift') // 12;
     $spinbutton_ashift->set_value($ashift);
-    push @$labeled_widgets, ['ashift', $spinbutton_ashift ];
+    push @$labeled_widgets, ['ashift', $spinbutton_ashift];
 
     my $combo_compress = Gtk3::ComboBoxText->new();
     $combo_compress->set_tooltip_text("zfs compression algorithm for rpool dataset");
-    my $comp_opts = ["on","off","lzjb","lz4", "zle", "gzip", "zstd"];
+    my $comp_opts = ["on", "off", "lzjb", "lz4", "zle", "gzip", "zstd"];
     foreach my $opt (@$comp_opts) {
-	$combo_compress->append($opt, $opt);
+        $combo_compress->append($opt, $opt);
     }
     my $compress = Proxmox::Install::Config::get_zfs_opt('compress') // 'on';
     $combo_compress->set_active_id($compress);
-    $combo_compress->signal_connect (changed => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_zfs_opt('compress', $w->get_active_text());
-    });
+    $combo_compress->signal_connect(
+        changed => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_zfs_opt('compress', $w->get_active_text());
+        },
+    );
     push @$labeled_widgets, ['compress', $combo_compress];
 
     my $combo_checksum = Gtk3::ComboBoxText->new();
     $combo_checksum->set_tooltip_text("zfs checksum algorithm for rpool dataset");
     my $csum_opts = ["on", "fletcher4", "sha256"];
     foreach my $opt (@$csum_opts) {
-	$combo_checksum->append($opt, $opt);
+        $combo_checksum->append($opt, $opt);
     }
     my $checksum = Proxmox::Install::Config::get_zfs_opt('checksum') // 'on';
     $combo_checksum->set_active_id($checksum);
-    $combo_checksum->signal_connect (changed => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_zfs_opt('checksum', $w->get_active_text());
-    });
+    $combo_checksum->signal_connect(
+        changed => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_zfs_opt('checksum', $w->get_active_text());
+        },
+    );
     push @$labeled_widgets, ['checksum', $combo_checksum];
 
-    my $spinbutton_copies = Gtk3::SpinButton->new_with_range(1,3,1);
-    $spinbutton_copies->set_tooltip_text("zfs copies property for rpool dataset (in addition to RAID redundancy!)");
-    $spinbutton_copies->signal_connect ("value-changed" => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_zfs_opt('copies', $w->get_value_as_int());
-    });
+    my $spinbutton_copies = Gtk3::SpinButton->new_with_range(1, 3, 1);
+    $spinbutton_copies->set_tooltip_text(
+        "zfs copies property for rpool dataset (in addition to RAID redundancy!)");
+    $spinbutton_copies->signal_connect(
+        "value-changed" => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_zfs_opt('copies', $w->get_value_as_int());
+        },
+    );
     my $copies = Proxmox::Install::Config::get_zfs_opt('copies') // 1;
     $spinbutton_copies->set_value($copies);
     push @$labeled_widgets, ['copies', $spinbutton_copies];
@@ -1161,19 +1218,26 @@ my $create_raid_advanced_grid = sub {
 
     # always leave a GiB as headroom for the OS
     my $arc_max_adjustment = Gtk3::Adjustment->new(
-	$arc_max, $Proxmox::Install::RunEnv::ZFS_ARC_MIN_SIZE_MIB,
-	$total_memory - 1024, 1, 10, 0);
+        $arc_max,
+        $Proxmox::Install::RunEnv::ZFS_ARC_MIN_SIZE_MIB,
+        $total_memory - 1024,
+        1,
+        10,
+        0,
+    );
     my $spinbutton_arc_max = Gtk3::SpinButton->new($arc_max_adjustment, 1, 0);
     $spinbutton_arc_max->set_tooltip_text('Maximum ARC size in megabytes');
-    $spinbutton_arc_max->signal_connect('value-changed' => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_zfs_opt('arc_max', $w->get_value_as_int());
-    });
+    $spinbutton_arc_max->signal_connect(
+        'value-changed' => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_zfs_opt('arc_max', $w->get_value_as_int());
+        },
+    );
 
     push @$labeled_widgets, ['ARC max size', $spinbutton_arc_max, 'MiB'];
 
     push @$labeled_widgets, ['hdsize', $hdsize_btn, 'GB'];
-    return $create_label_widget_grid->($labeled_widgets);;
+    return $create_label_widget_grid->($labeled_widgets);
 };
 
 my $create_btrfs_raid_advanced_grid = sub {
@@ -1184,18 +1248,20 @@ my $create_btrfs_raid_advanced_grid = sub {
     $combo_compress->set_tooltip_text("btrfs compression algorithm for boot volume");
     my $comp_opts = ["on", "off", "zlib", "lzo", "zstd"];
     foreach my $opt (@$comp_opts) {
-	$combo_compress->append($opt, $opt);
+        $combo_compress->append($opt, $opt);
     }
     my $compress = Proxmox::Install::Config::get_btrfs_opt('compress') // 'off';
     $combo_compress->set_active_id($compress);
-    $combo_compress->signal_connect (changed => sub {
-	my $w = shift;
-	Proxmox::Install::Config::set_btrfs_opt('compress', $w->get_active_text());
-    });
+    $combo_compress->signal_connect(
+        changed => sub {
+            my $w = shift;
+            Proxmox::Install::Config::set_btrfs_opt('compress', $w->get_active_text());
+        },
+    );
     push @$labeled_widgets, ['compress', $combo_compress];
 
     push @$labeled_widgets, ['hdsize', $hdsize_btn, 'GB'];
-    return $create_label_widget_grid->($labeled_widgets);;
+    return $create_label_widget_grid->($labeled_widgets);
 };
 
 sub create_hdoption_view {
@@ -1207,10 +1273,10 @@ sub create_hdoption_view {
 
     my $contarea = $dialog->get_content_area();
 
-    my $hbox2 =  Gtk3::Box->new('horizontal', 0);
+    my $hbox2 = Gtk3::Box->new('horizontal', 0);
     $contarea->pack_start($hbox2, 1, 1, 5);
 
-    my $grid =  Gtk3::Grid->new();
+    my $grid = Gtk3::Grid->new();
     $grid->set_column_spacing(10);
     $grid->set_row_spacing(10);
 
@@ -1225,24 +1291,24 @@ sub create_hdoption_view {
 
     my $fstypecb = Gtk3::ComboBoxText->new();
     my $fstype = [
-	'ext4',
-	'xfs',
-	'zfs (RAID0)',
-	'zfs (RAID1)',
-	'zfs (RAID10)',
-	'zfs (RAIDZ-1)',
-	'zfs (RAIDZ-2)',
-	'zfs (RAIDZ-3)',
+        'ext4',
+        'xfs',
+        'zfs (RAID0)',
+        'zfs (RAID1)',
+        'zfs (RAID10)',
+        'zfs (RAIDZ-1)',
+        'zfs (RAIDZ-2)',
+        'zfs (RAIDZ-3)',
     ];
     push @$fstype, 'btrfs (RAID0)', 'btrfs (RAID1)', 'btrfs (RAID10)'
-	if $iso_env->{cfg}->{enable_btrfs};
+        if $iso_env->{cfg}->{enable_btrfs};
 
     my $filesys = Proxmox::Install::Config::get_filesys();
     my $tcount = 0;
     foreach my $tmp (@$fstype) {
-	$fstypecb->append_text($tmp);
-	$fstypecb->set_active ($tcount) if $filesys eq $tmp;
-	$tcount++;
+        $fstypecb->append_text($tmp);
+        $fstypecb->set_active($tcount) if $filesys eq $tmp;
+        $tcount++;
     }
 
     $grid->attach($fstypecb, 1, $row, 1, 1);
@@ -1266,10 +1332,10 @@ sub create_hdoption_view {
 
     my $target_hd = Proxmox::Install::Config::get_target_hd();
     my $hdsize = 0; # size compute
-    if ( -b $target_hd) {
-	$hdsize = int(Proxmox::Sys::Block::hd_size($target_hd) / (1024 * 1024.0)); # size in GB
+    if (-b $target_hd) {
+        $hdsize = int(Proxmox::Sys::Block::hd_size($target_hd) / (1024 * 1024.0)); # size in GB
     } elsif ($target_hd) {
-	$hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
+        $hdsize = int((-s $target_hd) / (1024 * 1024 * 1024.0));
     }
 
     my $spinbutton_hdsize_nonraid = get_hdsize_spin_button($hdsize);
@@ -1278,51 +1344,63 @@ sub create_hdoption_view {
 
     my $entry_swapsize = Gtk3::Entry->new();
     $entry_swapsize->set_tooltip_text("maximum SWAP size");
-    $entry_swapsize->signal_connect (key_press_event => \&check_float);
+    $entry_swapsize->signal_connect(key_press_event => \&check_float);
     my $swapsize = Proxmox::Install::Config::get_swapsize();
     $entry_swapsize->set_text($swapsize) if defined($swapsize);
     push @$hdsize_labeled_widgets, ['swapsize', $entry_swapsize, 'GB'];
 
     my $entry_maxroot = Gtk3::Entry->new();
     if ($iso_env->{product} eq 'pve') {
-	$entry_maxroot->set_tooltip_text("maximum size for LVM root volume");
-	$entry_maxroot->signal_connect (key_press_event => \&check_float);
-	if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
-	    $entry_maxroot->set_text($maxroot);
-	}
-	push @$hdsize_labeled_widgets, ['maxroot', $entry_maxroot, 'GB'];
+        $entry_maxroot->set_tooltip_text("maximum size for LVM root volume");
+        $entry_maxroot->signal_connect(key_press_event => \&check_float);
+        if (my $maxroot = Proxmox::Install::Config::get_maxroot()) {
+            $entry_maxroot->set_text($maxroot);
+        }
+        push @$hdsize_labeled_widgets, ['maxroot', $entry_maxroot, 'GB'];
     }
 
     my $entry_minfree = Gtk3::Entry->new();
     $entry_minfree->set_tooltip_text("minimum free LVM space (required for LVM snapshots)");
-    $entry_minfree->signal_connect (key_press_event => \&check_float);
+    $entry_minfree->signal_connect(key_press_event => \&check_float);
     if (defined(my $minfree = Proxmox::Install::Config::get_minfree())) {
-	$entry_minfree->set_text($minfree);
+        $entry_minfree->set_text($minfree);
     }
     push @$hdsize_labeled_widgets, ['minfree', $entry_minfree, 'GB'];
 
     my $entry_maxvz;
     if ($iso_env->{product} eq 'pve') {
-	$entry_maxvz = Gtk3::Entry->new();
-	$entry_maxvz->set_tooltip_text("maximum size for LVM data volume");
-	$entry_maxvz->signal_connect (key_press_event => \&check_float);
-	if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
-	    $entry_maxvz->set_text($maxvz);
-	}
-	push @$hdsize_labeled_widgets, ['maxvz', $entry_maxvz, 'GB'];
+        $entry_maxvz = Gtk3::Entry->new();
+        $entry_maxvz->set_tooltip_text("maximum size for LVM data volume");
+        $entry_maxvz->signal_connect(key_press_event => \&check_float);
+        if (defined(my $maxvz = Proxmox::Install::Config::get_maxvz())) {
+            $entry_maxvz->set_text($maxvz);
+        }
+        push @$hdsize_labeled_widgets, ['maxvz', $entry_maxvz, 'GB'];
     }
 
     my $spinbutton_hdsize_zfs = get_hdsize_spin_button($hdsize);
     my $spinbutton_hdsize_btrfs = get_hdsize_spin_button($hdsize);
-    my $hdsize_buttons = [ $spinbutton_hdsize_zfs, $spinbutton_hdsize_btrfs ];
+    my $hdsize_buttons = [$spinbutton_hdsize_zfs, $spinbutton_hdsize_btrfs];
     my $options_stack = Gtk3::Stack->new();
     $options_stack->set_visible(1);
     $options_stack->set_hexpand(1);
     $options_stack->set_vexpand(1);
     $options_stack->add_titled(&$create_raid_disk_grid($hdsize_buttons), "raiddisk", "Disk Setup");
-    $options_stack->add_titled(&$create_label_widget_grid($hdsize_labeled_widgets), "hdsize", "Size Options");
-    $options_stack->add_titled(&$create_raid_advanced_grid($spinbutton_hdsize_zfs), "raidzfsadvanced", "Advanced Options");
-    $options_stack->add_titled(&$create_btrfs_raid_advanced_grid($spinbutton_hdsize_btrfs), "raidbtrfsadvanced", "Advanced Options");
+    $options_stack->add_titled(
+        &$create_label_widget_grid($hdsize_labeled_widgets),
+        "hdsize",
+        "Size Options",
+    );
+    $options_stack->add_titled(
+        &$create_raid_advanced_grid($spinbutton_hdsize_zfs),
+        "raidzfsadvanced",
+        "Advanced Options",
+    );
+    $options_stack->add_titled(
+        &$create_btrfs_raid_advanced_grid($spinbutton_hdsize_btrfs),
+        "raidbtrfsadvanced",
+        "Advanced Options",
+    );
     $options_stack->set_visible_child_name("raiddisk");
     my $options_stack_switcher = Gtk3::StackSwitcher->new();
     $options_stack_switcher->set_halign('center');
@@ -1335,52 +1413,56 @@ sub create_hdoption_view {
     $hdoption_first_setup = 0;
 
     my $switch_view = sub {
-	my $filesys = Proxmox::Install::Config::get_filesys();
-	my $raid = $filesys =~ m/zfs|btrfs/;
-	my $is_zfs = $filesys =~ m/zfs/;
+        my $filesys = Proxmox::Install::Config::get_filesys();
+        my $raid = $filesys =~ m/zfs|btrfs/;
+        my $is_zfs = $filesys =~ m/zfs/;
 
-	$target_hd_combo->set_visible(!$raid);
-	$options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
-	$options_stack->get_child_by_name("raiddisk")->set_visible($raid);
+        $target_hd_combo->set_visible(!$raid);
+        $options_stack->get_child_by_name("hdsize")->set_visible(!$raid);
+        $options_stack->get_child_by_name("raiddisk")->set_visible($raid);
 
-	if ($raid) {
-	    my $msg = "<b>Note</b>: " . ($is_zfs
-		? "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
-		: "BTRFS integration in $iso_env->{cfg}->{fullname} is a technology preview!"
-	    );
-	    $hw_raid_note->set_markup($msg);
-	}
-	$hw_raid_note->set_visible($raid);
-	$options_stack_switcher->set_visible($raid);
-	$options_stack->get_child_by_name("raidzfsadvanced")->set_visible($is_zfs);
-	$options_stack->get_child_by_name("raidbtrfsadvanced")->set_visible(!$is_zfs);
-	if ($raid) {
-	    $target_hd_label->set_text("Target: $filesys ");
-	    $options_stack->set_visible_child_name("raiddisk");
-	} else {
-	    $target_hd_label->set_text("Target Harddisk");
-	    $options_stack->set_visible_child_name("hdsize");
-	}
+        if ($raid) {
+            my $msg = "<b>Note</b>: "
+                . (
+                    $is_zfs
+                    ? "ZFS is not compatible with hardware RAID controllers, for details see the documentation."
+                    : "BTRFS integration in $iso_env->{cfg}->{fullname} is a technology preview!"
+                );
+            $hw_raid_note->set_markup($msg);
+        }
+        $hw_raid_note->set_visible($raid);
+        $options_stack_switcher->set_visible($raid);
+        $options_stack->get_child_by_name("raidzfsadvanced")->set_visible($is_zfs);
+        $options_stack->get_child_by_name("raidbtrfsadvanced")->set_visible(!$is_zfs);
+        if ($raid) {
+            $target_hd_label->set_text("Target: $filesys ");
+            $options_stack->set_visible_child_name("raiddisk");
+        } else {
+            $target_hd_label->set_text("Target Harddisk");
+            $options_stack->set_visible_child_name("hdsize");
+        }
 
-	if ($raid) {
-	    $spinbutton_hdsize = $is_zfs ? $spinbutton_hdsize_zfs : $spinbutton_hdsize_btrfs;
-	} else {
-	    $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
-	}
+        if ($raid) {
+            $spinbutton_hdsize = $is_zfs ? $spinbutton_hdsize_zfs : $spinbutton_hdsize_btrfs;
+        } else {
+            $spinbutton_hdsize = $spinbutton_hdsize_nonraid;
+        }
 
-	my (undef, $pref_width) = $dialog->get_preferred_width();
-	my (undef, $pref_height) = $dialog->get_preferred_height();
-	$pref_height = 750 if $pref_height > 750;
-	$dialog->resize($pref_width, $pref_height);
+        my (undef, $pref_width) = $dialog->get_preferred_width();
+        my (undef, $pref_height) = $dialog->get_preferred_height();
+        $pref_height = 750 if $pref_height > 750;
+        $dialog->resize($pref_width, $pref_height);
     };
 
     &$switch_view();
 
-    $fstypecb->signal_connect (changed => sub {
-	my $new_filesys = $fstypecb->get_active_text();
-	Proxmox::Install::Config::set_filesys($new_filesys);
-	&$switch_view();
-    });
+    $fstypecb->signal_connect(
+        changed => sub {
+            my $new_filesys = $fstypecb->get_active_text();
+            Proxmox::Install::Config::set_filesys($new_filesys);
+            &$switch_view();
+        },
+    );
 
     my $sep2 = Gtk3::Separator->new('horizontal');
     $sep2->set_visible(1);
@@ -1391,49 +1473,49 @@ sub create_hdoption_view {
     $dialog->run();
 
     my $get_float = sub {
-	my ($entry) = @_;
+        my ($entry) = @_;
 
-	my $text = $entry->get_text();
-	return undef if !defined($text);
+        my $text = $entry->get_text();
+        return undef if !defined($text);
 
-	$text =~ s/^\s+//;
-	$text =~ s/\s+$//;
+        $text =~ s/^\s+//;
+        $text =~ s/\s+$//;
 
-	return undef if $text !~ m/^\d+(\.\d+)?$/;
+        return undef if $text !~ m/^\d+(\.\d+)?$/;
 
-	return $text;
+        return $text;
     };
 
     my $tmp;
 
     if (($tmp = &$get_float($spinbutton_hdsize)) && ($tmp != $hdsize)) {
-	Proxmox::Install::Config::set_hdsize($tmp);
+        Proxmox::Install::Config::set_hdsize($tmp);
     } else {
-	Proxmox::Install::Config::set_hdsize(undef);
+        Proxmox::Install::Config::set_hdsize(undef);
     }
 
     if (defined($tmp = &$get_float($entry_swapsize))) {
-	Proxmox::Install::Config::set_swapsize($tmp);
+        Proxmox::Install::Config::set_swapsize($tmp);
     } else {
-	Proxmox::Install::Config::set_swapsize(undef);
+        Proxmox::Install::Config::set_swapsize(undef);
     }
 
     if (defined($tmp = &$get_float($entry_maxroot))) {
-	Proxmox::Install::Config::set_maxroot($tmp);
+        Proxmox::Install::Config::set_maxroot($tmp);
     } else {
-	Proxmox::Install::Config::set_maxroot(undef);
+        Proxmox::Install::Config::set_maxroot(undef);
     }
 
     if (defined($tmp = &$get_float($entry_minfree))) {
-	Proxmox::Install::Config::set_minfree($tmp);
+        Proxmox::Install::Config::set_minfree($tmp);
     } else {
-	Proxmox::Install::Config::set_minfree(undef);
+        Proxmox::Install::Config::set_minfree(undef);
     }
 
     if ($entry_maxvz && defined($tmp = &$get_float($entry_maxvz))) {
-	Proxmox::Install::Config::set_maxvz($tmp);
+        Proxmox::Install::Config::set_maxvz($tmp);
     } else {
-	Proxmox::Install::Config::set_maxvz(undef);
+        Proxmox::Install::Config::set_maxvz(undef);
     }
 
     $dialog->destroy();
@@ -1442,27 +1524,28 @@ sub create_hdoption_view {
 sub apply_raid_disk_selection {
     Proxmox::Install::Config::set_key('disk_selection', {}); # reset
     for my $order (sort keys $gtk_state->{disk_selection}->%*) {
-	my $disk = $gtk_state->{disk_selection}->{$order} // next;
-	Proxmox::Install::Config::set_disk_selection($order, $disk->[0]);
+        my $disk = $gtk_state->{disk_selection}->{$order} // next;
+        Proxmox::Install::Config::set_disk_selection($order, $disk->[0]);
     }
 }
 
 my $last_hd_selected = 0;
+
 sub create_hdsel_view {
 
     $gtk_state->{prev_btn}->set_sensitive(1); # enable previous button at this point
 
     cleanup_view();
 
-    my $vbox =  Gtk3::Box->new('vertical', 0);
+    my $vbox = Gtk3::Box->new('vertical', 0);
     $gtk_state->{inbox}->pack_start($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::Box->new('horizontal', 0);
+    my $hbox = Gtk3::Box->new('horizontal', 0);
     $vbox->pack_start($hbox, 0, 0, 10);
 
     my $cached_disks = get_cached_disks();
     my ($disk, $devname, $size, $model, $logical_bsize) = $cached_disks->[0]->@*;
     if (!defined(Proxmox::Install::Config::get_target_hd())) {
-	Proxmox::Install::Config::set_target_hd($devname);
+        Proxmox::Install::Config::set_target_hd($devname);
     }
 
     $target_hd_label = Gtk3::Label->new("Target Harddisk");
@@ -1471,70 +1554,74 @@ sub create_hdsel_view {
     $target_hd_combo = Gtk3::ComboBoxText->new();
 
     foreach my $hd ($cached_disks->@*) {
-	($disk, $devname, $size, $model, $logical_bsize) = @$hd;
-	$target_hd_combo->append_text(get_device_desc($devname, $size, $model));
+        ($disk, $devname, $size, $model, $logical_bsize) = @$hd;
+        $target_hd_combo->append_text(get_device_desc($devname, $size, $model));
     }
 
     my $raid = Proxmox::Install::Config::get_filesys() =~ m/zfs|btrfs/;
     if ($raid) {
-	my $filesys = Proxmox::Install::Config::get_filesys();
-	$target_hd_label->set_text("Target: $filesys ");
-	$target_hd_combo->set_visible(0);
-	$target_hd_combo->set_no_show_all(1);
+        my $filesys = Proxmox::Install::Config::get_filesys();
+        $target_hd_label->set_text("Target: $filesys ");
+        $target_hd_combo->set_visible(0);
+        $target_hd_combo->set_no_show_all(1);
     }
     $target_hd_combo->set_active($last_hd_selected);
-    $target_hd_combo->signal_connect(changed => sub {
-	$a = shift->get_active;
-	my ($disk, $devname) = @{@$cached_disks[$a]};
-	$last_hd_selected = $a;
-	Proxmox::Install::Config::set_target_hd($devname);
-    });
+    $target_hd_combo->signal_connect(
+        changed => sub {
+            $a = shift->get_active;
+            my ($disk, $devname) = @{ @$cached_disks[$a] };
+            $last_hd_selected = $a;
+            Proxmox::Install::Config::set_target_hd($devname);
+        },
+    );
 
     $hbox->pack_start($target_hd_combo, 0, 0, 10);
 
     my $options = Gtk3::Button->new('_Options');
-    $options->signal_connect (clicked => \&create_hdoption_view);
-    $hbox->pack_start ($options, 0, 0, 0);
-
+    $options->signal_connect(clicked => \&create_hdoption_view);
+    $hbox->pack_start($options, 0, 0, 0);
 
     $gtk_state->{inbox}->show_all;
 
     Proxmox::UI::display_html('page1.htm');
 
-    set_next(undef, sub {
-	my $filesys = Proxmox::Install::Config::get_filesys();
-	if ($filesys =~ m/zfs/) {
-	    apply_raid_disk_selection();
-	    my ($devlist) = eval { Proxmox::Install::get_zfs_raid_setup() };
-	    if (my $err = $@) {
-		Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
-		return;
-	    }
-	    $target_hds = [ map { $_->[1] } @$devlist ];
-	} elsif ($filesys =~ m/btrfs/) {
-	    apply_raid_disk_selection();
-	    my ($devlist) = eval { Proxmox::Install::get_btrfs_raid_setup() };
-	    if (my $err = $@) {
-		Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
-		return;
-	    }
-	    $target_hds = [ map { $_->[1] } @$devlist ];
-	} else {
-	    my $target_hd = Proxmox::Install::Config::get_target_hd();
-	    eval {
-		my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
-		Proxmox::Install::legacy_bios_4k_check($target_block_size);
-	    };
-	    if (my $err = $@) {
-		Proxmox::UI::message("Warning: $err\n");
-		return;
-	    }
-	    $target_hds = [ $target_hd ];
-	}
+    set_next(
+        undef,
+        sub {
+            my $filesys = Proxmox::Install::Config::get_filesys();
+            if ($filesys =~ m/zfs/) {
+                apply_raid_disk_selection();
+                my ($devlist) = eval { Proxmox::Install::get_zfs_raid_setup() };
+                if (my $err = $@) {
+                    Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
+                    return;
+                }
+                $target_hds = [map { $_->[1] } @$devlist];
+            } elsif ($filesys =~ m/btrfs/) {
+                apply_raid_disk_selection();
+                my ($devlist) = eval { Proxmox::Install::get_btrfs_raid_setup() };
+                if (my $err = $@) {
+                    Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
+                    return;
+                }
+                $target_hds = [map { $_->[1] } @$devlist];
+            } else {
+                my $target_hd = Proxmox::Install::Config::get_target_hd();
+                eval {
+                    my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
+                    Proxmox::Install::legacy_bios_4k_check($target_block_size);
+                };
+                if (my $err = $@) {
+                    Proxmox::UI::message("Warning: $err\n");
+                    return;
+                }
+                $target_hds = [$target_hd];
+            }
 
-	$step_number++;
-	create_country_view();
-    });
+            $step_number++;
+            create_country_view();
+        },
+    );
 }
 
 sub create_extract_view {
@@ -1546,46 +1633,47 @@ sub create_extract_view {
     $gtk_state->{prev_btn}->set_sensitive(0);
     $gtk_state->{prev_btn}->hide();
 
-    my $vbox =  Gtk3::Box->new('vertical', 0);
-    $gtk_state->{inbox}->pack_start ($vbox, 1, 0, 0);
-    my $hbox =  Gtk3::Box->new('horizontal', 0);
-    $vbox->pack_start ($hbox, 0, 0, 10);
+    my $vbox = Gtk3::Box->new('vertical', 0);
+    $gtk_state->{inbox}->pack_start($vbox, 1, 0, 0);
+    my $hbox = Gtk3::Box->new('horizontal', 0);
+    $vbox->pack_start($hbox, 0, 0, 10);
 
-    my $vbox2 =  Gtk3::Box->new('vertical', 0);
-    $hbox->pack_start ($vbox2, 0, 0, 0);
+    my $vbox2 = Gtk3::Box->new('vertical', 0);
+    $hbox->pack_start($vbox2, 0, 0, 0);
 
     $vbox2->pack_start($gtk_state->{progress_status}, 1, 1, 0);
 
     $gtk_state->{progress_bar}->set_show_text(1);
-    $gtk_state->{progress_bar}->set_size_request (600, -1);
+    $gtk_state->{progress_bar}->set_size_request(600, -1);
 
     $vbox2->pack_start($gtk_state->{progress_bar}, 0, 0, 0);
 
     $gtk_state->{inbox}->show_all();
 
-    eval  { Proxmox::Install::extract_data() };
+    eval { Proxmox::Install::extract_data() };
     my $err = $@;
 
     $gtk_state->{next_btn}->set_sensitive(1);
 
-    set_next("_Reboot", sub { app_quit(0); } );
+    set_next("_Reboot", sub { app_quit(0); });
 
     my $autoreboot = Proxmox::Install::Config::get_autoreboot();
     my $autoreboot_seconds = 5;
     my $success_transform = sub {
-	my ($raw_html, $iso_env) = @_;
+        my ($raw_html, $iso_env) = @_;
 
-	my $ip_addr = Proxmox::Install::Config::get_ip_addr();
-	my $ip_version = Proxmox::Install::Config::get_ip_version();
+        my $ip_addr = Proxmox::Install::Config::get_ip_addr();
+        my $ip_version = Proxmox::Install::Config::get_ip_version();
 
-	my $addr = $ip_version == 6 ? "[${ip_addr}]" : "$ip_addr";
-	$raw_html =~ s/__IPADDR__/$addr/g;
-	$raw_html =~ s/__PORT__/$iso_env->{cfg}->{port}/g;
+        my $addr = $ip_version == 6 ? "[${ip_addr}]" : "$ip_addr";
+        $raw_html =~ s/__IPADDR__/$addr/g;
+        $raw_html =~ s/__PORT__/$iso_env->{cfg}->{port}/g;
 
-	my $autoreboot_msg = $autoreboot ? "Automatic reboot scheduled in $autoreboot_seconds seconds." : '';
-	$raw_html =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
+        my $autoreboot_msg =
+            $autoreboot ? "Automatic reboot scheduled in $autoreboot_seconds seconds." : '';
+        $raw_html =~ s/__AUTOREBOOT_MSG__/$autoreboot_msg/;
 
-	return $raw_html;
+        return $raw_html;
     };
 
     # It does not make sense to Abort the install at this point, whether it
@@ -1593,25 +1681,28 @@ sub create_extract_view {
     $gtk_state->{abort_btn}->set_sensitive(0);
 
     if ($err) {
-	Proxmox::UI::display_html("fail.htm");
-	# suppress "empty" error as we got some case where the user choose to abort on a prompt,
-	# there it doesn't make sense to show them an error again, they "caused" it after all.
-	Proxmox::UI::error($err) if $err ne "\n";
+        Proxmox::UI::display_html("fail.htm");
+        # suppress "empty" error as we got some case where the user choose to abort on a prompt,
+        # there it doesn't make sense to show them an error again, they "caused" it after all.
+        Proxmox::UI::error($err) if $err ne "\n";
     } else {
-	cleanup_view();
-	Proxmox::UI::display_html("success.htm", $success_transform);
+        cleanup_view();
+        Proxmox::UI::display_html("success.htm", $success_transform);
 
         if ($autoreboot) {
-	    Glib::Timeout->add(1000, sub {
-		if ($autoreboot_seconds > 0) {
-		    $autoreboot_seconds--;
-		    Proxmox::UI::display_html("success.htm", $success_transform);
-		    return 1; # re-schedule, undef isn't enough anymore since Bookworm
-		} else {
-		    app_quit(0);
-		}
-	    });
-	}
+            Glib::Timeout->add(
+                1000,
+                sub {
+                    if ($autoreboot_seconds > 0) {
+                        $autoreboot_seconds--;
+                        Proxmox::UI::display_html("success.htm", $success_transform);
+                        return 1; # re-schedule, undef isn't enough anymore since Bookworm
+                    } else {
+                        app_quit(0);
+                    }
+                },
+            );
+        }
     }
 }
 
@@ -1623,32 +1714,35 @@ sub create_intro_view {
 
     my $run_env = Proxmox::Install::RunEnv::get();
     if (int($run_env->{total_memory}) < 1024) {
-	Proxmox::UI::error("Less than 1 GiB of usable memory detected, installation will probably fail.\n\n".
-	    "See 'System Requirements' in the $iso_env->{cfg}->{fullname} documentation.");
+        Proxmox::UI::error(
+            "Less than 1 GiB of usable memory detected, installation will probably fail.\n\n"
+                . "See 'System Requirements' in the $iso_env->{cfg}->{fullname} documentation.");
     }
 
     if ($iso_env->{product} eq 'pve' && !$run_env->{hvm_supported}) {
-	Proxmox::UI::error(
-	    "No support for hardware-accelerated KVM virtualization detected.\n\n"
-	    ."Check BIOS settings for Intel VT / AMD-V / SVM."
-	);
+        Proxmox::UI::error(
+            "No support for hardware-accelerated KVM virtualization detected.\n\n"
+                . "Check BIOS settings for Intel VT / AMD-V / SVM.");
     }
 
-    Proxmox::UI::display_html('license.htm', sub {
-	my ($raw_html, $iso_env) = @_;
+    Proxmox::UI::display_html(
+        'license.htm',
+        sub {
+            my ($raw_html, $iso_env) = @_;
 
-	my $proxmox_cddir = $iso_env->{locations}->{iso};
-	my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
-	if (my $err = $@) {
-	    die $err if !is_test_mode();
-	    $license = "TESTMODE: Ignore non existent EULA...\n";
-	}
-	my $title = "END USER LICENSE AGREEMENT (EULA)";
-	$raw_html =~ s/__LICENSE__/$license/;
-	$raw_html =~ s/__LICENSE_TITLE__/$title/;
+            my $proxmox_cddir = $iso_env->{locations}->{iso};
+            my $license = eval { decode('utf8', file_read_all("${proxmox_cddir}/EULA")) };
+            if (my $err = $@) {
+                die $err if !is_test_mode();
+                $license = "TESTMODE: Ignore non existent EULA...\n";
+            }
+            my $title = "END USER LICENSE AGREEMENT (EULA)";
+            $raw_html =~ s/__LICENSE__/$license/;
+            $raw_html =~ s/__LICENSE_TITLE__/$title/;
 
-	return $raw_html;
-    });
+            return $raw_html;
+        },
+    );
 
     $step_number++;
     set_next("I a_gree", \&create_hdsel_view);
@@ -1663,17 +1757,17 @@ my $initial_error = 0;
 
 {
     my $cached_disks = get_cached_disks();
-    if (!defined($cached_disks) || (scalar (@$cached_disks) <= 0)) {
-	print STDERR "no harddisks found\n";
-	$initial_error = 1;
-	Proxmox::UI::display_html("nohds.htm");
-	set_next("Reboot", sub { app_quit(0); } );
+    if (!defined($cached_disks) || (scalar(@$cached_disks) <= 0)) {
+        print STDERR "no harddisks found\n";
+        $initial_error = 1;
+        Proxmox::UI::display_html("nohds.htm");
+        set_next("Reboot", sub { app_quit(0); });
     } else {
-	foreach my $hd (@$cached_disks) {
-	    my ($disk, $devname) = @$hd;
-	    next if $devname =~ m|^/dev/md\d+$|;
-	    print STDERR "found Disk$disk N:$devname\n";
-	}
+        foreach my $hd (@$cached_disks) {
+            my ($disk, $devname) = @$hd;
+            next if $devname =~ m|^/dev/md\d+$|;
+            print STDERR "found Disk$disk N:$devname\n";
+        }
     }
 }
 
@@ -1682,10 +1776,10 @@ if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
     print STDERR "no network interfaces found\n";
     $initial_error = 1;
     Proxmox::UI::display_html("nonics.htm");
-    set_next("Reboot", sub { app_quit(0); } );
+    set_next("Reboot", sub { app_quit(0); });
 }
 
-create_intro_view () if !$initial_error;
+create_intro_view() if !$initial_error;
 
 Gtk3->main;
 

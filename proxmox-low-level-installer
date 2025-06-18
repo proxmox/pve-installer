@@ -13,7 +13,7 @@ use Time::HiRes qw(usleep);
 {
     my $test_image;
     GetOptions(
-	'test-image|t=s' => \$test_image
+        'test-image|t=s' => \$test_image,
     ) or die "usage error\n";
 
     Proxmox::Install::ISOEnv::set_test_image($test_image) if $test_image;
@@ -33,8 +33,10 @@ use Proxmox::UI;
 my $commands = {
     'dump-env' => 'Dump the current ISO and Hardware environment to base the installer UI on.',
     'dump-udev' => 'Dump disk and network device info. Used for the auto installation.',
-    'start-session' => 'Start an installation session, with command and result transmitted via stdin/out',
-    'start-session-test' => 'Start an installation TEST session, with command and result transmitted via stdin/out',
+    'start-session' =>
+        'Start an installation session, with command and result transmitted via stdin/out',
+    'start-session-test' =>
+        'Start an installation TEST session, with command and result transmitted via stdin/out',
     'help' => 'Output this usage help.',
 };
 
@@ -42,14 +44,14 @@ sub usage {
     my ($cmd) = @_;
 
     if (!$cmd) {
-	printf("ERROR: missing command\n\n");
+        printf("ERROR: missing command\n\n");
     } elsif (!exists($commands->{$cmd})) {
-	printf("ERROR: unknown command '$cmd'\n\n");
+        printf("ERROR: unknown command '$cmd'\n\n");
     }
 
     print "USAGE: $0 <cmd>\n";
     for my $cmd (sort keys $commands->%*) {
-	printf("  %-20s - %s\n", $cmd, $commands->{$cmd});
+        printf("  %-20s - %s\n", $cmd, $commands->{$cmd});
     }
 
     exit($cmd ne 'help' ? 1 : 0);
@@ -58,31 +60,33 @@ sub usage {
 sub read_and_merge_config {
     my $config_raw;
     while (my $line = <>) {
-	if ($line =~ /^\s*\{/) {
-	    $config_raw = $line;
-	    last;
-	}
+        if ($line =~ /^\s*\{/) {
+            $config_raw = $line;
+            last;
+        }
     }
 
-    my $config =  eval { from_json($config_raw, { utf8 => 1 }) };
+    my $config = eval { from_json($config_raw, { utf8 => 1 }) };
     die "failed to parse config from stdin - $@\n" if $@;
 
     Proxmox::Install::Config::merge($config);
-    log_info("got installation config: ". to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 }) ."\n");
+    log_info("got installation config: "
+        . to_json(Proxmox::Install::Config::get(), { utf8 => 1, canonical => 1 })
+        . "\n");
     file_write_all("/tmp/low-level-config.json", to_json(Proxmox::Install::Config::get()));
 }
 
 sub send_reboot_ui_message {
     if (Proxmox::Install::Config::get_autoreboot()) {
-	my $action = -f '/run/proxmox-poweroff-after-install' ? 'powering off' : 'rebooting';
-	my $secs = 5;
-	while ($secs > 0) {
-	    Proxmox::UI::finished(1, "Installation finished - auto $action in $secs seconds ..");
-	    sleep 1;
-	    $secs -= 1;
-	}
+        my $action = -f '/run/proxmox-poweroff-after-install' ? 'powering off' : 'rebooting';
+        my $secs = 5;
+        while ($secs > 0) {
+            Proxmox::UI::finished(1, "Installation finished - auto $action in $secs seconds ..");
+            sleep 1;
+            $secs -= 1;
+        }
     } else {
-	Proxmox::UI::finished(1, "Installation finished - reboot now?");
+        Proxmox::UI::finished(1, "Installation finished - reboot now?");
     }
 }
 
@@ -102,19 +106,19 @@ if ($cmd eq 'dump-env') {
     die "failed to create output directory '$out_dir'\n" if !-d $out_dir;
 
     my $iso_info = {
-	'iso-info' => $env->{iso},
-	'product' => $env->{product},
-	'product-cfg' => $env->{cfg},
-	'run-env-cache-file' => $env->{'run-env-cache-file'},
-	'locations' => $env->{locations},
+        'iso-info' => $env->{iso},
+        'product' => $env->{product},
+        'product-cfg' => $env->{cfg},
+        'run-env-cache-file' => $env->{'run-env-cache-file'},
+        'locations' => $env->{locations},
     };
-    my $iso_serialized = to_json($iso_info, {canonical => 1, utf8 => 1}) ."\n";
+    my $iso_serialized = to_json($iso_info, { canonical => 1, utf8 => 1 }) . "\n";
     file_write_all("$out_dir/iso-info.json", $iso_serialized);
 
     my $run_env_file = Proxmox::Install::ISOEnv::get('run-env-cache-file');
 
     my $run_env = Proxmox::Install::RunEnv::query_installation_environment();
-    my $run_env_serialized = to_json($run_env, {canonical => 1, utf8 => 1}) ."\n";
+    my $run_env_serialized = to_json($run_env, { canonical => 1, utf8 => 1 }) . "\n";
     file_write_all($run_env_file, $run_env_serialized);
 } elsif ($cmd eq 'dump-udev') {
     my $out_dir = $env->{locations}->{run};
@@ -122,11 +126,11 @@ if ($cmd eq 'dump-env') {
     die "failed to create output directory '$out_dir'\n" if !-d $out_dir;
 
     my $output = {
-	disks => Proxmox::Sys::Block::udevadm_disk_details(),
-	nics => Proxmox::Sys::Net::udevadm_netdev_details(),
+        disks => Proxmox::Sys::Block::udevadm_disk_details(),
+        nics => Proxmox::Sys::Net::udevadm_netdev_details(),
     };
 
-    my $output_serialized = to_json($output, {canonical => 1, utf8 => 1}) ."\n";
+    my $output_serialized = to_json($output, { canonical => 1, utf8 => 1 }) . "\n";
     file_write_all("$out_dir/run-env-udev.json", $output_serialized);
 } elsif ($cmd eq 'start-session') {
     Proxmox::UI::init_stdio({}, $env);
@@ -134,15 +138,15 @@ if ($cmd eq 'dump-env') {
 
     eval { Proxmox::Install::extract_data() };
     if (my $err = $@) {
-	# suppress "empty" error as we got some case where the user choose to abort on a prompt,
-	# there it doesn't make sense to show them an error again, they "caused" it after all.
-	if ($err ne "\n") {
-	    warn "installation failed - $err\n";
-	    log_error("installation failed: $err");
-	    Proxmox::UI::finished(0, $err);
-	}
+        # suppress "empty" error as we got some case where the user choose to abort on a prompt,
+        # there it doesn't make sense to show them an error again, they "caused" it after all.
+        if ($err ne "\n") {
+            warn "installation failed - $err\n";
+            log_error("installation failed: $err");
+            Proxmox::UI::finished(0, $err);
+        }
     } else {
-	send_reboot_ui_message();
+        send_reboot_ui_message();
     }
 } elsif ($cmd eq 'start-session-test') {
     Proxmox::UI::init_stdio({}, $env);
@@ -152,12 +156,12 @@ if ($cmd eq 'dump-env') {
     Proxmox::UI::message("Test Message - got $res");
 
     for (my $i = 1; $i <= 1000; $i += 3) {
-	Proxmox::UI::progress($i/100000, 0, 100, "foo $i");
-	if ($i > 500 && $i < 600) {
-	    usleep(50 * 1000);
-	} else {
-	    usleep(10 * 1000);
-	}
+        Proxmox::UI::progress($i / 100000, 0, 100, "foo $i");
+        if ($i > 500 && $i < 600) {
+            usleep(50 * 1000);
+        } else {
+            usleep(10 * 1000);
+        }
     }
 
     send_reboot_ui_message();

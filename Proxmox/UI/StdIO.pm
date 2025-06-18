@@ -57,7 +57,7 @@ sub prompt {
     my $response = recv_msg();
 
     if (defined($response) && $response->{type} eq 'prompt-answer') {
-	return lc($response->{answer}) eq 'ok';
+        return lc($response->{answer}) eq 'ok';
     }
 }
 
@@ -71,9 +71,9 @@ sub progress {
     my ($self, $ratio, $text) = @_;
 
     if (defined($text)) {
-	send_msg('progress', ratio => $ratio, text => $text);
+        send_msg('progress', ratio => $ratio, text => $text);
     } else {
-	send_msg('progress', ratio => $ratio);
+        send_msg('progress', ratio => $ratio);
     }
 }
 

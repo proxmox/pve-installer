@@ -27,6 +27,7 @@ sub init_gtk {
 
     return $_ui;
 }
+
 sub init_stdio {
     my ($state, $env) = @_;
 
@@ -74,9 +75,9 @@ sub display_html {
 
     my $path;
     if (-f "$html_dir/$env->{product}/$filename") {
-	$path = "$html_dir/$env->{product}/$filename";
+        $path = "$html_dir/$env->{product}/$filename";
     } else {
-	$path = "$html_dir/$filename";
+        $path = "$html_dir/$filename";
     }
 
     my $raw_html = file_read_all($path);

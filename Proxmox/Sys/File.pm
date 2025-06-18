@@ -11,7 +11,7 @@ our @EXPORT_OK = qw(file_read_firstline file_read_all file_write_all);
 sub file_read_firstline {
     my ($filename) = @_;
 
-    my $fh = IO::File->new ($filename, "r");
+    my $fh = IO::File->new($filename, "r");
     return if !$fh;
 
     my $res = <$fh>;

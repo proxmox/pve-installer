@@ -13,11 +13,11 @@ sub mock_product {
     my ($product) = @_;
 
     $proxmox_install_isoenv->redefine(
-	get => sub {
-	    my ($k) = @_;
-	    return $product if $k eq 'product';
-	    die "iso environment key $k not mocked!\n";
-	},
+        get => sub {
+            my ($k) = @_;
+            return $product if $k eq 'product';
+            die "iso environment key $k not mocked!\n";
+        },
     );
 }
 
@@ -46,32 +46,38 @@ my %default_tests_others = (
 mock_product('pve');
 while (my ($total_mem, $expected) = each %default_tests_pve) {
     $proxmox_install_runenv->redefine(
-	query_total_memory => sub { return $total_mem; },
+        query_total_memory => sub { return $total_mem; },
     );
 
-    is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $expected,
-	"zfs_arc_max should default to $expected for pve with $total_mem MiB system memory");
+    is(
+        Proxmox::Install::RunEnv::default_zfs_arc_max(),
+        $expected,
+        "zfs_arc_max should default to $expected for pve with $total_mem MiB system memory",
+    );
 }
 
 while (my ($total_mem, $expected) = each %default_tests_others) {
     $proxmox_install_runenv->redefine(
-	query_total_memory => sub { return $total_mem; },
+        query_total_memory => sub { return $total_mem; },
     );
 
     foreach my $product ('pbs', 'pmg', 'pdm') {
-	mock_product($product);
-	is(Proxmox::Install::RunEnv::default_zfs_arc_max(), $expected,
-	    "zfs_arc_max should default to $expected for $product with $total_mem MiB system memory");
+        mock_product($product);
+        is(
+            Proxmox::Install::RunEnv::default_zfs_arc_max(),
+            $expected,
+            "zfs_arc_max should default to $expected for $product with $total_mem MiB system memory",
+        );
     }
 }
 
 my @clamp_tests = (
     # input, total system memory, expected
-    [ 0, 4 * 1024, 0 ],
-    [ 16, 4 * 1024, 64 ],
-    [ 4 * 1024, 4 * 1024, 3 * 1024 ],
-    [ 4 * 1024, 6 * 1024, 4 * 1024 ],
-    [ 8 * 1024, 4 * 1024, 3 * 1024 ],
+    [0, 4 * 1024, 0],
+    [16, 4 * 1024, 64],
+    [4 * 1024, 4 * 1024, 3 * 1024],
+    [4 * 1024, 6 * 1024, 4 * 1024],
+    [8 * 1024, 4 * 1024, 3 * 1024],
 );
 
 mock_product('pve');
@@ -79,11 +85,14 @@ foreach (@clamp_tests) {
     my ($input, $total_mem, $expected) = @$_;
 
     $proxmox_install_runenv->redefine(
-	query_total_memory => sub { return $total_mem; },
+        query_total_memory => sub { return $total_mem; },
     );
 
-    is(Proxmox::Install::RunEnv::clamp_zfs_arc_max($input), $expected,
-	"$input MiB zfs_arc_max should be clamped to $expected MiB with $total_mem MiB system memory");
+    is(
+        Proxmox::Install::RunEnv::clamp_zfs_arc_max($input),
+        $expected,
+        "$input MiB zfs_arc_max should be clamped to $expected MiB with $total_mem MiB system memory",
+    );
 }
 
 done_testing();

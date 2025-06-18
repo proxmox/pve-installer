@@ -11,6 +11,7 @@ use base qw(Exporter);
 our @EXPORT = qw(log_debug log_error log_info log_notice log_warn);
 
 my $log_fd;
+
 sub init {
     my ($log_file) = @_;
     croak "log fd is already defined, refuse to reinitialize!" if defined($log_fd);
@@ -30,8 +31,8 @@ my sub _log {
 
     my $fd = $log_fd;
     if (!defined($log_fd)) {
-	carp "log FD not initialized, falling back to stderr";
-	$fd = *STDERR;
+        carp "log FD not initialized, falling back to stderr";
+        $fd = *STDERR;
     }
 
     my $date_time = iso_like_date_time();

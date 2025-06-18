@@ -47,16 +47,16 @@ sub display_html {
     my $html_view = $self->{state}->{html_view};
 
     # always set base-path to common path, all resources are accesible from there.
-    $html_view->load_html($raw_html,  "file://$html_dir/");
+    $html_view->load_html($raw_html, "file://$html_dir/");
 }
 
 sub progress {
     my ($self, $ratio, $text) = @_;
 
-    my ($bar, $status) = $self->{state}->@{'progress_bar', 'progress_status'};
+    my ($bar, $status) = $self->{state}->@{ 'progress_bar', 'progress_status' };
 
     $bar->set_fraction($ratio);
-    $bar->set_text(sprintf ("%d%%", int ($ratio * 100)));
+    $bar->set_text(sprintf("%d%%", int($ratio * 100)));
     $status->set_text($text) if defined($text);
 }
 

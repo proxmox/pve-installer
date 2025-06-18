@@ -24,13 +24,13 @@ my $mem_total = undef;
 sub query_total_memory : prototype() {
     return $mem_total if defined($mem_total);
 
-    open (my $MEMINFO, '<', '/proc/meminfo');
+    open(my $MEMINFO, '<', '/proc/meminfo');
 
     my $res = 512; # default to 512 if something goes wrong
     while (my $line = <$MEMINFO>) {
-	if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
-	    $res = int ($1 / 1024);
-	}
+        if ($line =~ m/^MemTotal:\s+(\d+)\s*kB/i) {
+            $res = int($1 / 1024);
+        }
     }
     close($MEMINFO);
 
@@ -39,17 +39,18 @@ sub query_total_memory : prototype() {
 }
 
 my $cpu_hvm_support = undef;
+
 sub query_cpu_hvm_support : prototype() {
     return $cpu_hvm_support if defined($cpu_hvm_support);
 
-    open (my $CPUINFO, '<', '/proc/cpuinfo');
+    open(my $CPUINFO, '<', '/proc/cpuinfo');
 
     my $res = 0;
     while (my $line = <$CPUINFO>) {
-	if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
-	    $res = 1;
-	    last;
-	}
+        if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
+            $res = 1;
+            last;
+        }
     }
     close($CPUINFO);
 
@@ -79,33 +80,34 @@ my sub query_netdevs : prototype() {
     my $interfaces = fromjs(qx/ip --json address show/);
 
     for my $if (@$interfaces) {
-	my ($index, $name, $state, $mac, $addresses) =
-	    $if->@{qw(ifindex ifname operstate address addr_info)};
+        my ($index, $name, $state, $mac, $addresses) =
+            $if->@{qw(ifindex ifname operstate address addr_info)};
 
-	next if !$name || $name eq 'lo'; # could also check flags for LOOPBACK..
+        next if !$name || $name eq 'lo'; # could also check flags for LOOPBACK..
 
-	my @valid_addrs;
-	if (uc($state) eq 'UP') {
-	    for my $addr (@$addresses) {
-		next if $addr->{scope} eq 'link';
+        my @valid_addrs;
+        if (uc($state) eq 'UP') {
+            for my $addr (@$addresses) {
+                next if $addr->{scope} eq 'link';
 
-		my ($family, $addr, $prefix) = $addr->@{qw(family local prefixlen)};
+                my ($family, $addr, $prefix) = $addr->@{qw(family local prefixlen)};
 
-		push @valid_addrs, {
-		    family => $family,
-		    address => $addr,
-		    prefix => $prefix,
-		};
-	    }
-	}
+                push @valid_addrs,
+                    {
+                        family => $family,
+                        address => $addr,
+                        prefix => $prefix,
+                    };
+            }
+        }
 
-	$ifs->{$name} = {
-	    index => $index,
-	    name => $name,
-	    mac => $mac,
-	    state => uc($state),
-	};
-	$ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
+        $ifs->{$name} = {
+            index => $index,
+            name => $name,
+            mac => $mac,
+            state => uc($state),
+        };
+        $ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
     }
 
     return $ifs;
@@ -131,24 +133,24 @@ my sub query_routes : prototype() {
     log_info("query routes");
     my $route4 = fromjs(qx/ip -4 --json route show/);
     for my $route (@$route4) {
-	if ($route->{dst} eq 'default') {
-	    $gateway4 = {
-		dev => $route->{dev},
-		gateway => $route->{gateway},
-	    };
-	    last;
-	}
+        if ($route->{dst} eq 'default') {
+            $gateway4 = {
+                dev => $route->{dev},
+                gateway => $route->{gateway},
+            };
+            last;
+        }
     }
 
     my $route6 = fromjs(qx/ip -6 --json route show/);
     for my $route (@$route6) {
-	if ($route->{dst} eq 'default') {
-	    $gateway6 = {
-		dev => $route->{dev},
-		gateway => $route->{gateway},
-	    };
-	    last;
-	}
+        if ($route->{dst} eq 'default') {
+            $gateway6 = {
+                dev => $route->{dev},
+                gateway => $route->{gateway},
+            };
+            last;
+        }
     }
 
     my $routes;
@@ -165,23 +167,23 @@ my sub query_routes : prototype() {
 #
 my sub query_dns : prototype() {
     log_info("query DNS from resolv.conf (managed by DHCP client)");
-    open my $fh , '<', '/etc/resolv.conf' or return;
+    open my $fh, '<', '/etc/resolv.conf' or return;
 
     my @dns;
     my $domain;
     while (defined(my $line = <$fh>)) {
-	if ($line =~ /^nameserver\s+(\S+)/) {
-	    push @dns, $1;
-	} elsif (!defined($domain) && $line =~ /^domain\s+(\S+)/) {
-	    $domain = $1;
-	}
+        if ($line =~ /^nameserver\s+(\S+)/) {
+            push @dns, $1;
+        } elsif (!defined($domain) && $line =~ /^domain\s+(\S+)/) {
+            $domain = $1;
+        }
     }
 
     my $output = {
-	domain => $domain,
-	@dns ? (dns => \@dns) : (),
+        domain => $domain,
+        @dns ? (dns => \@dns) : (),
     };
-};
+}
 
 # Uses `traceroute` and `geoiplookup`/`geoiplookup6` to figure out the current country.
 # Has a 10s timeout and uses the stops at the first entry found in the geoip database.
@@ -196,34 +198,40 @@ my sub detect_country_tracing_to : prototype($$) {
     my $country;
     my $previous_alarm;
     eval {
-	local $SIG{ALRM} = sub { die "timed out!\n" };
-	$previous_alarm = alarm (10);
+        local $SIG{ALRM} = sub { die "timed out!\n" };
+        $previous_alarm = alarm(10);
 
-	run_command($traceroute_cmd, sub {
-	    my $line = shift;
+        run_command(
+            $traceroute_cmd,
+            sub {
+                my $line = shift;
 
-	    log_debug("DC TRACEROUTE: $line");
-	    if ($line =~ m/^\s*\d+\s+(\S+)\s/) {
-		my $geoip = qx/$geoip_bin $1/;
-		log_debug("DC GEOIP: $geoip");
+                log_debug("DC TRACEROUTE: $line");
+                if ($line =~ m/^\s*\d+\s+(\S+)\s/) {
+                    my $geoip = qx/$geoip_bin $1/;
+                    log_debug("DC GEOIP: $geoip");
 
-		if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
-		    $country = lc ($1);
-		    log_info("DC FOUND: $country\n");
-		    return CMD_FINISHED;
-		}
-		return;
-	    }
-	}, undef, undef, 1);
+                    if ($geoip =~ m/GeoIP Country Edition:\s*([A-Z]+),/) {
+                        $country = lc($1);
+                        log_info("DC FOUND: $country\n");
+                        return CMD_FINISHED;
+                    }
+                    return;
+                }
+            },
+            undef,
+            undef,
+            1,
+        );
 
     };
     my $err = $@;
-    alarm ($previous_alarm);
+    alarm($previous_alarm);
 
     if ($err) {
-	die "unable to detect country - $err\n";
+        die "unable to detect country - $err\n";
     } elsif ($country) {
-	print STDERR "detected country: " . uc($country) . "\n";
+        print STDERR "detected country: " . uc($country) . "\n";
     }
 
     return $country;
@@ -250,14 +258,14 @@ sub query_installation_environment : prototype() {
     # check first if somebody already cached this for us and re-use that
     my $run_env_file = Proxmox::Install::ISOEnv::get('run-env-cache-file');
     if (-f "$run_env_file" && !Proxmox::Install::ISOEnv::is_test_mode()) {
-	log_info("re-using cached runtime env from $run_env_file");
-	my $cached_env = eval {
-	    my $run_env_raw = Proxmox::Sys::File::file_read_all($run_env_file);
-	    return fromjs($run_env_raw); # returns from eval
-	};
-	log_error("failed to parse cached runtime env - $@") if $@;
-	return $cached_env if defined($cached_env) && scalar keys $cached_env->%*;
-	log_warn("cached runtime env seems empty, query everything (again)");
+        log_info("re-using cached runtime env from $run_env_file");
+        my $cached_env = eval {
+            my $run_env_raw = Proxmox::Sys::File::file_read_all($run_env_file);
+            return fromjs($run_env_raw); # returns from eval
+        };
+        log_error("failed to parse cached runtime env - $@") if $@;
+        return $cached_env if defined($cached_env) && scalar keys $cached_env->%*;
+        log_warn("cached runtime env seems empty, query everything (again)");
     }
     # else re-query everything
     my $output = {};
@@ -267,14 +275,14 @@ sub query_installation_environment : prototype() {
     log_info("query block devices");
     $output->{disks} = Proxmox::Sys::Block::get_cached_disks();
     $output->{network} = {
-	interfaces => query_netdevs(),
-	routes => $routes,
-	dns => query_dns(),
+        interfaces => query_netdevs(),
+        routes => $routes,
+        dns => query_dns(),
     };
 
     # avoid serializing out null or an empty string, that can trip up the UIs
     if (my $fqdn = Proxmox::Sys::Net::get_dhcp_fqdn()) {
-	$output->{network}->{hostname} = $fqdn;
+        $output->{network}->{hostname} = $fqdn;
     }
 
     # FIXME: move whatever makes sense over to Proxmox::Sys::Net:: and keep that as single source,
@@ -289,33 +297,36 @@ sub query_installation_environment : prototype() {
     $output->{default_zfs_arc_max} = default_zfs_arc_max();
 
     if ($output->{boot_type} eq 'efi') {
-	my $content = eval { file_read_all("/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c") };
-	if ($@) {
-	    log_warn("Failed to read secure boot state: $@\n");
-	} else {
-	    my @secureboot = unpack("CCCCC", $content);
-	    $output->{secure_boot} = $secureboot[4] == 1 ? 1 : 0;
-	}
+        my $content = eval {
+            file_read_all(
+                "/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c");
+        };
+        if ($@) {
+            log_warn("Failed to read secure boot state: $@\n");
+        } else {
+            my @secureboot = unpack("CCCCC", $content);
+            $output->{secure_boot} = $secureboot[4] == 1 ? 1 : 0;
+        }
     }
 
     my $err;
     my $country;
     if ($routes->{gateway4}) {
-	log_info("trace country via IPv4");
-	$country = eval { detect_country_tracing_to(4 => '8.8.8.8') };
-	$err = $@ if !$country;
+        log_info("trace country via IPv4");
+        $country = eval { detect_country_tracing_to(4 => '8.8.8.8') };
+        $err = $@ if !$country;
     }
 
     if (!$country && $routes->{gateway6}) {
-	log_info("trace country via IPv6");
-	$country = eval { detect_country_tracing_to(6 => '2001:4860:4860::8888') };
-	$err = $@ if !$country;
+        log_info("trace country via IPv6");
+        $country = eval { detect_country_tracing_to(6 => '2001:4860:4860::8888') };
+        $err = $@ if !$country;
     }
 
     if (defined($country)) {
-	$output->{country} = $country;
+        $output->{country} = $country;
     } else {
-	warn ($err || "unable to detect country\n");
+        warn($err || "unable to detect country\n");
     }
 
     return $output;
@@ -339,9 +350,9 @@ sub default_zfs_arc_max {
 
     # By default limit PVE and low-memory systems, for all just use the 50% of system memory
     if ($product ne 'pve') {
-	my $zfs_default_mib = int(sprintf('%.0f', $total_memory / 2));
-	return $zfs_default_mib if $total_memory >= 2048 && $product ne 'pmg';
-	return $zfs_default_mib if $total_memory >= 4096; # PMG's base memory requirement is much higher
+        my $zfs_default_mib = int(sprintf('%.0f', $total_memory / 2));
+        return $zfs_default_mib if $total_memory >= 2048 && $product ne 'pmg';
+        return $zfs_default_mib if $total_memory >= 4096; # PMG's base memory requirement is much higher
     }
 
     my $default_mib = $total_memory * $ZFS_ARC_SYSMEM_PERCENTAGE;
@@ -349,9 +360,9 @@ sub default_zfs_arc_max {
     my $rounded_mib = int(sprintf('%.0f', $default_mib));
 
     if ($rounded_mib > $ZFS_ARC_MAX_SIZE_MIB) {
-	return $ZFS_ARC_MAX_SIZE_MIB;
+        return $ZFS_ARC_MAX_SIZE_MIB;
     } elsif ($rounded_mib < $ZFS_ARC_MIN_SIZE_MIB) {
-	return $ZFS_ARC_MIN_SIZE_MIB;
+        return $ZFS_ARC_MIN_SIZE_MIB;
     }
 
     return $rounded_mib;
@@ -368,17 +379,18 @@ sub clamp_zfs_arc_max {
     # upper limit is total system memory with a GiB headroom for the base system
     my $total_mem_with_headroom_mib = query_total_memory() - 1024;
     if ($mib > $total_mem_with_headroom_mib) {
-	$mib = $total_mem_with_headroom_mib; # do not return directly here, to catch < min ARC size
+        $mib = $total_mem_with_headroom_mib; # do not return directly here, to catch < min ARC size
     }
     # lower limit is the ARC min size, else ZFS ignores the setting and uses 50% of total memory again
     if ($mib < $ZFS_ARC_MIN_SIZE_MIB) {
-	return $ZFS_ARC_MIN_SIZE_MIB;
+        return $ZFS_ARC_MIN_SIZE_MIB;
     }
 
     return $mib;
 }
 
 my $_env = undef;
+
 sub get {
     my ($k) = @_;
     $_env = query_installation_environment() if !defined($_env);

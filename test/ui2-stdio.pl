@@ -55,8 +55,8 @@ if ($child_pid) {
     close($child_writer);
 
     my $next_msg = sub {
-	chomp(my $msg = <$parent_reader>);
-	return from_json($msg, { utf8 => 1 });
+        chomp(my $msg = <$parent_reader>);
+        return from_json($msg, { utf8 => 1 });
     };
 
     is_deeply($next_msg->(), { type => 'message', message => 'foo' }, 'should receive message');
@@ -69,28 +69,40 @@ if ($child_pid) {
     print $parent_writer "{\"type\":\"prompt-answer\",\"answer\":\"cancel\"}\n";
 
     is_deeply(
-	$next_msg->(), { type => 'finished', state => 'ok', message => 'install successful'},
-	'should receive successful finished message');
+        $next_msg->(),
+        { type => 'finished', state => 'ok', message => 'install successful' },
+        'should receive successful finished message',
+    );
 
     is_deeply(
-	$next_msg->(), { type => 'finished', state => 'err', message => 'install failed'},
-	'should receive failed finished message');
+        $next_msg->(),
+        { type => 'finished', state => 'err', message => 'install failed' },
+        'should receive failed finished message',
+    );
 
     is_deeply(
-	$next_msg->(), { type => 'progress', ratio => 0.2, text => '20% done' },
-	'should get 20% done progress message');
+        $next_msg->(),
+        { type => 'progress', ratio => 0.2, text => '20% done' },
+        'should get 20% done progress message',
+    );
 
     is_deeply(
-	$next_msg->(), { type => 'progress', ratio => 0.2, },
-	'should get progress continuation message');
+        $next_msg->(),
+        { type => 'progress', ratio => 0.2 },
+        'should get progress continuation message',
+    );
 
     is_deeply(
-	$next_msg->(), { type => 'progress', ratio => 0.99, text => '99% done' },
-	'should get 99% done progress message');
+        $next_msg->(),
+        { type => 'progress', ratio => 0.99, text => '99% done' },
+        'should get 99% done progress message',
+    );
 
     is_deeply(
-	$next_msg->(), { type => 'progress', ratio => 1, text => 'done' },
-	'should get 100% done progress message');
+        $next_msg->(),
+        { type => 'progress', ratio => 1, text => 'done' },
+        'should get 100% done progress message',
+    );
 
     done_testing();
 }

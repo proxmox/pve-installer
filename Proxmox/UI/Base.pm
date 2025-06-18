@@ -13,8 +13,8 @@ sub new {
     my $class = ref($this) || $this;
 
     my $self = bless {
-	state => $state,
-	env => $env,
+        state => $state,
+        env => $env,
     }, $class;
 
     $self->init();

@@ -19,9 +19,9 @@ sub parse_udevadm_info {
 
     my $details = {};
     for my $line (split('\n', $udev_raw)) {
-	if ($line =~ $UDEV_REGEX) {
-	    $details->{$1} = $2;
-	}
+        if ($line =~ $UDEV_REGEX) {
+            $details->{$1} = $2;
+        }
     }
     return $details;
 }

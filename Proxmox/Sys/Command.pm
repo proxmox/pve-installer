@@ -19,8 +19,8 @@ use base qw(Exporter);
 our @EXPORT_OK = qw(run_command syscmd CMD_FINISHED);
 
 use constant {
-    CMD_RESERVED => 1<<0, # reserve 1 as it's often the default return value of closures
-    CMD_FINISHED => 1<<1,
+    CMD_RESERVED => 1 << 0, # reserve 1 as it's often the default return value of closures
+    CMD_FINISHED => 1 << 1,
 };
 
 my sub shellquote {
@@ -34,9 +34,9 @@ my sub cmd2string {
     die "no arguments" if !$cmd;
     return $cmd if !ref($cmd);
 
-    my $quoted_args = [ map { shellquote($_) } $cmd->@* ];
+    my $quoted_args = [map { shellquote($_) } $cmd->@*];
 
-    return join (' ', $quoted_args->@*);
+    return join(' ', $quoted_args->@*);
 }
 
 # Safely for the (sub-)process specified by $pid to exit, using a timeout.
@@ -55,11 +55,11 @@ my sub wait_for_process {
 
     my $timeout = ($params{timeout} // 5) * 20; # waiting 0.05 secs per loop
     for (0 .. $timeout) {
-	my $terminated = waitpid($pid, WNOHANG);
-	return $? if $terminated > 0;
+        my $terminated = waitpid($pid, WNOHANG);
+        return $? if $terminated > 0;
 
-	usleep(50_000) if $_ != $timeout; # sleep 0.05 sec, on all but last round
-	kill('KILL', $pid) if $params{kill} && $_ == 10; # just once after 0.5s
+        usleep(50_000) if $_ != $timeout; # sleep 0.05 sec, on all but last round
+        kill('KILL', $pid) if $params{kill} && $_ == 10; # just once after 0.5s
     }
 
     log_warn("failed to kill child pid $pid, probably stuck in D-state?\n");
@@ -93,29 +93,29 @@ sub run_command {
 
     my $cmdstr;
     if (!ref($cmd)) {
-	$cmdstr = $cmd;
-	if ($cmd =~ m/|/) {
-	    # see 'man bash' for option pipefail
-	    $cmd = [ '/bin/bash', '-c', "set -o pipefail && $cmd" ];
-	} else {
-	    $cmd = [ $cmd ];
-	}
+        $cmdstr = $cmd;
+        if ($cmd =~ m/|/) {
+            # see 'man bash' for option pipefail
+            $cmd = ['/bin/bash', '-c', "set -o pipefail && $cmd"];
+        } else {
+            $cmd = [$cmd];
+        }
     } else {
-	$cmdstr = cmd2string($cmd);
+        $cmdstr = cmd2string($cmd);
     }
 
     my $cmdtxt;
     if ($input && ($cmdstr !~ m/chpasswd/)) {
-	$cmdtxt = "# $cmdstr <<EOD\n$input";
-	chomp $cmdtxt;
-	$cmdtxt .= "\nEOD\n";
+        $cmdtxt = "# $cmdstr <<EOD\n$input";
+        chomp $cmdtxt;
+        $cmdtxt .= "\nEOD\n";
     } else {
-	$cmdtxt = "# $cmdstr\n";
+        $cmdtxt = "# $cmdstr\n";
     }
 
     if (is_test_mode()) {
-	print $cmdtxt;
-	STDOUT->flush();
+        print $cmdtxt;
+        STDOUT->flush();
     }
     log_info($cmdtxt);
 
@@ -127,8 +127,8 @@ sub run_command {
     my $err = $@;
 
     if ($orig_pid != $$) { # catch exec errors
-	POSIX::_exit (1);
-	kill ('KILL', $$);
+        POSIX::_exit(1);
+        kill('KILL', $$);
     }
     die $err if $err;
 
@@ -143,48 +143,48 @@ sub run_command {
     my $caught_sig;
 
     while ($select->count) {
-	my @handles = $select->can_read (0.2);
+        my @handles = $select->can_read(0.2);
 
-	# If we catch a signal, stop processing & clean up
-	if ($!{EINTR}) {
-	    $caught_sig = 1;
-	    last;
-	}
+        # If we catch a signal, stop processing & clean up
+        if ($!{EINTR}) {
+            $caught_sig = 1;
+            last;
+        }
 
-	Proxmox::UI::process_events();
+        Proxmox::UI::process_events();
 
-	next if !scalar (@handles); # timeout
+        next if !scalar(@handles); # timeout
 
-	foreach my $h (@handles) {
-	    my $buf = '';
-	    my $count = sysread ($h, $buf, 4096);
-	    if (!defined ($count)) {
-		my $err = $!;
-		wait_for_process($pid, kill => 1);
-		die "command '$cmd' failed: $err";
-	    }
-	    $select->remove($h) if !$count;
-	    if ($h eq $reader) {
-		$ostream .= $buf if !($noout || $func);
-		$logout .= $buf;
-		while ($logout =~ s/^([^\010\r\n]*)(\r|\n|(\010)+|\r\n)//s) {
-		    my $line = $1;
-		    if ($func) {
-			my $ret = $func->($line);
-			if (defined($ret) && $ret == CMD_FINISHED) {
-			    wait_for_process($pid, kill => 1);
-			    return $ostream;
-			}
-		    };
-		}
+        foreach my $h (@handles) {
+            my $buf = '';
+            my $count = sysread($h, $buf, 4096);
+            if (!defined($count)) {
+                my $err = $!;
+                wait_for_process($pid, kill => 1);
+                die "command '$cmd' failed: $err";
+            }
+            $select->remove($h) if !$count;
+            if ($h eq $reader) {
+                $ostream .= $buf if !($noout || $func);
+                $logout .= $buf;
+                while ($logout =~ s/^([^\010\r\n]*)(\r|\n|(\010)+|\r\n)//s) {
+                    my $line = $1;
+                    if ($func) {
+                        my $ret = $func->($line);
+                        if (defined($ret) && $ret == CMD_FINISHED) {
+                            wait_for_process($pid, kill => 1);
+                            return $ostream;
+                        }
+                    }
+                }
 
-	    } elsif ($h eq $error) {
-		$ostream .= $buf if !($noout || $func);
-	    }
-	    print $buf if !$noprint;
-	    STDOUT->flush();
-	    log_info($buf);
-	}
+            } elsif ($h eq $error) {
+                $ostream .= $buf if !($noout || $func);
+            }
+            print $buf if !$noprint;
+            STDOUT->flush();
+            log_info($buf);
+        }
     }
 
     &$func($logout) if $func;
@@ -195,14 +195,14 @@ sub run_command {
     return ($ec // -1) if $noout;
 
     if (!defined($ec)) {
-	# Don't fail completely here to let the install continue
-	warn "command '$cmdstr' failed to exit properly\n";
+        # Don't fail completely here to let the install continue
+        warn "command '$cmdstr' failed to exit properly\n";
     } elsif ($ec == -1) {
-	croak "command '$cmdstr' failed to execute\n";
+        croak "command '$cmdstr' failed to execute\n";
     } elsif (my $sig = ($ec & 127)) {
-	croak "command '$cmdstr' failed - got signal $sig\n";
+        croak "command '$cmdstr' failed - got signal $sig\n";
     } elsif (my $exitcode = ($ec >> 8)) {
-	croak "command '$cmdstr' failed with exit code $exitcode";
+        croak "command '$cmdstr' failed with exit code $exitcode";
     }
 
     return $ostream;
@@ -216,12 +216,12 @@ sub run_in_background {
 
     my $pid = fork() // die "fork failed: $!\n";
     if (!$pid) {
-	eval { $cmd->(); };
-	if (my $err = $@) {
-	    warn "run_in_background error: $err\n";
-	    POSIX::_exit(1);
-	}
-	POSIX::_exit(0);
+        eval { $cmd->(); };
+        if (my $err = $@) {
+            warn "run_in_background error: $err\n";
+            POSIX::_exit(1);
+        }
+        POSIX::_exit(0);
     }
 }
 

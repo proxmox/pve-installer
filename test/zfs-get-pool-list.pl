@@ -52,6 +52,9 @@ while (my ($name, $info) = each %$pools) {
     ok(defined($p), "pool $name was found");
     is($p->{id}, $info->{id}, "pool $name has correct id");
     is($p->{state}, $info->{state}, "pool $name has correct state");
-    like($p->{action}, qr/^The pool can be imported using its name or numeric identifier/,
-	"pool $name can be imported");
+    like(
+        $p->{action},
+        qr/^The pool can be imported using its name or numeric identifier/,
+        "pool $name can be imported",
+    );
 }

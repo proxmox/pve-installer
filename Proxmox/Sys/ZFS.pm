@@ -47,23 +47,23 @@ sub zpool_import_parse_output {
     my $pool = {}; # last found pool in output
 
     while (my $line = <$fh>) {
-	# first, if we find the start of a new pool, add it to the list with
-	# its name
-	if ($line =~ /^\s+pool: (.+)$/) {
-	    # push the previous parsed pool to the result list
-	    push @$pools, $pool if %$pool;
-	    $pool = { name => $1 };
-	    next;
-	}
+        # first, if we find the start of a new pool, add it to the list with
+        # its name
+        if ($line =~ /^\s+pool: (.+)$/) {
+            # push the previous parsed pool to the result list
+            push @$pools, $pool if %$pool;
+            $pool = { name => $1 };
+            next;
+        }
 
-	# ignore any (garbage) output before the actual list, just in case
-	next if !%$pool;
+        # ignore any (garbage) output before the actual list, just in case
+        next if !%$pool;
 
-	# add any possibly-useful attribute to the last (aka. current) pool
-	if ($line =~ /^\s*(id|state|status|action): (.+)$/) {
-	    chomp($pool->{$1} = $2);
-	    next;
-	}
+        # add any possibly-useful attribute to the last (aka. current) pool
+        if ($line =~ /^\s*(id|state|status|action): (.+)$/) {
+            chomp($pool->{$1} = $2);
+            next;
+        }
     }
 
     # add the final parsed pool to the list
@@ -85,7 +85,7 @@ sub zpool_import_parse_output {
 # }
 sub get_exported_pools {
     my $raw = run_command(['zpool', 'import']);
-    open (my $fh, '<', \$raw) or die 'failed to open in-memory stream';
+    open(my $fh, '<', \$raw) or die 'failed to open in-memory stream';
 
     return zpool_import_parse_output($fh);
 }
@@ -100,10 +100,10 @@ sub get_exported_pools {
 sub rename_pool {
     my ($poolid, $new_name) = @_;
 
-    syscmd("zpool import -f $poolid $new_name") == 0 ||
-	die "failed to import zfs pool with id '$poolid' with new name '$new_name'\n";
-    syscmd("zpool export $new_name") == 0 ||
-	warn "failed to export renamed zfs pool '$new_name'\n";
+    syscmd("zpool import -f $poolid $new_name") == 0
+        || die "failed to import zfs pool with id '$poolid' with new name '$new_name'\n";
+    syscmd("zpool export $new_name") == 0
+        || warn "failed to export renamed zfs pool '$new_name'\n";
 }
 
 1;

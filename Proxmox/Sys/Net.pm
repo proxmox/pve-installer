@@ -16,6 +16,7 @@ my $IPV4RE = "(?:(?:$IPV4OCTET\\.){3}$IPV4OCTET)";
 my $IPV6H16 = "(?:[0-9a-fA-F]{1,4})";
 my $IPV6LS32 = "(?:(?:$IPV4RE|$IPV6H16:$IPV6H16))";
 
+#<<< make perltidy ignore this.
 my $IPV6RE = "(?:" .
     "(?:(?:" .                             "(?:$IPV6H16:){6})$IPV6LS32)|" .
     "(?:(?:" .                           "::(?:$IPV6H16:){5})$IPV6LS32)|" .
@@ -26,9 +27,9 @@ my $IPV6RE = "(?:" .
     "(?:(?:(?:(?:$IPV6H16:){0,4}$IPV6H16)?::" .           ")$IPV6LS32)|" .
     "(?:(?:(?:(?:$IPV6H16:){0,5}$IPV6H16)?::" .            ")$IPV6H16)|" .
     "(?:(?:(?:(?:$IPV6H16:){0,6}$IPV6H16)?::" .                    ")))";
+#>>>
 
 my $IPRE = "(?:$IPV4RE|$IPV6RE)";
-
 
 my $ipv4_mask_hash = {
     '128.0.0.0' => 1,
@@ -62,7 +63,7 @@ my $ipv4_mask_hash = {
     '255.255.255.248' => 29,
     '255.255.255.252' => 30,
     '255.255.255.254' => 31,
-    '255.255.255.255' => 32
+    '255.255.255.255' => 32,
 };
 
 my $ipv4_reverse_mask = [
@@ -106,9 +107,9 @@ sub parse_ip_address {
     my ($text) = @_;
 
     if ($text =~ m!^\s*($IPV4RE)\s*$!) {
-	return ($1, 4);
+        return ($1, 4);
     } elsif ($text =~ m!^\s*($IPV6RE)\s*$!) {
-	return ($1, 6);
+        return ($1, 6);
     }
     return (undef, undef);
 }
@@ -118,12 +119,12 @@ sub parse_ip_mask {
     $text =~ s/^\s+//;
     $text =~ s/\s+$//;
     if ($ip_version == 6 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 126) {
-	return $text;
+        return $text;
     } elsif ($ip_version == 4 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 32) {
-	return $text;
+        return $text;
     } elsif ($ip_version == 4 && defined($ipv4_mask_hash->{$text})) {
-	# costs nothing to handle 255.x.y.z style masks, so continue to allow it
-	return $ipv4_mask_hash->{$text};
+        # costs nothing to handle 255.x.y.z style masks, so continue to allow it
+        return $ipv4_mask_hash->{$text};
     }
     return;
 }
@@ -133,47 +134,48 @@ sub get_ip_config {
     my $default;
 
     my $links = `ip -o l`;
-    foreach my $l (split /\n/,$links) {
-	my ($index, $name, $flags, $state, $mac) = $l =~ m/^(\d+):\s+(\S+):\s+<(\S+)>.*\s+state\s+(\S+)\s+.*\s+link\/ether\s+(\S+)\s+/;
-	next if !$name || $name eq 'lo';
+    foreach my $l (split /\n/, $links) {
+        my ($index, $name, $flags, $state, $mac) =
+            $l =~ m/^(\d+):\s+(\S+):\s+<(\S+)>.*\s+state\s+(\S+)\s+.*\s+link\/ether\s+(\S+)\s+/;
+        next if !$name || $name eq 'lo';
 
-	my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
-	$driver =~ s!^.*/!!;
+        my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
+        $driver =~ s!^.*/!!;
 
-	$ifaces->{"$index"} = {
-	    name => $name,
-	    driver => $driver,
-	    flags => $flags,
-	    state => $state,
-	    mac => $mac,
-	};
+        $ifaces->{"$index"} = {
+            name => $name,
+            driver => $driver,
+            flags => $flags,
+            state => $state,
+            mac => $mac,
+        };
 
-	my $addresses = `ip -o a s $name`;
-	for my $addr_line (split /\n/,$addresses) {
-	    my ($family, $ip, $prefix) = $addr_line =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
-	    next if !$ip;
-	    next if $addr_line =~ /scope\s+link/; # ignore link local
+        my $addresses = `ip -o a s $name`;
+        for my $addr_line (split /\n/, $addresses) {
+            my ($family, $ip, $prefix) =
+                $addr_line =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
+            next if !$ip;
+            next if $addr_line =~ /scope\s+link/; # ignore link local
 
-	    my $mask = $prefix;
+            my $mask = $prefix;
 
-	    if ($family eq 'inet') {
-		next if !$ip =~ /$IPV4RE/;
-		next if $prefix < 8 || $prefix > 32;
-		$mask = @$ipv4_reverse_mask[$prefix];
-	    } else {
-		next if !$ip =~ /$IPV6RE/;
-	    }
+            if ($family eq 'inet') {
+                next if !$ip =~ /$IPV4RE/;
+                next if $prefix < 8 || $prefix > 32;
+                $mask = @$ipv4_reverse_mask[$prefix];
+            } else {
+                next if !$ip =~ /$IPV6RE/;
+            }
 
-	    $default = $index if !$default;
+            $default = $index if !$default;
 
-	    $ifaces->{"$index"}->{"$family"} = {
-		prefix => $prefix,
-		mask => $mask,
-		addr => $ip,
-	    };
-	}
+            $ifaces->{"$index"}->{"$family"} = {
+                prefix => $prefix,
+                mask => $mask,
+                addr => $ip,
+            };
+        }
     }
-
 
     my $route = `ip route`;
     my ($gateway) = $route =~ m/^default\s+via\s+(\S+)\s+/m;
@@ -183,12 +185,12 @@ sub get_ip_config {
     my ($domain) = $resolvconf =~ m/^domain\s+(\S+)$/m;
 
     return {
-	default => $default,
-	ifaces => $ifaces,
-	gateway => $gateway,
-	dnsserver => $dnsserver,
-	domain => $domain,
-    }
+        default => $default,
+        ifaces => $ifaces,
+        gateway => $gateway,
+        dnsserver => $dnsserver,
+        domain => $domain,
+    };
 }
 
 sub udevadm_netdev_details {
@@ -196,8 +198,8 @@ sub udevadm_netdev_details {
 
     my $result = {};
     for my $dev (values $ip_config->{ifaces}->%*) {
-	my $name = $dev->{name};
-	$result->{$name} = Proxmox::Sys::Udev::get_udev_properties("/sys/class/net/$name");
+        my $name = $dev->{name};
+        $result->{$name} = Proxmox::Sys::Udev::get_udev_properties("/sys/class/net/$name");
     }
     return $result;
 }
@@ -209,18 +211,18 @@ sub udevadm_netdev_details {
 # [0] RFC 2132, section 3.14
 sub get_dhcp_fqdn : prototype() {
     my $leasefile = '/var/lib/dhcp/dhclient.leases';
-    return if ! -f $leasefile;
+    return if !-f $leasefile;
 
     open(my $fh, '<', $leasefile) or return;
 
     my $name = undef;
     while (my $line = <$fh>) {
-	# "The name may or may not be qualified with the local domain name"
-	# Thus, only match the first part.
-	if ($line =~ m/^\s+option host-name \"(${FQDN_RE})\";$/) {
-	    $name = $1;
-	    last;
-	}
+        # "The name may or may not be qualified with the local domain name"
+        # Thus, only match the first part.
+        if ($line =~ m/^\s+option host-name \"(${FQDN_RE})\";$/) {
+            $name = $1;
+            last;
+        }
     }
 
     close($fh);
@@ -232,19 +234,19 @@ sub parse_fqdn : prototype($) {
     my ($text) = @_;
 
     die "FQDN cannot be empty\n"
-	if !$text || length($text) == 0;
+        if !$text || length($text) == 0;
 
     die "FQDN too long\n"
-	if length($text) > 253;
+        if length($text) > 253;
 
     die "Purely numeric hostnames are not allowed\n"
-	if $text =~ /^[0-9]+(?:\.|$)/;
+        if $text =~ /^[0-9]+(?:\.|$)/;
 
     die "FQDN must only consist of alphanumeric characters and dashes\n"
-	if $text !~ m/^${FQDN_RE}$/;
+        if $text !~ m/^${FQDN_RE}$/;
 
     if ($text =~ m/^([^\.]+)\.(\S+)$/) {
-	return ($1, $2);
+        return ($1, $2);
     }
 
     die "Hostname does not look like a fully qualified domain name\n";
