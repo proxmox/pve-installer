@@ -1,9 +1,10 @@
 use anyhow::Result;
 use rustls::ClientConfig;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::sync::Arc;
-use ureq::{Agent, AgentBuilder};
+use ureq::Agent;
 
 /// Builds an [`Agent`] with TLS suitable set up, depending whether a custom fingerprint was
 /// supplied or not. If a fingerprint was supplied, only matching certificates will be accepted.
@@ -19,26 +20,24 @@ use ureq::{Agent, AgentBuilder};
 fn build_agent(fingerprint: Option<&str>) -> Result<Agent> {
     if let Some(fingerprint) = fingerprint {
         let tls_config = ClientConfig::builder()
-            .with_safe_defaults()
+            .dangerous()
             .with_custom_certificate_verifier(VerifyCertFingerprint::new(fingerprint)?)
             .with_no_client_auth();
 
-        Ok(AgentBuilder::new().tls_config(Arc::new(tls_config)).build())
+        Ok(Agent::config_builder()
+            //.tls_config(tls_config) // FIXME: add custom ureq connector to manage rustls
+            .build()
+            .into())
     } else {
-        let mut roots = rustls::RootCertStore::empty();
-        for cert in rustls_native_certs::load_native_certs()? {
-            roots.add(&rustls::Certificate(cert.0)).unwrap();
-        }
-
-        let tls_config = rustls::ClientConfig::builder()
-            .with_safe_defaults()
-            .with_root_certificates(roots)
-            .with_no_client_auth();
-
-        Ok(AgentBuilder::new()
-            .tls_connector(Arc::new(native_tls::TlsConnector::new()?))
-            .tls_config(Arc::new(tls_config))
-            .build())
+        Ok(Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(60)))
+            .tls_config(
+                ureq::tls::TlsConfig::builder()
+                    .root_certs(ureq::tls::RootCerts::PlatformVerifier)
+                    .build(),
+            )
+            .build()
+            .into())
     }
 }
 
@@ -58,12 +57,9 @@ fn build_agent(fingerprint: Option<&str>) -> Result<Agent> {
 pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Result<Vec<u8>> {
     let mut result: Vec<u8> = Vec::new();
 
-    let response = build_agent(fingerprint)?
-        .get(url)
-        .timeout(std::time::Duration::from_secs(60))
-        .call()?;
+    let (_, body) = build_agent(fingerprint)?.get(url).call()?.into_parts();
 
-    response
+    body
         .into_reader()
         .take(max_size as u64)
         .read_to_end(&mut result)?;
@@ -83,14 +79,16 @@ pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Re
 /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
 /// * `payload` - The payload to send to the server. Expected to be a JSON formatted string.
 pub fn post(url: &str, fingerprint: Option<&str>, payload: String) -> Result<String> {
+    // TODO: read_to_string limits the size to 10 MB, should be increase that?
     Ok(build_agent(fingerprint)?
         .post(url)
-        .set("Content-Type", "application/json; charset=utf-8")
-        .timeout(std::time::Duration::from_secs(60))
-        .send_string(&payload)?
-        .into_string()?)
+        .header("Content-Type", "application/json; charset=utf-8")
+        .send(&payload)?
+        .body_mut()
+        .read_to_string()?)
 }
 
+#[derive(Debug)]
 struct VerifyCertFingerprint {
     cert_fingerprint: Vec<u8>,
 }
@@ -106,24 +104,57 @@ impl VerifyCertFingerprint {
     }
 }
 
-impl rustls::client::ServerCertVerifier for VerifyCertFingerprint {
+impl rustls::client::danger::ServerCertVerifier for VerifyCertFingerprint {
     fn verify_server_cert(
         &self,
-        end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &rustls::ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
+        end_entity: &CertificateDer,
+        _intermediates: &[CertificateDer],
+        _server_name: &ServerName,
         _ocsp_response: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        _now: UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
         let mut hasher = Sha256::new();
         hasher.update(end_entity);
         let result = hasher.finalize();
 
         if result.as_slice() == self.cert_fingerprint {
-            Ok(rustls::client::ServerCertVerified::assertion())
+            Ok(rustls::client::danger::ServerCertVerified::assertion())
         } else {
             Err(rustls::Error::General("Fingerprint did not match!".into()))
         }
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        rustls::crypto::ring::default_provider()
+            .signature_verification_algorithms
+            .supported_schemes()
     }
 }
