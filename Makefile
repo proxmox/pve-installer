@@ -125,7 +125,7 @@ install: $(INSTALLER_SOURCES) $(COMPILED_BINS)
 	install -D -m 755 fake-start-stop-daemon $(VARLIBDIR)/fake-start-stop-daemon
 	install -D -m 755 policy-disable-rc.d $(VARLIBDIR)/policy-disable-rc.d
 	install -D -m 644 locale-info.json $(VARLIBDIR)/locale-info.json
-	install -D -m 755 unconfigured.sh $(DESTDIR)/sbin/unconfigured.sh
+	install -D -m 755 unconfigured.sh $(DESTDIR)/usr/sbin/unconfigured.sh
 	install -D -m 755 proxinstall $(DESTDIR)/usr/bin/proxinstall
 	install -D -m 755 proxmox-low-level-installer $(DESTDIR)/$(BINDIR)/proxmox-low-level-installer
 	$(foreach i,$(USR_BIN), install -m755 $(CARGO_COMPILEDIR)/$(i) $(DESTDIR)$(BINDIR)/ ;)
