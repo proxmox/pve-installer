@@ -3,7 +3,7 @@ keyboard = "de"
 country = "at"
 mailto = "mail@no.invalid"
 timezone = "Europe/Vienna"
-root_password = "12345678"
+root-password = "12345678"
 
 [global.fqdn]
 source = "from-dhcp"
@@ -14,4 +14,4 @@ source = "from-dhcp"
 
 [disk-setup]
 filesystem = "ext4"
-disk_list = ["sda"]
+disk-list = ["sda"]

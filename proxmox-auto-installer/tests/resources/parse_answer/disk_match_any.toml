@@ -4,7 +4,7 @@ country = "at"
 fqdn = "pveauto.testinstall"
 mailto = "mail@no.invalid"
 timezone = "Europe/Vienna"
-root_password = "12345678"
+root-password = "12345678"
 
 [network]
 source = "from-dhcp"
@@ -12,7 +12,7 @@ source = "from-dhcp"
 [disk-setup]
 filesystem = "zfs"
 zfs.raid = "raid10"
-zfs.arc_max = 2048
-filter_match = "any"
+zfs.arc-max = 2048
+filter-match = "any"
 filter.ID_SERIAL = "*MZ7KM240HAGR*"
 filter.ID_MODEL = "Micron_9300*"

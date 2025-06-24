@@ -285,10 +285,10 @@ impl TryFrom<DiskSetup> for Disks {
 
     fn try_from(source: DiskSetup) -> Result<Self, Self::Error> {
         if source.disk_list.is_empty() && source.filter.is_none() {
-            return Err("Need either 'disk_list' or 'filter' set");
+            return Err("Need either 'disk-list' or 'filter' set");
         }
         if !source.disk_list.is_empty() && source.filter.is_some() {
-            return Err("Cannot use both, 'disk_list' and 'filter'");
+            return Err("Cannot use both, 'disk-list' and 'filter'");
         }
 
         let disk_selection = if !source.disk_list.is_empty() {

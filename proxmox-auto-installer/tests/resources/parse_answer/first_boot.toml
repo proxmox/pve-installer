@@ -4,7 +4,7 @@ country = "at"
 fqdn = "pveauto.testinstall"
 mailto = "mail@no.invalid"
 timezone = "Europe/Vienna"
-root_password = "12345678"
+root-password = "12345678"
 
 [first-boot]
 source = "from-iso"
@@ -15,4 +15,4 @@ source = "from-dhcp"
 
 [disk-setup]
 filesystem = "ext4"
-disk_list = ["sda"]
+disk-list = ["sda"]

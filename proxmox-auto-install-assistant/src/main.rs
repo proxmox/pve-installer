@@ -500,12 +500,72 @@ fn match_filter(args: &CommandDeviceMatchArgs) -> Result<()> {
     Ok(())
 }
 
-fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
-    let answer = parse_answer(&args.path)?;
-    if args.debug {
-        println!("Parsed data from answer file:\n{:#?}", answer);
+fn validate_answer_file_keys(path: impl AsRef<Path> + fmt::Debug) -> Result<bool> {
+    let mut file =
+        fs::File::open(&path).with_context(|| format!("Opening answer file {path:?} failed"))?;
+
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .with_context(|| format!("Reading from file {path:?} failed"))?;
+
+    fn validate(section: &[&str], v: toml::Value) -> bool {
+        // These sections only hold udev properties, so don't validate them
+        if section == ["network", "filter"] || section == ["disk-setup", "filter"] {
+            return true;
+        }
+
+        let mut valid = true;
+        if let toml::Value::Table(t) = v {
+            for (k, v) in t {
+                if k.contains('_') {
+                    eprintln!(
+                        "Warning: Section [{}] contains deprecated key `{k}`, use `{}` instead.",
+                        section.join("."),
+                        k.replace("_", "-")
+                    );
+                    valid = false;
+                }
+                valid &= validate(&[section, &[&k]].concat(), v);
+            }
+        }
+
+        valid
     }
-    Ok(())
+
+    let answers: toml::Value = toml::from_str(&contents).context("Error parsing answer file")?;
+
+    if validate(&[], answers) {
+        Ok(true)
+    } else {
+        eprintln!(
+            "Warning: Answer file is using deprecated underscore keys. \
+            Since PVE 8.4-1 and PBS 3.4-1, kebab-case style keys are now preferred."
+        );
+        Ok(false)
+    }
+}
+
+fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
+    let mut valid = validate_answer_file_keys(&args.path)?;
+
+    match parse_answer(&args.path) {
+        Ok(answer) => {
+            if args.debug {
+                println!("Parsed data from answer file:\n{:#?}", answer);
+            }
+        }
+        Err(err) => {
+            eprintln!("{err:#}");
+            valid = false;
+        }
+    }
+
+    if valid {
+        println!("The answer file was parsed successfully, no errors found!");
+        Ok(())
+    } else {
+        bail!("Found issues in the answer file.");
+    }
 }
 
 fn show_system_info(_args: &CommandSystemInfoArgs) -> Result<()> {
@@ -819,7 +879,6 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
             verify_locale_settings(&answer, &serde_json::from_str(LOCALE_INFO)?)?;
             verify_first_boot_settings(&answer)?;
             verify_email_and_root_password_settings(&answer)?;
-            println!("The answer file was parsed successfully, no errors found!");
             Ok(answer)
         }
         Err(err) => bail!("Error parsing answer file: {err}"),

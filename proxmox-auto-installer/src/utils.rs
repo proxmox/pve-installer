@@ -210,7 +210,7 @@ fn set_single_disk(
                 .find(|item| item.path.ends_with(disk_name.as_str()));
             match disk {
                 Some(disk) => config.target_hd = Some(disk.path.clone()),
-                None => bail!("disk in 'disk_selection' not found"),
+                None => bail!("disk in 'disk-selection' not found"),
             }
         }
         answer::DiskSelection::Filter(filter) => {
@@ -353,8 +353,8 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
 
 /// Validates the following options of an user-provided answer:
 ///
-/// - `global.root_password`
-/// - `global.root_password_hashed`
+/// - `global.root-password`
+/// - `global.root-password-hashed`
 /// - `global.mailto`
 ///
 /// Ensures that the provided email-address is of valid format and that one
@@ -370,15 +370,15 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     ) {
         (Some(_), Some(_)) => {
             bail!(
-                "`global.root_password` and `global.root_password_hashed` cannot be set at the same time"
+                "`global.root-password` and `global.root-password-hashed` cannot be set at the same time"
             );
         }
         (None, None) => {
-            bail!("One of `global.root_password` or `global.root_password_hashed` must be set");
+            bail!("One of `global.root-password` or `global.root-password-hashed` must be set");
         }
         (Some(password), None) if password.len() < ROOT_PASSWORD_MIN_LENGTH => {
             bail!(
-                "`global.root_password` must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long"
+                "`global.root-password` must be at least {ROOT_PASSWORD_MIN_LENGTH} characters long"
             );
         }
         _ => Ok(()),
