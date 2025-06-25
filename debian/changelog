@@ -1,3 +1,9 @@
+proxmox-installer (9.0.2) trixie; urgency=medium
+
+  * unconfigured: fix variable expansion for creating static dev nodes
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 25 Jun 2025 21:24:02 +0200
+
 proxmox-installer (9.0.1) trixie; urgency=medium
 
   * d/control: record e2fsprogs as dependency for installer.
