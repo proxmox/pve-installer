@@ -80,7 +80,13 @@ real_reboot() {
     fi
 
     # stop udev (release file handles)
-    /etc/init.d/udev stop
+    udevd_pid="$(pgrep systemd-udevd)"
+    if kill -s TERM "$udevd_pid"; then
+        if ! waitpid --exited --timeout 5 "$udevd_pid"; then
+            echo "failed to wait for udevd exit - $?"
+            kill -s KILL "$udevd_pid" || :
+        fi
+    fi
 
     swap=$(awk '/^\/dev\// { print $1 }' /proc/swaps);
     if [ -n "$swap" ]; then
@@ -122,6 +128,63 @@ err_reboot() {
     debugsh || true
     real_reboot
 }
+
+make_static_nodes() {
+    [ -e "/lib/modules/$(uname -r)/modules.devname" ] || return 0
+    [ -x /bin/kmod ] || return 0
+
+    /bin/kmod static-nodes --format=tmpfiles --output=/proc/self/fd/1 | \
+        while read -r type name mode uid gid age arg; do
+            [ -e "$name" ] && continue
+            case "$type" in
+                c|b|c!|b!) mknod -m "$mode" "$name" "$type" "${arg//:/ /}" ;;
+                d|d!) mkdir "$name" ;;
+                *) echo "unparseable line ($type $name $mode $uid $gid $age $arg)" >&2 ;;
+            esac
+        done
+}
+
+start_udevd() {
+    echo > /sys/kernel/uevent_helper # unregister mdev from early init
+
+    # mount a devtmpfs over /dev, if somebody did not already do it
+    if grep -E -q "^[^[:space:]]+ /dev devtmpfs" /proc/mounts; then
+        mount -n -o remount,nosuid,size=100M,mode=0755 -t devtmpfs devtmpfs /dev
+    elif ! mount -n -o nosuid,size=100M,mode=0755 -t devtmpfs devtmpfs /dev; then
+        echo "udev requires devtmpfs support, not started"
+        return 0
+    fi
+
+    make_static_nodes
+
+    # clean up parts of the database created by the initramfs udev
+    udevadm info --cleanup-db
+
+    # actually start daemon
+    /usr/lib/systemd/systemd-udevd --daemon
+
+    echo "Synthesizing the initial hotplug events (subsystems)"
+    if ! udevadm trigger --type=subsystems --action=add; then
+        echo "udevadm failed - $?"
+    fi
+    echo "Synthesizing the initial hotplug events (devices)"
+    if ! udevadm trigger --type=devices --action=add; then
+        echo "udevadm failed - $?"
+    fi
+
+    if [ -e /sbin/MAKEDEV ]; then
+        ln -sf /sbin/MAKEDEV /dev/MAKEDEV
+    else
+        ln -sf /bin/true /dev/MAKEDEV
+    fi
+
+    echo "Waiting for /dev to be fully populated"
+    if ! udevadm settle; then
+        echo "udevadm settle timed out - $?"
+    fi
+
+    return 0
+ }
 
 # NOTE: dbus must be launched before this, else iwd cannot work
 # FIXME: very crude, still needs to actually copy over any iwd config to target
@@ -171,9 +234,7 @@ modprobe -q usbhid ||  true
 modprobe -q dm_mod || true
 
 echo "Installing additional hardware drivers"
-export RUNLEVEL=S
-export PREVLEVEL=N
-/etc/init.d/udev start
+start_udevd
 
 mkdir -p /dev/shm
 mount -t tmpfs tmpfs /dev/shm
