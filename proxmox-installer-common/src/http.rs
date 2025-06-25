@@ -1,10 +1,17 @@
 use anyhow::Result;
-use rustls::ClientConfig;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{ClientConfig, ClientConnection, StreamOwned};
 use sha2::{Digest, Sha256};
-use std::io::Read;
+use std::fmt;
+use std::io::{Read, Write};
 use std::sync::Arc;
+use std::time::Duration;
 use ureq::Agent;
+use ureq::unversioned::resolver::DefaultResolver;
+use ureq::unversioned::transport::{
+    Buffers, ConnectionDetails, Connector, Either, LazyBuffers, NextTimeout, TcpConnector,
+    Transport, TransportAdapter,
+};
 
 /// Builds an [`Agent`] with TLS suitable set up, depending whether a custom fingerprint was
 /// supplied or not. If a fingerprint was supplied, only matching certificates will be accepted.
@@ -18,19 +25,34 @@ use ureq::Agent;
 /// # Arguments
 /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
 fn build_agent(fingerprint: Option<&str>) -> Result<Agent> {
+    const GLOBAL_TIMEOUT: Duration = Duration::from_secs(60);
+
     if let Some(fingerprint) = fingerprint {
-        let tls_config = ClientConfig::builder()
+        // If the user specified a custom TLS fingerprint, we must use a custom
+        // `rustls::ClientConfig`, which in turns means to use a custom
+        // `Connector`.
+        let crypto_provider = rustls::crypto::CryptoProvider::get_default()
+            .cloned()
+            .unwrap_or_else(|| Arc::new(rustls::crypto::ring::default_provider()));
+
+        let tls_config = ClientConfig::builder_with_provider(crypto_provider)
+            .with_protocol_versions(rustls::ALL_VERSIONS)?
             .dangerous()
             .with_custom_certificate_verifier(VerifyCertFingerprint::new(fingerprint)?)
             .with_no_client_auth();
 
-        Ok(Agent::config_builder()
-            //.tls_config(tls_config) // FIXME: add custom ureq connector to manage rustls
-            .build()
-            .into())
+        let connector = UreqRustlsConnector::new(Arc::new(tls_config));
+
+        Ok(Agent::with_parts(
+            ureq::config::Config::builder()
+                .timeout_global(Some(GLOBAL_TIMEOUT))
+                .build(),
+            TcpConnector::default().chain(connector),
+            DefaultResolver::default(),
+        ))
     } else {
         Ok(Agent::config_builder()
-            .timeout_global(Some(std::time::Duration::from_secs(60)))
+            .timeout_global(Some(GLOBAL_TIMEOUT))
             .tls_config(
                 ureq::tls::TlsConfig::builder()
                     .root_certs(ureq::tls::RootCerts::PlatformVerifier)
@@ -59,8 +81,7 @@ pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Re
 
     let (_, body) = build_agent(fingerprint)?.get(url).call()?.into_parts();
 
-    body
-        .into_reader()
+    body.into_reader()
         .take(max_size as u64)
         .read_to_end(&mut result)?;
 
@@ -156,5 +177,109 @@ impl rustls::client::danger::ServerCertVerifier for VerifyCertFingerprint {
         rustls::crypto::ring::default_provider()
             .signature_verification_algorithms
             .supported_schemes()
+    }
+}
+
+/// Mostly a copy of [ureq::unversioned::transport::RustlsConnector], with the exception of using
+/// our custom [ClientConfig].
+#[derive(Debug)]
+struct UreqRustlsConnector {
+    /// [ClientConfig] to use for the TLS connection(s).
+    config: Arc<ClientConfig>,
+}
+
+impl UreqRustlsConnector {
+    fn new(config: Arc<ClientConfig>) -> Self {
+        UreqRustlsConnector { config }
+    }
+}
+
+impl<In: Transport> Connector<In> for UreqRustlsConnector {
+    type Out = Either<In, UreqRustlsTransport>;
+
+    fn connect(
+        &self,
+        details: &ConnectionDetails,
+        chained: Option<In>,
+    ) -> Result<Option<Self::Out>, ureq::Error> {
+        let Some(transport) = chained else {
+            panic!("RustlConnector requires a chained transport");
+        };
+
+        if !details.needs_tls() || transport.is_tls() {
+            return Ok(Some(Either::A(transport)));
+        }
+
+        let name: ServerName<'_> = details
+            .uri
+            .authority()
+            .ok_or(ureq::Error::Tls("no naming authority for URI"))?
+            .host()
+            .try_into()
+            .map_err(|_| ureq::Error::Tls("invalid dns name"))?;
+
+        let conn = ClientConnection::new(self.config.clone(), name.to_owned())?;
+        let stream = StreamOwned {
+            conn,
+            sock: TransportAdapter::new(transport.boxed()),
+        };
+
+        let buffers = LazyBuffers::new(
+            details.config.input_buffer_size(),
+            details.config.output_buffer_size(),
+        );
+
+        let transport = UreqRustlsTransport { buffers, stream };
+
+        Ok(Some(Either::B(transport)))
+    }
+}
+
+/// Direct copy of ureq/tls/rustls.rs:RustlsTransport, which unfortunately is not
+/// made public by the crate.
+struct UreqRustlsTransport {
+    buffers: LazyBuffers,
+    stream: StreamOwned<ClientConnection, TransportAdapter>,
+}
+
+impl Transport for UreqRustlsTransport {
+    fn buffers(&mut self) -> &mut dyn Buffers {
+        &mut self.buffers
+    }
+
+    fn transmit_output(&mut self, amount: usize, timeout: NextTimeout) -> Result<(), ureq::Error> {
+        self.stream.get_mut().set_timeout(timeout);
+
+        let output = &self.buffers.output()[..amount];
+        self.stream.write_all(output)?;
+
+        Ok(())
+    }
+
+    fn await_input(&mut self, timeout: NextTimeout) -> Result<bool, ureq::Error> {
+        self.stream.get_mut().set_timeout(timeout);
+
+        let input = self.buffers.input_append_buf();
+        let amount = self.stream.read(input)?;
+        self.buffers.input_appended(amount);
+
+        Ok(amount > 0)
+    }
+
+    fn is_open(&mut self) -> bool {
+        self.stream.get_mut().get_mut().is_open()
+    }
+
+    fn is_tls(&self) -> bool {
+        true
+    }
+}
+
+impl fmt::Debug for UreqRustlsTransport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RustlsTransport")
+            .field("chained", &self.stream.sock.inner())
+            .field("buffers", &self.buffers)
+            .finish()
     }
 }
