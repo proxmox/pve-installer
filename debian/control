@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Proxmox Support Team <support@proxmox.com>
 Build-Depends: cargo:native,
                debhelper-compat (= 12),
+               geoip-bin <!nocheck>,
                iproute2,
                iso-codes,
                libgtk3-perl,
