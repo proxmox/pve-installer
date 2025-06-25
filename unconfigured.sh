@@ -81,11 +81,16 @@ real_reboot() {
 
     # stop udev (release file handles)
     udevd_pid="$(pgrep systemd-udevd)"
-    if kill -s TERM "$udevd_pid"; then
-        if ! waitpid --exited --timeout 5 "$udevd_pid"; then
-            echo "failed to wait for udevd exit - $?"
-            kill -s KILL "$udevd_pid" || :
+    if -n "$udevd_pid"; then
+        if kill -s TERM "$udevd_pid"; then
+            if ! waitpid --exited --timeout 5 "$udevd_pid"; then
+                echo "failed to wait for udevd exit - $?"
+                kill -s KILL "$udevd_pid" || :
+            fi
         fi
+    else
+        # cannot hurt I guess..
+        pkill systemd-udevd || :
     fi
 
     swap=$(awk '/^\/dev\// { print $1 }' /proc/swaps);
