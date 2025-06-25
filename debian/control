@@ -38,6 +38,7 @@ Homepage: https://www.proxmox.com
 Package: proxmox-installer
 Architecture: any
 Depends: chrony,
+         e2fsprogs,
          geoip-bin,
          iproute2,
          libgtk3-perl,
