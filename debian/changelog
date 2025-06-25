@@ -1,3 +1,11 @@
+proxmox-installer (9.0.1) trixie; urgency=medium
+
+  * d/control: record e2fsprogs as dependency for installer.
+
+  * unconfigured: manage systemd-udevd start/stop ourselves.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 25 Jun 2025 20:56:44 +0200
+
 proxmox-installer (9.0.0) trixie; urgency=medium
 
   * tree-wide: replace clap with pico-args for command argument parsing in all
