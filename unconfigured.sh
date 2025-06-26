@@ -81,7 +81,7 @@ real_reboot() {
 
     # stop udev (release file handles)
     udevd_pid="$(pgrep systemd-udevd)"
-    if -n "$udevd_pid"; then
+    if [ -n "$udevd_pid" ]; then
         if kill -s TERM "$udevd_pid"; then
             if ! waitpid --exited --timeout 5 "$udevd_pid"; then
                 echo "failed to wait for udevd exit - $?"
