@@ -1,3 +1,11 @@
+proxmox-installer (9.0.3) trixie; urgency=medium
+
+  * unconfigured: rework stopping systemd-udevd slightly
+
+  * common: cli: always print trailing newline on command error
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 02 Jul 2025 18:00:36 +0200
+
 proxmox-installer (9.0.2) trixie; urgency=medium
 
   * unconfigured: fix variable expansion for creating static dev nodes
