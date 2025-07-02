@@ -55,7 +55,7 @@ pub fn handle_command<T: Subcommand>(args: &mut pico_args::Arguments) -> Result<
     if args.contains(["-h", "--help"]) {
         T::print_usage();
     } else if let Err(err) = T::parse(args).and_then(|cmd| cmd.run()) {
-        eprint!("Error: {err:#}");
+        eprintln!("Error: {err:#}");
     }
 
     Ok(())
