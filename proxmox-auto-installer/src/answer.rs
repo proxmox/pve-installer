@@ -22,9 +22,7 @@ pub struct Answer {
     pub network: Network,
     #[serde(rename = "disk-setup")]
     pub disks: Disks,
-    #[serde(default)]
     pub post_installation_webhook: Option<PostNotificationHookInfo>,
-    #[serde(default)]
     pub first_boot: Option<FirstBootHookInfo>,
 }
 
