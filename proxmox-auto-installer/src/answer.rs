@@ -185,7 +185,8 @@ struct NetworkInAnswer {
     pub cidr: Option<CidrAddress>,
     pub dns: Option<IpAddr>,
     pub gateway: Option<IpAddr>,
-    pub filter: Option<BTreeMap<String, String>>,
+    #[serde(default)]
+    pub filter: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -208,7 +209,7 @@ impl TryFrom<NetworkInAnswer> for Network {
             if network.gateway.is_none() {
                 return Err("Field 'gateway' must be set.");
             }
-            if network.filter.is_none() {
+            if network.filter.is_empty() {
                 return Err("Field 'filter' must be set.");
             }
 
@@ -217,7 +218,7 @@ impl TryFrom<NetworkInAnswer> for Network {
                     cidr: network.cidr.unwrap(),
                     dns: network.dns.unwrap(),
                     gateway: network.gateway.unwrap(),
-                    filter: network.filter.unwrap(),
+                    filter: network.filter,
                 }),
             })
         } else {
@@ -230,7 +231,7 @@ impl TryFrom<NetworkInAnswer> for Network {
             if network.gateway.is_some() {
                 return Err("Field 'gateway' not supported for 'from-dhcp' config.");
             }
-            if network.filter.is_some() {
+            if !network.filter.is_empty() {
                 return Err("Field 'filter' not supported for 'from-dhcp' config.");
             }
 
@@ -261,7 +262,8 @@ pub struct DiskSetup {
     pub filesystem: Filesystem,
     #[serde(alias = "disk_list", default)]
     pub disk_list: Vec<String>,
-    pub filter: Option<BTreeMap<String, String>>,
+    #[serde(default)]
+    pub filter: BTreeMap<String, String>,
     #[serde(alias = "filter_match")]
     pub filter_match: Option<FilterMatch>,
     pub zfs: Option<ZfsOptions>,
@@ -282,17 +284,17 @@ impl TryFrom<DiskSetup> for Disks {
     type Error = &'static str;
 
     fn try_from(source: DiskSetup) -> Result<Self, Self::Error> {
-        if source.disk_list.is_empty() && source.filter.is_none() {
+        if source.disk_list.is_empty() && source.filter.is_empty() {
             return Err("Need either 'disk-list' or 'filter' set");
         }
-        if !source.disk_list.is_empty() && source.filter.is_some() {
+        if !source.disk_list.is_empty() && !source.filter.is_empty() {
             return Err("Cannot use both, 'disk-list' and 'filter'");
         }
 
         let disk_selection = if !source.disk_list.is_empty() {
             DiskSelection::Selection(source.disk_list.clone())
         } else {
-            DiskSelection::Filter(source.filter.clone().unwrap())
+            DiskSelection::Filter(source.filter.clone())
         };
 
         let lvm_checks = |source: &DiskSetup| -> Result<(), Self::Error> {
