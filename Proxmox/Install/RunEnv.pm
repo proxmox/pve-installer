@@ -38,24 +38,27 @@ sub query_total_memory : prototype() {
     return $mem_total;
 }
 
-my $cpu_hvm_support = undef;
+my $_cached_cpu_info = undef;
+sub query_cpu_info : prototype() {
+    return $_cached_cpu_info if defined($_cached_cpu_info);
 
-sub query_cpu_hvm_support : prototype() {
-    return $cpu_hvm_support if defined($cpu_hvm_support);
+    my $cpu_info = {
+        hvm_supported => 0,
+    };
 
-    open(my $CPUINFO, '<', '/proc/cpuinfo');
-
-    my $res = 0;
-    while (my $line = <$CPUINFO>) {
+    open(my $CPUINFO_FD, '<', '/proc/cpuinfo');
+    while (my $line = <$CPUINFO_FD>) {
         if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
-            $res = 1;
+            $cpu_info->{hvm_supported} = 1;
+        } elsif ($line eq "") {
+            # processed a whole section, and for the info we currently need that's enough -> return
             last;
         }
     }
-    close($CPUINFO);
+    close($CPUINFO_FD);
 
-    $cpu_hvm_support = $res;
-    return $cpu_hvm_support;
+    $_cached_cpu_info = $cpu_info;
+    return $cpu_info;
 }
 
 # Returns a hash.
@@ -292,7 +295,10 @@ sub query_installation_environment : prototype() {
 
     $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();
-    $output->{hvm_supported} = query_cpu_hvm_support();
+
+    my $cpu_info = query_cpu_info();
+    $output->{hvm_supported} = $cpu_info->{hvm_supported};
+
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
     $output->{default_zfs_arc_max} = default_zfs_arc_max();
 
