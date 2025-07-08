@@ -43,6 +43,7 @@ sub query_cpu_info : prototype() {
     return $_cached_cpu_info if defined($_cached_cpu_info);
 
     my $cpu_info = {
+        vendor_id => 'unknown',
         hvm_supported => 0,
     };
 
@@ -50,6 +51,8 @@ sub query_cpu_info : prototype() {
     while (my $line = <$CPUINFO_FD>) {
         if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
             $cpu_info->{hvm_supported} = 1;
+        } elsif ($line =~ /^vendor_id\s*:\s*(GenuineIntel|AuthenticAMD)/) {
+            $cpu_info->{vendor_id} = $1;
         } elsif ($line eq "") {
             # processed a whole section, and for the info we currently need that's enough -> return
             last;
@@ -247,6 +250,7 @@ my sub detect_country_tracing_to : prototype($$) {
 #     kernel_cmdline = <contents of /proc/cmdline>,
 #     total_memory = <memory size in MiB>,
 #     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
+#     cpu_vendor_id = <GenuineIntel|AuthenticAMD>,
 #     secure_boot = <1 if SecureBoot is enabled>,
 #     boot_type = <either 'efi' or 'bios'>,
 #     default_zfs_arc_max => <default upper limit for the ZFS ARC size in MiB>,
@@ -298,6 +302,7 @@ sub query_installation_environment : prototype() {
 
     my $cpu_info = query_cpu_info();
     $output->{hvm_supported} = $cpu_info->{hvm_supported};
+    $output->{cpu_vendor_id} = $cpu_info->{vendor_id};
 
     $output->{boot_type} = -d '/sys/firmware/efi' ? 'efi' : 'bios';
     $output->{default_zfs_arc_max} = default_zfs_arc_max();
