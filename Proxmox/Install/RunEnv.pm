@@ -90,6 +90,10 @@ my sub query_netdevs : prototype() {
             $if->@{qw(ifindex ifname operstate address addr_info)};
 
         next if !$name || $name eq 'lo'; # could also check flags for LOOPBACK..
+        if (!$mac) {
+            log_info("skipped interface $name, no mac address detected");
+            next;
+        }
 
         my @valid_addrs;
         if (uc($state) eq 'UP') {
