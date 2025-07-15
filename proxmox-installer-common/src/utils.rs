@@ -18,6 +18,22 @@ pub enum CidrAddressParseError {
     InvalidMask(Option<ParseIntError>),
 }
 
+impl fmt::Display for CidrAddressParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Invalid CIDR: ")?;
+
+        match self {
+            CidrAddressParseError::NoDelimiter => {
+                write!(f, "no delimiter for separating address and mask was found")
+            }
+            CidrAddressParseError::InvalidAddr(err) => write!(f, "{err}"),
+            CidrAddressParseError::InvalidMask(err) => {
+                write!(f, "{:?}", err)
+            }
+        }
+    }
+}
+
 /// An IP address (IPv4 or IPv6), including network mask.
 ///
 /// See the [`IpAddr`] type for more information how IP addresses are handled.
@@ -109,8 +125,7 @@ impl<'de> Deserialize<'de> for CidrAddress {
         D: serde::Deserializer<'de>,
     {
         let s: String = Deserialize::deserialize(deserializer)?;
-        s.parse()
-            .map_err(|_| serde::de::Error::custom("invalid CIDR"))
+        s.parse().map_err(serde::de::Error::custom)
     }
 }
 
