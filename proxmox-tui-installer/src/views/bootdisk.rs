@@ -17,10 +17,7 @@ use crate::InstallerState;
 use crate::options::FS_TYPES;
 
 use proxmox_installer_common::{
-    disk_checks::{
-        check_btrfs_raid_config, check_disks_4kn_legacy_boot, check_for_duplicate_disks,
-        check_zfs_raid_config,
-    },
+    disk_checks::{check_disks_4kn_legacy_boot, check_for_duplicate_disks},
     options::{
         AdvancedBootdiskOptions, BTRFS_COMPRESS_OPTIONS, BootdiskOptions, BtrfsBootdiskOptions,
         Disk, FsType, LvmBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
@@ -275,7 +272,9 @@ impl AdvancedBootdiskOptionsView {
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
             if let FsType::Zfs(level) = fstype {
-                check_zfs_raid_config(level, &disks).map_err(|err| format!("{fstype}: {err}"))?;
+                level
+                    .check_raid_disks_setup(&disks)
+                    .map_err(|err| format!("{fstype}: {err}"))?;
             }
 
             Ok(BootdiskOptions {
@@ -289,7 +288,9 @@ impl AdvancedBootdiskOptionsView {
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
             if let FsType::Btrfs(level) = fstype {
-                check_btrfs_raid_config(level, &disks).map_err(|err| format!("{fstype}: {err}"))?;
+                level
+                    .check_raid_disks_setup(&disks)
+                    .map_err(|err| format!("{fstype}: {err}"))?;
             }
 
             Ok(BootdiskOptions {

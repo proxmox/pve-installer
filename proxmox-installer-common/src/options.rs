@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{cmp, fmt};
 
+use crate::disk_checks::check_raid_min_disks;
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
 use crate::utils::{CidrAddress, Fqdn};
 
@@ -27,6 +28,17 @@ impl BtrfsRaidLevel {
             BtrfsRaidLevel::Raid1 => 2,
             BtrfsRaidLevel::Raid10 => 4,
         }
+    }
+
+    /// Checks whether a user-supplied Btrfs RAID setup is valid or not, such as minimum
+    /// number of disks.
+    ///
+    /// # Arguments
+    ///
+    /// * `disks` - List of disks designated as RAID targets.
+    pub fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
+        check_raid_min_disks(disks, self.get_min_disks())?;
+        Ok(())
     }
 }
 
@@ -68,6 +80,53 @@ impl ZfsRaidLevel {
             ZfsRaidLevel::RaidZ2 => 4,
             ZfsRaidLevel::RaidZ3 => 5,
         }
+    }
+
+    fn check_mirror_size(&self, disk1: &Disk, disk2: &Disk) -> Result<(), String> {
+        if (disk1.size - disk2.size).abs() > disk1.size / 10. {
+            Err(format!(
+                "Mirrored disks must have same size:\n\n  * {disk1}\n  * {disk2}"
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Checks whether a user-supplied ZFS RAID setup is valid or not, such as disk sizes andminimum
+    /// number of disks.
+    ///
+    /// # Arguments
+    ///
+    /// * `disks` - List of disks designated as RAID targets.
+    pub fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
+        check_raid_min_disks(disks, self.get_min_disks())?;
+
+        match self {
+            ZfsRaidLevel::Raid0 => {}
+            ZfsRaidLevel::Raid10 => {
+                if disks.len() % 2 != 0 {
+                    return Err(format!(
+                        "Needs an even number of disks, currently selected: {}",
+                        disks.len(),
+                    ));
+                }
+
+                // Pairs need to have the same size
+                for i in (0..disks.len()).step_by(2) {
+                    self.check_mirror_size(&disks[i], &disks[i + 1])?;
+                }
+            }
+            ZfsRaidLevel::Raid1
+            | ZfsRaidLevel::RaidZ
+            | ZfsRaidLevel::RaidZ2
+            | ZfsRaidLevel::RaidZ3 => {
+                for disk in disks {
+                    self.check_mirror_size(&disks[0], disk)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -316,6 +375,19 @@ pub struct Disk {
     pub block_size: Option<usize>,
 }
 
+impl Disk {
+    #[cfg(test)]
+    pub fn dummy(index: usize) -> Disk {
+        Disk {
+            index: index.to_string(),
+            path: format!("/dev/dummy{index}"),
+            model: Some("Dummy disk".to_owned()),
+            size: 1024. * 1024. * 1024. * 8.,
+            block_size: Some(512),
+        }
+    }
+}
+
 impl fmt::Display for Disk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Format sizes properly with `proxmox-human-byte` once merged
@@ -541,6 +613,61 @@ mod tests {
     };
     use std::collections::BTreeMap;
     use std::net::{IpAddr, Ipv4Addr};
+
+    fn dummy_disks(num: usize) -> Vec<Disk> {
+        (0..num).map(Disk::dummy).collect()
+    }
+
+    #[test]
+    fn btrfs_raid() {
+        let disks = dummy_disks(10);
+
+        let btrfs_raid_variants = [
+            BtrfsRaidLevel::Raid0,
+            BtrfsRaidLevel::Raid1,
+            BtrfsRaidLevel::Raid10,
+        ];
+
+        for v in btrfs_raid_variants {
+            assert!(v.check_raid_disks_setup(&[]).is_err());
+            assert!(
+                v.check_raid_disks_setup(&disks[..v.get_min_disks() - 1])
+                    .is_err()
+            );
+            assert!(
+                v.check_raid_disks_setup(&disks[..v.get_min_disks()])
+                    .is_ok()
+            );
+            assert!(v.check_raid_disks_setup(&disks).is_ok());
+        }
+    }
+
+    #[test]
+    fn zfs_raid() {
+        let disks = dummy_disks(10);
+
+        let zfs_raid_variants = [
+            ZfsRaidLevel::Raid0,
+            ZfsRaidLevel::Raid1,
+            ZfsRaidLevel::Raid10,
+            ZfsRaidLevel::RaidZ,
+            ZfsRaidLevel::RaidZ2,
+            ZfsRaidLevel::RaidZ3,
+        ];
+
+        for v in zfs_raid_variants {
+            assert!(v.check_raid_disks_setup(&[]).is_err());
+            assert!(
+                v.check_raid_disks_setup(&disks[..v.get_min_disks() - 1])
+                    .is_err()
+            );
+            assert!(
+                v.check_raid_disks_setup(&disks[..v.get_min_disks()])
+                    .is_ok()
+            );
+            assert!(v.check_raid_disks_setup(&disks).is_ok());
+        }
+    }
 
     fn mock_setup_network() -> (SetupInfo, NetworkInfo) {
         let mut interfaces = BTreeMap::new();
