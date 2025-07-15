@@ -294,9 +294,9 @@ sub query_installation_environment : prototype() {
 
     # avoid serializing out null or an empty string, that can trip up the UIs
     if (my $fqdn = Proxmox::Sys::Net::get_dhcp_hostname()) {
-        if (defined($output->{network}->{dns}->{domain})) {
+        if (defined(my $domain = $output->{network}->{dns}->{domain})) {
             # strip domain name suffix, if possible
-            $fqdn =~ s/\.$output->{network}->{dns}->{domain}//;
+            $fqdn =~ s/\.${domain}//;
         }
 
         $output->{network}->{hostname} = $fqdn;
