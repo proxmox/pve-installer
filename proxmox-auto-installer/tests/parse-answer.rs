@@ -142,11 +142,13 @@ mod tests {
             run_named_fail_parse_test,
             // Keep below entries alphabetically sorted
             both_password_and_hashed_set,
+            btrfs_raid_single_disk,
             fqdn_from_dhcp_no_default_domain,
             fqdn_hostname_only,
             no_fqdn_from_dhcp,
             no_root_password_set,
-            short_password
+            short_password,
+            zfs_raid_single_disk
         );
     }
 }

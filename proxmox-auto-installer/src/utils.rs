@@ -5,7 +5,8 @@ use std::{collections::BTreeMap, process::Command};
 
 use crate::{
     answer::{
-        self, Answer, FirstBootHookSourceMode, FqdnConfig, FqdnExtendedConfig, FqdnSourceMode,
+        self, Answer, DiskSelection, FirstBootHookSourceMode, FqdnConfig, FqdnExtendedConfig,
+        FqdnSourceMode,
     },
     udevinfo::UdevInfo,
 };
@@ -385,6 +386,20 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     }
 }
 
+pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
+    if let DiskSelection::Selection(selection) = &answer.disks.disk_selection {
+        let min_disks = answer.disks.fs_type.get_min_disks();
+        if selection.len() < min_disks {
+            bail!(
+                "{} requires at least {} disks",
+                answer.disks.fs_type,
+                min_disks
+            );
+        }
+    }
+    Ok(())
+}
+
 pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
     info!("Verifying first boot settings");
 
@@ -415,6 +430,7 @@ pub fn parse_answer(
     let network_settings = get_network_settings(answer, udev_info, runtime_info, setup_info)?;
 
     verify_locale_settings(answer, locales)?;
+    verify_disks_settings(answer)?;
     verify_email_and_root_password_settings(answer)?;
     verify_first_boot_settings(answer)?;
 

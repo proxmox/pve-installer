@@ -20,6 +20,16 @@ pub enum BtrfsRaidLevel {
     Raid10,
 }
 
+impl BtrfsRaidLevel {
+    pub fn get_min_disks(&self) -> usize {
+        match self {
+            BtrfsRaidLevel::Raid0 => 1,
+            BtrfsRaidLevel::Raid1 => 2,
+            BtrfsRaidLevel::Raid10 => 4,
+        }
+    }
+}
+
 serde_plain::derive_display_from_serialize!(BtrfsRaidLevel);
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -48,6 +58,19 @@ pub enum ZfsRaidLevel {
     RaidZ3,
 }
 
+impl ZfsRaidLevel {
+    pub fn get_min_disks(&self) -> usize {
+        match self {
+            ZfsRaidLevel::Raid0 => 1,
+            ZfsRaidLevel::Raid1 => 2,
+            ZfsRaidLevel::Raid10 => 4,
+            ZfsRaidLevel::RaidZ => 3,
+            ZfsRaidLevel::RaidZ2 => 4,
+            ZfsRaidLevel::RaidZ3 => 5,
+        }
+    }
+}
+
 serde_plain::derive_display_from_serialize!(ZfsRaidLevel);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -66,6 +89,15 @@ impl FsType {
     /// Returns true if the filesystem is used on top of LVM, e.g. ext4 or XFS.
     pub fn is_lvm(&self) -> bool {
         matches!(self, FsType::Ext4 | FsType::Xfs)
+    }
+
+    pub fn get_min_disks(&self) -> usize {
+        match self {
+            FsType::Ext4 => 1,
+            FsType::Xfs => 1,
+            FsType::Zfs(level) => level.get_min_disks(),
+            FsType::Btrfs(level) => level.get_min_disks(),
+        }
     }
 }
 

@@ -1,0 +1,15 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "btrfs-raid-single-disk.fail.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+root-password = "12345678"
+
+[network]
+source = "from-dhcp"
+
+[disk-setup]
+filesystem = "btrfs"
+btrfs.raid = "raid1"
+disk-list = ["sda"]

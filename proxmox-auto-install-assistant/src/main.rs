@@ -20,7 +20,7 @@ use proxmox_auto_installer::{
     sysinfo::SysInfo,
     utils::{
         AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, verify_disks_settings,
         verify_email_and_root_password_settings, verify_first_boot_settings,
         verify_locale_settings,
     },
@@ -877,6 +877,7 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
     match toml::from_str(&contents) {
         Ok(answer) => {
             verify_locale_settings(&answer, &serde_json::from_str(LOCALE_INFO)?)?;
+            verify_disks_settings(&answer)?;
             verify_first_boot_settings(&answer)?;
             verify_email_and_root_password_settings(&answer)?;
             Ok(answer)

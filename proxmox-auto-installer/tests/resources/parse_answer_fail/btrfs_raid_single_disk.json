@@ -1,0 +1,3 @@
+{
+  "error": "BTRFS (RAID1) requires at least 2 disks"
+}
