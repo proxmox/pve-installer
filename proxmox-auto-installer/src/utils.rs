@@ -12,6 +12,7 @@ use crate::{
 };
 use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
+    disk_checks::check_swapsize,
     options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption, email_validate},
     setup::{
         InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
@@ -397,6 +398,13 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
             );
         }
     }
+
+    if let answer::FsOptions::LVM(lvm) = &answer.disks.fs_options {
+        if let Some((swapsize, hdsize)) = lvm.swapsize.zip(lvm.hdsize) {
+            check_swapsize(swapsize, hdsize)?;
+        }
+    }
+
     Ok(())
 }
 

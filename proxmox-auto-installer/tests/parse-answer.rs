@@ -145,6 +145,7 @@ mod tests {
             btrfs_raid_single_disk,
             fqdn_from_dhcp_no_default_domain,
             fqdn_hostname_only,
+            lvm_swapsize_greater_than_hdsize,
             no_fqdn_from_dhcp,
             no_root_password_set,
             short_password,

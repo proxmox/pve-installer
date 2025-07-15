@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use anyhow::Context;
+
 use cursive::{
     Cursive, Vec2, View,
     view::{Nameable, Resizable, ViewWrapper},
@@ -17,7 +19,9 @@ use crate::InstallerState;
 use crate::options::FS_TYPES;
 
 use proxmox_installer_common::{
-    disk_checks::{check_disks_4kn_legacy_boot, check_for_duplicate_disks},
+    disk_checks::{
+        check_disks_4kn_legacy_boot, check_for_duplicate_disks, check_lvm_bootdisk_opts,
+    },
     options::{
         AdvancedBootdiskOptions, BTRFS_COMPRESS_OPTIONS, BootdiskOptions, BtrfsBootdiskOptions,
         Disk, FsType, LvmBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
@@ -260,6 +264,10 @@ impl AdvancedBootdiskOptionsView {
             let (disk, advanced) = view
                 .get_values()
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
+
+            check_lvm_bootdisk_opts(&advanced)
+                .context(fstype.to_string())
+                .map_err(|err| format!("{:#}", err))?;
 
             Ok(BootdiskOptions {
                 disks: vec![disk],

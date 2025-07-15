@@ -599,6 +599,14 @@ sub compute_swapsize {
     return $swapsize_kb;
 }
 
+sub swapsize_check {
+    my ($hdsize) = @_;
+    my $swapsize = Proxmox::Install::Config::get_swapsize();
+    my $threshold = $hdsize / 8;
+    die "Swap size ${swapsize} GiB cannot be greater than ${threshold} GiB (hard disk size / 8)\n"
+        if $swapsize > $threshold;
+}
+
 my sub chroot_chown {
     my ($root, $path, %param) = @_;
 

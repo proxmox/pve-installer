@@ -1488,7 +1488,7 @@ sub create_hdoption_view {
 
     my $tmp;
 
-    if (($tmp = &$get_float($spinbutton_hdsize)) && ($tmp != $hdsize)) {
+    if (defined($tmp = &$get_float($spinbutton_hdsize))) {
         Proxmox::Install::Config::set_hdsize($tmp);
     } else {
         Proxmox::Install::Config::set_hdsize(undef);
@@ -1607,9 +1607,11 @@ sub create_hdsel_view {
                 $target_hds = [map { $_->[1] } @$devlist];
             } else {
                 my $target_hd = Proxmox::Install::Config::get_target_hd();
+                my $hdsize = Proxmox::Install::Config::get_hdsize();
                 eval {
                     my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
                     Proxmox::Install::legacy_bios_4k_check($target_block_size);
+                    Proxmox::Install::swapsize_check($hdsize);
                 };
                 if (my $err = $@) {
                     Proxmox::UI::message("Warning: $err\n");

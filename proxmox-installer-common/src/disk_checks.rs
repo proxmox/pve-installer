@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::options::Disk;
+use anyhow::ensure;
+
+use crate::options::{Disk, LvmBootdiskOptions};
 use crate::setup::BootType;
 
 /// Checks a list of disks for duplicate entries, using their index as key.
@@ -44,6 +46,35 @@ pub fn check_raid_min_disks(disks: &[Disk], min: usize) -> Result<(), String> {
 pub fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Result<(), &str> {
     if boot_type == BootType::Bios && disks.iter().any(|disk| disk.block_size == Some(4096)) {
         return Err("Booting from 4Kn drive in legacy BIOS mode is not supported.");
+    }
+
+    Ok(())
+}
+
+/// Checks whether the configured swap size exceeds the allowed threshold.
+///
+/// # Arguments
+///
+/// * `swapsize` - The size of the swap in GiB
+/// * `hdsize` - The total size of the hard disk in GiB
+pub fn check_swapsize(swapsize: f64, hdsize: f64) -> anyhow::Result<()> {
+    let threshold = hdsize / 8.0;
+    ensure!(
+        swapsize <= threshold,
+        "Swap size {swapsize} GiB cannot be greater than {threshold} GiB (hard disk size / 8)"
+    );
+    Ok(())
+}
+
+/// Checks whether a user-supplied LVM setup is valid or not, such as the swapsize not
+/// exceeding a certain threshold.
+///
+/// # Arguments
+///
+/// * `bootdisk_opts` - The LVM options set by the user.
+pub fn check_lvm_bootdisk_opts(bootdisk_opts: &LvmBootdiskOptions) -> anyhow::Result<()> {
+    if let Some(swap_size) = bootdisk_opts.swap_size {
+        check_swapsize(swap_size, bootdisk_opts.total_size)?;
     }
 
     Ok(())
