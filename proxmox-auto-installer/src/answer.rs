@@ -90,6 +90,7 @@ pub struct FqdnExtendedConfig {
     #[serde(default)]
     pub source: FqdnSourceMode,
     /// Domain to use if none is received via DHCP.
+    #[serde(default, deserialize_with = "deserialize_non_empty_string_maybe")]
     pub domain: Option<String>,
 }
 
@@ -444,3 +445,15 @@ pub enum KeyboardLayout {
 }
 
 serde_plain::derive_display_from_serialize!(KeyboardLayout);
+
+fn deserialize_non_empty_string_maybe<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let val: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    match val {
+        Some(s) if !s.is_empty() => Ok(Some(s)),
+        _ => Ok(None),
+    }
+}

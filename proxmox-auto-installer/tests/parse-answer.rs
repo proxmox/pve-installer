@@ -124,6 +124,7 @@ mod tests {
             disk_match_any,
             first_boot,
             fqdn_from_dhcp,
+            fqdn_from_dhcp_empty_dhcp_domain_setting,
             fqdn_from_dhcp_no_dhcp_domain_with_default_domain,
             full_fqdn_from_dhcp_with_default_domain,
             hashed_root_password,

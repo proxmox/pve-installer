@@ -1,0 +1,17 @@
+[global]
+keyboard = "de"
+country = "at"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+root-password = "12345678"
+
+[global.fqdn]
+source = "from-dhcp"
+domain = ""
+
+[network]
+source = "from-dhcp"
+
+[disk-setup]
+filesystem = "ext4"
+disk-list = ["sda"]
