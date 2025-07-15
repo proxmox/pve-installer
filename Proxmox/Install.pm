@@ -1271,8 +1271,8 @@ _EOD
                     && !Proxmox::Install::Config::get_first_boot_opt('enabled'));
 
             # support installing a matching CPU microcode package by default
-            next if ($deb =~ /^amd64-microcode_/ && $run_env->{cpu_vendor_id} ne 'AuthenticAMD');
-            next if ($deb =~ /^intel-microcode_/ && $run_env->{cpu_vendor_id} ne 'GenuineIntel');
+            next if $deb =~ /^amd64-microcode_/ && $run_env->{cpu_vendor_id} ne 'AuthenticAMD';
+            next if $deb =~ /^intel-microcode_/ && $run_env->{cpu_vendor_id} ne 'GenuineIntel';
 
             update_progress($count / $pkg_count, 0.5, 0.75, "extracting $deb");
 

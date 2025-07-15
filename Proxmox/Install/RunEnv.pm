@@ -39,6 +39,7 @@ sub query_total_memory : prototype() {
 }
 
 my $_cached_cpu_info = undef;
+
 sub query_cpu_info : prototype() {
     return $_cached_cpu_info if defined($_cached_cpu_info);
 
