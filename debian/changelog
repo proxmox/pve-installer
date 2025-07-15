@@ -1,3 +1,23 @@
+proxmox-installer (9.0.5) trixie; urgency=medium
+
+  * filter out network interfaces without valid MAC address.
+
+  * add early answer file sanity check for RAID configurations similar to the
+    manual guided graphical and terminal based installer interfaces.
+
+  * close #5887: add basic sanity check for overly big swapsize on LVM based
+    installations.
+
+  * common: add checks for valid subnet mask and IPv4 address within subnet.
+
+  * remove any local domain from a hostname set by DHCP.
+
+  * handle the case where users set `global.fqdn.domain = ""`, which would
+    result incorrect parsing and finally resulting in the FQDN of the target
+    machine being set to `<productname>.example.invalid`.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 15 Jul 2025 16:25:10 +0200
+
 proxmox-installer (9.0.4) trixie; urgency=medium
 
   * installation: filter out CPU microcode package depending on CPU vendor.
