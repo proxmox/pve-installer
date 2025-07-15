@@ -204,12 +204,16 @@ sub udevadm_netdev_details {
     return $result;
 }
 
-# Tries to detect the FQDN hostname for this system via DHCP, if available.
+# Tries to detect the hostname for this system given via DHCP, if available.
+# The hostname _might_ also include the local domain name, depending on the
+# concrete DHCP server implementation.
 #
-# DHCP server can set option 12 to inform the client about it's hostname [0]. dhclient dumps all
-# options set by the DHCP server it in lease file, so just read it from there.
+# DHCP servers can set option 12 to inform the client about it's hostname [0].
+# dhclient dumps all options set by the DHCP server it in lease file, so just
+# read it from there.
+#
 # [0] RFC 2132, section 3.14
-sub get_dhcp_fqdn : prototype() {
+sub get_dhcp_hostname : prototype() {
     my $leasefile = '/var/lib/dhcp/dhclient.leases';
     return if !-f $leasefile;
 
