@@ -395,7 +395,7 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
         let min_disks = answer.disks.fs_type.get_min_disks();
         if selection.len() < min_disks {
             bail!(
-                "{} requires at least {} disks",
+                "{}: need at least {} disks",
                 answer.disks.fs_type,
                 min_disks
             );
@@ -404,7 +404,7 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
         let mut disk_set = HashSet::new();
         for disk in selection {
             if !disk_set.insert(disk) {
-                bail!("List of disks contains duplicate disk {disk}");
+                bail!("List of disks contains duplicate device {disk}");
             }
         }
     }

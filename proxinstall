@@ -1593,7 +1593,7 @@ sub create_hdsel_view {
                 apply_raid_disk_selection();
                 my ($devlist) = eval { Proxmox::Install::get_zfs_raid_setup() };
                 if (my $err = $@) {
-                    Proxmox::UI::message("Warning: $err\nPlease fix ZFS setup first.");
+                    Proxmox::UI::message("$err");
                     return;
                 }
                 $target_hds = [map { $_->[1] } @$devlist];
@@ -1601,7 +1601,7 @@ sub create_hdsel_view {
                 apply_raid_disk_selection();
                 my ($devlist) = eval { Proxmox::Install::get_btrfs_raid_setup() };
                 if (my $err = $@) {
-                    Proxmox::UI::message("Warning: $err\nPlease fix BTRFS setup first.");
+                    Proxmox::UI::message("$err");
                     return;
                 }
                 $target_hds = [map { $_->[1] } @$devlist];
@@ -1614,7 +1614,7 @@ sub create_hdsel_view {
                     Proxmox::Install::swapsize_check($hdsize);
                 };
                 if (my $err = $@) {
-                    Proxmox::UI::message("Warning: $err\n");
+                    Proxmox::UI::message("$filesys: $err");
                     return;
                 }
                 $target_hds = [$target_hd];
