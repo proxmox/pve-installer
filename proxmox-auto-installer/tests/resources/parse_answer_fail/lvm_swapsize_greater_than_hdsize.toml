@@ -11,6 +11,6 @@ source = "from-dhcp"
 
 [disk-setup]
 filesystem = "ext4"
-lvm.swapsize = 4.01
+lvm.swapsize = 16.01
 lvm.hdsize = 32
 disk-list = ["sda"]
