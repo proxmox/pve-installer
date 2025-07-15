@@ -387,8 +387,9 @@ where
     }
 }
 
-impl FormViewGetValue<CidrAddress> for CidrAddressEditView {
-    fn get_value(&self) -> Option<CidrAddress> {
+impl FormViewGetValue<(IpAddr, usize)> for CidrAddressEditView {
+    // FIXME: return CidrAddress (again) with proper error handling through Result
+    fn get_value(&self) -> Option<(IpAddr, usize)> {
         self.get_values()
     }
 }
@@ -569,7 +570,7 @@ impl CidrAddressEditView {
             .fixed_width(4)
     }
 
-    fn get_values(&self) -> Option<CidrAddress> {
+    fn get_values(&self) -> Option<(IpAddr, usize)> {
         let addr = self
             .view
             .get_child(0)?
@@ -587,7 +588,7 @@ impl CidrAddressEditView {
             .get_content()
             .ok()?;
 
-        CidrAddress::new(addr, mask).ok()
+        Some((addr, mask))
     }
 }
 

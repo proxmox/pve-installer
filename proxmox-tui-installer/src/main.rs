@@ -20,9 +20,8 @@ use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
     options::{BootdiskOptions, NetworkOptions, TimezoneOptions, email_validate},
     setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo, installer_setup},
-    utils::Fqdn,
+    utils::{CidrAddress, Fqdn},
 };
-
 mod setup;
 
 mod system;
@@ -536,7 +535,10 @@ fn network_dialog(siv: &mut Cursive) -> InstallerView {
 
                 let address = view
                     .get_value::<CidrAddressEditView, _>(2)
-                    .ok_or("failed to retrieve host address")?;
+                    .ok_or("failed to retrieve host address".to_string())
+                    .and_then(|(ip_addr, mask)| {
+                        CidrAddress::new(ip_addr, mask).map_err(|err| err.to_string())
+                    })?;
 
                 let gateway = view
                     .get_value::<EditView, _>(3)
