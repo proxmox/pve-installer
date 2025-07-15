@@ -1611,7 +1611,7 @@ sub create_hdsel_view {
                 eval {
                     my $target_block_size = Proxmox::Sys::Block::logical_blocksize($target_hd);
                     Proxmox::Install::legacy_bios_4k_check($target_block_size);
-                    Proxmox::Install::swapsize_check($hdsize);
+                    Proxmox::Install::assert_swapsize_validity($hdsize);
                 };
                 if (my $err = $@) {
                     Proxmox::UI::message("$filesys: $err");

@@ -58,10 +58,10 @@ pub fn check_disks_4kn_legacy_boot(boot_type: BootType, disks: &[Disk]) -> Resul
 /// * `swapsize` - The size of the swap in GiB
 /// * `hdsize` - The total size of the hard disk in GiB
 pub fn check_swapsize(swapsize: f64, hdsize: f64) -> anyhow::Result<()> {
-    let threshold = hdsize / 8.0;
+    let threshold = hdsize / 2.0;
     ensure!(
         swapsize <= threshold,
-        "Swap size {swapsize} GiB cannot be greater than {threshold} GiB (hard disk size / 8)"
+        "Swap size {swapsize} GiB cannot be greater than {threshold} GiB (hard disk size / 2)"
     );
     Ok(())
 }

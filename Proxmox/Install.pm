@@ -599,11 +599,12 @@ sub compute_swapsize {
     return $swapsize_kb;
 }
 
-sub swapsize_check {
+sub assert_swapsize_validity {
     my ($hdsize) = @_;
     my $swapsize = Proxmox::Install::Config::get_swapsize();
-    my $threshold = $hdsize / 8;
-    die "Swap size ${swapsize} GiB cannot be greater than ${threshold} GiB (hard disk size / 8)\n"
+    # just a rough heuristic of what quite certainly won't make sense in practice
+    my $threshold = $hdsize / 2;
+    die "Swap size ${swapsize} GiB cannot be greater than ${threshold} GiB (hard disk size / 2)\n"
         if $swapsize > $threshold;
 }
 
