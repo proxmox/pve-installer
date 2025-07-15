@@ -1,7 +1,10 @@
 use anyhow::{Context, Result, bail};
 use glob::Pattern;
 use log::info;
-use std::{collections::BTreeMap, process::Command};
+use std::{
+    collections::{BTreeMap, HashSet},
+    process::Command,
+};
 
 use crate::{
     answer::{
@@ -396,6 +399,13 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
                 answer.disks.fs_type,
                 min_disks
             );
+        }
+
+        let mut disk_set = HashSet::new();
+        for disk in selection {
+            if !disk_set.insert(disk) {
+                bail!("List of disks contains duplicate disk {disk}");
+            }
         }
     }
 

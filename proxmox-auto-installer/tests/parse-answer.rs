@@ -143,6 +143,7 @@ mod tests {
             // Keep below entries alphabetically sorted
             both_password_and_hashed_set,
             btrfs_raid_single_disk,
+            duplicate_disk,
             fqdn_from_dhcp_no_default_domain,
             fqdn_hostname_only,
             lvm_swapsize_greater_than_hdsize,
