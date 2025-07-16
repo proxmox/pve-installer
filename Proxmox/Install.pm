@@ -363,20 +363,16 @@ sub get_btrfs_raid_setup {
 
     my $mode;
 
-    if ($diskcount == 1) {
-        $mode = 'single';
+    if ($filesys eq 'btrfs (RAID0)') {
+        $mode = 'raid0';
+    } elsif ($filesys eq 'btrfs (RAID1)') {
+        die "$filesys: need at least 2 devices\n" if $diskcount < 2;
+        $mode = 'raid1';
+    } elsif ($filesys eq 'btrfs (RAID10)') {
+        die "$filesys: need at least 4 devices\n" if $diskcount < 4;
+        $mode = 'raid10';
     } else {
-        if ($filesys eq 'btrfs (RAID0)') {
-            $mode = 'raid0';
-        } elsif ($filesys eq 'btrfs (RAID1)') {
-            die "$filesys: need at least 2 devices\n" if $diskcount < 2;
-            $mode = 'raid1';
-        } elsif ($filesys eq 'btrfs (RAID10)') {
-            die "$filesys: need at least 4 devices\n" if $diskcount < 4;
-            $mode = 'raid10';
-        } else {
-            die "unknown btrfs mode '$filesys'\n";
-        }
+        die "unknown btrfs mode '$filesys'\n";
     }
 
     return ($devlist, $mode);
