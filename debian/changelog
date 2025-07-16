@@ -1,3 +1,15 @@
+proxmox-installer (9.0.6) trixie; urgency=medium
+
+  * run env: anchor domain suffix strip regex to end of string.
+
+  * remove network and broadcast address checks for now, these probably will
+    be reintroduced as visual hints in the future to allow odd, but possible,
+    network setups.
+
+  * GTK GUI: don't assume 'single' btrfs mode if user selects exactely 1 disk.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 17 Jul 2025 01:34:16 +0200
+
 proxmox-installer (9.0.5) trixie; urgency=medium
 
   * filter out network interfaces without valid MAC address.
