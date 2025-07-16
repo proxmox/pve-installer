@@ -16,10 +16,6 @@ pub enum CidrAddressParseError {
     InvalidAddr(AddrParseError),
     /// The mask could not be parsed.
     InvalidMask(Box<dyn Error>),
-    /// The IP address is a network address.
-    IsNetworkAddr,
-    /// The IP address is a broadcast address.
-    IsBroadcastAddr,
 }
 
 impl fmt::Display for CidrAddressParseError {
@@ -32,8 +28,6 @@ impl fmt::Display for CidrAddressParseError {
             }
             CidrAddressParseError::InvalidAddr(err) => write!(f, "{err}"),
             CidrAddressParseError::InvalidMask(err) => write!(f, "{err}"),
-            CidrAddressParseError::IsNetworkAddr => write!(f, "address is a network address"),
-            CidrAddressParseError::IsBroadcastAddr => write!(f, "address is a broadcast address"),
         }
     }
 }
@@ -68,7 +62,6 @@ impl CidrAddress {
         let addr = addr.into();
 
         check_mask_limit(&addr, mask)?;
-        check_addr_valid_in_subnet(&addr, mask)?;
 
         Ok(Self { addr, mask })
     }
@@ -109,7 +102,6 @@ impl FromStr for CidrAddress {
             .map_err(|err| CidrAddressParseError::InvalidMask(Box::new(err)))?;
 
         check_mask_limit(&addr, mask)?;
-        check_addr_valid_in_subnet(&addr, mask)?;
 
         Ok(Self { addr, mask })
     }
@@ -146,33 +138,6 @@ fn check_mask_limit(addr: &IpAddr, mask: usize) -> Result<(), CidrAddressParseEr
     } else {
         Ok(())
     };
-}
-
-fn check_addr_valid_in_subnet(addr: &IpAddr, mask: usize) -> Result<(), CidrAddressParseError> {
-    match &addr {
-        IpAddr::V4(addr_v4) => {
-            if mask >= 31 {
-                return Ok(());
-            }
-
-            let num_host_bits = 32 - mask;
-            let host_part_mask = (1u32 << num_host_bits) - 1;
-
-            let ip_bits = u32::from_be_bytes(addr_v4.octets());
-
-            let network_addr = ip_bits & !host_part_mask;
-            let broadcast_addr = network_addr | host_part_mask;
-
-            if ip_bits == network_addr {
-                Err(CidrAddressParseError::IsNetworkAddr)
-            } else if ip_bits == broadcast_addr {
-                Err(CidrAddressParseError::IsBroadcastAddr)
-            } else {
-                Ok(())
-            }
-        }
-        IpAddr::V6(_) => Ok(()),
-    }
 }
 
 /// Possible errors that might occur when parsing FQDNs.
