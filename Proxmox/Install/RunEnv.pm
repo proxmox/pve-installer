@@ -296,7 +296,7 @@ sub query_installation_environment : prototype() {
     if (my $fqdn = Proxmox::Sys::Net::get_dhcp_hostname()) {
         if (defined(my $domain = $output->{network}->{dns}->{domain})) {
             # strip domain name suffix, if possible
-            $fqdn =~ s/\.${domain}//;
+            $fqdn =~ s/\.${domain}$//;
         }
 
         $output->{network}->{hostname} = $fqdn;
