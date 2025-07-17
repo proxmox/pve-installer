@@ -6,7 +6,7 @@ proxmox-installer (9.0.6) trixie; urgency=medium
     be reintroduced as visual hints in the future to allow odd, but possible,
     network setups.
 
-  * GTK GUI: don't assume 'single' btrfs mode if user selects exactely 1 disk.
+  * GTK GUI: don't assume 'single' btrfs mode if user selects exactly 1 disk.
 
  -- Proxmox Support Team <support@proxmox.com>  Thu, 17 Jul 2025 01:34:16 +0200
 
