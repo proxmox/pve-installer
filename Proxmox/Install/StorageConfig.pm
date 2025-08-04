@@ -23,7 +23,7 @@ sub get_zfs_config {
     my $storage_cfg_zfs = <<__EOD__;
 dir: local
 	path /var/lib/vz
-	content iso,vztmpl,backup
+	content iso,vztmpl,backup,import
 
 zfspool: local-zfs
 	pool $zfspoolname/data
@@ -42,7 +42,7 @@ dir: local
 
 btrfs: local-btrfs
 	path /var/lib/pve/local-btrfs
-	content iso,vztmpl,backup,images,rootdir
+	content iso,vztmpl,backup,images,rootdir,import
 __EOD__
     return $storage_cfg_btrfs;
 }
@@ -51,7 +51,7 @@ sub get_lvm_thin_config {
     my $storage_cfg_lvmthin = <<__EOD__;
 dir: local
 	path /var/lib/vz
-	content iso,vztmpl,backup
+	content iso,vztmpl,backup,import
 
 lvmthin: local-lvm
 	thinpool data
@@ -65,7 +65,7 @@ sub get_local_config {
     my $storage_cfg_local = <<__EOD__;
 dir: local
 	path /var/lib/vz
-	content iso,vztmpl,backup,rootdir,images
+	content iso,vztmpl,backup,rootdir,images,import
 __EOD__
     return $storage_cfg_local;
 }
