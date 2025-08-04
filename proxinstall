@@ -861,10 +861,10 @@ sub create_country_view {
                     syscmd("setxkbmap $xkmap $xvar");
 
                     my $kbd_config = qq{
-		    XKBLAYOUT="$xkmap"
-		    XKBVARIANT="$xvar"
-		    BACKSPACE="guess"
-		};
+                    XKBLAYOUT="$xkmap"
+                    XKBVARIANT="$xvar"
+                    BACKSPACE="guess"
+                };
                     $kbd_config =~ s/^\s+//gm;
 
                     Proxmox::Sys::Command::run_in_background(sub {
