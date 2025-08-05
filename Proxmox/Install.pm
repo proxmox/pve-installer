@@ -1534,6 +1534,9 @@ _EOD
             );
 
             syscmd("rm -rf $tmpdir");
+
+            mkdir "$targetdir/var/lib/rrdcached";
+            mkdir "$targetdir/var/lib/rrdcached/db";
         } elsif ($iso_env->{product} eq 'pbs') {
             my $base_cfg_path = "/etc/proxmox-backup";
             mkdir "$targetdir/$base_cfg_path";
