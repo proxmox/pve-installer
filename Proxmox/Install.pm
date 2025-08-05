@@ -1299,7 +1299,6 @@ _EOD
         my $timezone = Proxmox::Install::Config::get_timezone();
         unlink("$targetdir/etc/localtime");
         symlink("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
-        file_write_all("$targetdir/etc/timezone", "$timezone\n");
 
         unlink "$targetdir/etc/mailname";
         $postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
