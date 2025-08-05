@@ -1295,6 +1295,12 @@ _EOD
             },
         );
 
+        # set timezone
+        my $timezone = Proxmox::Install::Config::get_timezone();
+        unlink("$targetdir/etc/localtime");
+        symlink("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
+        file_write_all("$targetdir/etc/timezone", "$timezone\n");
+
         unlink "$targetdir/etc/mailname";
         $postfix_main_cf =~ s/__FQDN__/${hostname}.${domain}/;
         file_write_all("$targetdir/etc/postfix/main.cf", $postfix_main_cf);
@@ -1309,12 +1315,6 @@ _EOD
         unlink "$targetdir/proxmox_install_mode";
 
         my $country = Proxmox::Install::Config::get_country();
-        my $timezone = Proxmox::Install::Config::get_timezone();
-
-        # set timezone
-        unlink("$targetdir/etc/localtime");
-        symlink("/usr/share/zoneinfo/$timezone", "$targetdir/etc/localtime");
-        file_write_all("$targetdir/etc/timezone", "$timezone\n");
 
         # set apt mirror
         if (my $mirror = $iso_env->{locales}->{country}->{$country}->{mirror}) {
