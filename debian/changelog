@@ -1,3 +1,17 @@
+proxmox-installer (9.0.7) trixie; urgency=medium
+
+  * pve storage config: enable import content type by default.
+
+  * pve installation: create rrdcached DB directory upfront on target system.
+
+  * pve installation: mark /etc/pve as immutable.
+
+  * install: update postfix config compatibility level from 2 to 3.6 to avoid
+    warnings from postfix complaining about using a backward compatible
+    config.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 05 Aug 2025 20:10:07 +0200
+
 proxmox-installer (9.0.6) trixie; urgency=medium
 
   * run env: anchor domain suffix strip regex to end of string.
