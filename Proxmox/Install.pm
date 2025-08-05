@@ -42,7 +42,7 @@ mynetworks = 127.0.0.0/8
 inet_interfaces = loopback-only
 recipient_delimiter = +
 
-compatibility_level = 2
+compatibility_level = 3.6
 
 _EOD
 
