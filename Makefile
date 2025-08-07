@@ -182,12 +182,12 @@ cd-info.test:
 check-pve: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
 	./proxmox-low-level-installer dump-env -t test.img
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+	perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pve-multidisks: prepare-check-env test.img test2.img test3.img test4.img test5.big.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
 	./proxmox-low-level-installer dump-env -t test.img,test2.img,test3.img,test4.img,test5.big.img
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
+	perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img,test2.img,test3.img,test4.img,test5.big.img
 
 check-pve-tui: prepare-check-env test.img
 	rm -f cd-info.test; $(MAKE) cd-info.test
@@ -208,7 +208,7 @@ prepare-check-pmg: prepare-check-env test.img
 	./proxmox-low-level-installer dump-env -t test.img
 
 check-pmg: prepare-check-pmg
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+	perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pmg-tui: prepare-check-pmg
 	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
@@ -222,7 +222,7 @@ prepare-check-pbs: prepare-check-env test.img
 	./proxmox-low-level-installer dump-env -t test.img
 
 check-pbs: prepare-check-pbs
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+	perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pbs-tui: prepare-check-pbs
 	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
@@ -236,7 +236,7 @@ prepare-check-pdm: prepare-check-env test.img
 	./proxmox-low-level-installer dump-env -t test.img
 
 check-pdm: prepare-check-pdm
-	G_SLICE=always-malloc perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
+	perl -I testdir/usr/share/perl5 testdir/usr/bin/proxinstall -t test.img
 
 check-pdm-tui: prepare-check-pdm
 	testdir/usr/bin/proxmox-tui-installer -t test.img 2>testdir/run/stderr
