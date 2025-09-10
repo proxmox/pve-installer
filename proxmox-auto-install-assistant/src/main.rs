@@ -6,10 +6,11 @@
 
 use anyhow::{Context, Result, bail, format_err};
 use glob::Pattern;
+use proxmox_sys::{crypt::verify_crypt_pw, linux::tty::read_password};
 use std::{
     collections::BTreeMap,
     fmt, fs,
-    io::{self, Read},
+    io::{self, IsTerminal, Read},
     path::{Path, PathBuf},
     process::{self, Command, Stdio},
     str::FromStr,
@@ -153,12 +154,15 @@ struct CommandValidateAnswerArgs {
     path: PathBuf,
     /// Whether to also show the full answer as parsed.
     debug: bool,
+    /// Interactively verify the hashed root password.
+    verify_password: bool,
 }
 
 impl cli::Subcommand for CommandValidateAnswerArgs {
     fn parse(args: &mut cli::Arguments) -> Result<Self> {
         Ok(Self {
             debug: args.contains(["-d", "--debug"]),
+            verify_password: args.contains("--verify-root-password"),
             // Needs to be last
             path: args.free_from_str()?,
         })
@@ -175,15 +179,20 @@ ARGUMENTS:
   <PATH>  Path to the answer file.
 
 OPTIONS:
-  -d, --debug        Also show the full answer as parsed.
-  -h, --help         Print this help
-  -V, --version      Print version
+  -d, --debug                 Also show the full answer as parsed.
+      --verify-root-password  Interactively verify the hashed root password.
+  -h, --help                  Print this help
+  -V, --version               Print version
     "#,
             env!("CARGO_PKG_NAME")
         );
     }
 
     fn run(&self) -> Result<()> {
+        if self.verify_password && !std::io::stdin().is_terminal() {
+            Self::print_usage();
+            bail!("Verifying the root password requires an interactive terminal.");
+        }
         validate_answer(self)
     }
 }
@@ -545,6 +554,20 @@ fn validate_answer_file_keys(path: impl AsRef<Path> + fmt::Debug) -> Result<bool
     }
 }
 
+fn verify_hashed_password_interactive(answer: &Answer) -> Result<()> {
+    if let Some(hashed) = &answer.global.root_password_hashed {
+        println!("Verifying hashed root password.");
+
+        let password = String::from_utf8(read_password("Enter root password to verify: ")?)?;
+        verify_crypt_pw(&password, hashed).context("Failed to verify hashed root password")?;
+
+        println!("Password matches hashed root password.");
+        Ok(())
+    } else {
+        bail!("'root-password-hashed' not set in answer file, cannot verify.");
+    }
+}
+
 fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
     let mut valid = validate_answer_file_keys(&args.path)?;
 
@@ -552,6 +575,12 @@ fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
         Ok(answer) => {
             if args.debug {
                 println!("Parsed data from answer file:\n{:#?}", answer);
+            }
+            if args.verify_password {
+                if let Err(err) = verify_hashed_password_interactive(&answer) {
+                    eprintln!("{err:#}");
+                    valid = false;
+                }
             }
         }
         Err(err) => {
