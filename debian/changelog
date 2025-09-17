@@ -1,3 +1,18 @@
+proxmox-installer (9.0.8) trixie; urgency=medium
+
+  * install: set timezone before configuring postfix.
+
+  * install: do not create deprecated /etc/timezone file, it was specific to
+    Debian.
+
+  * assistant: validate answer file: add verify-root-password option to ensure
+    the configured password has no typos in source or hash.
+
+  * GTK UI: remove setting G_SLICE=always-malloc environment variable as this
+    is the default now.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 17 Sep 2025 18:00:22 +0200
+
 proxmox-installer (9.0.7) trixie; urgency=medium
 
   * pve storage config: enable import content type by default.
