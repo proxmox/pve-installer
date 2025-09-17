@@ -1351,6 +1351,13 @@ _EOD
                 "$targetdir/etc/systemd/system/multi-user.target.wants/clamav-clamonacc.service"
                 or $!{ENOENT}
                 or warn "failed to disable clamav-clamonacc.service - $!\n";
+            # clamav-freshclam is not enabled automatically anymore in recent versions - so ensure
+            # it will start - see https://salsa.debian.org/clamav-team/clamav/-/merge_requests/7
+            syscmd(
+                "ln -sf /lib/systemd/system/clamav-freshclam.service $targetdir/etc/systemd/system/multi-user.target.wants/clamav-freshclam.service"
+                ) == 0
+                || warn "failed to enable clamav-freshclam.service - $!\n";
+
         }
 
         if ($iso_env->{product} eq 'pve') {
