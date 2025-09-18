@@ -1,3 +1,9 @@
+proxmox-installer (9.0.9) trixie; urgency=medium
+
+  * pmg: ensure clamav-freshclam is enabled.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 18 Sep 2025 14:21:08 +0200
+
 proxmox-installer (9.0.8) trixie; urgency=medium
 
   * install: set timezone before configuring postfix.
