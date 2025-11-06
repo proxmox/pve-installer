@@ -1315,12 +1315,6 @@ _EOD
 
         my $country = Proxmox::Install::Config::get_country();
 
-        # set apt mirror
-        if (my $mirror = $iso_env->{locales}->{country}->{$country}->{mirror}) {
-            my $fn = "$targetdir/etc/apt/sources.list";
-            syscmd("sed -i 's/ftp\\.debian\\.org/$mirror/' '$fn'");
-        }
-
         # create extended_states for apt (avoid cron job warning if that
         # file does not exist)
         file_write_all("$targetdir/var/lib/apt/extended_states", '');
