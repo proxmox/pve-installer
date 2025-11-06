@@ -916,1493 +916,1244 @@
   "country": {
     "ad": {
       "kmap": "",
-      "mirror": "",
       "name": "Andorra",
       "zone": "Europe/Andorra"
     },
     "ae": {
       "kmap": "",
-      "mirror": "",
       "name": "United Arab Emirates",
       "zone": "Asia/Dubai"
     },
     "af": {
       "kmap": "",
-      "mirror": "",
       "name": "Afghanistan",
       "zone": "Asia/Kabul"
     },
     "ag": {
       "kmap": "",
-      "mirror": "",
       "name": "Antigua and Barbuda",
       "zone": "America/Antigua"
     },
     "ai": {
       "kmap": "",
-      "mirror": "",
       "name": "Anguilla",
       "zone": "America/Anguilla"
     },
     "al": {
       "kmap": "",
-      "mirror": "",
       "name": "Albania",
       "zone": "Europe/Tirane"
     },
     "am": {
       "kmap": "",
-      "mirror": "",
       "name": "Armenia",
       "zone": "Asia/Yerevan"
     },
     "ao": {
       "kmap": "",
-      "mirror": "",
       "name": "Angola",
       "zone": "Africa/Luanda"
     },
     "aq": {
       "kmap": "",
-      "mirror": "",
       "name": "Antarctica",
       "zone": "Antarctica/McMurdo"
     },
     "ar": {
       "kmap": "",
-      "mirror": "",
       "name": "Argentina",
       "zone": "America/Argentina/Buenos_Aires"
     },
     "as": {
       "kmap": "",
-      "mirror": "",
       "name": "American Samoa",
       "zone": "Pacific/Pago_Pago"
     },
     "at": {
       "kmap": "de",
-      "mirror": "ftp.at.debian.org",
       "name": "Austria",
       "zone": "Europe/Vienna"
     },
     "au": {
       "kmap": "",
-      "mirror": "ftp.au.debian.org",
       "name": "Australia",
       "zone": "Australia/Lord_Howe"
     },
     "aw": {
       "kmap": "",
-      "mirror": "",
       "name": "Aruba",
       "zone": "America/Aruba"
     },
     "ax": {
       "kmap": "",
-      "mirror": "",
       "name": "Åland Islands",
       "zone": "Europe/Mariehamn"
     },
     "az": {
       "kmap": "",
-      "mirror": "",
       "name": "Azerbaijan",
       "zone": "Asia/Baku"
     },
     "ba": {
       "kmap": "",
-      "mirror": "",
       "name": "Bosnia and Herzegovina",
       "zone": "Europe/Sarajevo"
     },
     "bb": {
       "kmap": "",
-      "mirror": "",
       "name": "Barbados",
       "zone": "America/Barbados"
     },
     "bd": {
       "kmap": "",
-      "mirror": "",
       "name": "Bangladesh",
       "zone": "Asia/Dhaka"
     },
     "be": {
       "kmap": "fr-be",
-      "mirror": "ftp.be.debian.org",
       "name": "Belgium",
       "zone": "Europe/Brussels"
     },
     "bf": {
       "kmap": "",
-      "mirror": "",
       "name": "Burkina Faso",
       "zone": "Africa/Ouagadougou"
     },
     "bg": {
       "kmap": "",
-      "mirror": "ftp.bg.debian.org",
       "name": "Bulgaria",
       "zone": "Europe/Sofia"
     },
     "bh": {
       "kmap": "",
-      "mirror": "",
       "name": "Bahrain",
       "zone": "Asia/Bahrain"
     },
     "bi": {
       "kmap": "",
-      "mirror": "",
       "name": "Burundi",
       "zone": "Africa/Bujumbura"
     },
     "bj": {
       "kmap": "",
-      "mirror": "",
       "name": "Benin",
       "zone": "Africa/Porto-Novo"
     },
     "bl": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Barthélemy",
       "zone": "America/St_Barthelemy"
     },
     "bm": {
       "kmap": "",
-      "mirror": "",
       "name": "Bermuda",
       "zone": "Atlantic/Bermuda"
     },
     "bn": {
       "kmap": "",
-      "mirror": "",
       "name": "Brunei Darussalam",
       "zone": "Asia/Brunei"
     },
     "bo": {
       "kmap": "",
-      "mirror": "",
       "name": "Bolivia",
       "zone": "America/La_Paz"
     },
     "bq": {
       "kmap": "",
-      "mirror": "",
       "name": "Bonaire, Sint Eustatius and Saba",
       "zone": "America/Kralendijk"
     },
     "br": {
       "kmap": "pt-br",
-      "mirror": "ftp.br.debian.org",
       "name": "Brazil",
       "zone": "America/Noronha"
     },
     "bs": {
       "kmap": "",
-      "mirror": "",
       "name": "Bahamas",
       "zone": "America/Nassau"
     },
     "bt": {
       "kmap": "",
-      "mirror": "",
       "name": "Bhutan",
       "zone": "Asia/Thimphu"
     },
     "bv": {
       "kmap": "",
-      "mirror": "",
       "name": "Bouvet Island"
     },
     "bw": {
       "kmap": "",
-      "mirror": "",
       "name": "Botswana",
       "zone": "Africa/Gaborone"
     },
     "by": {
       "kmap": "",
-      "mirror": "",
       "name": "Belarus",
       "zone": "Europe/Minsk"
     },
     "bz": {
       "kmap": "",
-      "mirror": "",
       "name": "Belize",
       "zone": "America/Belize"
     },
     "ca": {
       "kmap": "en-us",
-      "mirror": "ftp.ca.debian.org",
       "name": "Canada",
       "zone": "America/St_Johns"
     },
     "cc": {
       "kmap": "",
-      "mirror": "",
       "name": "Cocos (Keeling) Islands",
       "zone": "Indian/Cocos"
     },
     "cd": {
       "kmap": "",
-      "mirror": "",
       "name": "Congo, The Democratic Republic of the",
       "zone": "Africa/Kinshasa"
     },
     "cf": {
       "kmap": "",
-      "mirror": "",
       "name": "Central African Republic",
       "zone": "Africa/Bangui"
     },
     "cg": {
       "kmap": "",
-      "mirror": "",
       "name": "Congo",
       "zone": "Africa/Brazzaville"
     },
     "ch": {
       "kmap": "de-ch",
-      "mirror": "ftp.ch.debian.org",
       "name": "Switzerland",
       "zone": "Europe/Zurich"
     },
     "ci": {
       "kmap": "",
-      "mirror": "",
       "name": "Côte d'Ivoire",
       "zone": "Africa/Abidjan"
     },
     "ck": {
       "kmap": "",
-      "mirror": "",
       "name": "Cook Islands",
       "zone": "Pacific/Rarotonga"
     },
     "cl": {
       "kmap": "",
-      "mirror": "ftp.cl.debian.org",
       "name": "Chile",
       "zone": "America/Santiago"
     },
     "cm": {
       "kmap": "",
-      "mirror": "",
       "name": "Cameroon",
       "zone": "Africa/Douala"
     },
     "cn": {
       "kmap": "",
-      "mirror": "",
       "name": "China",
       "zone": "Asia/Shanghai"
     },
     "co": {
       "kmap": "",
-      "mirror": "",
       "name": "Colombia",
       "zone": "America/Bogota"
     },
     "cr": {
       "kmap": "",
-      "mirror": "",
       "name": "Costa Rica",
       "zone": "America/Costa_Rica"
     },
     "cu": {
       "kmap": "",
-      "mirror": "",
       "name": "Cuba",
       "zone": "America/Havana"
     },
     "cv": {
       "kmap": "",
-      "mirror": "",
       "name": "Cabo Verde",
       "zone": "Atlantic/Cape_Verde"
     },
     "cw": {
       "kmap": "",
-      "mirror": "",
       "name": "Curaçao",
       "zone": "America/Curacao"
     },
     "cx": {
       "kmap": "",
-      "mirror": "",
       "name": "Christmas Island",
       "zone": "Indian/Christmas"
     },
     "cy": {
       "kmap": "",
-      "mirror": "",
       "name": "Cyprus",
       "zone": "Asia/Nicosia"
     },
     "cz": {
       "kmap": "",
-      "mirror": "ftp.cz.debian.org",
       "name": "Czechia",
       "zone": "Europe/Prague"
     },
     "de": {
       "kmap": "de",
-      "mirror": "ftp.de.debian.org",
       "name": "Germany",
       "zone": "Europe/Berlin"
     },
     "dj": {
       "kmap": "",
-      "mirror": "",
       "name": "Djibouti",
       "zone": "Africa/Djibouti"
     },
     "dk": {
       "kmap": "dk",
-      "mirror": "ftp.dk.debian.org",
       "name": "Denmark",
       "zone": "Europe/Copenhagen"
     },
     "dm": {
       "kmap": "",
-      "mirror": "",
       "name": "Dominica",
       "zone": "America/Dominica"
     },
     "do": {
       "kmap": "",
-      "mirror": "",
       "name": "Dominican Republic",
       "zone": "America/Santo_Domingo"
     },
     "dz": {
       "kmap": "",
-      "mirror": "",
       "name": "Algeria",
       "zone": "Africa/Algiers"
     },
     "ec": {
       "kmap": "",
-      "mirror": "",
       "name": "Ecuador",
       "zone": "America/Guayaquil"
     },
     "ee": {
       "kmap": "",
-      "mirror": "ftp.ee.debian.org",
       "name": "Estonia",
       "zone": "Europe/Tallinn"
     },
     "eg": {
       "kmap": "",
-      "mirror": "",
       "name": "Egypt",
       "zone": "Africa/Cairo"
     },
     "eh": {
       "kmap": "",
-      "mirror": "",
       "name": "Western Sahara",
       "zone": "Africa/El_Aaiun"
     },
     "er": {
       "kmap": "",
-      "mirror": "",
       "name": "Eritrea",
       "zone": "Africa/Asmara"
     },
     "es": {
       "kmap": "es",
-      "mirror": "ftp.es.debian.org",
       "name": "Spain",
       "zone": "Europe/Madrid"
     },
     "et": {
       "kmap": "",
-      "mirror": "",
       "name": "Ethiopia",
       "zone": "Africa/Addis_Ababa"
     },
     "fi": {
       "kmap": "fi",
-      "mirror": "ftp.fi.debian.org",
       "name": "Finland",
       "zone": "Europe/Helsinki"
     },
     "fj": {
       "kmap": "",
-      "mirror": "",
       "name": "Fiji",
       "zone": "Pacific/Fiji"
     },
     "fk": {
       "kmap": "",
-      "mirror": "",
       "name": "Falkland Islands (Malvinas)",
       "zone": "Atlantic/Stanley"
     },
     "fm": {
       "kmap": "",
-      "mirror": "",
       "name": "Micronesia, Federated States of",
       "zone": "Pacific/Chuuk"
     },
     "fo": {
       "kmap": "",
-      "mirror": "",
       "name": "Faroe Islands",
       "zone": "Atlantic/Faroe"
     },
     "fr": {
       "kmap": "fr",
-      "mirror": "ftp.fr.debian.org",
       "name": "France",
       "zone": "Europe/Paris"
     },
     "ga": {
       "kmap": "",
-      "mirror": "",
       "name": "Gabon",
       "zone": "Africa/Libreville"
     },
     "gb": {
       "kmap": "en-gb",
-      "mirror": "ftp.uk.debian.org",
       "name": "United Kingdom",
       "zone": "Europe/London"
     },
     "gd": {
       "kmap": "",
-      "mirror": "",
       "name": "Grenada",
       "zone": "America/Grenada"
     },
     "ge": {
       "kmap": "",
-      "mirror": "",
       "name": "Georgia",
       "zone": "Asia/Tbilisi"
     },
     "gf": {
       "kmap": "",
-      "mirror": "",
       "name": "French Guiana",
       "zone": "America/Cayenne"
     },
     "gg": {
       "kmap": "",
-      "mirror": "",
       "name": "Guernsey",
       "zone": "Europe/Guernsey"
     },
     "gh": {
       "kmap": "",
-      "mirror": "",
       "name": "Ghana",
       "zone": "Africa/Accra"
     },
     "gi": {
       "kmap": "es",
-      "mirror": "",
       "name": "Gibraltar",
       "zone": "Europe/Gibraltar"
     },
     "gl": {
       "kmap": "",
-      "mirror": "",
       "name": "Greenland",
       "zone": "America/Nuuk"
     },
     "gm": {
       "kmap": "",
-      "mirror": "",
       "name": "Gambia",
       "zone": "Africa/Banjul"
     },
     "gn": {
       "kmap": "",
-      "mirror": "",
       "name": "Guinea",
       "zone": "Africa/Conakry"
     },
     "gp": {
       "kmap": "",
-      "mirror": "",
       "name": "Guadeloupe",
       "zone": "America/Guadeloupe"
     },
     "gq": {
       "kmap": "",
-      "mirror": "",
       "name": "Equatorial Guinea",
       "zone": "Africa/Malabo"
     },
     "gr": {
       "kmap": "",
-      "mirror": "ftp.gr.debian.org",
       "name": "Greece",
       "zone": "Europe/Athens"
     },
     "gs": {
       "kmap": "",
-      "mirror": "",
       "name": "South Georgia and the South Sandwich Islands",
       "zone": "Atlantic/South_Georgia"
     },
     "gt": {
       "kmap": "",
-      "mirror": "",
       "name": "Guatemala",
       "zone": "America/Guatemala"
     },
     "gu": {
       "kmap": "",
-      "mirror": "",
       "name": "Guam",
       "zone": "Pacific/Guam"
     },
     "gw": {
       "kmap": "",
-      "mirror": "",
       "name": "Guinea-Bissau",
       "zone": "Africa/Bissau"
     },
     "gy": {
       "kmap": "",
-      "mirror": "",
       "name": "Guyana",
       "zone": "America/Guyana"
     },
     "hk": {
       "kmap": "",
-      "mirror": "ftp.hk.debian.org",
       "name": "Hong Kong",
       "zone": "Asia/Hong_Kong"
     },
     "hm": {
       "kmap": "",
-      "mirror": "",
       "name": "Heard Island and McDonald Islands"
     },
     "hn": {
       "kmap": "",
-      "mirror": "",
       "name": "Honduras",
       "zone": "America/Tegucigalpa"
     },
     "hr": {
       "kmap": "",
-      "mirror": "ftp.hr.debian.org",
       "name": "Croatia",
       "zone": "Europe/Zagreb"
     },
     "ht": {
       "kmap": "",
-      "mirror": "",
       "name": "Haiti",
       "zone": "America/Port-au-Prince"
     },
     "hu": {
       "kmap": "hu",
-      "mirror": "ftp.hu.debian.org",
       "name": "Hungary",
       "zone": "Europe/Budapest"
     },
     "id": {
       "kmap": "",
-      "mirror": "",
       "name": "Indonesia",
       "zone": "Asia/Jakarta"
     },
     "ie": {
       "kmap": "",
-      "mirror": "ftp.ie.debian.org",
       "name": "Ireland",
       "zone": "Europe/Dublin"
     },
     "il": {
       "kmap": "",
-      "mirror": "",
       "name": "Israel",
       "zone": "Asia/Jerusalem"
     },
     "im": {
       "kmap": "",
-      "mirror": "",
       "name": "Isle of Man",
       "zone": "Europe/Isle_of_Man"
     },
     "in": {
       "kmap": "",
-      "mirror": "",
       "name": "India",
       "zone": "Asia/Kolkata"
     },
     "io": {
       "kmap": "",
-      "mirror": "",
       "name": "British Indian Ocean Territory",
       "zone": "Indian/Chagos"
     },
     "iq": {
       "kmap": "",
-      "mirror": "",
       "name": "Iraq",
       "zone": "Asia/Baghdad"
     },
     "ir": {
       "kmap": "",
-      "mirror": "",
       "name": "Iran",
       "zone": "Asia/Tehran"
     },
     "is": {
       "kmap": "is",
-      "mirror": "ftp.is.debian.org",
       "name": "Iceland",
       "zone": "Atlantic/Reykjavik"
     },
     "it": {
       "kmap": "it",
-      "mirror": "ftp.it.debian.org",
       "name": "Italy",
       "zone": "Europe/Rome"
     },
     "je": {
       "kmap": "",
-      "mirror": "",
       "name": "Jersey",
       "zone": "Europe/Jersey"
     },
     "jm": {
       "kmap": "",
-      "mirror": "",
       "name": "Jamaica",
       "zone": "America/Jamaica"
     },
     "jo": {
       "kmap": "",
-      "mirror": "",
       "name": "Jordan",
       "zone": "Asia/Amman"
     },
     "jp": {
       "kmap": "jp",
-      "mirror": "ftp.jp.debian.org",
       "name": "Japan",
       "zone": "Asia/Tokyo"
     },
     "ke": {
       "kmap": "",
-      "mirror": "",
       "name": "Kenya",
       "zone": "Africa/Nairobi"
     },
     "kg": {
       "kmap": "",
-      "mirror": "",
       "name": "Kyrgyzstan",
       "zone": "Asia/Bishkek"
     },
     "kh": {
       "kmap": "",
-      "mirror": "",
       "name": "Cambodia",
       "zone": "Asia/Phnom_Penh"
     },
     "ki": {
       "kmap": "",
-      "mirror": "",
       "name": "Kiribati",
       "zone": "Pacific/Tarawa"
     },
     "km": {
       "kmap": "",
-      "mirror": "",
       "name": "Comoros",
       "zone": "Indian/Comoro"
     },
     "kn": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Kitts and Nevis",
       "zone": "America/St_Kitts"
     },
     "kp": {
       "kmap": "",
-      "mirror": "",
       "name": "North Korea",
       "zone": "Asia/Pyongyang"
     },
     "kr": {
       "kmap": "",
-      "mirror": "ftp.kr.debian.org",
       "name": "South Korea",
       "zone": "Asia/Seoul"
     },
     "kw": {
       "kmap": "",
-      "mirror": "",
       "name": "Kuwait",
       "zone": "Asia/Kuwait"
     },
     "ky": {
       "kmap": "",
-      "mirror": "",
       "name": "Cayman Islands",
       "zone": "America/Cayman"
     },
     "kz": {
       "kmap": "",
-      "mirror": "",
       "name": "Kazakhstan",
       "zone": "Asia/Almaty"
     },
     "la": {
       "kmap": "",
-      "mirror": "",
       "name": "Laos",
       "zone": "Asia/Vientiane"
     },
     "lb": {
       "kmap": "",
-      "mirror": "",
       "name": "Lebanon",
       "zone": "Asia/Beirut"
     },
     "lc": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Lucia",
       "zone": "America/St_Lucia"
     },
     "li": {
       "kmap": "de-ch",
-      "mirror": "",
       "name": "Liechtenstein",
       "zone": "Europe/Vaduz"
     },
     "lk": {
       "kmap": "",
-      "mirror": "",
       "name": "Sri Lanka",
       "zone": "Asia/Colombo"
     },
     "lr": {
       "kmap": "",
-      "mirror": "",
       "name": "Liberia",
       "zone": "Africa/Monrovia"
     },
     "ls": {
       "kmap": "",
-      "mirror": "",
       "name": "Lesotho",
       "zone": "Africa/Maseru"
     },
     "lt": {
       "kmap": "lt",
-      "mirror": "",
       "name": "Lithuania",
       "zone": "Europe/Vilnius"
     },
     "lu": {
       "kmap": "fr-ch",
-      "mirror": "",
       "name": "Luxembourg",
       "zone": "Europe/Luxembourg"
     },
     "lv": {
       "kmap": "",
-      "mirror": "",
       "name": "Latvia",
       "zone": "Europe/Riga"
     },
     "ly": {
       "kmap": "",
-      "mirror": "",
       "name": "Libya",
       "zone": "Africa/Tripoli"
     },
     "ma": {
       "kmap": "",
-      "mirror": "",
       "name": "Morocco",
       "zone": "Africa/Casablanca"
     },
     "mc": {
       "kmap": "",
-      "mirror": "",
       "name": "Monaco",
       "zone": "Europe/Monaco"
     },
     "md": {
       "kmap": "",
-      "mirror": "",
       "name": "Moldova",
       "zone": "Europe/Chisinau"
     },
     "me": {
       "kmap": "",
-      "mirror": "",
       "name": "Montenegro",
       "zone": "Europe/Podgorica"
     },
     "mf": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Martin (French part)",
       "zone": "America/Marigot"
     },
     "mg": {
       "kmap": "",
-      "mirror": "",
       "name": "Madagascar",
       "zone": "Indian/Antananarivo"
     },
     "mh": {
       "kmap": "",
-      "mirror": "",
       "name": "Marshall Islands",
       "zone": "Pacific/Majuro"
     },
     "mk": {
       "kmap": "mk",
-      "mirror": "",
       "name": "North Macedonia",
       "zone": "Europe/Skopje"
     },
     "ml": {
       "kmap": "",
-      "mirror": "",
       "name": "Mali",
       "zone": "Africa/Bamako"
     },
     "mm": {
       "kmap": "",
-      "mirror": "",
       "name": "Myanmar",
       "zone": "Asia/Yangon"
     },
     "mn": {
       "kmap": "",
-      "mirror": "",
       "name": "Mongolia",
       "zone": "Asia/Ulaanbaatar"
     },
     "mo": {
       "kmap": "",
-      "mirror": "",
       "name": "Macao",
       "zone": "Asia/Macau"
     },
     "mp": {
       "kmap": "",
-      "mirror": "",
       "name": "Northern Mariana Islands",
       "zone": "Pacific/Saipan"
     },
     "mq": {
       "kmap": "",
-      "mirror": "",
       "name": "Martinique",
       "zone": "America/Martinique"
     },
     "mr": {
       "kmap": "",
-      "mirror": "",
       "name": "Mauritania",
       "zone": "Africa/Nouakchott"
     },
     "ms": {
       "kmap": "",
-      "mirror": "",
       "name": "Montserrat",
       "zone": "America/Montserrat"
     },
     "mt": {
       "kmap": "",
-      "mirror": "",
       "name": "Malta",
       "zone": "Europe/Malta"
     },
     "mu": {
       "kmap": "",
-      "mirror": "",
       "name": "Mauritius",
       "zone": "Indian/Mauritius"
     },
     "mv": {
       "kmap": "",
-      "mirror": "",
       "name": "Maldives",
       "zone": "Indian/Maldives"
     },
     "mw": {
       "kmap": "",
-      "mirror": "",
       "name": "Malawi",
       "zone": "Africa/Blantyre"
     },
     "mx": {
       "kmap": "",
-      "mirror": "ftp.mx.debian.org",
       "name": "Mexico",
       "zone": "America/Mexico_City"
     },
     "my": {
       "kmap": "",
-      "mirror": "",
       "name": "Malaysia",
       "zone": "Asia/Kuala_Lumpur"
     },
     "mz": {
       "kmap": "",
-      "mirror": "",
       "name": "Mozambique",
       "zone": "Africa/Maputo"
     },
     "na": {
       "kmap": "",
-      "mirror": "",
       "name": "Namibia",
       "zone": "Africa/Windhoek"
     },
     "nc": {
       "kmap": "",
-      "mirror": "",
       "name": "New Caledonia",
       "zone": "Pacific/Noumea"
     },
     "ne": {
       "kmap": "",
-      "mirror": "",
       "name": "Niger",
       "zone": "Africa/Niamey"
     },
     "nf": {
       "kmap": "",
-      "mirror": "",
       "name": "Norfolk Island",
       "zone": "Pacific/Norfolk"
     },
     "ng": {
       "kmap": "",
-      "mirror": "",
       "name": "Nigeria",
       "zone": "Africa/Lagos"
     },
     "ni": {
       "kmap": "",
-      "mirror": "",
       "name": "Nicaragua",
       "zone": "America/Managua"
     },
     "nl": {
       "kmap": "en-us",
-      "mirror": "ftp.nl.debian.org",
       "name": "Netherlands",
       "zone": "Europe/Amsterdam"
     },
     "no": {
       "kmap": "no",
-      "mirror": "ftp.no.debian.org",
       "name": "Norway",
       "zone": "Europe/Oslo"
     },
     "np": {
       "kmap": "",
-      "mirror": "",
       "name": "Nepal",
       "zone": "Asia/Kathmandu"
     },
     "nr": {
       "kmap": "",
-      "mirror": "",
       "name": "Nauru",
       "zone": "Pacific/Nauru"
     },
     "nu": {
       "kmap": "",
-      "mirror": "",
       "name": "Niue",
       "zone": "Pacific/Niue"
     },
     "nz": {
       "kmap": "",
-      "mirror": "ftp.nz.debian.org",
       "name": "New Zealand",
       "zone": "Pacific/Auckland"
     },
     "om": {
       "kmap": "",
-      "mirror": "",
       "name": "Oman",
       "zone": "Asia/Muscat"
     },
     "pa": {
       "kmap": "",
-      "mirror": "",
       "name": "Panama",
       "zone": "America/Panama"
     },
     "pe": {
       "kmap": "",
-      "mirror": "",
       "name": "Peru",
       "zone": "America/Lima"
     },
     "pf": {
       "kmap": "",
-      "mirror": "",
       "name": "French Polynesia",
       "zone": "Pacific/Tahiti"
     },
     "pg": {
       "kmap": "",
-      "mirror": "",
       "name": "Papua New Guinea",
       "zone": "Pacific/Port_Moresby"
     },
     "ph": {
       "kmap": "",
-      "mirror": "",
       "name": "Philippines",
       "zone": "Asia/Manila"
     },
     "pk": {
       "kmap": "",
-      "mirror": "",
       "name": "Pakistan",
       "zone": "Asia/Karachi"
     },
     "pl": {
       "kmap": "pl",
-      "mirror": "ftp.pl.debian.org",
       "name": "Poland",
       "zone": "Europe/Warsaw"
     },
     "pm": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Pierre and Miquelon",
       "zone": "America/Miquelon"
     },
     "pn": {
       "kmap": "",
-      "mirror": "",
       "name": "Pitcairn",
       "zone": "Pacific/Pitcairn"
     },
     "pr": {
       "kmap": "",
-      "mirror": "",
       "name": "Puerto Rico",
       "zone": "America/Puerto_Rico"
     },
     "ps": {
       "kmap": "",
-      "mirror": "",
       "name": "Palestine, State of",
       "zone": "Asia/Gaza"
     },
     "pt": {
       "kmap": "pt",
-      "mirror": "ftp.pt.debian.org",
       "name": "Portugal",
       "zone": "Europe/Lisbon"
     },
     "pw": {
       "kmap": "",
-      "mirror": "",
       "name": "Palau",
       "zone": "Pacific/Palau"
     },
     "py": {
       "kmap": "",
-      "mirror": "",
       "name": "Paraguay",
       "zone": "America/Asuncion"
     },
     "qa": {
       "kmap": "",
-      "mirror": "",
       "name": "Qatar",
       "zone": "Asia/Qatar"
     },
     "re": {
       "kmap": "",
-      "mirror": "",
       "name": "Réunion",
       "zone": "Indian/Reunion"
     },
     "ro": {
       "kmap": "",
-      "mirror": "ftp.ro.debian.org",
       "name": "Romania",
       "zone": "Europe/Bucharest"
     },
     "rs": {
       "kmap": "",
-      "mirror": "",
       "name": "Serbia",
       "zone": "Europe/Belgrade"
     },
     "ru": {
       "kmap": "",
-      "mirror": "ftp.ru.debian.org",
       "name": "Russian Federation",
       "zone": "Europe/Kaliningrad"
     },
     "rw": {
       "kmap": "",
-      "mirror": "",
       "name": "Rwanda",
       "zone": "Africa/Kigali"
     },
     "sa": {
       "kmap": "",
-      "mirror": "",
       "name": "Saudi Arabia",
       "zone": "Asia/Riyadh"
     },
     "sb": {
       "kmap": "",
-      "mirror": "",
       "name": "Solomon Islands",
       "zone": "Pacific/Guadalcanal"
     },
     "sc": {
       "kmap": "",
-      "mirror": "",
       "name": "Seychelles",
       "zone": "Indian/Mahe"
     },
     "sd": {
       "kmap": "",
-      "mirror": "",
       "name": "Sudan",
       "zone": "Africa/Khartoum"
     },
     "se": {
       "kmap": "",
-      "mirror": "ftp.se.debian.org",
       "name": "Sweden",
       "zone": "Europe/Stockholm"
     },
     "sg": {
       "kmap": "",
-      "mirror": "",
       "name": "Singapore",
       "zone": "Asia/Singapore"
     },
     "sh": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Helena, Ascension and Tristan da Cunha",
       "zone": "Atlantic/St_Helena"
     },
     "si": {
       "kmap": "si",
-      "mirror": "ftp.si.debian.org",
       "name": "Slovenia",
       "zone": "Europe/Ljubljana"
     },
     "sj": {
       "kmap": "",
-      "mirror": "",
       "name": "Svalbard and Jan Mayen",
       "zone": "Arctic/Longyearbyen"
     },
     "sk": {
       "kmap": "",
-      "mirror": "ftp.sk.debian.org",
       "name": "Slovakia",
       "zone": "Europe/Bratislava"
     },
     "sl": {
       "kmap": "",
-      "mirror": "",
       "name": "Sierra Leone",
       "zone": "Africa/Freetown"
     },
     "sm": {
       "kmap": "",
-      "mirror": "",
       "name": "San Marino",
       "zone": "Europe/San_Marino"
     },
     "sn": {
       "kmap": "",
-      "mirror": "",
       "name": "Senegal",
       "zone": "Africa/Dakar"
     },
     "so": {
       "kmap": "",
-      "mirror": "",
       "name": "Somalia",
       "zone": "Africa/Mogadishu"
     },
     "sr": {
       "kmap": "",
-      "mirror": "",
       "name": "Suriname",
       "zone": "America/Paramaribo"
     },
     "ss": {
       "kmap": "",
-      "mirror": "",
       "name": "South Sudan",
       "zone": "Africa/Juba"
     },
     "st": {
       "kmap": "",
-      "mirror": "",
       "name": "Sao Tome and Principe",
       "zone": "Africa/Sao_Tome"
     },
     "sv": {
       "kmap": "",
-      "mirror": "",
       "name": "El Salvador",
       "zone": "America/El_Salvador"
     },
     "sx": {
       "kmap": "",
-      "mirror": "",
       "name": "Sint Maarten (Dutch part)",
       "zone": "America/Lower_Princes"
     },
     "sy": {
       "kmap": "",
-      "mirror": "",
       "name": "Syria",
       "zone": "Asia/Damascus"
     },
     "sz": {
       "kmap": "",
-      "mirror": "",
       "name": "Eswatini",
       "zone": "Africa/Mbabane"
     },
     "tc": {
       "kmap": "",
-      "mirror": "",
       "name": "Turks and Caicos Islands",
       "zone": "America/Grand_Turk"
     },
     "td": {
       "kmap": "",
-      "mirror": "",
       "name": "Chad",
       "zone": "Africa/Ndjamena"
     },
     "tf": {
       "kmap": "",
-      "mirror": "",
       "name": "French Southern Territories",
       "zone": "Indian/Kerguelen"
     },
     "tg": {
       "kmap": "",
-      "mirror": "",
       "name": "Togo",
       "zone": "Africa/Lome"
     },
     "th": {
       "kmap": "",
-      "mirror": "",
       "name": "Thailand",
       "zone": "Asia/Bangkok"
     },
     "tj": {
       "kmap": "",
-      "mirror": "",
       "name": "Tajikistan",
       "zone": "Asia/Dushanbe"
     },
     "tk": {
       "kmap": "",
-      "mirror": "",
       "name": "Tokelau",
       "zone": "Pacific/Fakaofo"
     },
     "tl": {
       "kmap": "",
-      "mirror": "",
       "name": "Timor-Leste",
       "zone": "Asia/Dili"
     },
     "tm": {
       "kmap": "",
-      "mirror": "",
       "name": "Turkmenistan",
       "zone": "Asia/Ashgabat"
     },
     "tn": {
       "kmap": "",
-      "mirror": "",
       "name": "Tunisia",
       "zone": "Africa/Tunis"
     },
     "to": {
       "kmap": "",
-      "mirror": "",
       "name": "Tonga",
       "zone": "Pacific/Tongatapu"
     },
     "tr": {
       "kmap": "",
-      "mirror": "ftp.tr.debian.org",
       "name": "Türkiye",
       "zone": "Europe/Istanbul"
     },
     "tt": {
       "kmap": "",
-      "mirror": "",
       "name": "Trinidad and Tobago",
       "zone": "America/Port_of_Spain"
     },
     "tv": {
       "kmap": "",
-      "mirror": "",
       "name": "Tuvalu",
       "zone": "Pacific/Funafuti"
     },
     "tw": {
       "kmap": "",
-      "mirror": "ftp.tw.debian.org",
       "name": "Taiwan",
       "zone": "Asia/Taipei"
     },
     "tz": {
       "kmap": "",
-      "mirror": "",
       "name": "Tanzania",
       "zone": "Africa/Dar_es_Salaam"
     },
     "ua": {
       "kmap": "",
-      "mirror": "",
       "name": "Ukraine",
       "zone": "Europe/Simferopol"
     },
     "ug": {
       "kmap": "",
-      "mirror": "",
       "name": "Uganda",
       "zone": "Africa/Kampala"
     },
     "um": {
       "kmap": "",
-      "mirror": "",
       "name": "United States Minor Outlying Islands",
       "zone": "Pacific/Midway"
     },
     "us": {
       "kmap": "en-us",
-      "mirror": "ftp.us.debian.org",
       "name": "United States",
       "zone": "America/New_York"
     },
     "uy": {
       "kmap": "",
-      "mirror": "",
       "name": "Uruguay",
       "zone": "America/Montevideo"
     },
     "uz": {
       "kmap": "",
-      "mirror": "",
       "name": "Uzbekistan",
       "zone": "Asia/Samarkand"
     },
     "va": {
       "kmap": "it",
-      "mirror": "",
       "name": "Holy See (Vatican City State)",
       "zone": "Europe/Vatican"
     },
     "vc": {
       "kmap": "",
-      "mirror": "",
       "name": "Saint Vincent and the Grenadines",
       "zone": "America/St_Vincent"
     },
     "ve": {
       "kmap": "",
-      "mirror": "",
       "name": "Venezuela",
       "zone": "America/Caracas"
     },
     "vg": {
       "kmap": "",
-      "mirror": "",
       "name": "Virgin Islands, British",
       "zone": "America/Tortola"
     },
     "vi": {
       "kmap": "",
-      "mirror": "",
       "name": "Virgin Islands, U.S.",
       "zone": "America/St_Thomas"
     },
     "vn": {
       "kmap": "",
-      "mirror": "",
       "name": "Vietnam",
       "zone": "Asia/Ho_Chi_Minh"
     },
     "vu": {
       "kmap": "",
-      "mirror": "",
       "name": "Vanuatu",
       "zone": "Pacific/Efate"
     },
     "wf": {
       "kmap": "",
-      "mirror": "",
       "name": "Wallis and Futuna",
       "zone": "Pacific/Wallis"
     },
     "ws": {
       "kmap": "",
-      "mirror": "",
       "name": "Samoa",
       "zone": "Pacific/Apia"
     },
     "ye": {
       "kmap": "",
-      "mirror": "",
       "name": "Yemen",
       "zone": "Asia/Aden"
     },
     "yt": {
       "kmap": "",
-      "mirror": "",
       "name": "Mayotte",
       "zone": "Indian/Mayotte"
     },
     "za": {
       "kmap": "",
-      "mirror": "",
       "name": "South Africa",
       "zone": "Africa/Johannesburg"
     },
     "zm": {
       "kmap": "",
-      "mirror": "",
       "name": "Zambia",
       "zone": "Africa/Lusaka"
     },
     "zw": {
       "kmap": "",
-      "mirror": "",
       "name": "Zimbabwe",
       "zone": "Africa/Harare"
     }

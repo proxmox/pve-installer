@@ -8,23 +8,20 @@ use JSON qw(from_json to_json);
 
 # Generates a
 #
-#   - country code => name/kmap/mirror
 #   - name => country code
 #
 # mapping for each defined country
 my sub generate_country_mappings {
-    my ($country_codes, $defmap, $mirrors) = @_;
+    my ($country_codes, $defmap) = @_;
 
     my ($countries, $countryhash) = ({}, {});
     foreach my $cc (sort keys %$country_codes) {
         my $name = $country_codes->{$cc};
         my $kmap = $defmap->{$cc} || '';
-        my $mirror = $mirrors->{$cc} || '';
 
         $countries->{$cc} = {
             name => $name,
             kmap => $kmap,
-            mirror => $mirror,
         };
         $countryhash->{ lc($name) } = $cc;
     }
@@ -158,56 +155,7 @@ my $defmap = {
     'li' => 'de-ch',
 };
 
-sub debmirrors {
-    return {
-        'at' => 'ftp.at.debian.org',
-        'au' => 'ftp.au.debian.org',
-        'be' => 'ftp.be.debian.org',
-        'bg' => 'ftp.bg.debian.org',
-        'br' => 'ftp.br.debian.org',
-        'ca' => 'ftp.ca.debian.org',
-        'ch' => 'ftp.ch.debian.org',
-        'cl' => 'ftp.cl.debian.org',
-        'cz' => 'ftp.cz.debian.org',
-        'de' => 'ftp.de.debian.org',
-        'dk' => 'ftp.dk.debian.org',
-        'ee' => 'ftp.ee.debian.org',
-        'es' => 'ftp.es.debian.org',
-        'fi' => 'ftp.fi.debian.org',
-        'fr' => 'ftp.fr.debian.org',
-        'gr' => 'ftp.gr.debian.org',
-        'hk' => 'ftp.hk.debian.org',
-        'hr' => 'ftp.hr.debian.org',
-        'hu' => 'ftp.hu.debian.org',
-        'ie' => 'ftp.ie.debian.org',
-        'is' => 'ftp.is.debian.org',
-        'it' => 'ftp.it.debian.org',
-        'jp' => 'ftp.jp.debian.org',
-        'kr' => 'ftp.kr.debian.org',
-        'mx' => 'ftp.mx.debian.org',
-        'nl' => 'ftp.nl.debian.org',
-        'no' => 'ftp.no.debian.org',
-        'nz' => 'ftp.nz.debian.org',
-        'pl' => 'ftp.pl.debian.org',
-        'pt' => 'ftp.pt.debian.org',
-        'ro' => 'ftp.ro.debian.org',
-        'ru' => 'ftp.ru.debian.org',
-        'se' => 'ftp.se.debian.org',
-        'si' => 'ftp.si.debian.org',
-        'sk' => 'ftp.sk.debian.org',
-        'tr' => 'ftp.tr.debian.org',
-        'tw' => 'ftp.tw.debian.org',
-        'gb' => 'ftp.uk.debian.org',
-        'us' => 'ftp.us.debian.org',
-    };
-}
-
-my $mirrors = debmirrors();
-foreach my $cc (keys %$mirrors) {
-    die "undefined country code '$cc'" if !defined($country_codes->{$cc});
-}
-
-my ($countries, $countryhash) = generate_country_mappings($country_codes, $defmap, $mirrors);
+my ($countries, $countryhash) = generate_country_mappings($country_codes, $defmap);
 my ($kmap, $kmaphash) = generate_keymaps($country_codes);
 my ($zones, $cczones) = parse_zoneinfo($countries);
 
