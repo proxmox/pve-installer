@@ -23,7 +23,7 @@ use proxmox_auto_installer::{
         AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
         get_matched_udev_indexes, get_nic_list, get_single_udev_index, verify_disks_settings,
         verify_email_and_root_password_settings, verify_first_boot_settings,
-        verify_locale_settings,
+        verify_locale_settings, verify_network_settings,
     },
 };
 use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, cli};
@@ -909,6 +909,7 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
             verify_disks_settings(&answer)?;
             verify_first_boot_settings(&answer)?;
             verify_email_and_root_password_settings(&answer)?;
+            verify_network_settings(&answer.network, None)?;
             Ok(answer)
         }
         Err(err) => bail!("Error parsing answer file: {err}"),
