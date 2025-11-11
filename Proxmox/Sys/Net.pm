@@ -3,7 +3,9 @@ package Proxmox::Sys::Net;
 use strict;
 use warnings;
 
+use Proxmox::Sys::Command;
 use Proxmox::Sys::Udev;
+use JSON qw();
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(parse_ip_address parse_ip_mask parse_fqdn);
@@ -129,9 +131,59 @@ sub parse_ip_mask {
     return;
 }
 
+sub iface_is_vf {
+    my ($iface_name) = @_;
+    return -l "/sys/class/net/$iface_name/device/physfn";
+}
+
+# Duplicated from pve-common/src/PVE/Network.pm for now
+sub ip_link_details {
+    my $link_json = '';
+
+    Proxmox::Sys::Command::run_command(
+        ['ip', '-details', '-json', 'link', 'show'],
+        sub {
+            $link_json .= shift;
+            return;
+        },
+    );
+
+    my $links = JSON::decode_json($link_json);
+    my %ip_links = map { $_->{ifname} => $_ } $links->@*;
+
+    return \%ip_links;
+}
+
+# Duplicated from pve-common/src/PVE/Network.pm from now
+sub ip_link_is_physical {
+    my ($ip_link) = @_;
+
+    # ether alone isn't enough, as virtual interfaces can also have link_type
+    # ether
+    return $ip_link->{link_type} eq 'ether'
+        && (!defined($ip_link->{linkinfo}) || !defined($ip_link->{linkinfo}->{info_kind}));
+}
+
+my $LINK_FILE_TEMPLATE = <<EOF;
+# setup by the Proxmox installer.
+[Match]
+MACAddress=%s
+Type=ether
+
+[Link]
+Name=%s
+EOF
+
+sub get_pin_link_file_content {
+    my ($mac, $pin_name) = @_;
+
+    return sprintf($LINK_FILE_TEMPLATE, $mac, $pin_name);
+}
+
 sub get_ip_config {
     my $ifaces = {};
     my $default;
+    my $pinned_counter = 0;
 
     my $links = `ip -o l`;
     foreach my $l (split /\n/, $links) {
@@ -144,11 +196,13 @@ sub get_ip_config {
 
         $ifaces->{"$index"} = {
             name => $name,
+            pinned_id => "${pinned_counter}",
             driver => $driver,
             flags => $flags,
             state => $state,
             mac => $mac,
         };
+        $pinned_counter++;
 
         my $addresses = `ip -o a s $name`;
         for my $addr_line (split /\n/, $addresses) {

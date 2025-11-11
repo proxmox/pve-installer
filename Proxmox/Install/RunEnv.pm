@@ -86,6 +86,7 @@ my sub query_netdevs : prototype() {
     # FIXME: not the same as the battle proven way we used in the installer for years?
     my $interfaces = fromjs(qx/ip --json address show/);
 
+    my $pinned_counter = 0;
     for my $if (@$interfaces) {
         my ($index, $name, $state, $mac, $addresses) =
             $if->@{qw(ifindex ifname operstate address addr_info)};
@@ -115,10 +116,13 @@ my sub query_netdevs : prototype() {
         $ifs->{$name} = {
             index => $index,
             name => $name,
+            pinned_id => "${pinned_counter}",
             mac => $mac,
             state => uc($state),
         };
         $ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
+
+        $pinned_counter++;
     }
 
     return $ifs;

@@ -1101,6 +1101,49 @@ sub extract_data {
         my $cidr = Proxmox::Install::Config::get_cidr();
         my $gateway = Proxmox::Install::Config::get_gateway();
 
+        # configure pinned names for all network interfaces, if enabled
+
+        my $netif_pin_map = Proxmox::Install::Config::get_network_interface_pin_map();
+        if (defined($netif_pin_map)) {
+            mkdir "$targetdir/usr/local/lib/systemd", 0755;
+            mkdir "$targetdir/usr/local/lib/systemd/network", 0755;
+
+            my $ip_links = Proxmox::Sys::Net::ip_link_details();
+
+            for my $ifname (sort keys $run_env->{network}->{interfaces}->%*) {
+                next
+                    if !Proxmox::Sys::Net::ip_link_is_physical($ip_links->{$ifname})
+                    || Proxmox::Sys::Net::iface_is_vf($ifname);
+
+                my $if = $run_env->{network}->{interfaces}->{$ifname};
+
+                if (!defined($netif_pin_map->{ $if->{mac} })) {
+                    # each installer frontend must ensure that either
+                    #   - pinning is disabled by never setting the map or
+                    #   - setting a pinned name for each
+                    die "no network interface name set for '$if->{mac}'!";
+                }
+
+                my $pinned_name = $netif_pin_map->{ $if->{mac} };
+                my $link_file_content = Proxmox::Sys::Net::get_pin_link_file_content(
+                    $if->{mac}, $pinned_name,
+                );
+
+                file_write_all(
+                    "$targetdir/usr/local/lib/systemd/network/50-pmx-${pinned_name}.link",
+                    $link_file_content,
+                );
+
+                # ensure that we use the correct interface name when writing out
+                # /etc/network/interfaces below - just in case the interface name
+                # is pinned and get_mngmt_nic() returned the original interface name.
+                # better be safe than sorry
+                if ($ethdev eq $ifname) {
+                    $ethdev = $pinned_name;
+                }
+            }
+        }
+
         if ($iso_env->{cfg}->{bridged_network}) {
             $ifaces .= "iface $ethdev $ntype manual\n";
 
@@ -1121,7 +1164,9 @@ sub extract_data {
 
         my $ipconf = $run_env->{ipconf};
         foreach my $iface (sort keys %{ $ipconf->{ifaces} }) {
-            my $name = $ipconf->{ifaces}->{$iface}->{name};
+            my $if = $ipconf->{ifaces}->{$iface};
+            my $name = defined($netif_pin_map) ? $netif_pin_map->{ $if->{mac} } : $if->{name};
+
             next if $name eq $ethdev;
 
             $ifaces .= "\niface $name $ntype manual\n";

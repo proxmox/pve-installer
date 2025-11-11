@@ -101,6 +101,11 @@ my sub init_cfg {
 
         # network related
         mngmt_nic => undef,
+
+        # maps mac address -> custom name
+        # if set to a hash, enables interface name pinning for all interfaces
+        network_interface_pin_map => undef,
+
         hostname => undef,
         domain => undef,
         cidr => undef,
@@ -247,6 +252,9 @@ sub get_root_ssh_keys { return get('root_ssh_keys'); }
 
 sub set_mngmt_nic { set_key('mngmt_nic', $_[0]); }
 sub get_mngmt_nic { return get('mngmt_nic'); }
+
+sub set_network_interface_pin_map { set_key('network_interface_pin_map', $_[0]); }
+sub get_network_interface_pin_map { return get('network_interface_pin_map'); }
 
 sub set_hostname { set_key('hostname', $_[0]); }
 sub get_hostname { return get('hostname'); }
