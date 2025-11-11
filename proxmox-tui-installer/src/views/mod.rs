@@ -16,6 +16,9 @@ pub use bootdisk::*;
 mod install_progress;
 pub use install_progress::*;
 
+mod network;
+pub use network::*;
+
 mod tabbed_view;
 pub use tabbed_view::*;
 
