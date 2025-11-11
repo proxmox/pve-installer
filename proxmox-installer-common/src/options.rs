@@ -104,7 +104,7 @@ impl ZfsRaidLevel {
         match self {
             ZfsRaidLevel::Raid0 => {}
             ZfsRaidLevel::Raid10 => {
-                if disks.len() % 2 != 0 {
+                if !disks.len().is_multiple_of(2) {
                     return Err(format!(
                         "Needs an even number of disks, currently selected: {}",
                         disks.len(),
@@ -515,42 +515,35 @@ impl NetworkOptions {
 
         if let Some(routes) = &network.routes {
             let mut filled = false;
-            if let Some(gw) = &routes.gateway4 {
-                if let Some(iface) = network.interfaces.get(&gw.dev) {
+            if let Some(gw) = &routes.gateway4
+                && let Some(iface) = network.interfaces.get(&gw.dev) {
                     this.ifname.clone_from(&iface.name);
-                    if let Some(addresses) = &iface.addresses {
-                        if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
+                    if let Some(addresses) = &iface.addresses
+                        && let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
                             this.gateway = gw.gateway;
                             this.address = addr.clone();
                             filled = true;
                         }
-                    }
                 }
-            }
-            if !filled {
-                if let Some(gw) = &routes.gateway6 {
-                    if let Some(iface) = network.interfaces.get(&gw.dev) {
-                        if let Some(addresses) = &iface.addresses {
-                            if let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
+            if !filled
+                && let Some(gw) = &routes.gateway6
+                    && let Some(iface) = network.interfaces.get(&gw.dev)
+                        && let Some(addresses) = &iface.addresses
+                            && let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
                                 this.ifname.clone_from(&iface.name);
                                 this.gateway = gw.gateway;
                                 this.address = addr.clone();
                             }
-                        }
-                    }
-                }
-            }
         }
 
         // In case no there are no routes defined at all (e.g. no DHCP lease),
         // try to set the interface name to *some* valid values. At least one
         // NIC should always be present here, as the installation will abort
         // earlier in that case, so use the first one enumerated.
-        if this.ifname.is_empty() {
-            if let Some(iface) = network.interfaces.values().min_by_key(|v| v.index) {
+        if this.ifname.is_empty()
+            && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index) {
                 this.ifname.clone_from(&iface.name);
             }
-        }
 
         this
     }

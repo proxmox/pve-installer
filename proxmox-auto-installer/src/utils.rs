@@ -409,11 +409,10 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
         }
     }
 
-    if let answer::FsOptions::LVM(lvm) = &answer.disks.fs_options {
-        if let Some((swapsize, hdsize)) = lvm.swapsize.zip(lvm.hdsize) {
+    if let answer::FsOptions::LVM(lvm) = &answer.disks.fs_options
+        && let Some((swapsize, hdsize)) = lvm.swapsize.zip(lvm.hdsize) {
             check_swapsize(swapsize, hdsize)?;
         }
-    }
 
     Ok(())
 }
@@ -421,11 +420,10 @@ pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
 pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
     info!("Verifying first boot settings");
 
-    if let Some(first_boot) = &answer.first_boot {
-        if first_boot.source == FirstBootHookSourceMode::FromUrl && first_boot.url.is_none() {
+    if let Some(first_boot) = &answer.first_boot
+        && first_boot.source == FirstBootHookSourceMode::FromUrl && first_boot.url.is_none() {
             bail!("first-boot executable source set to URL, but none specified!");
         }
-    }
 
     Ok(())
 }

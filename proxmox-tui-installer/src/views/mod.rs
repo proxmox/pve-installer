@@ -109,10 +109,10 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     pub fn get_content(&self) -> Result<T, <T as FromStr>::Err> {
         let content = self.inner().get_content();
 
-        if content.is_empty() {
-            if let Some(placeholder) = self.placeholder {
-                return Ok(placeholder);
-            }
+        if content.is_empty()
+            && let Some(placeholder) = self.placeholder
+        {
+            return Ok(placeholder);
         }
 
         assert!(!(self.allow_empty && self.placeholder.is_none()));
@@ -137,17 +137,17 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
 
     fn check_bounds(&mut self, original: Arc<String>, result: EventResult) -> EventResult {
         // Check if the new value is actually valid according to the max value, if set
-        if let Some(max) = self.max_value {
-            if let Ok(val) = self.get_content() {
-                if result.is_consumed() && val > max {
-                    // Restore the original value, before the insert
-                    let cb = self.inner_mut().set_content((*original).clone());
-                    return EventResult::with_cb_once(move |siv| {
-                        result.process(siv);
-                        cb(siv);
-                    });
-                }
-            }
+        if let Some(max) = self.max_value
+            && let Ok(val) = self.get_content()
+            && result.is_consumed()
+            && val > max
+        {
+            // Restore the original value, before the insert
+            let cb = self.inner_mut().set_content((*original).clone());
+            return EventResult::with_cb_once(move |siv| {
+                result.process(siv);
+                cb(siv);
+            });
         }
 
         result
@@ -182,7 +182,7 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     ///
     /// # Arguments
     /// * `content` - New, stringified content for the inner [`EditView`]. Must be a valid value
-    ///               according to the container type `T`.
+    ///   according to the container type `T`.
     fn content_inner(mut self, content: &str) -> Self {
         let mut inner = EditView::new();
         std::mem::swap(self.inner_mut(), &mut inner);
@@ -198,15 +198,16 @@ impl<T: Copy + ToString + FromStr + PartialOrd> NumericEditView<T> {
     fn wrap_draw_inner(&self, printer: &Printer) {
         self.view.draw(printer);
 
-        if self.inner().get_content().is_empty() && !printer.focused {
-            if let Some(placeholder) = self.placeholder {
-                let placeholder = placeholder.to_string();
+        if self.inner().get_content().is_empty()
+            && !printer.focused
+            && let Some(placeholder) = self.placeholder
+        {
+            let placeholder = placeholder.to_string();
 
-                printer.with_color(
-                    (BaseColor::Blue.light(), BaseColor::Blue.dark()).into(),
-                    |printer| printer.print((0, 0), &placeholder),
-                );
-            }
+            printer.with_color(
+                (BaseColor::Blue.light(), BaseColor::Blue.dark()).into(),
+                |printer| printer.print((0, 0), &placeholder),
+            );
         }
     }
 }

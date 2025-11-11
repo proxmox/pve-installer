@@ -130,14 +130,14 @@ fn mask_limit(addr: &IpAddr) -> usize {
 }
 
 fn check_mask_limit(addr: &IpAddr, mask: usize) -> Result<(), CidrAddressParseError> {
-    let limit = mask_limit(&addr);
-    return if mask > limit {
+    let limit = mask_limit(addr);
+    if mask > limit {
         Err(CidrAddressParseError::InvalidMask(
             format!("mask cannot be greater than {limit}").into(),
         ))
     } else {
         Ok(())
-    };
+    }
 }
 
 /// Possible errors that might occur when parsing FQDNs.

@@ -576,11 +576,11 @@ fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
             if args.debug {
                 println!("Parsed data from answer file:\n{:#?}", answer);
             }
-            if args.verify_password {
-                if let Err(err) = verify_hashed_password_interactive(&answer) {
-                    eprintln!("{err:#}");
-                    valid = false;
-                }
+            if args.verify_password
+                && let Err(err) = verify_hashed_password_interactive(&answer)
+            {
+                eprintln!("{err:#}");
+                valid = false;
             }
         }
         Err(err) => {
@@ -775,7 +775,7 @@ fn get_iso_uuid(iso: impl AsRef<Path>) -> Result<String> {
         if line.starts_with("-volume_date uuid") {
             uuid = line
                 .split(' ')
-                .last()
+                .next_back()
                 .ok_or_else(|| format_err!("xorriso did behave unexpectedly"))?
                 .replace('\'', "")
                 .trim()
@@ -823,10 +823,10 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
         let mut name = filename;
         let mut udev_props: BTreeMap<String, String> = BTreeMap::new();
         for line in output.lines() {
-            if let Some(prop) = line.strip_prefix(PROP_DEVTYP_PREFIX) {
-                if prop != "disk" {
-                    continue 'outer;
-                }
+            if let Some(prop) = line.strip_prefix(PROP_DEVTYP_PREFIX)
+                && prop != "disk"
+            {
+                continue 'outer;
             }
 
             if line.starts_with(PROP_CDROM) || line.starts_with(PROP_ISO9660_FS) {
@@ -837,10 +837,10 @@ fn get_disks() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
                 name = prop.to_owned();
             };
 
-            if let Some(prop) = line.strip_prefix("E: ") {
-                if let Some((key, val)) = prop.split_once('=') {
-                    udev_props.insert(key.to_owned(), val.to_owned());
-                }
+            if let Some(prop) = line.strip_prefix("E: ")
+                && let Some((key, val)) = prop.split_once('=')
+            {
+                udev_props.insert(key.to_owned(), val.to_owned());
             }
         }
 
@@ -867,10 +867,10 @@ fn get_nics() -> Result<BTreeMap<String, BTreeMap<String, String>>> {
         let mut udev_props: BTreeMap<String, String> = BTreeMap::new();
 
         for line in output.lines() {
-            if let Some(prop) = line.strip_prefix("E: ") {
-                if let Some((key, val)) = prop.split_once('=') {
-                    udev_props.insert(key.to_owned(), val.to_owned());
-                }
+            if let Some(prop) = line.strip_prefix("E: ")
+                && let Some((key, val)) = prop.split_once('=')
+            {
+                udev_props.insert(key.to_owned(), val.to_owned());
             }
         }
 

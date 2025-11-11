@@ -139,11 +139,10 @@ impl FetchFromHTTP {
     fn get_search_domain() -> Result<String> {
         info!("Retrieving default search domain.");
         for line in read_to_string("/etc/resolv.conf")?.lines() {
-            if let Some((key, value)) = line.split_once(' ') {
-                if key == "search" {
+            if let Some((key, value)) = line.split_once(' ')
+                && key == "search" {
                     return Ok(value.trim().into());
                 }
-            }
         }
         bail!("Could not find search domain in resolv.conf.");
     }

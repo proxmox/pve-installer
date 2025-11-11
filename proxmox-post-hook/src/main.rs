@@ -547,10 +547,11 @@ impl PostHookInfo {
         for pkg in kernel_pkgs.lines() {
             let parts = pkg.split('|').collect::<Vec<&str>>();
 
-            if let [status, arch, name] = parts[..] {
-                if status.trim() == "ii" && arch.trim() == dpkg_arch {
-                    return Ok(name.trim().to_owned());
-                }
+            if let [status, arch, name] = parts[..]
+                && status.trim() == "ii"
+                && arch.trim() == dpkg_arch
+            {
+                return Ok(name.trim().to_owned());
             }
         }
 
@@ -612,7 +613,7 @@ impl PostHookInfo {
 /// # Arguments
 ///
 /// * `callback` - Callback to call with the absolute path where the chroot environment root is
-///                mounted.
+///   mounted.
 fn with_chroot<R, F: FnOnce(&str) -> Result<R>>(callback: F) -> Result<R> {
     let ec = Command::new("proxmox-chroot")
         .arg("prepare")

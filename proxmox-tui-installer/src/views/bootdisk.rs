@@ -183,7 +183,7 @@ impl AdvancedBootdiskOptionsView {
     /// # Arguments
     /// * `siv` - Cursive instance
     /// * `fstype` - The chosen filesystem type by the user, for which the UI should be
-    ///              updated accordingly
+    ///   updated accordingly
     /// * `options_ref` - [`BootdiskOptionsRef`] where advanced disk options should be saved to
     fn fstype_on_submit(siv: &mut Cursive, fstype: &FsType, options_ref: BootdiskOptionsRef) {
         let state = siv.user_data::<InstallerState>().unwrap();
