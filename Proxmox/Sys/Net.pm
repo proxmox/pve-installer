@@ -8,7 +8,21 @@ use Proxmox::Sys::Udev;
 use JSON qw();
 
 use base qw(Exporter);
-our @EXPORT_OK = qw(parse_ip_address parse_ip_mask parse_fqdn);
+our @EXPORT_OK = qw(
+    parse_ip_address
+    parse_ip_mask
+    parse_fqdn
+    validate_link_pin_map
+    MAX_IFNAME_LEN
+    DEFAULT_PIN_PREFIX
+);
+
+# Maximum length of the (primary) name of a network interface
+# IFNAMSIZ - 1 to account for NUL byte
+use constant {
+    MAX_IFNAME_LEN => 15,
+    DEFAULT_PIN_PREFIX => 'nic',
+};
 
 our $HOSTNAME_RE = "(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{,61}?[a-zA-Z0-9])?)";
 our $FQDN_RE = "(?:${HOSTNAME_RE}\\.)*${HOSTNAME_RE}";
@@ -308,6 +322,52 @@ sub parse_fqdn : prototype($) {
     }
 
     die "Hostname does not look like a fully qualified domain name\n";
+}
+
+# Does some basic checks on a link name mapping.
+# Takes a hashref mapping mac => name.
+#
+# Includes checks for:
+# - empty interface names
+# - overlong interface names
+# - duplicate interface names
+# - only contains ASCII alphanumeric characters and underscore, as enforced by
+#   our `pve-iface` json schema.
+sub validate_link_pin_map : prototype($) {
+    my ($mapping) = @_;
+    my $reverse_mapping = {};
+
+    while (my ($mac, $name) = each %$mapping) {
+        if (!defined($name) || $name eq '') {
+            die "interface name for '$mac' cannot be empty\n";
+        }
+
+        if (length($name) > MAX_IFNAME_LEN) {
+            die "interface name '$name' for '$mac' cannot be longer than "
+                . MAX_IFNAME_LEN
+                . " characters\n";
+        }
+
+        if ($name =~ m/^[0-9]+$/) {
+            die "interface name '$name' for '$mac' is invalid: "
+                . "name must not be fully numeric\n";
+        }
+
+        if ($name =~ m/^[0-9]/) {
+            die "interface name '$name' for '$mac' is invalid: name must not start with a number\n";
+        }
+
+        if ($name !~ m/^[a-zA-Z_][a-zA-Z0-9_]*$/) {
+            die "interface name '$name' for '$mac' is invalid: "
+                . "name must only consist of alphanumeric characters and underscores\n";
+        }
+
+        if ($reverse_mapping->{$name}) {
+            die "duplicate interface name mapping '$name' for: $mac, $reverse_mapping->{$name}\n";
+        }
+
+        $reverse_mapping->{$name} = $mac;
+    }
 }
 
 1;

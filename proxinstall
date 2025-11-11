@@ -37,7 +37,8 @@ use Proxmox::Sys;
 use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_all file_write_all);
-use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask);
+use Proxmox::Sys::Net
+    qw(parse_ip_address parse_ip_mask validate_link_pin_map MAX_IFNAME_LEN DEFAULT_PIN_PREFIX);
 use Proxmox::UI;
 
 my $step_number = 0; # Init number for global function list
@@ -340,10 +341,91 @@ my $create_basic_grid = sub {
     return $grid;
 };
 
+my sub create_network_interface_pin_view {
+    my ($done_cb) = @_;
+
+    my $dialog = Gtk3::Dialog->new();
+    $dialog->set_title('Interface Name Pinning Options');
+    $dialog->add_button('_OK', 'ok');
+
+    my $content = $dialog->get_content_area();
+
+    my $hbox = Gtk3::Box->new('horizontal', 0);
+    $content->pack_start($hbox, 1, 1, 5);
+
+    my $grid = Gtk3::Grid->new();
+    $grid->set_column_spacing(10);
+    $grid->set_row_spacing(10);
+
+    # make the list scrollable, in case there are lots of interfaces
+    my $scrolled_window = Gtk3::ScrolledWindow->new();
+    $scrolled_window->set_hexpand(1);
+    $scrolled_window->set_propagate_natural_height(1);
+
+    $scrolled_window->add($grid);
+    $scrolled_window->set_policy('never', 'automatic');
+    $scrolled_window->set_min_content_height(200);
+    $scrolled_window->set_margin_start(10);
+    $scrolled_window->set_margin_end(10);
+
+    $hbox->pack_start($scrolled_window, 1, 0, 5);
+
+    my $interfaces = Proxmox::Install::RunEnv::get()->{network}->{interfaces};
+    my $mapping = Proxmox::Install::Config::get_network_interface_pin_map();
+
+    my $inputs = {};
+    my $row = 0;
+    for my $ifname (sort keys $interfaces->%*) {
+        my $iface = $interfaces->{$ifname};
+
+        my $name = $mapping->{ $iface->{mac} };
+        my $label_text = "$iface->{mac} ($ifname, $iface->{driver}, $iface->{state})";
+
+        # if the interface has addresses assigned through DHCP, show them for
+        # reference
+        if (defined($iface->{addresses})) {
+            $label_text .=
+                "\n  " . join(', ', map { "$_->{address}/$_->{prefix}" } @{ $iface->{addresses} });
+        }
+
+        my ($label, $input) = create_text_input($name, $label_text);
+        $label->set_xalign(0.);
+
+        $grid->attach($label, 0, $row, 1, 1);
+        $grid->attach($input, 1, $row, 1, 1);
+        $row++;
+
+        $inputs->{ $iface->{mac} } = $input;
+    }
+
+    $hbox->show_all();
+
+    $dialog->signal_connect(
+        response => sub {
+            my %new_mapping = map { $_ => $inputs->{$_}->get_text() } keys %$inputs;
+
+            eval { validate_link_pin_map(\%new_mapping); };
+            if ($@) {
+                Proxmox::UI::message($@, $dialog);
+                return;
+            }
+
+            Proxmox::Install::Config::set_network_interface_pin_map(\%new_mapping);
+            $dialog->destroy();
+            $done_cb->();
+        },
+    );
+
+    $dialog->present();
+}
+
 sub create_ipconf_view {
 
     cleanup_view();
     Proxmox::UI::display_html('ipconf.htm');
+
+    my $run_env = Proxmox::Install::RunEnv::get();
+    my $ipconf = $run_env->{ipconf};
 
     my $grid = &$create_basic_grid();
     $grid->set_row_spacing(10);
@@ -355,7 +437,7 @@ sub create_ipconf_view {
 
     my ($cidr_label, $cidr_box, $ipconf_entry_addr, $ipconf_entry_mask) = create_cidr_inputs($cidr);
 
-    my $device_model = Gtk3::ListStore->new('Glib::String', 'Glib::String');
+    my $device_model = Gtk3::ListStore->new('Glib::String', 'Glib::String', 'Glib::String');
     my $device_cb = Gtk3::ComboBox->new_with_model($device_model);
     $device_cb->set_active(0);
     $device_cb->set_visible(1);
@@ -369,18 +451,61 @@ sub create_ipconf_view {
     $device_cb->pack_start($cell, 0);
     $device_cb->add_attribute($cell, 'text', 1);
 
-    my $get_device_desc = sub {
-        my $iface = shift;
-        return "$iface->{name} - $iface->{mac} ($iface->{driver})";
+    my $refresh_device_cb = sub {
+        # clear all entries and re-add them with their new names
+        my $active = $device_cb->get_active();
+        $device_model->clear();
+
+        my $mapping = Proxmox::Install::Config::get_network_interface_pin_map();
+        my $i = 0;
+        for my $index (sort keys $ipconf->{ifaces}->%*) {
+            my $iface = $ipconf->{ifaces}->{$index};
+            my $iter = $device_model->append();
+
+            my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
+            my $name =
+                $gtk_state->{network_pinning_enabled}
+                ? $mapping->{ $iface->{mac} }
+                : $iface->{name};
+
+            $device_model->set(
+                $iter,
+                0 => $symbol,
+                1 => "$name - $iface->{mac} ($iface->{driver})",
+            );
+            $i++;
+        }
+
+        # re-set the currently active entry to keep the users selection
+        $device_cb->set_active($active);
     };
 
-    my $run_env = Proxmox::Install::RunEnv::get();
-    my $ipconf = $run_env->{ipconf};
+    my $name_pin_opts_button = Gtk3::Button->new('Options');
+    $name_pin_opts_button->set_sensitive($gtk_state->{network_pinning_enabled});
+    $name_pin_opts_button->signal_connect(
+        clicked => sub {
+            create_network_interface_pin_view($refresh_device_cb);
+        },
+    );
+
+    my $name_pin_checkbox = Gtk3::CheckButton->new('Pin network interface names');
+    $name_pin_checkbox->set_active($gtk_state->{network_pinning_enabled});
+    $name_pin_checkbox->signal_connect(
+        toggled => sub {
+            $name_pin_opts_button->set_sensitive(!!$name_pin_checkbox->get_active());
+            $gtk_state->{network_pinning_enabled} = !!$name_pin_checkbox->get_active();
+            $refresh_device_cb->();
+        },
+    );
 
     my ($device_active_map, $device_active_reverse_map) = ({}, {});
 
     my $device_change_handler = sub {
         my $current = shift;
+
+        # happens during the clear + re-insertion of all interfaces after
+        # the pinning changed, can be safely ignored
+        return if $current->get_active() == -1;
 
         my $new = $device_active_map->{ $current->get_active() };
         my $iface = $ipconf->{ifaces}->{$new};
@@ -389,6 +514,7 @@ sub create_ipconf_view {
         return if defined($selected) && $iface->{name} eq $selected;
 
         Proxmox::Install::Config::set_mngmt_nic($iface->{name});
+
         $ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
             if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
         $ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
@@ -400,13 +526,6 @@ sub create_ipconf_view {
     my $i = 0;
     for my $index (sort keys $ipconf->{ifaces}->%*) {
         my $iface = $ipconf->{ifaces}->{$index};
-        my $iter = $device_model->append();
-        my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
-        $device_model->set(
-            $iter,
-            0 => $symbol,
-            1 => $get_device_desc->($iface),
-        );
         $device_active_map->{$i} = $index;
         $device_active_reverse_map->{ $iface->{name} } = $i;
 
@@ -417,6 +536,9 @@ sub create_ipconf_view {
         }
         $i++;
     }
+
+    # fill the combobox with entries
+    $refresh_device_cb->();
 
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
         $initial_active_device_pos = $device_active_reverse_map->{$nic};
@@ -443,7 +565,7 @@ sub create_ipconf_view {
     $label->set_xalign(1.0);
 
     $grid->attach($label, 0, 0, 1, 1);
-    $grid->attach($device_cb, 1, 0, 1, 1);
+    $grid->attach($device_cb, 1, 0, 2, 1);
 
     my $fqdn = Proxmox::Install::Config::get_fqdn();
     my $hostname = $run_env->{network}->{hostname} || $iso_env->{product};
@@ -452,17 +574,17 @@ sub create_ipconf_view {
 
     my ($host_label, $hostentry) = create_text_input($fqdn, 'Hostname (FQDN)');
     $grid->attach($host_label, 0, 1, 1, 1);
-    $grid->attach($hostentry, 1, 1, 1, 1);
+    $grid->attach($hostentry, 1, 1, 2, 1);
 
     $grid->attach($cidr_label, 0, 2, 1, 1);
-    $grid->attach($cidr_box, 1, 2, 1, 1);
+    $grid->attach($cidr_box, 1, 2, 2, 1);
 
     my $cfg_gateway = Proxmox::Install::Config::get_gateway();
     my $gateway = $cfg_gateway // $ipconf->{gateway} || '192.168.100.1';
 
     my ($gw_label, $ipconf_entry_gw) = create_text_input($gateway, 'Gateway');
     $grid->attach($gw_label, 0, 3, 1, 1);
-    $grid->attach($ipconf_entry_gw, 1, 3, 1, 1);
+    $grid->attach($ipconf_entry_gw, 1, 3, 2, 1);
 
     my $cfg_dns = Proxmox::Install::Config::get_dns();
     my $dnsserver = $cfg_dns // $ipconf->{dnsserver} || $gateway;
@@ -470,7 +592,10 @@ sub create_ipconf_view {
     my ($dns_label, $ipconf_entry_dns) = create_text_input($dnsserver, 'DNS Server');
 
     $grid->attach($dns_label, 0, 4, 1, 1);
-    $grid->attach($ipconf_entry_dns, 1, 4, 1, 1);
+    $grid->attach($ipconf_entry_dns, 1, 4, 2, 1);
+
+    $grid->attach($name_pin_checkbox, 1, 5, 1, 1);
+    $grid->attach($name_pin_opts_button, 2, 5, 1, 1);
 
     $gtk_state->{inbox}->show_all;
     set_next(
@@ -538,6 +663,8 @@ sub create_ipconf_view {
             }
             Proxmox::Install::Config::set_dns($dns_ip);
 
+            $gtk_state->{network_pinning_enabled} = !!$name_pin_checkbox->get_active();
+
             #print STDERR "TEST $ipaddress/$netmask $gateway_ip $dns_ip\n";
 
             $step_number++;
@@ -573,6 +700,13 @@ sub create_ack_view {
 
     my $country = Proxmox::Install::Config::get_country();
 
+    my $mngmt_nic = Proxmox::Install::Config::get_mngmt_nic();
+    my $iface = Proxmox::Install::RunEnv::get('network')->{interfaces}->{$mngmt_nic};
+
+    my $nic_mapping = Proxmox::Install::Config::get_network_interface_pin_map();
+    my $interface =
+        $gtk_state->{network_pinning_enabled} ? $nic_mapping->{ $iface->{mac} } : $iface->{name};
+
     my %config_values = (
         __target_hd__ => join(' | ', $target_hds->@*),
         __target_fs__ => Proxmox::Install::Config::get_filesys(),
@@ -580,7 +714,7 @@ sub create_ack_view {
         __timezone__ => Proxmox::Install::Config::get_timezone(),
         __keymap__ => Proxmox::Install::Config::get_keymap(),
         __mailto__ => Proxmox::Install::Config::get_mailto(),
-        __interface__ => Proxmox::Install::Config::get_mngmt_nic(),
+        __interface__ => $interface,
         __hostname__ => Proxmox::Install::Config::get_hostname(),
         __cidr__ => Proxmox::Install::Config::get_cidr(),
         __gateway__ => Proxmox::Install::Config::get_gateway(),
@@ -609,6 +743,12 @@ sub create_ack_view {
     set_next(
         undef,
         sub {
+            # before starting the install, unset the name pinning map if it
+            # is disabled
+            if (!$gtk_state->{network_pinning_enabled}) {
+                Proxmox::Install::Config::set_network_interface_pin_map(undef);
+            }
+
             $step_number++;
             create_extract_view();
         },
@@ -1775,6 +1915,15 @@ if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
     $initial_error = 1;
     Proxmox::UI::display_html("nonics.htm");
     set_next("Reboot", sub { app_quit(0); });
+} else {
+    # we enable it by default for new installation
+    $gtk_state->{network_pinning_enabled} = 1;
+
+    # pre-fill the name mapping before starting
+    my %mapping = map {
+        $_->{mac} => DEFAULT_PIN_PREFIX . $_->{pinned_id}
+    } values $run_env->{network}->{interfaces}->%*;
+    Proxmox::Install::Config::set_network_interface_pin_map(\%mapping);
 }
 
 create_intro_view() if !$initial_error;
