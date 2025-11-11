@@ -7,7 +7,7 @@ use Test::More;
 use Test::MockModule qw(strict);
 
 use Proxmox::Install::RunEnv;
-use Proxmox::Install::Config qw(parse_kernel_cmdline);
+use Proxmox::Install::Config;
 
 my $proxmox_install_runenv = Test::MockModule->new('Proxmox::Install::RunEnv');
 my $proxmox_install_isoenv = Test::MockModule->new('Proxmox::Install::ISOEnv');
