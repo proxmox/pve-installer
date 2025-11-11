@@ -8,18 +8,18 @@ use Gtk3;
 use base qw(Proxmox::UI::Base);
 
 sub message {
-    my ($self, $msg) = @_;
+    my ($self, $msg, $parent_window) = @_;
 
-    my $window = $self->{state}->{window};
+    my $window = $parent_window // $self->{state}->{window};
     my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'info', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
 }
 
 sub error {
-    my ($self, $msg) = @_;
+    my ($self, $msg, $parent_window) = @_;
 
-    my $window = $self->{state}->{window};
+    my $window = $parent_window // $self->{state}->{window};
     my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'error', 'ok', $msg);
     $dialog->run();
     $dialog->destroy();
@@ -31,9 +31,9 @@ sub finished {
 }
 
 sub prompt {
-    my ($self, $query) = @_;
+    my ($self, $query, $parent_window) = @_;
 
-    my $window = $self->{state}->{window};
+    my $window = $parent_window // $self->{state}->{window};
     my $dialog = Gtk3::MessageDialog->new($window, 'modal', 'question', 'ok-cancel', $query);
     my $response = $dialog->run();
     $dialog->destroy();

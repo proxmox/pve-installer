@@ -48,13 +48,13 @@ my sub get_env {
 }
 
 sub message {
-    my ($msg) = @_;
-    get_ui()->message($msg);
+    my ($msg, $parent_window) = @_;
+    get_ui()->message($msg, $parent_window);
 }
 
 sub error {
-    my ($msg) = @_;
-    get_ui()->error($msg);
+    my ($msg, $parent_window) = @_;
+    get_ui()->error($msg, $parent_window);
 }
 
 sub finished {
@@ -63,8 +63,8 @@ sub finished {
 }
 
 sub prompt {
-    my ($query) = @_;
-    return get_ui()->prompt($query);
+    my ($query, $parent_window) = @_;
+    return get_ui()->prompt($query, $parent_window);
 }
 
 sub display_html {
