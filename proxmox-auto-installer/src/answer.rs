@@ -1,13 +1,17 @@
-use anyhow::{Result, format_err};
+use anyhow::{Result, bail, format_err};
 use proxmox_installer_common::{
     options::{
-        BtrfsCompressOption, BtrfsRaidLevel, FsType, ZfsChecksumOption, ZfsCompressOption,
-        ZfsRaidLevel,
+        BtrfsCompressOption, BtrfsRaidLevel, FsType, NetworkInterfacePinningOptions,
+        ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel,
     },
     utils::{CidrAddress, Fqdn},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, io::BufRead, net::IpAddr};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::BufRead,
+    net::IpAddr,
+};
 
 // NOTE New answer file properties must use kebab-case, but should allow snake_case for backwards
 // compatibility. TODO Remove the snake_cased variants in a future major version (e.g. PVE 10).
@@ -178,6 +182,18 @@ enum NetworkConfigMode {
     FromAnswer,
 }
 
+/// Options controlling the behaviour of the network interface pinning (by
+/// creating appropriate systemd.link files) during the installation.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct NetworkInterfacePinningOptionsAnswer {
+    /// Whether interfaces should be pinned during the installation.
+    pub enabled: bool,
+    /// Maps MAC address to custom name
+    #[serde(default)]
+    pub mapping: HashMap<String, String>,
+}
+
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct NetworkInAnswer {
@@ -188,30 +204,47 @@ struct NetworkInAnswer {
     pub gateway: Option<IpAddr>,
     #[serde(default)]
     pub filter: BTreeMap<String, String>,
+    /// Controls network interface pinning behaviour during installation.
+    /// Off by default. Allowed for both `from-dhcp` and `from-answer` modes.
+    #[serde(default)]
+    pub interface_name_pinning: Option<NetworkInterfacePinningOptionsAnswer>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(try_from = "NetworkInAnswer", deny_unknown_fields)]
 pub struct Network {
     pub network_settings: NetworkSettings,
+    /// Controls network interface pinning behaviour during installation.
+    pub interface_name_pinning: Option<NetworkInterfacePinningOptions>,
 }
 
 impl TryFrom<NetworkInAnswer> for Network {
-    type Error = &'static str;
+    type Error = anyhow::Error;
 
-    fn try_from(network: NetworkInAnswer) -> Result<Self, Self::Error> {
+    fn try_from(network: NetworkInAnswer) -> Result<Self> {
+        let interface_name_pinning = match network.interface_name_pinning {
+            Some(opts) if opts.enabled => {
+                let opts = NetworkInterfacePinningOptions {
+                    mapping: opts.mapping,
+                };
+                opts.verify()?;
+                Some(opts)
+            }
+            _ => None,
+        };
+
         if network.source == NetworkConfigMode::FromAnswer {
             if network.cidr.is_none() {
-                return Err("Field 'cidr' must be set.");
+                bail!("Field 'cidr' must be set.");
             }
             if network.dns.is_none() {
-                return Err("Field 'dns' must be set.");
+                bail!("Field 'dns' must be set.");
             }
             if network.gateway.is_none() {
-                return Err("Field 'gateway' must be set.");
+                bail!("Field 'gateway' must be set.");
             }
             if network.filter.is_empty() {
-                return Err("Field 'filter' must be set.");
+                bail!("Field 'filter' must be set.");
             }
 
             Ok(Network {
@@ -221,23 +254,25 @@ impl TryFrom<NetworkInAnswer> for Network {
                     gateway: network.gateway.unwrap(),
                     filter: network.filter,
                 }),
+                interface_name_pinning,
             })
         } else {
             if network.cidr.is_some() {
-                return Err("Field 'cidr' not supported for 'from-dhcp' config.");
+                bail!("Field 'cidr' not supported for 'from-dhcp' config.");
             }
             if network.dns.is_some() {
-                return Err("Field 'dns' not supported for 'from-dhcp' config.");
+                bail!("Field 'dns' not supported for 'from-dhcp' config.");
             }
             if network.gateway.is_some() {
-                return Err("Field 'gateway' not supported for 'from-dhcp' config.");
+                bail!("Field 'gateway' not supported for 'from-dhcp' config.");
             }
             if !network.filter.is_empty() {
-                return Err("Field 'filter' not supported for 'from-dhcp' config.");
+                bail!("Field 'filter' not supported for 'from-dhcp' config.");
             }
 
             Ok(Network {
                 network_settings: NetworkSettings::FromDhcp,
+                interface_name_pinning,
             })
         }
     }

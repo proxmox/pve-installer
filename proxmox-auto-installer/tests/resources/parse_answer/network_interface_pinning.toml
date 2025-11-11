@@ -1,0 +1,22 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "pveauto.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+root-password = "12345678"
+
+[network]
+source = "from-dhcp"
+
+[network.interface-name-pinning]
+enabled = true
+
+[network.interface-name-pinning.mapping]
+"24:8a:07:1e:05:bc" = "lan0"
+"24:8a:07:1e:05:bd" = "lan1"
+"b4:2e:99:ac:ad:b4" = "mgmt"
+
+[disk-setup]
+filesystem = "ext4"
+disk-list = ["sda"]

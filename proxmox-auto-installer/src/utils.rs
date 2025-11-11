@@ -1,15 +1,15 @@
 use anyhow::{Context, Result, bail};
 use glob::Pattern;
-use log::info;
+use log::{info, warn};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     process::Command,
 };
 
 use crate::{
     answer::{
         self, Answer, DiskSelection, FirstBootHookSourceMode, FqdnConfig, FqdnExtendedConfig,
-        FqdnSourceMode,
+        FqdnSourceMode, Network,
     },
     udevinfo::UdevInfo,
 };
@@ -35,7 +35,12 @@ fn get_network_settings(
     let mut network_options = match &answer.global.fqdn {
         // If the user set a static FQDN in the answer file, override it
         FqdnConfig::Simple(name) => {
-            let mut opts = NetworkOptions::defaults_from(setup_info, &runtime_info.network, None);
+            let mut opts = NetworkOptions::defaults_from(
+                setup_info,
+                &runtime_info.network,
+                None,
+                answer.network.interface_name_pinning.as_ref(),
+            );
             opts.fqdn = name.to_owned();
             opts
         }
@@ -58,7 +63,12 @@ fn get_network_settings(
                 bail!("no domain received from DHCP server and `global.fqdn.domain` is unset!");
             }
 
-            NetworkOptions::defaults_from(setup_info, &runtime_info.network, domain.as_deref())
+            NetworkOptions::defaults_from(
+                setup_info,
+                &runtime_info.network,
+                domain.as_deref(),
+                answer.network.interface_name_pinning.as_ref(),
+            )
         }
     };
 
@@ -68,6 +78,12 @@ fn get_network_settings(
         network_options.gateway = settings.gateway;
         network_options.ifname = get_single_udev_index(&settings.filter, &udev_info.nics)?;
     }
+
+    if let Some(opts) = &network_options.pinning_opts {
+        info!("Network interface name pinning is enabled");
+        opts.verify()?;
+    }
+
     info!("Network interface used is '{}'", &network_options.ifname);
     Ok(network_options)
 }
@@ -428,6 +444,31 @@ pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
     Ok(())
 }
 
+pub fn verify_network_settings(network: &Network, run_env: Option<&RuntimeInfo>) -> Result<()> {
+    info!("Verifying network settings");
+
+    if let Some(pin_opts) = &network.interface_name_pinning {
+        pin_opts.verify()?;
+
+        if let Some(run_env) = run_env {
+            for (mac, name) in pin_opts.mapping.iter() {
+                if !run_env
+                    .network
+                    .interfaces
+                    .values()
+                    .any(|iface| iface.mac == *mac)
+                {
+                    warn!(
+                        "found unknown address '{mac}' (mapped to '{name}') in network interface pinning options"
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn parse_answer(
     answer: &Answer,
     udev_info: &UdevInfo,
@@ -449,6 +490,7 @@ pub fn parse_answer(
     verify_disks_settings(answer)?;
     verify_email_and_root_password_settings(answer)?;
     verify_first_boot_settings(answer)?;
+    verify_network_settings(&answer.network, Some(runtime_info))?;
 
     let root_password = match (
         &answer.global.root_password,
@@ -483,7 +525,10 @@ pub fn parse_answer(
         root_ssh_keys: answer.global.root_ssh_keys.clone(),
 
         mngmt_nic: network_settings.ifname,
-        network_interface_pin_map: HashMap::new(),
+        network_interface_pin_map: network_settings
+            .pinning_opts
+            .map(|o| o.mapping)
+            .unwrap_or_default(),
 
         hostname: network_settings
             .fqdn

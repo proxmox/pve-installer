@@ -1,0 +1,18 @@
+[global]
+keyboard = "de"
+country = "at"
+fqdn = "pveauto.fail.testinstall"
+mailto = "mail@no.invalid"
+timezone = "Europe/Vienna"
+root-password = "12345678"
+
+[network]
+source = "from-dhcp"
+interface-name-pinning.enabled = true
+
+[network.interface-name-pinning.mapping]
+"ab:cd:ef:12:34:56" = "waytoolonginterfacename"
+
+[disk-setup]
+filesystem = "ext4"
+disk-list = ["sda"]
