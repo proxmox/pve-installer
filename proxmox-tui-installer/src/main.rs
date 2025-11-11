@@ -419,7 +419,7 @@ fn password_dialog(siv: &mut Cursive) -> InstallerView {
     let state = siv.user_data::<InstallerState>().unwrap();
     let options = &state.options.password;
 
-    let inner = FormView::new()
+    let inner = FormView::<()>::new()
         .child(
             "Root password [at least 8 characters]",
             EditView::new().secret(),

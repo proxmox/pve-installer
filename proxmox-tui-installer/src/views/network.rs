@@ -33,7 +33,7 @@ impl NetworkOptionsView {
 
         ifaces_selection.set_selection(selected);
 
-        let view = FormView::new()
+        let form = FormView::<()>::new()
             .child("Management interface", ifaces_selection)
             .child(
                 "Hostname (FQDN)",

@@ -1,4 +1,4 @@
-use std::{net::IpAddr, str::FromStr, sync::Arc};
+use std::{collections::HashMap, net::IpAddr, str::FromStr, sync::Arc};
 
 use cursive::{
     Printer, Rect, Vec2, View,
@@ -415,22 +415,32 @@ impl FormViewGetValue<f64> for DiskSizeEditView {
     }
 }
 
-pub struct FormView {
+pub struct FormView<UDT = ()> {
     view: LinearLayout,
+    user_data: HashMap<usize, UDT>,
 }
 
-impl FormView {
+impl<UDT> FormView<UDT> {
     pub fn new() -> Self {
         let view = LinearLayout::horizontal()
             .child(LinearLayout::vertical().full_width())
             .child(LinearLayout::vertical().full_width());
 
-        Self { view }
+        Self {
+            view,
+            user_data: HashMap::new(),
+        }
     }
 
     pub fn add_child(&mut self, label: &str, view: impl View) {
         self.add_to_column(0, TextView::new(format!("{label}: ")).no_wrap());
         self.add_to_column(1, view);
+    }
+
+    pub fn add_child_with_data(&mut self, label: &str, view: impl View, data: UDT) {
+        self.add_to_column(0, TextView::new(format!("{label}: ")).no_wrap());
+        self.add_to_column(1, view);
+        self.user_data.insert(self.len() - 1, data);
     }
 
     pub fn child(mut self, label: &str, view: impl View) -> Self {
@@ -452,6 +462,19 @@ impl FormView {
             .get_inner()
             .get_child(index)?
             .downcast_ref::<T>()
+    }
+
+    pub fn get_child_with_data<T: View>(&self, index: usize) -> Option<(&T, &UDT)> {
+        let view = self
+            .view
+            .get_child(1)?
+            .downcast_ref::<ResizedView<LinearLayout>>()?
+            .get_inner()
+            .get_child(index)?
+            .downcast_ref::<T>()?;
+
+        let data = self.user_data.get(&index)?;
+        Some((view, data))
     }
 
     pub fn get_child_mut<T: View>(&mut self, index: usize) -> Option<&mut T> {
@@ -510,7 +533,7 @@ impl FormView {
     }
 }
 
-impl ViewWrapper for FormView {
+impl<UDT: Send + Sync + 'static> ViewWrapper for FormView<UDT> {
     cursive::wrap_impl!(self.view: LinearLayout);
 
     fn wrap_important_area(&self, size: Vec2) -> Rect {

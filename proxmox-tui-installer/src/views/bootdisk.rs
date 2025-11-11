@@ -47,7 +47,7 @@ impl BootdiskOptionsView {
     pub fn new(siv: &mut Cursive, runinfo: &RuntimeInfo, options: &BootdiskOptions) -> Self {
         let advanced_options = Arc::new(Mutex::new(options.clone()));
 
-        let bootdisk_form = FormView::new()
+        let bootdisk_form = FormView::<()>::new()
             .child(
                 "Target harddisk",
                 target_bootdisk_selectview(
@@ -152,7 +152,7 @@ impl AdvancedBootdiskOptionsView {
 
         let mut view = LinearLayout::vertical()
             .child(DummyView.full_width())
-            .child(FormView::new().child("Filesystem", fstype_select))
+            .child(FormView::<()>::new().child("Filesystem", fstype_select))
             .child(DummyView.full_width());
 
         // Create the appropriate (inner) advanced options view
@@ -493,7 +493,7 @@ impl<T: View> MultiDiskOptionsView<T> {
 
         selectable_disks.push(("-- do not use --".to_owned(), None));
 
-        let mut disk_form = FormView::new();
+        let mut disk_form = FormView::<()>::new();
         for (i, _) in avail_disks.iter().enumerate() {
             disk_form.add_child(
                 &format!("Harddisk {i}"),
