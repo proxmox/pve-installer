@@ -76,6 +76,8 @@ struct DiskInfo {
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct NetworkInterfaceInfo {
+    /// Name of the interface
+    name: String,
     /// MAC address of the interface
     mac: String,
     /// (Designated) IP address of the interface
@@ -85,6 +87,10 @@ struct NetworkInterfaceInfo {
     /// installation.
     #[serde(skip_serializing_if = "bool_is_false")]
     is_management: bool,
+    /// Set to true if the network interface name was pinned based on the MAC
+    /// address during the installation.
+    #[serde(skip_serializing_if = "bool_is_false")]
+    is_pinned: bool,
     /// Properties about the device as given by udev.
     udev_properties: UdevProperties,
 }
@@ -151,7 +157,7 @@ struct PostHookInfoSchema {
 }
 
 impl PostHookInfoSchema {
-    const SCHEMA_VERSION: &str = "1.1";
+    const SCHEMA_VERSION: &str = "1.2";
 }
 
 impl Default for PostHookInfoSchema {
@@ -386,23 +392,24 @@ impl PostHookInfo {
                     })?
                     .clone();
 
-                if config.mngmt_nic == nic.name {
+                let is_pinned = config.network_interface_pin_map.contains_key(&nic.mac);
+                let ifname = config
+                    .network_interface_pin_map
+                    .get(&nic.mac)
+                    .unwrap_or(&nic.name);
+
+                let is_management = config.mngmt_nic == *ifname;
+
+                anyhow::Ok(NetworkInterfaceInfo {
+                    name: ifname.clone(),
+                    mac: nic.mac.clone(),
                     // Use the actual IP address from the low-level install config, as the runtime info
                     // contains the original IP address from DHCP.
-                    anyhow::Ok(NetworkInterfaceInfo {
-                        mac: nic.mac.clone(),
-                        address: Some(config.cidr.clone()),
-                        is_management: true,
-                        udev_properties,
-                    })
-                } else {
-                    anyhow::Ok(NetworkInterfaceInfo {
-                        mac: nic.mac.clone(),
-                        address: None,
-                        is_management: false,
-                        udev_properties,
-                    })
-                }
+                    address: is_management.then_some(config.cidr.clone()),
+                    is_management,
+                    is_pinned,
+                    udev_properties,
+                })
             })
             .collect())
     }
