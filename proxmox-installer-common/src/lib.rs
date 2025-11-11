@@ -10,6 +10,11 @@ pub mod http;
 #[cfg(feature = "cli")]
 pub mod cli;
 
+pub mod net {
+    /// Maximum length of the (primary) name of a network interface
+    pub const MAX_IFNAME_LEN: usize = 15; // IFNAMSIZ - 1 to account for NUL byte
+}
+
 pub const RUNTIME_DIR: &str = "/run/proxmox-installer";
 
 /// Default placeholder value for the administrator email address.

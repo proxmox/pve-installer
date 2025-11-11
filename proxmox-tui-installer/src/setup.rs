@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::options::InstallerOptions;
 use proxmox_installer_common::{
@@ -32,6 +32,7 @@ impl From<InstallerOptions> for InstallConfig {
             root_ssh_keys: vec![],
 
             mngmt_nic: options.network.ifname,
+            network_interface_pin_map: HashMap::new(),
 
             // Safety: At this point, it is know that we have a valid FQDN, as
             // this is set by the TUI network panel, which only lets the user

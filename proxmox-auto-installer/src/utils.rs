@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use glob::Pattern;
 use log::info;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     process::Command,
 };
 
@@ -483,6 +483,7 @@ pub fn parse_answer(
         root_ssh_keys: answer.global.root_ssh_keys.clone(),
 
         mngmt_nic: network_settings.ifname,
+        network_interface_pin_map: HashMap::new(),
 
         hostname: network_settings
             .fqdn

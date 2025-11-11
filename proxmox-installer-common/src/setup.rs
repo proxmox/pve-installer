@@ -3,6 +3,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     fmt,
     fs::File,
+    hash::Hash,
     io::{self, BufReader},
     net::IpAddr,
     path::{Path, PathBuf},
@@ -13,8 +14,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::{
     options::{
-        BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, ZfsBootdiskOptions,
-        ZfsChecksumOption, ZfsCompressOption,
+        BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, NetworkInterfacePinningOptions,
+        ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
     },
     utils::CidrAddress,
 };
@@ -443,14 +444,17 @@ pub struct Gateway {
     pub gateway: IpAddr,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
+/// The current interface state as reported by the kernel.
 pub enum InterfaceState {
     Up,
     Down,
     #[serde(other)]
     Unknown,
 }
+
+serde_plain::derive_display_from_serialize!(InterfaceState);
 
 impl InterfaceState {
     // avoid display trait as this is not the string representation for a serializer
@@ -469,6 +473,9 @@ pub struct Interface {
 
     pub index: usize,
 
+    /// Sequential interface ID for pinning interface names.
+    pub pinned_id: String,
+
     pub mac: String,
 
     pub state: InterfaceState,
@@ -484,7 +491,22 @@ pub struct Interface {
 impl Interface {
     // avoid display trait as this is not the string representation for a serializer
     pub fn render(&self) -> String {
-        format!("{} {}", self.state.render(), self.name)
+        format!("{} {} ({})", self.state.render(), self.name, self.mac)
+    }
+
+    pub fn to_pinned(&self, options: &NetworkInterfacePinningOptions) -> Self {
+        let mut this = self.clone();
+        this.name = options
+            .mapping
+            .get(&this.mac)
+            .unwrap_or(&format!(
+                "{}{}",
+                NetworkInterfacePinningOptions::DEFAULT_PREFIX,
+                this.pinned_id
+            ))
+            .clone();
+
+        this
     }
 }
 
@@ -577,6 +599,14 @@ pub struct InstallConfig {
     pub root_ssh_keys: Vec<String>,
 
     pub mngmt_nic: String,
+    // Maps MAC addresses -> custom name. If set, enables pinning for all
+    // interfaces present.
+    #[serde(
+        default,
+        skip_serializing_if = "HashMap::is_empty",
+        deserialize_with = "deserialize_optional_map"
+    )]
+    pub network_interface_pin_map: HashMap<String, String>,
 
     pub hostname: String,
     pub domain: String,
@@ -609,4 +639,17 @@ pub enum LowLevelMessage {
         ratio: f32,
         text: Option<String>,
     },
+}
+
+/// Deserializes an optional [HashMap].
+///
+/// If missing, it returns an empty map, otherwise the deserialized map.
+fn deserialize_optional_map<'de, D, K, V>(deserializer: D) -> Result<HashMap<K, V>, D::Error>
+where
+    D: Deserializer<'de>,
+    K: Eq + Hash + Deserialize<'de>,
+    V: Deserialize<'de>,
+{
+    let map: Option<HashMap<K, V>> = Deserialize::deserialize(deserializer)?;
+    Ok(map.unwrap_or_default())
 }

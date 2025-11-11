@@ -1,12 +1,14 @@
 use anyhow::{Result, bail};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{cmp, fmt};
 
 use crate::disk_checks::check_raid_min_disks;
+use crate::net::MAX_IFNAME_LEN;
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
 use crate::utils::{CidrAddress, Fqdn};
 
@@ -476,6 +478,75 @@ impl TimezoneOptions {
     }
 }
 
+/// Options controlling the behaviour of the network interface pinning (by
+/// creating appropriate systemd.link files) during the installation.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct NetworkInterfacePinningOptions {
+    /// Maps MAC address to custom name
+    #[serde(default)]
+    pub mapping: HashMap<String, String>,
+}
+
+impl NetworkInterfacePinningOptions {
+    /// Default prefix to prepend to the pinned interface ID as received from the low-level
+    /// installer.
+    pub const DEFAULT_PREFIX: &str = "nic";
+
+    /// Does some basic checks on the options.
+    ///
+    /// This includes checks for:
+    /// - empty interface names
+    /// - overlong interface names
+    /// - duplicate interface names
+    /// - only contains ASCII alphanumeric characters and underscore, as
+    ///   enforced by our `pve-iface` json schema.
+    pub fn verify(&self) -> Result<()> {
+        let mut reverse_mapping = HashMap::<String, String>::new();
+        for (mac, name) in self.mapping.iter() {
+            if name.is_empty() {
+                bail!("interface name for '{mac}' cannot be empty");
+            }
+
+            if name.len() > MAX_IFNAME_LEN {
+                bail!(
+                    "interface name '{name}' for '{mac}' cannot be longer than {} characters",
+                    MAX_IFNAME_LEN
+                );
+            }
+
+            if name.chars().all(char::is_numeric) {
+                bail!(
+                    "interface name '{name}' for '{mac}' is invalid: name must not be fully numeric"
+                );
+            }
+
+            // Mimicking the `pve-iface` schema verification
+            if name.starts_with(|c: char| c.is_ascii_digit()) {
+                bail!(
+                    "interface name '{name}' for '{mac}' is invalid: name must not start with a number"
+                );
+            }
+
+            if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                bail!(
+                    "interface name '{name}' for '{mac}' is invalid: name must only consist of alphanumeric characters and underscores"
+                );
+            }
+
+            if let Some(duplicate_mac) = reverse_mapping.get(name)
+                && mac != duplicate_mac
+            {
+                bail!("duplicate interface name mapping '{name}' for: {mac}, {duplicate_mac}");
+            }
+
+            reverse_mapping.insert(name.clone(), mac.clone());
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct NetworkOptions {
     pub ifname: String,
@@ -483,6 +554,7 @@ pub struct NetworkOptions {
     pub address: CidrAddress,
     pub gateway: IpAddr,
     pub dns_server: IpAddr,
+    pub pinning_opts: Option<NetworkInterfacePinningOptions>,
 }
 
 impl NetworkOptions {
@@ -492,6 +564,7 @@ impl NetworkOptions {
         setup: &SetupInfo,
         network: &NetworkInfo,
         default_domain: Option<&str>,
+        pinning_opts: Option<&NetworkInterfacePinningOptions>,
     ) -> Self {
         // Sets up sensible defaults as much as possible, such that even in the
         // worse case nothing breaks down *completely*.
@@ -507,28 +580,39 @@ impl NetworkOptions {
             address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
             gateway: Ipv4Addr::new(192, 168, 100, 1).into(),
             dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+            pinning_opts: pinning_opts.cloned(),
         };
 
         if let Some(ip) = network.dns.dns.first() {
             this.dns_server = *ip;
         }
 
-        if let Some(routes) = &network.routes {
-            if let Some(gw) = &routes.gateway4
-                && let Some(iface) = network.interfaces.get(&gw.dev)
-            {
-                // we got some ipv4 connectivity, so use that
+        if let Some(routes) = &network.routes
+            && let Some(gw) = &routes.gateway4
+            && let Some(iface) = network.interfaces.get(&gw.dev)
+        {
+            // we got some ipv4 connectivity, so use that
+
+            if let Some(opts) = pinning_opts {
+                this.ifname.clone_from(&iface.to_pinned(opts).name);
+            } else {
                 this.ifname.clone_from(&iface.name);
-                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
-                    this.gateway = gw.gateway;
-                    this.address = addr.clone();
-                }
+            }
+
+            if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
+                this.gateway = gw.gateway;
+                this.address = addr.clone();
             } else if let Some(gw) = &routes.gateway6
                 && let Some(iface) = network.interfaces.get(&gw.dev)
                 && let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6())
             {
                 // no ipv4, but ipv6 connectivity
-                this.ifname.clone_from(&iface.name);
+                if let Some(opts) = pinning_opts {
+                    this.ifname.clone_from(&iface.to_pinned(opts).name);
+                } else {
+                    this.ifname.clone_from(&iface.name);
+                }
+
                 this.gateway = gw.gateway;
                 this.address = addr.clone();
             }
@@ -541,7 +625,20 @@ impl NetworkOptions {
         if this.ifname.is_empty()
             && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index)
         {
-            this.ifname.clone_from(&iface.name);
+            if let Some(opts) = pinning_opts {
+                this.ifname.clone_from(&iface.to_pinned(opts).name);
+            } else {
+                this.ifname.clone_from(&iface.name);
+            }
+        }
+
+        if let Some(ref mut opts) = this.pinning_opts {
+            // Ensure that all unique interfaces indeed have an entry in the map,
+            // as required by the low-level installer
+            for iface in network.interfaces.values() {
+                let pinned_name = iface.to_pinned(opts).name;
+                opts.mapping.entry(iface.mac.clone()).or_insert(pinned_name);
+            }
         }
 
         this
@@ -668,6 +765,7 @@ mod tests {
             Interface {
                 name: "eth0".to_owned(),
                 index: 0,
+                pinned_id: "0".to_owned(),
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
@@ -699,49 +797,53 @@ mod tests {
         let (setup, mut info) = mock_setup_network();
 
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
 
         info.hostname = None;
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
 
         info.dns.domain = None;
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
 
         info.hostname = Some("foo".to_owned());
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.example.invalid").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
     }
@@ -751,37 +853,40 @@ mod tests {
         let (setup, mut info) = mock_setup_network();
 
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
 
         info.dns.domain = None;
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, Some("custom.local")),
+            NetworkOptions::defaults_from(&setup, &info, Some("custom.local"), None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
 
         info.dns.domain = Some("some.domain.local".to_owned());
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, Some("custom.local")),
+            NetworkOptions::defaults_from(&setup, &info, Some("custom.local"), None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
     }
@@ -794,6 +899,7 @@ mod tests {
             Interface {
                 name: "eth0".to_owned(),
                 index: 0,
+                pinned_id: "0".to_owned(),
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
@@ -814,14 +920,112 @@ mod tests {
         let setup = SetupInfo::mocked();
 
         pretty_assertions::assert_eq!(
-            NetworkOptions::defaults_from(&setup, &info, None),
+            NetworkOptions::defaults_from(&setup, &info, None, None),
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
                 address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 100, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
             }
         );
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_empty_name() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), String::new());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name for 'ab:cd:ef:12:34:56' cannot be empty"
+        )
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_overlong_name() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options.mapping.insert(
+            "ab:cd:ef:12:34:56".to_owned(),
+            "waytoolonginterfacename".to_owned(),
+        );
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name 'waytoolonginterfacename' for 'ab:cd:ef:12:34:56' cannot be longer than 15 characters"
+        )
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_duplicate_name() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "nic0".to_owned());
+        options
+            .mapping
+            .insert("12:34:56:ab:cd:ef".to_owned(), "nic0".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        let err = res.unwrap_err().to_string();
+
+        // [HashMap] does not guarantee iteration order, so just check for the substrings
+        // we expect to find
+        assert!(err.contains("duplicate interface name mapping 'nic0' for: "));
+        assert!(err.contains("12:34:56:ab:cd:ef"));
+        assert!(err.contains("ab:cd:ef:12:34:56"));
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_invalid_characters() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "nic-".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric characters and underscores"
+        )
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_name_starting_with_number() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "0nic".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must not start with a number"
+        )
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_fully_numeric_name() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "12345".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name '12345' for 'ab:cd:ef:12:34:56' is invalid: name must not be fully numeric"
+        )
     }
 }
