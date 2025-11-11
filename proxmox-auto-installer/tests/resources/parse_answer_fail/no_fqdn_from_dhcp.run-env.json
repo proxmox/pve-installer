@@ -181,6 +181,7 @@
         "mac": "b4:2e:99:ac:ad:b4",
         "name": "eno1",
         "state": "UP",
+        "driver": "igb",
         "pinned_id": "0"
       },
       "eno2": {
@@ -188,6 +189,7 @@
         "mac": "b4:2e:99:ac:ad:b5",
         "name": "eno2",
         "state": "UP",
+        "driver": "igb",
         "pinned_id": "1"
       },
       "enp129s0f0np0": {
@@ -195,6 +197,7 @@
         "mac": "1c:34:da:5c:5e:24",
         "name": "enp129s0f0np0",
         "state": "DOWN",
+        "driver": "mlx5_core",
         "pinned_id": "2"
       },
       "enp129s0f1np1": {
@@ -202,6 +205,7 @@
         "mac": "1c:34:da:5c:5e:25",
         "name": "enp129s0f1np1",
         "state": "DOWN",
+        "driver": "mlx5_core",
         "pinned_id": "3"
       },
       "enp193s0f0np0": {
@@ -209,6 +213,7 @@
         "mac": "24:8a:07:1e:05:bc",
         "name": "enp193s0f0np0",
         "state": "UP",
+        "driver": "mlx5_core",
         "pinned_id": "4"
       },
       "enp193s0f1np1": {
@@ -216,6 +221,7 @@
         "mac": "24:8a:07:1e:05:bd",
         "name": "enp193s0f1np1",
         "state": "DOWN",
+        "driver": "mlx5_core",
         "pinned_id": "5"
       },
       "enp65s0f0": {
@@ -223,6 +229,7 @@
         "mac": "a0:36:9f:0a:b3:82",
         "name": "enp65s0f0",
         "state": "DOWN",
+        "driver": "igb",
         "pinned_id": "6"
       },
       "enp65s0f1": {
@@ -230,6 +237,7 @@
         "mac": "a0:36:9f:0a:b3:83",
         "name": "enp65s0f1",
         "state": "DOWN",
+        "driver": "igb",
         "pinned_id": "7"
       },
       "enx5a4732ddc747": {
@@ -237,6 +245,7 @@
         "mac": "5a:47:32:dd:c7:47",
         "name": "enx5a4732ddc747",
         "state": "UNKNOWN",
+        "driver": "cdc_ether",
         "pinned_id": "8"
       }
     },

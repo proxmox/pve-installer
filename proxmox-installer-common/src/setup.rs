@@ -473,6 +473,9 @@ pub struct Interface {
 
     pub state: InterfaceState,
 
+    /// Kernel driver name that claims this interface.
+    pub driver: String,
+
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
     pub addresses: Option<Vec<CidrAddress>>,

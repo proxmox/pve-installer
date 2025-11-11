@@ -677,6 +677,7 @@ mod tests {
                 name: "eth0".to_owned(),
                 index: 0,
                 state: InterfaceState::Up,
+                driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
                 addresses: Some(vec![
                     CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
@@ -804,6 +805,7 @@ mod tests {
                 name: "eth0".to_owned(),
                 index: 0,
                 state: InterfaceState::Up,
+                driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
                 addresses: None,
             },

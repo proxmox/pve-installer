@@ -72,6 +72,9 @@ sub query_cpu_info : prototype() {
 #         mac => <mac address>,
 #         index => <index>,
 #         name => <ifname>,
+#         state => <UP|DOWN|LOWERLAYERDOWN|DORMANT|TESTING|NOTPRESENT|UNKNOWN>,
+#         pinned_id => <sequential numerical ID>,
+#         driver => <driver name>,
 #         addresses => [
 #             family => <inet|inet6>,
 #             address => <mac address>,
@@ -113,12 +116,16 @@ my sub query_netdevs : prototype() {
             }
         }
 
+        my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
+        $driver =~ s!^.*/!!;
+
         $ifs->{$name} = {
             index => $index,
             name => $name,
             pinned_id => "${pinned_counter}",
             mac => $mac,
             state => uc($state),
+            driver => $driver,
         };
         $ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
 
