@@ -44,8 +44,8 @@ struct BootInfo {
     /// Whether the system is booted using UEFI or legacy BIOS.
     mode: BootType,
     /// Whether SecureBoot is enabled for the installation.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    secureboot: Option<bool>,
+    #[serde(skip_serializing_if = "bool_is_false")]
+    secureboot: bool,
 }
 
 /// Holds all the public keys for the different algorithms available.
@@ -66,8 +66,8 @@ struct DiskInfo {
     /// Size in bytes
     size: usize,
     /// Set to true if the disk is used for booting.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    is_bootdisk: Option<bool>,
+    #[serde(skip_serializing_if = "bool_is_false")]
+    is_bootdisk: bool,
     /// Properties about the device as given by udev.
     udev_properties: UdevProperties,
 }
@@ -83,10 +83,14 @@ struct NetworkInterfaceInfo {
     address: Option<CidrAddress>,
     /// Set to true if the interface is the chosen management interface during
     /// installation.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    is_management: Option<bool>,
+    #[serde(skip_serializing_if = "bool_is_false")]
+    is_management: bool,
     /// Properties about the device as given by udev.
     udev_properties: UdevProperties,
+}
+
+fn bool_is_false(value: &bool) -> bool {
+    !value
 }
 
 /// Information about the installed product itself.
@@ -323,7 +327,8 @@ impl PostHookInfo {
                     let is_bootdisk = config
                         .target_hd
                         .as_ref()
-                        .and_then(|hd| (*hd == disk.path).then_some(true));
+                        .map(|hd| *hd == disk.path)
+                        .unwrap_or_default();
 
                     anyhow::Ok(DiskInfo {
                         size: (config.hdsize * (SIZE_GIB as f64)) as usize,
@@ -341,9 +346,7 @@ impl PostHookInfo {
                 .disks
                 .iter()
                 .flat_map(|disk| {
-                    let is_bootdisk = selected_disks_indices
-                        .contains(&&disk.index)
-                        .then_some(true);
+                    let is_bootdisk = selected_disks_indices.contains(&&disk.index);
 
                     anyhow::Ok(DiskInfo {
                         size: (config.hdsize * (SIZE_GIB as f64)) as usize,
@@ -389,14 +392,14 @@ impl PostHookInfo {
                     anyhow::Ok(NetworkInterfaceInfo {
                         mac: nic.mac.clone(),
                         address: Some(config.cidr.clone()),
-                        is_management: Some(true),
+                        is_management: true,
                         udev_properties,
                     })
                 } else {
                     anyhow::Ok(NetworkInterfaceInfo {
                         mac: nic.mac.clone(),
                         address: None,
-                        is_management: None,
+                        is_management: false,
                         udev_properties,
                     })
                 }

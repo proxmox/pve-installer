@@ -275,14 +275,6 @@ where
     Ok(val != 0)
 }
 
-fn deserialize_bool_from_int_maybe<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let val: Option<u32> = Deserialize::deserialize(deserializer)?;
-    Ok(val.map(|v| v != 0))
-}
-
 fn deserialize_cczones_map<'de, D>(
     deserializer: D,
 ) -> Result<HashMap<String, Vec<String>>, D::Error>
@@ -389,8 +381,8 @@ pub struct RuntimeInfo {
     pub hvm_supported: bool,
 
     /// Whether the system was booted with SecureBoot enabled
-    #[serde(default, deserialize_with = "deserialize_bool_from_int_maybe")]
-    pub secure_boot: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_bool_from_int")]
+    pub secure_boot: bool,
 
     /// Default upper limit for the ZFS ARC size, in MiB.
     pub default_zfs_arc_max: usize,
