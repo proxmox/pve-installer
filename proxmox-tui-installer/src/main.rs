@@ -18,7 +18,10 @@ use options::{InstallerOptions, PasswordOptions};
 
 use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
-    options::{BootdiskOptions, NetworkOptions, TimezoneOptions, email_validate},
+    options::{
+        BootdiskOptions, NetworkInterfacePinningOptions, NetworkOptions, TimezoneOptions,
+        email_validate,
+    },
     setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo, installer_setup},
 };
 mod setup;
@@ -167,7 +170,13 @@ fn main() {
             bootdisk: BootdiskOptions::defaults_from(&runtime_info.disks[0]),
             timezone: TimezoneOptions::defaults_from(&runtime_info, &locales),
             password: Default::default(),
-            network: NetworkOptions::defaults_from(&setup_info, &runtime_info.network, None),
+            network: NetworkOptions::defaults_from(
+                &setup_info,
+                &runtime_info.network,
+                None,
+                // We enable network interface pinning by default in the TUI
+                Some(&NetworkInterfacePinningOptions::default()),
+            ),
             autoreboot: true,
         },
         setup_info,

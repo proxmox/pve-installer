@@ -436,7 +436,7 @@ pub struct Gateway {
     pub gateway: IpAddr,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "UPPERCASE")]
 /// The current interface state as reported by the kernel.
 pub enum InterfaceState {
@@ -483,7 +483,13 @@ pub struct Interface {
 impl Interface {
     // avoid display trait as this is not the string representation for a serializer
     pub fn render(&self) -> String {
-        format!("{} {} ({})", self.state.render(), self.name, self.mac)
+        format!(
+            "{} {} ({}, {})",
+            self.state.render(),
+            self.name,
+            self.mac,
+            self.driver
+        )
     }
 
     pub fn to_pinned(&self, options: &NetworkInterfacePinningOptions) -> Self {

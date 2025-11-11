@@ -437,6 +437,11 @@ impl<UDT> FormView<UDT> {
         self.add_to_column(1, view);
     }
 
+    pub fn add_child_with_custom_label(&mut self, label: &str, view: impl View) {
+        self.add_to_column(0, TextView::new(label).no_wrap());
+        self.add_to_column(1, view);
+    }
+
     pub fn add_child_with_data(&mut self, label: &str, view: impl View, data: UDT) {
         self.add_to_column(0, TextView::new(format!("{label}: ")).no_wrap());
         self.add_to_column(1, view);
