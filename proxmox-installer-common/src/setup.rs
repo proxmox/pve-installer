@@ -321,7 +321,7 @@ where
         .collect())
 }
 
-fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Option<Vec<CidrAddress>>, D::Error>
+fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -347,7 +347,7 @@ where
         );
     }
 
-    Ok(Some(result))
+    Ok(result)
 }
 
 fn serialize_as_display<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
@@ -478,7 +478,7 @@ pub struct Interface {
 
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
-    pub addresses: Option<Vec<CidrAddress>>,
+    pub addresses: Vec<CidrAddress>,
 }
 
 impl Interface {

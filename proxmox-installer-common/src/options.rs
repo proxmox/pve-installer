@@ -514,26 +514,24 @@ impl NetworkOptions {
         }
 
         if let Some(routes) = &network.routes {
-            let mut filled = false;
             if let Some(gw) = &routes.gateway4
-                && let Some(iface) = network.interfaces.get(&gw.dev) {
-                    this.ifname.clone_from(&iface.name);
-                    if let Some(addresses) = &iface.addresses
-                        && let Some(addr) = addresses.iter().find(|addr| addr.is_ipv4()) {
-                            this.gateway = gw.gateway;
-                            this.address = addr.clone();
-                            filled = true;
-                        }
+                && let Some(iface) = network.interfaces.get(&gw.dev)
+            {
+                // we got some ipv4 connectivity, so use that
+                this.ifname.clone_from(&iface.name);
+                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
+                    this.gateway = gw.gateway;
+                    this.address = addr.clone();
                 }
-            if !filled
-                && let Some(gw) = &routes.gateway6
-                    && let Some(iface) = network.interfaces.get(&gw.dev)
-                        && let Some(addresses) = &iface.addresses
-                            && let Some(addr) = addresses.iter().find(|addr| addr.is_ipv6()) {
-                                this.ifname.clone_from(&iface.name);
-                                this.gateway = gw.gateway;
-                                this.address = addr.clone();
-                            }
+            } else if let Some(gw) = &routes.gateway6
+                && let Some(iface) = network.interfaces.get(&gw.dev)
+                && let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6())
+            {
+                // no ipv4, but ipv6 connectivity
+                this.ifname.clone_from(&iface.name);
+                this.gateway = gw.gateway;
+                this.address = addr.clone();
+            }
         }
 
         // In case no there are no routes defined at all (e.g. no DHCP lease),
@@ -541,9 +539,10 @@ impl NetworkOptions {
         // NIC should always be present here, as the installation will abort
         // earlier in that case, so use the first one enumerated.
         if this.ifname.is_empty()
-            && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index) {
-                this.ifname.clone_from(&iface.name);
-            }
+            && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index)
+        {
+            this.ifname.clone_from(&iface.name);
+        }
 
         this
     }
@@ -672,9 +671,7 @@ mod tests {
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
-                addresses: Some(vec![
-                    CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
-                ]),
+                addresses: vec![CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap()],
             },
         );
 
@@ -800,7 +797,7 @@ mod tests {
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
-                addresses: None,
+                addresses: vec![],
             },
         );
 
