@@ -1,3 +1,19 @@
+proxmox-installer (9.1.0) trixie; urgency=medium
+
+  * setup the by Debian preferred deb.debian.org CDN over country-specific
+    mirrors.
+
+  * tui: also show the used kernel driver for network interface, just like in
+    the GTK UI.
+
+  * add support to generated network interface name pinnings for the target
+    installation.
+
+  * integrate network interface name pinning support into the terminal and GTK
+    based user interfaces and the automatic installation mechanism.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 12 Nov 2025 08:12:35 +0100
+
 proxmox-installer (9.0.9) trixie; urgency=medium
 
   * pmg: ensure clamav-freshclam is enabled.
