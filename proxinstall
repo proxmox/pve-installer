@@ -421,7 +421,7 @@ my sub create_network_interface_pin_view {
         },
     );
 
-    $dialog->present();
+    $dialog->run();
 }
 
 sub create_ipconf_view {
