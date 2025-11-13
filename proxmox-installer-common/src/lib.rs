@@ -11,8 +11,11 @@ pub mod http;
 pub mod cli;
 
 pub mod net {
-    /// Maximum length of the (primary) name of a network interface
-    pub const MAX_IFNAME_LEN: usize = 15; // IFNAMSIZ - 1 to account for NUL byte
+    /// As dictated by the `pve-iface` schema.
+    pub const MIN_IFNAME_LEN: usize = 2;
+    /// Maximum length of the (primary) name of a network interface.
+    /// IFNAMSIZ - 1 to account for NUL byte
+    pub const MAX_IFNAME_LEN: usize = 15;
 }
 
 pub const RUNTIME_DIR: &str = "/run/proxmox-installer";

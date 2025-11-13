@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use std::{cmp, fmt};
 
 use crate::disk_checks::check_raid_min_disks;
-use crate::net::MAX_IFNAME_LEN;
+use crate::net::{MAX_IFNAME_LEN, MIN_IFNAME_LEN};
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
 use crate::utils::{CidrAddress, Fqdn};
 
@@ -504,8 +504,10 @@ impl NetworkInterfacePinningOptions {
     pub fn verify(&self) -> Result<()> {
         let mut reverse_mapping = HashMap::<String, String>::new();
         for (mac, name) in self.mapping.iter() {
-            if name.is_empty() {
-                bail!("interface name for '{mac}' cannot be empty");
+            if name.len() < MIN_IFNAME_LEN {
+                bail!(
+                    "interface name for '{mac}' must be at least {MIN_IFNAME_LEN} characters long"
+                );
             }
 
             if name.len() > MAX_IFNAME_LEN {
@@ -522,9 +524,9 @@ impl NetworkInterfacePinningOptions {
             }
 
             // Mimicking the `pve-iface` schema verification
-            if name.starts_with(|c: char| c.is_ascii_digit()) {
+            if !name.starts_with(|c: char| c.is_ascii_alphabetic()) {
                 bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must not start with a number"
+                    "interface name '{name}' for '{mac}' is invalid: name must start with a letter"
                 );
             }
 
@@ -943,7 +945,22 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name for 'ab:cd:ef:12:34:56' cannot be empty"
+            "interface name for 'ab:cd:ef:12:34:56' must be at least 2 characters long"
+        )
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_too_short_name() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "a".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name for 'ab:cd:ef:12:34:56' must be at least 2 characters long"
         )
     }
 
@@ -1000,7 +1017,7 @@ mod tests {
     }
 
     #[test]
-    fn network_interface_pinning_options_fail_on_name_starting_with_number() {
+    fn network_interface_pinning_options_fail_on_nonletter_first_char() {
         let mut options = NetworkInterfacePinningOptions::default();
         options
             .mapping
@@ -1010,8 +1027,19 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must not start with a number"
-        )
+            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter"
+        );
+
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "_a".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter"
+        );
     }
 
     #[test]
