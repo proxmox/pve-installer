@@ -1,3 +1,17 @@
+proxmox-installer (9.1.1) trixie; urgency=medium
+
+  * network interface pinning: make interface name checks stricter to closer
+    match the accepted naming schemes of the projects like PVE. Require at
+    least two characters and that the first character is a Latin letter (a-z).
+
+  * TUI, Gtk UI: only display pinnable network interfaces in pinning options
+    dialog.
+
+  * Gtk UI: ensure network-pinning option-dialog is modal and blocks
+    interaction with the main installer view in the background while its open.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 13 Nov 2025 20:05:00 +0100
+
 proxmox-installer (9.1.0) trixie; urgency=medium
 
   * setup the by Debian preferred deb.debian.org CDN over country-specific
