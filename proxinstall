@@ -37,8 +37,7 @@ use Proxmox::Sys;
 use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_all file_write_all);
-use Proxmox::Sys::Net
-    qw(parse_ip_address parse_ip_mask validate_link_pin_map MAX_IFNAME_LEN DEFAULT_PIN_PREFIX);
+use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask validate_link_pin_map DEFAULT_PIN_PREFIX);
 use Proxmox::UI;
 
 my $step_number = 0; # Init number for global function list

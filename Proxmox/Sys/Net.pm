@@ -13,13 +13,16 @@ our @EXPORT_OK = qw(
     parse_ip_mask
     parse_fqdn
     validate_link_pin_map
+    MIN_IFNAME_LEN
     MAX_IFNAME_LEN
     DEFAULT_PIN_PREFIX
 );
 
-# Maximum length of the (primary) name of a network interface
-# IFNAMSIZ - 1 to account for NUL byte
 use constant {
+    # As dictated by the `pve-iface` schema.
+    MIN_IFNAME_LEN => 2,
+    # Maximum length of the (primary) name of a network interface.
+    # IFNAMSIZ - 1 to account for NUL byte
     MAX_IFNAME_LEN => 15,
     DEFAULT_PIN_PREFIX => 'nic',
 };
@@ -338,8 +341,10 @@ sub validate_link_pin_map : prototype($) {
     my $reverse_mapping = {};
 
     while (my ($mac, $name) = each %$mapping) {
-        if (!defined($name) || $name eq '') {
-            die "interface name for '$mac' cannot be empty\n";
+        if (!defined($name) || length($name) < MIN_IFNAME_LEN) {
+            die "interface name for '$mac' must be at least "
+                . MIN_IFNAME_LEN
+                . " characters long\n";
         }
 
         if (length($name) > MAX_IFNAME_LEN) {
@@ -353,8 +358,8 @@ sub validate_link_pin_map : prototype($) {
                 . "name must not be fully numeric\n";
         }
 
-        if ($name =~ m/^[0-9]/) {
-            die "interface name '$name' for '$mac' is invalid: name must not start with a number\n";
+        if ($name !~ m/^[a-z]/) {
+            die "interface name '$name' for '$mac' is invalid: name must start with a letter\n";
         }
 
         if ($name !~ m/^[a-zA-Z_][a-zA-Z0-9_]*$/) {
