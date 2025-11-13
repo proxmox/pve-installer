@@ -153,24 +153,6 @@ sub iface_is_vf {
     return -l "/sys/class/net/$iface_name/device/physfn";
 }
 
-# Duplicated from pve-common/src/PVE/Network.pm for now
-sub ip_link_details {
-    my $link_json = '';
-
-    Proxmox::Sys::Command::run_command(
-        ['ip', '-details', '-json', 'link', 'show'],
-        sub {
-            $link_json .= shift;
-            return;
-        },
-    );
-
-    my $links = JSON::decode_json($link_json);
-    my %ip_links = map { $_->{ifname} => $_ } $links->@*;
-
-    return \%ip_links;
-}
-
 # Duplicated from pve-common/src/PVE/Network.pm from now
 sub ip_link_is_physical {
     my ($ip_link) = @_;

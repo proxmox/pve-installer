@@ -87,7 +87,7 @@ my sub query_netdevs : prototype() {
     my $default;
 
     # FIXME: not the same as the battle proven way we used in the installer for years?
-    my $interfaces = fromjs(qx/ip --json address show/);
+    my $interfaces = fromjs(qx/ip --details --json address show/);
 
     my $pinned_counter = 0;
     for my $if (@$interfaces) {
@@ -122,14 +122,20 @@ my sub query_netdevs : prototype() {
         $ifs->{$name} = {
             index => $index,
             name => $name,
-            pinned_id => "${pinned_counter}",
             mac => $mac,
             state => uc($state),
             driver => $driver,
         };
         $ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
 
-        $pinned_counter++;
+        # only set the `pinned_id` property if the interface actually can be pinned,
+        # i.e. is a physical link
+        my $is_pinnable =
+            Proxmox::Sys::Net::ip_link_is_physical($if) && !Proxmox::Sys::Net::iface_is_vf($name);
+        if ($is_pinnable) {
+            $ifs->{$name}->{pinned_id} = "${pinned_counter}";
+            $pinned_counter++;
+        }
     }
 
     return $ifs;

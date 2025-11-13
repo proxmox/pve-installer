@@ -374,8 +374,14 @@ my sub create_network_interface_pin_view {
 
     my $inputs = {};
     my $row = 0;
+
     for my $ifname (sort keys $interfaces->%*) {
         my $iface = $interfaces->{$ifname};
+
+        # exclude all non-pinnable interfaces, i.e. non-physical links, which won't have their
+        # `pinned_id` set.
+        # It does not make sense to pin those names, and the low-level installer will also skip them
+        next if !defined($iface->{pinned_id});
 
         my $name = $mapping->{ $iface->{mac} };
         my $label_text = "$iface->{mac} ($ifname, $iface->{driver}, $iface->{state})";
@@ -463,7 +469,7 @@ sub create_ipconf_view {
 
             my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
             my $name =
-                $gtk_state->{network_pinning_enabled}
+                $gtk_state->{network_pinning_enabled} && defined($mapping->{ $iface->{mac} })
                 ? $mapping->{ $iface->{mac} }
                 : $iface->{name};
 
@@ -1920,7 +1926,7 @@ if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
 
     # pre-fill the name mapping before starting
     my %mapping = map {
-        $_->{mac} => DEFAULT_PIN_PREFIX . $_->{pinned_id}
+        defined($_->{pinned_id}) ? ($_->{mac} => DEFAULT_PIN_PREFIX . $_->{pinned_id}) : ()
     } values $run_env->{network}->{interfaces}->%*;
     Proxmox::Install::Config::set_network_interface_pin_map(\%mapping);
 }

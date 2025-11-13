@@ -1108,14 +1108,11 @@ sub extract_data {
             mkdir "$targetdir/usr/local/lib/systemd", 0755;
             mkdir "$targetdir/usr/local/lib/systemd/network", 0755;
 
-            my $ip_links = Proxmox::Sys::Net::ip_link_details();
-
             for my $ifname (sort keys $run_env->{network}->{interfaces}->%*) {
-                next
-                    if !Proxmox::Sys::Net::ip_link_is_physical($ip_links->{$ifname})
-                    || Proxmox::Sys::Net::iface_is_vf($ifname);
-
                 my $if = $run_env->{network}->{interfaces}->{$ifname};
+
+                # skip unpinnable interfaces, i.e. virtual links
+                next if !defined($if->{pinned_id});
 
                 if (!defined($netif_pin_map->{ $if->{mac} })) {
                     # each installer frontend must ensure that either
