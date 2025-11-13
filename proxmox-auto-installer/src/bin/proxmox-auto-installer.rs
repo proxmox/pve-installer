@@ -123,9 +123,10 @@ fn main() -> ExitCode {
     };
 
     if answer.global.reboot_on_error
-        && let Err(err) = File::create("/run/proxmox-reboot-on-error") {
-            error!("failed to create reboot-on-error flag-file: {err}");
-        }
+        && let Err(err) = File::create("/run/proxmox-reboot-on-error")
+    {
+        error!("failed to create reboot-on-error flag-file: {err}");
+    }
 
     if answer.global.reboot_mode == RebootMode::PowerOff {
         if let Err(err) = File::create("/run/proxmox-poweroff-after-install") {

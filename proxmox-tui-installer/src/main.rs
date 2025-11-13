@@ -197,9 +197,10 @@ fn installer_setup_late(siv: &mut Cursive) {
     if !state.in_test_mode {
         let kmap_id = &state.options.timezone.kb_layout;
         if let Some(kmap) = state.locales.kmap.get(kmap_id)
-            && let Err(err) = system::set_keyboard_layout(kmap) {
-                display_setup_warning(siv, &format!("Failed to apply keyboard layout: {err}"));
-            }
+            && let Err(err) = system::set_keyboard_layout(kmap)
+        {
+            display_setup_warning(siv, &format!("Failed to apply keyboard layout: {err}"));
+        }
     }
 
     if state.runtime_info.total_memory < 1024 {

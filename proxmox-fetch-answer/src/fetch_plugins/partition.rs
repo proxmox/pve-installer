@@ -123,9 +123,10 @@ fn check_if_mounted(target_path: &str) -> Result<bool> {
     let mounts = fs::read_to_string("/proc/mounts")?;
     for line in mounts.lines() {
         if let Some(mp) = line.split(' ').nth(1)
-            && mp == target_path {
-                return Ok(true);
-            }
+            && mp == target_path
+        {
+            return Ok(true);
+        }
     }
     Ok(false)
 }
