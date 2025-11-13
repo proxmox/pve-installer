@@ -465,8 +465,9 @@ pub struct Interface {
 
     pub index: usize,
 
-    /// Sequential interface ID for pinning interface names.
-    pub pinned_id: String,
+    /// Sequential interface ID for pinning interface names. If unset, the
+    /// interface name cannot/should not be pinned due to being e.g. a non-physical link.
+    pub pinned_id: Option<String>,
 
     pub mac: String,
 
@@ -492,19 +493,23 @@ impl Interface {
         )
     }
 
-    pub fn to_pinned(&self, options: &NetworkInterfacePinningOptions) -> Self {
-        let mut this = self.clone();
-        this.name = options
-            .mapping
-            .get(&this.mac)
-            .unwrap_or(&format!(
-                "{}{}",
-                NetworkInterfacePinningOptions::DEFAULT_PREFIX,
-                this.pinned_id
-            ))
-            .clone();
+    pub fn to_pinned(&self, options: &NetworkInterfacePinningOptions) -> Option<Self> {
+        if let Some(pinned_id) = &self.pinned_id {
+            let mut this = self.clone();
+            this.name = options
+                .mapping
+                .get(&this.mac)
+                .unwrap_or(&format!(
+                    "{}{}",
+                    NetworkInterfacePinningOptions::DEFAULT_PREFIX,
+                    pinned_id
+                ))
+                .clone();
 
-        this
+            Some(this)
+        } else {
+            None
+        }
     }
 }
 

@@ -595,8 +595,10 @@ impl NetworkOptions {
         {
             // we got some ipv4 connectivity, so use that
 
-            if let Some(opts) = pinning_opts {
-                this.ifname.clone_from(&iface.to_pinned(opts).name);
+            if let Some(opts) = pinning_opts
+                && let Some(pinned) = iface.to_pinned(opts)
+            {
+                this.ifname.clone_from(&pinned.name);
             } else {
                 this.ifname.clone_from(&iface.name);
             }
@@ -609,8 +611,10 @@ impl NetworkOptions {
                 && let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6())
             {
                 // no ipv4, but ipv6 connectivity
-                if let Some(opts) = pinning_opts {
-                    this.ifname.clone_from(&iface.to_pinned(opts).name);
+                if let Some(opts) = pinning_opts
+                    && let Some(pinned) = iface.to_pinned(opts)
+                {
+                    this.ifname.clone_from(&pinned.name);
                 } else {
                     this.ifname.clone_from(&iface.name);
                 }
@@ -627,19 +631,22 @@ impl NetworkOptions {
         if this.ifname.is_empty()
             && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index)
         {
-            if let Some(opts) = pinning_opts {
-                this.ifname.clone_from(&iface.to_pinned(opts).name);
+            if let Some(opts) = pinning_opts
+                && let Some(pinned) = iface.to_pinned(opts)
+            {
+                this.ifname.clone_from(&pinned.name);
             } else {
                 this.ifname.clone_from(&iface.name);
             }
         }
 
         if let Some(ref mut opts) = this.pinning_opts {
-            // Ensure that all unique interfaces indeed have an entry in the map,
-            // as required by the low-level installer
+            // Ensure that all unique, pinnable interfaces indeed have an entry in the map, as
+            // required by the low-level installer
             for iface in network.interfaces.values() {
-                let pinned_name = iface.to_pinned(opts).name;
-                opts.mapping.entry(iface.mac.clone()).or_insert(pinned_name);
+                if let Some(pinned) = iface.to_pinned(opts) {
+                    opts.mapping.entry(iface.mac.clone()).or_insert(pinned.name);
+                }
             }
         }
 
@@ -767,7 +774,7 @@ mod tests {
             Interface {
                 name: "eth0".to_owned(),
                 index: 0,
-                pinned_id: "0".to_owned(),
+                pinned_id: Some("0".to_owned()),
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
@@ -901,7 +908,7 @@ mod tests {
             Interface {
                 name: "eth0".to_owned(),
                 index: 0,
-                pinned_id: "0".to_owned(),
+                pinned_id: Some("0".to_owned()),
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),

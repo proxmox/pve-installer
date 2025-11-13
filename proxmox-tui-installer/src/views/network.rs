@@ -189,9 +189,12 @@ impl NetworkOptionsView {
             .map(|opt| opt.pinning_enabled.then_some(opt.pinning_options.clone()))
             .map_err(|err| err.to_string())?;
 
-        let ifname = match &pinning_opts {
-            Some(opts) => iface.to_pinned(opts).name,
-            None => iface.name,
+        let ifname = if let Some(opts) = &pinning_opts
+            && let Some(pinned) = iface.to_pinned(opts)
+        {
+            pinned.name
+        } else {
+            iface.name
         };
 
         if address.addr().is_ipv4() != gateway.is_ipv4() {
@@ -291,13 +294,13 @@ impl NetworkOptionsView {
         let ifnames = ifaces
             .iter()
             .map(|iface| {
-                let iface = if options.pinning_enabled {
-                    &iface.to_pinned(&options.pinning_options)
+                if options.pinning_enabled
+                    && let Some(pinned) = iface.to_pinned(&options.pinning_options)
+                {
+                    (pinned.render(), pinned.clone())
                 } else {
-                    iface
-                };
-
-                (iface.render(), iface.clone())
+                    (iface.render(), (*iface).clone())
+                }
             })
             .collect::<Vec<(String, Interface)>>();
 
@@ -337,6 +340,11 @@ impl InterfacePinningOptionsView {
     fn new(interfaces: &[&Interface], options_ref: NetworkViewOptionsRef) -> Self {
         let options = options_ref.lock().expect("unpoisoned lock");
 
+        // Filter out all non-physical links, as it does not make sense to pin their names
+        // in this way.
+        // The low-level installer will skip them anyway.
+        let interfaces = interfaces.iter().filter(|iface| iface.pinned_id.is_some());
+
         let mut form = FormView::<String>::new();
 
         for iface in interfaces {
@@ -349,7 +357,12 @@ impl InterfacePinningOptionsView {
                 .child(DummyView.full_width()) // right align below form elements
                 .child(
                     EditView::new()
-                        .content(iface.to_pinned(&options.pinning_options).name)
+                        .content(
+                            iface
+                                .to_pinned(&options.pinning_options)
+                                .expect("always pinnable interface")
+                                .name,
+                        )
                         .max_content_width(MAX_IFNAME_LEN)
                         .fixed_width(MAX_IFNAME_LEN),
                 );
