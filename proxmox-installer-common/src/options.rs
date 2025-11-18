@@ -524,9 +524,9 @@ impl NetworkInterfacePinningOptions {
             }
 
             // Mimicking the `pve-iface` schema verification
-            if !name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+            if !name.starts_with(|c: char| c.is_ascii_lowercase()) {
                 bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must start with a letter"
+                    "interface name '{name}' for '{mac}' is invalid: name must start with a lower-case letter"
                 );
             }
 
@@ -1034,7 +1034,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter"
+            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter"
         );
 
         options
@@ -1045,7 +1045,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter"
+            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter"
         );
     }
 
