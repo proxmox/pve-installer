@@ -341,7 +341,7 @@ sub validate_link_pin_map : prototype($) {
         }
 
         if ($name !~ m/^[a-z]/) {
-            die "interface name '$name' for '$mac' is invalid: name must start with a letter\n";
+            die "interface name '$name' for '$mac' is invalid: name must start with a lower-case letter\n";
         }
 
         if ($name !~ m/^[a-zA-Z_][a-zA-Z0-9_]*$/) {
