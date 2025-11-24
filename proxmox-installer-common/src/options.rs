@@ -526,13 +526,16 @@ impl NetworkInterfacePinningOptions {
             // Mimicking the `pve-iface` schema verification
             if !name.starts_with(|c: char| c.is_ascii_lowercase()) {
                 bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must start with a lower-case letter"
+                    "interface name '{name}' for '{mac}' is invalid: name must start with a lowercase letter"
                 );
             }
 
-            if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            if !name
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+            {
                 bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must only consist of alphanumeric characters and underscores"
+                    "interface name '{name}' for '{mac}' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
                 );
             }
 
@@ -1019,7 +1022,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric characters and underscores"
+            "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
         )
     }
 
@@ -1034,7 +1037,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter"
+            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
         );
 
         options
@@ -1045,8 +1048,41 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter"
+            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
         );
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_uppercase_char() {
+        let mut options = NetworkInterfacePinningOptions::default();
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "Nic0".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name 'Nic0' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
+        );
+
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "nIc0".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "interface name 'nIc0' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
+        );
+
+        options
+            .mapping
+            .insert("ab:cd:ef:12:34:56".to_owned(), "nic0".to_owned());
+
+        let res = options.verify();
+        assert!(res.is_ok());
     }
 
     #[test]
