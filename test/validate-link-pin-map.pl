@@ -38,28 +38,32 @@ like($@, qr/12:34:56:ab:cd:ef/, "duplicate error message contains expected mac a
 eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => 'nic-' }) };
 is(
     $@,
-    "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric characters and underscores\n",
+    "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and "
+        . "contain only ascii characters, digits and underscores\n",
     "name with dash is rejected",
 );
 
 eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => '0nic' }) };
 is(
     $@,
-    "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter\n",
+    "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and "
+        . "contain only ascii characters, digits and underscores\n",
     "name starting with number is rejected",
 );
 
 eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => '_a' }) };
 is(
     $@,
-    "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lower-case letter\n",
+    "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and "
+        . "contain only ascii characters, digits and underscores\n",
     "name starting with underscore is rejected",
 );
 
 eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => '12345' }) };
 is(
     $@,
-    "interface name '12345' for 'ab:cd:ef:12:34:56' is invalid: name must not be fully numeric\n",
+    "interface name '12345' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and "
+        . "contain only ascii characters, digits and underscores\n",
     "fully numeric name is rejected",
 );
 

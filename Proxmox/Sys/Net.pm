@@ -335,18 +335,9 @@ sub validate_link_pin_map : prototype($) {
                 . " characters\n";
         }
 
-        if ($name =~ m/^[0-9]+$/) {
-            die "interface name '$name' for '$mac' is invalid: "
-                . "name must not be fully numeric\n";
-        }
-
-        if ($name !~ m/^[a-z]/) {
-            die "interface name '$name' for '$mac' is invalid: name must start with a lower-case letter\n";
-        }
-
-        if ($name !~ m/^[a-zA-Z_][a-zA-Z0-9_]*$/) {
-            die "interface name '$name' for '$mac' is invalid: "
-                . "name must only consist of alphanumeric characters and underscores\n";
+        if ($name !~ m/^[a-z][a-z0-9_]{1,20}([:\.]\d+)?$/i) {
+            die "interface name '$name' for '$mac' is invalid: name must start with a letter and "
+                . "contain only ascii characters, digits and underscores\n";
         }
 
         if ($reverse_mapping->{$name}) {
