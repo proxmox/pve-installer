@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
@@ -517,25 +517,18 @@ impl NetworkInterfacePinningOptions {
                 );
             }
 
-            if name.chars().all(char::is_numeric) {
-                bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must not be fully numeric"
-                );
-            }
-
             // Mimicking the `pve-iface` schema verification
-            if !name.starts_with(|c: char| c.is_ascii_lowercase()) {
-                bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must start with a lowercase letter"
-                );
-            }
+            static RE: OnceLock<Regex> = OnceLock::new();
+            let re = RE.get_or_init(|| {
+                RegexBuilder::new(r"^[a-z][a-z0-9_]{1,20}([:\.]\d+)?$")
+                    .case_insensitive(true)
+                    .build()
+                    .unwrap()
+            });
 
-            if !name
-                .chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
-            {
+            if !re.is_match(name) {
                 bail!(
-                    "interface name '{name}' for '{mac}' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
+                    "interface name '{name}' for '{mac}' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
                 );
             }
 
@@ -1022,7 +1015,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
+            "interface name 'nic-' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
         )
     }
 
@@ -1037,7 +1030,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
+            "interface name '0nic' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
         );
 
         options
@@ -1048,34 +1041,26 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
+            "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
         );
     }
 
     #[test]
-    fn network_interface_pinning_options_fail_on_uppercase_char() {
+    fn network_interface_pinning_options_pass_on_uppercase_char() {
         let mut options = NetworkInterfacePinningOptions::default();
         options
             .mapping
             .insert("ab:cd:ef:12:34:56".to_owned(), "Nic0".to_owned());
 
         let res = options.verify();
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
-            "interface name 'Nic0' for 'ab:cd:ef:12:34:56' is invalid: name must start with a lowercase letter"
-        );
+        assert!(res.is_ok());
 
         options
             .mapping
             .insert("ab:cd:ef:12:34:56".to_owned(), "nIc0".to_owned());
 
         let res = options.verify();
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
-            "interface name 'nIc0' for 'ab:cd:ef:12:34:56' is invalid: name must only consist of alphanumeric lowercase characters and underscores"
-        );
+        assert!(res.is_ok());
 
         options
             .mapping
@@ -1096,7 +1081,7 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            "interface name '12345' for 'ab:cd:ef:12:34:56' is invalid: name must not be fully numeric"
+            "interface name '12345' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
         )
     }
 }
