@@ -1,5 +1,5 @@
 [workspace.package]
-version = "9.1.3"
+version = "9.1.4"
 edition = "2024"
 license = "AGPL-3"
 repository = "https://git.proxmox.com/?p=pve-installer.git"

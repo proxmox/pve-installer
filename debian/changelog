@@ -1,3 +1,9 @@
+proxmox-installer (9.1.4) trixie; urgency=medium
+
+  * pdm: adapt texts shown during actual installation.
+
+ -- Proxmox Support Team <support@proxmox.com>  Sun, 30 Nov 2025 01:18:46 +0100
+
 proxmox-installer (9.1.3) trixie; urgency=medium
 
   * make interface naming more flexible again to match actual limits in
