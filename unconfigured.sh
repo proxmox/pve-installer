@@ -3,6 +3,7 @@
 reboot_action="reboot"
 
 trap "err_reboot" ERR
+trap "err_reboot" INT
 
 # NOTE: we nowadays get exec'd by the initrd's PID 1, so we're the new PID 1
 
@@ -74,6 +75,9 @@ eject_and_reboot() {
 
 real_reboot() {
     trap - ERR
+
+    # ignore ^C from this point, we are already shutting down
+    trap '' INT
 
     if [[ -x /etc/init.d/networking ]]; then
         /etc/init.d/networking stop
