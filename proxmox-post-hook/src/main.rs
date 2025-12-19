@@ -718,6 +718,15 @@ fn do_main() -> Result<()> {
 
         let info = with_chroot(|target_path| PostHookInfo::gather(target_path, &answer))?;
 
+        if let Err(err) = fs::write(
+            "/run/proxmox-installer/post-hook-data.json",
+            serde_json::to_string_pretty(&info)?,
+        ) {
+            eprintln!(
+                "Failed to write post-installation-webhook data to /run/proxmox-installer: {err:#}"
+            );
+        }
+
         proxmox_installer_common::http::post(
             url,
             cert_fingerprint.as_deref(),
