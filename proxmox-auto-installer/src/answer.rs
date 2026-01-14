@@ -225,8 +225,13 @@ impl TryFrom<NetworkInAnswer> for Network {
         let interface_name_pinning = match network.interface_name_pinning {
             Some(opts) if opts.enabled => {
                 let opts = NetworkInterfacePinningOptions {
-                    mapping: opts.mapping,
+                    mapping: opts
+                        .mapping
+                        .iter()
+                        .map(|(k, v)| (k.to_lowercase(), v.clone()))
+                        .collect(),
                 };
+
                 opts.verify()?;
                 Some(opts)
             }

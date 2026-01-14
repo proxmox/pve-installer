@@ -130,6 +130,7 @@ mod tests {
             hashed_root_password,
             minimal,
             network_interface_pinning,
+            network_interface_pinning_uppercase_mac_address,
             nic_matching,
             specific_nic,
             zfs,

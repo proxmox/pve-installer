@@ -1,0 +1,30 @@
+{
+  "autoreboot": 1,
+  "cidr": "192.168.1.114/24",
+  "country": "at",
+  "dns": "192.168.1.254",
+  "domain": "testinstall",
+  "filesys": "ext4",
+  "gateway": "192.168.1.1",
+  "hdsize": 223.57088470458984,
+  "existing_storage_auto_rename": 1,
+  "hostname": "pveauto",
+  "keymap": "de",
+  "mailto": "mail@no.invalid",
+  "mngmt_nic": "mgmt",
+  "network_interface_pin_map": {
+    "1c:34:da:5c:5e:24": "nic2",
+    "1c:34:da:5c:5e:25": "nic3",
+    "24:8a:07:1e:05:bc": "lan0",
+    "24:8a:07:1e:05:bd": "lan1",
+    "5a:47:32:dd:c7:47": "nic8",
+    "a0:36:9f:0a:b3:82": "nic6",
+    "a0:36:9f:0a:b3:83": "nic7",
+    "b4:2e:99:ac:ad:b4": "mgmt",
+    "b4:2e:99:ac:ad:b5": "nic1"
+  },
+  "root_password": { "plain": "12345678" },
+  "target_hd": "/dev/sda",
+  "timezone": "Europe/Vienna",
+  "first_boot": { "enabled": 0 }
+}
