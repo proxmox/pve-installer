@@ -736,6 +736,8 @@ fn inject_file_to_iso(
     uuid: &String,
 ) -> Result<()> {
     let result = Command::new("xorriso")
+        .arg("-follow")
+        .arg("link")
         .arg("-boot_image")
         .arg("any")
         .arg("keep")
