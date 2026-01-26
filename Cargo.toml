@@ -5,7 +5,7 @@ license = "AGPL-3"
 repository = "https://git.proxmox.com/?p=pve-installer.git"
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "proxmox-auto-installer",
     "proxmox-auto-install-assistant",
