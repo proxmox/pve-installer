@@ -23,7 +23,7 @@ parse_cmdline() {
             proxauto|proxmox-start-auto-installer)
                 start_auto_installer=1
             ;;
-            console=ttyS*)
+            console=ttyS*|console=ttyAMA*)
                 serial=1
             ;;
         esac

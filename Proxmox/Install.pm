@@ -1416,7 +1416,7 @@ _EOD
         my $target_cmdline = '';
         if ($target_cmdline = Proxmox::Install::Config::get_target_cmdline()) {
             my $target_cmdline_snippet = '';
-            if ($target_cmdline =~ /console=ttyS(\d+),(\d+)/) {
+            if ($target_cmdline =~ /console=tty(?:S|AMA)(\d+),(\d+)/) {
                 $target_cmdline_snippet .= "GRUB_TERMINAL_INPUT=\"console serial\"\n";
                 $target_cmdline_snippet .= "GRUB_TERMINAL_OUTPUT=\"gfxterm serial\"\n";
                 $target_cmdline_snippet .=
