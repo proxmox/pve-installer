@@ -18,6 +18,17 @@ my sub fromjs : prototype($) {
     return from_json($_[0], { utf8 => 1 });
 }
 
+my $_cached_arch = undef;
+
+sub query_arch : prototype() {
+    return $_cached_arch if defined($_cached_arch);
+
+    $_cached_arch = `dpkg --print-architecture`;
+    chomp $_cached_arch;
+
+    return $_cached_arch;
+}
+
 my $mem_total = undef;
 # Returns the system memory size in MiB, and falls back to 512 MiB if it
 # could not be determined.
@@ -48,18 +59,26 @@ sub query_cpu_info : prototype() {
         hvm_supported => 0,
     };
 
-    open(my $CPUINFO_FD, '<', '/proc/cpuinfo');
-    while (my $line = <$CPUINFO_FD>) {
-        if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
-            $cpu_info->{hvm_supported} = 1;
-        } elsif ($line =~ /^vendor_id\s*:\s*(GenuineIntel|AuthenticAMD)/) {
-            $cpu_info->{vendor_id} = $1;
-        } elsif ($line eq "") {
-            # processed a whole section, and for the info we currently need that's enough -> return
-            last;
-        }
+    my $arch = query_arch();
+
+    if ($arch eq 'arm64') {
+	# ARM has no vendor_id/flags in /proc/cpuinfo, check /dev/kvm for
+	# virtualization support instead
+	$cpu_info->{hvm_supported} = -e '/dev/kvm' ? 1 : 0;
+	$cpu_info->{vendor_id} = 'ARM';
+    } else {
+	open(my $CPUINFO_FD, '<', '/proc/cpuinfo');
+	while (my $line = <$CPUINFO_FD>) {
+	    if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
+		$cpu_info->{hvm_supported} = 1;
+	    } elsif ($line =~ /^vendor_id\s*:\s*(GenuineIntel|AuthenticAMD)/) {
+		$cpu_info->{vendor_id} = $1;
+	    } elsif ($line eq "") {
+		last;
+	    }
+	}
+	close($CPUINFO_FD);
     }
-    close($CPUINFO_FD);
 
     $_cached_cpu_info = $cpu_info;
     return $cpu_info;
@@ -267,12 +286,13 @@ my sub detect_country_tracing_to : prototype($$) {
 
 # Returns the entire environment as a hash.
 # {
+#     arch => <dpkg architecture, e.g. 'amd64' or 'arm64'>,
 #     country => <short country>,
 #     ipconf = <see Proxmox::Sys::Net::get_ip_config()>,
 #     kernel_cmdline = <contents of /proc/cmdline>,
 #     total_memory = <memory size in MiB>,
 #     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
-#     cpu_vendor_id = <GenuineIntel|AuthenticAMD>,
+#     cpu_vendor_id = <GenuineIntel|AuthenticAMD|ARM>,
 #     secure_boot = <1 if SecureBoot is enabled>,
 #     boot_type = <either 'efi' or 'bios'>,
 #     default_zfs_arc_max => <default upper limit for the ZFS ARC size in MiB>,
@@ -326,6 +346,9 @@ sub query_installation_environment : prototype() {
 
     $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();
+
+    my $arch = query_arch();
+    $output->{arch} = $arch;
 
     my $cpu_info = query_cpu_info();
     $output->{hvm_supported} = $cpu_info->{hvm_supported};
