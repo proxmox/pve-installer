@@ -8,6 +8,7 @@ use IO::File;
 use List::Util qw(first);
 
 use Proxmox::Install::ISOEnv;
+use Proxmox::Install::RunEnv;
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_firstline);
 use Proxmox::Sys::Udev;
@@ -279,7 +280,9 @@ sub partition_bootable_disk {
 
     my $blocksize = logical_blocksize($target_dev);
 
-    if ($blocksize != 4096) {
+    # BIOS boot partition is x86-only, arm64 is EFI-only
+    my $run_env = Proxmox::Install::RunEnv::get();
+    if ($blocksize != 4096 && $run_env->{arch} ne 'arm64') {
         $pnum = 1;
         $pcmd = ['sgdisk', '-a1', "-n$pnum:34:2047", "-t$pnum:EF02", $target_dev];
 
