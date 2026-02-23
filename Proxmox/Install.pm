@@ -646,11 +646,13 @@ sub prepare_grub_efi_boot_esp {
         || die "unable to mount $espdev\n";
 
     eval {
+        my $run_env = Proxmox::Install::RunEnv::get();
+        my $grub_target = $run_env->{arch} eq 'arm64' ? 'arm64-efi' : 'x86_64-efi';
+
         my $rc = syscmd(
-            "chroot $targetdir /usr/sbin/grub-install --target x86_64-efi --no-floppy --bootloader-id='proxmox' $dev"
+            "chroot $targetdir /usr/sbin/grub-install --target $grub_target --no-floppy --bootloader-id='proxmox' $dev"
         );
         if ($rc != 0) {
-            my $run_env = Proxmox::Install::RunEnv::get();
             if ($run_env->{boot_type} eq 'efi') {
                 die "unable to install the EFI boot loader on '$dev'\n";
             } else {
@@ -662,8 +664,12 @@ sub prepare_grub_efi_boot_esp {
         mkdir("$targetdir/boot/efi/EFI/BOOT");
         syscmd("cp $targetdir/boot/efi/EFI/proxmox/*.efi $targetdir/boot/efi/EFI/BOOT/") == 0
             || die "unable to copy efi boot loader\n";
+
+        my ($shim_src, $boot_dst) = $run_env->{arch} eq 'arm64'
+            ? ('shimaa64.efi', 'BOOTAA64.efi')
+            : ('shimx64.efi', 'BOOTx64.efi');
         syscmd(
-            "mv $targetdir/boot/efi/EFI/BOOT/shimx64.efi $targetdir/boot/efi/EFI/BOOT/BOOTx64.efi")
+            "mv $targetdir/boot/efi/EFI/BOOT/$shim_src $targetdir/boot/efi/EFI/BOOT/$boot_dst")
             == 0
             || die "unable to setup default efi boot loader\n";
     };
@@ -1274,6 +1280,16 @@ sub extract_data {
         # Note: keyboard-configuration/xbkb-keymap is used by console-setup
         my $xkmap = $iso_env->{locales}->{kmap}->{$keymap}->{x11} // 'us';
 
+        my $grub_debconfig = '';
+        if ($run_env->{arch} ne 'arm64') {
+            $grub_debconfig .=
+                "grub-pc grub-pc/install_devices select $grub_install_devices_txt\n";
+        }
+        my $grub_efi_pkg = $run_env->{arch} eq 'arm64'
+            ? 'grub-efi-arm64' : 'grub-efi-amd64';
+        $grub_debconfig .=
+            "$grub_efi_pkg grub2/force_efi_extra_removable boolean true\n";
+
         debconfig_set($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated select en_US.UTF-8 UTF-8
@@ -1282,8 +1298,7 @@ samba-common samba-common/workgroup string WORKGROUP
 postfix postfix/main_mailer_type select No configuration
 keyboard-configuration keyboard-configuration/xkb-keymap select $xkmap
 d-i debian-installer/locale select en_US.UTF-8
-grub-pc grub-pc/install_devices select $grub_install_devices_txt
-grub-efi-amd64 grub2/force_efi_extra_removable boolean true
+${grub_debconfig}
 _EOD
 
         my $pkg_count = 0;
@@ -1298,17 +1313,20 @@ _EOD
             my $path = $_;
             my ($deb) = $path =~ m/${proxmox_pkgdir}\/(.*\.deb)/;
 
-            # the grub-pc/grub-efi-amd64 packages (w/o -bin) are the ones actually updating grub
-            # upon upgrade - and conflict with each other - install the fitting one only
-            next if ($deb =~ /grub-pc_/ && $run_env->{boot_type} ne 'bios');
-            next if ($deb =~ /grub-efi-amd64_/ && $run_env->{boot_type} ne 'efi');
+            # the grub-pc/grub-efi packages (w/o -bin) are the ones actually updating
+            # grub upon upgrade - and conflict with each other - install the fitting one
+            # only; arm64 is EFI-only and never has grub-pc
+            next if $deb =~ /grub-pc_/ && ($run_env->{boot_type} ne 'bios' || $run_env->{arch} eq 'arm64');
+            next if $deb =~ /grub-efi-amd64_/ && $run_env->{arch} ne 'amd64';
+            next if $deb =~ /grub-efi-arm64_/ && $run_env->{arch} ne 'arm64';
+            next if $deb =~ /grub-efi-(?:amd64|arm64)_/ && $run_env->{boot_type} ne 'efi';
             next if ($deb =~ /^proxmox-grub/ && $run_env->{boot_type} ne 'efi');
             next if ($deb =~ /^proxmox-secure-boot-support_/ && !$run_env->{secure_boot});
             next
                 if ($deb =~ /^proxmox-first-boot/
                     && !Proxmox::Install::Config::get_first_boot_opt('enabled'));
 
-            # support installing a matching CPU microcode package by default
+            # CPU microcode packages are x86-only
             next if $deb =~ /^amd64-microcode_/ && $run_env->{cpu_vendor_id} ne 'AuthenticAMD';
             next if $deb =~ /^intel-microcode_/ && $run_env->{cpu_vendor_id} ne 'GenuineIntel';
 
@@ -1492,7 +1510,8 @@ _EOD
                             $run_env->{secure_boot},
                         );
                     } else {
-                        if (!$native_4k_disk_bootable) {
+                        # BIOS boot via i386-pc is x86-only, arm64 is EFI-only
+                        if (!$native_4k_disk_bootable && $run_env->{arch} ne 'arm64') {
                             eval {
                                 syscmd(
                                     "chroot $targetdir /usr/sbin/grub-install --target i386-pc --no-floppy --bootloader-id='proxmox' $dev"
