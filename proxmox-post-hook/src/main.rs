@@ -777,6 +777,37 @@ ii |amd64|proxmox-kernel-6.8.8-2-pve-signed
     }
 
     #[test]
+    fn finds_correct_kernel_package_name_arm64() {
+        let mocked_run_cmd = |cmd: &[&str]| {
+            if cmd[0] == "dpkg" {
+                assert_eq!(cmd, &["dpkg", "--print-architecture"]);
+                Ok("arm64\n".to_owned())
+            } else {
+                assert_eq!(
+                    cmd,
+                    &[
+                        "dpkg-query",
+                        "--showformat",
+                        "${db:Status-Abbrev}|${Architecture}|${Package}\\n",
+                        "--show",
+                        "proxmox-kernel-[0-9]*",
+                    ]
+                );
+                Ok(r#"ii |all|proxmox-kernel-6.17
+un ||proxmox-kernel-6.17.2-1-pve
+ii |arm64|proxmox-kernel-6.17.2-1-pve-signed
+                "#
+                .to_owned())
+            }
+        };
+
+        assert_eq!(
+            PostHookInfo::find_kernel_package_name(&mocked_run_cmd).unwrap(),
+            "proxmox-kernel-6.17.2-1-pve-signed"
+        );
+    }
+
+    #[test]
     fn find_kernel_package_name_fails_on_wrong_architecture() {
         let mocked_run_cmd = |cmd: &[&str]| {
             if cmd[0] == "dpkg" {
