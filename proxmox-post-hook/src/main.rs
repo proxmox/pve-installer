@@ -513,6 +513,45 @@ impl PostHookInfo {
         })
     }
 
+    /// Extracts the version from the installed kernel image path and
+    /// the version string from /proc/version.
+    ///
+    /// ARM64 kernels have no x86 real-mode header, so the version cannot
+    /// be read from a fixed offset. Instead, extract the release from
+    /// the image filename and parse /proc/version for the full string.
+    #[cfg(target_arch = "aarch64")]
+    fn gather_kernel_version(
+        run_cmd: &dyn Fn(&[&str]) -> Result<String>,
+        _open_file: &dyn Fn(&str) -> Result<File>,
+    ) -> Result<KernelVersionInformation> {
+        let image_path = Self::find_kernel_image_path(run_cmd)?;
+
+        let release = image_path
+            .strip_prefix("/boot/vmlinuz-")
+            .context("unexpected kernel image path format")?
+            .to_owned();
+
+        // Try to get the full version string from /proc/version
+        let version = fs::read_to_string("/proc/version")
+            .map(|v| {
+                // /proc/version: "Linux version 6.17.2-1-pve (...) #1 SMP ..."
+                // extract everything after the second space
+                v.splitn(3, ' ')
+                    .nth(2)
+                    .unwrap_or("")
+                    .trim()
+                    .to_owned()
+            })
+            .unwrap_or_default();
+
+        Ok(KernelVersionInformation {
+            machine: std::env::consts::ARCH.to_owned(),
+            sysname: "Linux".to_owned(),
+            release,
+            version,
+        })
+    }
+
     /// Retrieves the absolute path to the kernel image (aka. `/boot/vmlinuz-<version>`)
     /// inside the chroot by looking at the file list installed by the kernel package.
     ///
@@ -586,31 +625,48 @@ impl PostHookInfo {
         let mut sockets = HashSet::new();
         let mut cores = HashSet::new();
 
-        // Does not matter if we read the file from inside the chroot or directly on the host.
         let cpuinfo = fs::read_to_string("/proc/cpuinfo")?;
         for line in cpuinfo.lines() {
             match line.split_once(':') {
                 Some((key, _)) if key.trim() == "processor" => {
                     result.cpus += 1;
                 }
+                // x86: "core id", ARM64: not present
                 Some((key, value)) if key.trim() == "core id" => {
                     cores.insert(value);
                 }
+                // x86: "physical id", ARM64: not present
                 Some((key, value)) if key.trim() == "physical id" => {
                     sockets.insert(value);
                 }
-                Some((key, value)) if key.trim() == "flags" => {
+                // x86: "flags", ARM64: "Features"
+                Some((key, value))
+                    if key.trim() == "flags"
+                        || key.trim() == "Features" =>
+                {
                     value.trim().clone_into(&mut result.flags);
                 }
-                Some((key, value)) if key.trim() == "model name" => {
-                    value.trim().clone_into(&mut result.model);
+                // x86: "model name", ARM64: "CPU implementer"
+                Some((key, value))
+                    if key.trim() == "model name"
+                        || key.trim() == "CPU implementer" =>
+                {
+                    if result.model.is_empty() {
+                        value.trim().clone_into(&mut result.model);
+                    }
                 }
                 _ => {}
             }
         }
 
         result.cores = cores.len();
-        result.sockets = sockets.len();
+        // ARM64 has no physical id, assume 1 socket if we found
+        // CPUs but no socket info
+        result.sockets = if sockets.is_empty() && result.cpus > 0 {
+            1
+        } else {
+            sockets.len()
+        };
 
         Ok(result)
     }
