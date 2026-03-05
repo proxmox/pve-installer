@@ -156,7 +156,7 @@ cargo-build:
 .PHONY: upload
 upload: UPLOAD_DIST ?= $(DEB_DISTRIBUTION)
 upload: $(ALL_DEBS)
-	tar cf - $(ALL_DEBS) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs,pdm --dist $(UPLOAD_DIST)
+	tar cf - $(ALL_DEBS) | ssh -X repoman@repo.proxmox.com -- upload --product pve,pmg,pbs,pdm --dist $(UPLOAD_DIST) --arch $(DEB_HOST_ARCH)
 
 %.img:
 	truncate -s 2G $@
