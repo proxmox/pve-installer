@@ -4,12 +4,13 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{Context, Result, bail, format_err};
+use anyhow::{Context, Result, anyhow, bail, format_err};
 use glob::Pattern;
 use proxmox_sys::{crypt::verify_crypt_pw, linux::tty::read_password};
 use std::{
     collections::BTreeMap,
-    fmt, fs,
+    fmt,
+    fs::{self, File},
     io::{self, IsTerminal, Read},
     path::{Path, PathBuf},
     process::{self, Command, Stdio},
@@ -33,6 +34,13 @@ static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 /// Locale information as raw JSON, can be parsed into a
 /// [LocaleInfo](`proxmox_installer_common::setup::LocaleInfo`) struct.
 const LOCALE_INFO: &str = include_str!("../../locale-info.json");
+
+#[derive(Debug, PartialEq)]
+struct CdInfo {
+    product_name: String,
+    release: String,
+    isorelease: String,
+}
 
 /// Arguments for the `device-info` command.
 struct CommandDeviceInfoArgs {
@@ -197,6 +205,22 @@ OPTIONS:
     }
 }
 
+#[derive(Copy, Clone)]
+enum PxeLoader {
+    Ipxe,
+}
+
+impl FromStr for PxeLoader {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "ipxe" => Ok(PxeLoader::Ipxe),
+            _ => bail!("unknown PXE loader '{s}'"),
+        }
+    }
+}
+
 /// Arguments for the `prepare-iso` command.
 struct CommandPrepareISOArgs {
     /// Path to the source ISO to prepare.
@@ -204,6 +228,7 @@ struct CommandPrepareISOArgs {
 
     /// Path to store the final ISO to, defaults to an auto-generated file name depending on mode
     /// and the same directory as the source file is located in.
+    /// If '--pxe' is specified, the path must be a directory.
     output: Option<PathBuf>,
 
     /// Where the automatic installer should fetch the answer file from.
@@ -234,10 +259,24 @@ struct CommandPrepareISOArgs {
     ///
     /// Must be appropriately enabled in the answer file.
     on_first_boot: Option<PathBuf>,
+
+    /// Instead of producing an ISO file, generate a 'initrd.img' and 'vmlinuz' file for use with
+    /// (i)PXE servers. The '--output' option must point to a directory to place these files in.
+    ///
+    /// See also '--pxe-loader'.
+    pxe: bool,
+
+    /// Optional. The only possible value is 'ipxe'. If <LOADER> is specified, a
+    /// configuration file is additionally produced for the specified PXE loader.
+    ///
+    /// Implies '--pxe'.
+    pxe_loader: Option<PxeLoader>,
 }
 
 impl cli::Subcommand for CommandPrepareISOArgs {
     fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        let pxe_loader = args.opt_value_from_str("--pxe-loader")?;
+
         Ok(Self {
             output: args.opt_value_from_str("--output")?,
             fetch_from: args.value_from_str("--fetch-from")?,
@@ -249,6 +288,8 @@ impl cli::Subcommand for CommandPrepareISOArgs {
                 .opt_value_from_str("--partition-label")?
                 .unwrap_or_else(default_partition_label),
             on_first_boot: args.opt_value_from_str("--on-first-boot")?,
+            pxe: args.contains("--pxe") || pxe_loader.is_some(),
+            pxe_loader,
             // Needs to be last
             input: args.free_from_str()?,
         })
@@ -292,6 +333,9 @@ OPTIONS:
           Path to store the final ISO to, defaults to an auto-generated file name depending on mode
           and the same directory as the source file is located in.
 
+          If '--pxe' is specified, the given path must be a directory, otherwise it will default
+          to the directory of the source file.
+
       --fetch-from <FETCH_FROM>
           Where the automatic installer should fetch the answer file from.
 
@@ -312,7 +356,7 @@ OPTIONS:
           input ISO file.
 
       --partition-label <PARTITION_LABEL>
-          Can be used in combination with `--fetch-from partition` to set the partition label the
+          Can be used in combination with '--fetch-from partition' to set the partition label the
           auto-installer will search for.
 
           [default: proxmox-ais]
@@ -322,6 +366,21 @@ OPTIONS:
           installation. Can be used for further bootstrapping the new system.
 
           Must be appropriately enabled in the answer file.
+
+      --pxe
+          Instead of only producing an ISO file, additionally generate 'initrd.img' and 'vmlinuz'
+          file for use with (i)PXE servers. If given, the '--output' option must point to a
+          directory to place the files in, instead of a filename.
+
+          See also '--pxe-loader'.
+
+          [default: off]
+
+      --pxe-loader <LOADER>
+          Optional. The only possible value is 'ipxe'. If <LOADER> is specified, a configuration
+          file is additionally produced for the specified PXE loader.
+
+          Implies '--pxe'.
 
   -h, --help         Print this help
   -V, --version      Print version
@@ -639,25 +698,41 @@ fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
         }
     }
 
+    if let Some(path) = &args.output {
+        if args.pxe {
+            if !fs::exists(path)? || !fs::metadata(path)?.is_dir() {
+                // If PXE output is enabled and an output was specified, it must point to a
+                // directory, as we produce multiple files there.
+                bail!("'--output' must point to an existing directory when '--pxe' is specified.");
+            }
+        } else if fs::exists(path)? && !fs::metadata(path)?.is_file() {
+            // .. otherwise, the output file must either not exist yet or point to a file which
+            // gets overwritten.
+            bail!(
+                "Path specified by '--output' already exists but is not a file, cannot overwrite."
+            );
+        }
+    }
+
     if let Some(file) = &args.answer_file {
         println!("Checking provided answer file...");
         parse_answer(file)?;
     }
 
-    let iso_target = final_iso_location(args);
+    let iso_target = final_iso_location(args)?;
     let iso_target_file_name = match iso_target.file_name() {
         None => bail!("no base filename in target ISO path found"),
         Some(source_file_name) => source_file_name.to_string_lossy(),
     };
 
-    let mut tmp_base = PathBuf::new();
-    match args.tmp.as_ref() {
-        Some(tmp_dir) => tmp_base.push(tmp_dir),
-        None => tmp_base.push(iso_target.parent().unwrap()),
-    }
+    let tmp_base = args
+        .tmp
+        .as_ref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(&args.input.parent().unwrap()));
 
     let mut tmp_iso = tmp_base.clone();
-    tmp_iso.push(format!("{iso_target_file_name}.tmp",));
+    tmp_iso.push(format!("{iso_target_file_name}.tmp"));
 
     println!("Copying source ISO to temporary location...");
     fs::copy(&args.input, &tmp_iso)?;
@@ -681,6 +756,7 @@ fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
         "/auto-installer-mode.toml",
         &uuid,
     )?;
+    let _ = fs::remove_file(&instmode_file_tmp);
 
     if let Some(answer_file) = &args.answer_file {
         inject_file_to_iso(&tmp_iso, answer_file, "/answer.toml", &uuid)?;
@@ -695,38 +771,162 @@ fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
         )?;
     }
 
-    println!("Moving prepared ISO to target location...");
-    fs::rename(&tmp_iso, &iso_target)?;
-    println!("Final ISO is available at {iso_target:?}.");
+    if args.pxe {
+        prepare_pxe_compatible_files(args, &tmp_base, &tmp_iso, &iso_target, &uuid)?;
+        let _ = fs::remove_file(tmp_iso);
+    } else {
+        println!("Moving prepared ISO to target location...");
+        fs::copy(&tmp_iso, &iso_target)?;
+        let _ = fs::remove_file(tmp_iso);
+        println!("Final ISO is available at {}.", iso_target.display());
+    }
 
     Ok(())
 }
 
-fn final_iso_location(args: &CommandPrepareISOArgs) -> PathBuf {
-    if let Some(specified) = args.output.clone() {
-        return specified;
+/// Creates and prepares all files needing for PXE-booting the installer.
+///
+/// The general flow here is:
+/// 1. Extract the kernel and initrd image to the given target folder
+/// 2. Recompress the initrd image from zstd to gzip, as PXE loaders generally
+///    only support gzip.
+/// 3. Remove the `/boot` directory from the target ISO, to save nearly 100 MiB
+/// 4. If a particular (supported) PXE loader was given on the command line,
+///    generate a configuration file for it.
+///
+/// # Arguments
+///
+/// * `args` - Original command arguments given to the `prepare-iso` subcommand.
+/// * `tmp_base` - Directory to use a scratch pad.
+/// * `iso_source` - Source ISO file to extract kernel and initrd from.
+/// * `iso_target` - Target ISO file to create, must be different from 'iso_source'.
+/// * `iso_uuid` - UUID to set for the target ISO.
+fn prepare_pxe_compatible_files(
+    args: &CommandPrepareISOArgs,
+    tmp_base: &Path,
+    iso_source: &Path,
+    iso_target: &Path,
+    iso_uuid: &str,
+) -> Result<()> {
+    debug_assert_ne!(
+        iso_source, iso_target,
+        "source and target ISO files must be different"
+    );
+
+    println!("Creating vmlinuz and initrd.img for PXE booting...");
+
+    let out_dir = match &args.output {
+        Some(path) => path,
+        None => args
+            .input
+            .parent()
+            .ok_or_else(|| anyhow!("could not determine directory of input file"))?,
+    };
+
+    let cd_info_path = out_dir.join(".cd-info.tmp");
+    extract_file_from_iso(iso_source, Path::new("/.cd-info"), &cd_info_path)?;
+    let cd_info = parse_cd_info(&fs::read_to_string(&cd_info_path)?)?;
+
+    extract_file_from_iso(
+        iso_source,
+        Path::new("/boot/linux26"),
+        &out_dir.join("vmlinuz"),
+    )?;
+
+    let compressed_initrd = tmp_base.join("initrd.img.zst");
+    extract_file_from_iso(
+        iso_source,
+        Path::new("/boot/initrd.img"),
+        &compressed_initrd,
+    )?;
+
+    // re-compress the initrd from zstd to gzip, as iPXE does not support a
+    // zstd-compressed initrd
+    {
+        println!("Recompressing initrd using gzip...");
+
+        let input = File::open(&compressed_initrd)
+            .with_context(|| format!("opening {compressed_initrd:?}"))?;
+
+        let output_file = File::create(out_dir.join("initrd.img"))
+            .with_context(|| format!("opening {out_dir:?}/initrd.img"))?;
+        let mut output = flate2::write::GzEncoder::new(output_file, flate2::Compression::default());
+
+        zstd::stream::copy_decode(input, &mut output)?;
+        output.finish()?;
     }
-    let mut suffix: String = match args.fetch_from {
-        FetchAnswerFrom::Http => "auto-from-http",
-        FetchAnswerFrom::Iso => "auto-from-iso",
-        FetchAnswerFrom::Partition => "auto-from-partition",
+
+    let iso_target_file_name = iso_target
+        .file_name()
+        .map(|name| name.to_string_lossy())
+        .ok_or_else(|| anyhow!("no filename found for ISO target?"))?;
+    println!("Creating ISO file {:?}...", iso_target_file_name);
+
+    // need to remove the output file if it exists, as xorriso refuses to overwrite it
+    if fs::exists(iso_target)? {
+        fs::remove_file(iso_target).context("failed to remove existing target ISO file")?;
     }
-    .into();
+
+    // remove the whole /boot folder from the ISO to save some space (nearly 100 MiB), as it is
+    // unnecessary with PXE
+    remove_file_from_iso(iso_source, iso_target, iso_uuid, "/boot")?;
+
+    if let Some(loader) = args.pxe_loader {
+        create_pxe_config_file(loader, &cd_info, &iso_target_file_name, out_dir)?;
+    }
+
+    // try to clean up all temporary files
+    let _ = fs::remove_file(&cd_info_path);
+    let _ = fs::remove_file(&compressed_initrd);
+    println!("PXE-compatible files are available in {out_dir:?}.");
+
+    Ok(())
+}
+
+fn final_iso_location(args: &CommandPrepareISOArgs) -> Result<PathBuf> {
+    // if not in PXE mode and the user already specified a output file, use that
+    if !args.pxe
+        && let Some(specified) = &args.output
+    {
+        return Ok(specified.clone());
+    }
+
+    let mut filename = args
+        .input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| anyhow!("input name has no filename?"))?
+        .to_owned();
+
+    match args.fetch_from {
+        FetchAnswerFrom::Http => filename.push_str("-auto-from-http"),
+        FetchAnswerFrom::Iso => filename.push_str("-auto-from-iso"),
+        FetchAnswerFrom::Partition => filename.push_str("-auto-from-partition"),
+    }
 
     if args.url.is_some() {
-        suffix.push_str("-url");
+        filename.push_str("-url");
     }
     if args.cert_fingerprint.is_some() {
-        suffix.push_str("-fp");
+        filename.push_str("-fp");
     }
 
-    let base = args.input.parent().unwrap();
-    let iso = args.input.file_stem().unwrap();
+    filename.push_str(".iso");
 
-    let mut target = base.to_path_buf();
-    target.push(format!("{}-{}.iso", iso.to_str().unwrap(), suffix));
-
-    target.to_path_buf()
+    if args.pxe
+        && let Some(out_dir) = &args.output
+    {
+        // for PXE, place the file into the output directory if one was given
+        Ok(out_dir.join(filename))
+    } else {
+        // .. otherwise, we default to the directory the input ISO lies in
+        let path = args
+            .input
+            .parent()
+            .ok_or_else(|| anyhow!("parent directory of input not found"))?
+            .join(filename);
+        Ok(path)
+    }
 }
 
 fn inject_file_to_iso(
@@ -754,6 +954,209 @@ fn inject_file_to_iso(
             String::from_utf8_lossy(&result.stderr)
         );
     }
+    Ok(())
+}
+
+/// Extracts a file from the given ISO9660 file.
+///
+/// If `file` points a directory inside the ISO, `outpath` must be a directory too.
+///
+/// # Arguments
+///
+/// * `iso` - Source ISO file to extract from
+/// * `file` - Absolute file path inside the ISO file to extract.
+/// * `outpath` - Output path to write the extracted file to.
+fn extract_file_from_iso(iso: &Path, file: &Path, outpath: &Path) -> Result<()> {
+    debug_assert!(fs::exists(iso).unwrap_or_default());
+
+    let result = Command::new("xorriso")
+        .arg("-osirrox")
+        .arg("on")
+        .arg("-indev")
+        .arg(iso)
+        .arg("-extract")
+        .arg(file)
+        .arg(outpath)
+        .output()?;
+
+    if !result.status.success() {
+        bail!(
+            "Error extracting {file:?} from {iso:?} to {outpath:?}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+    Ok(())
+}
+
+/// Removes a file from the ISO9660 file.
+///
+/// # Arguments
+///
+/// * `iso_in` - Source ISO file to remove the file from.
+/// * `iso_out` - Target ISO file to create with the given filepath removed, must be different from
+///   'iso_in'
+/// * `iso_uuid` - UUID to set for the target ISO.
+/// * `path` - File path to remove from the ISO file.
+fn remove_file_from_iso(
+    iso_in: &Path,
+    iso_out: &Path,
+    iso_uuid: &str,
+    path: impl AsRef<Path> + fmt::Debug,
+) -> Result<()> {
+    debug_assert_ne!(
+        iso_in, iso_out,
+        "source and target ISO files must be different"
+    );
+
+    let result = Command::new("xorriso")
+        .arg("-boot_image")
+        .arg("any")
+        .arg("keep")
+        .arg("-volume_date")
+        .arg("uuid")
+        .arg(iso_uuid)
+        .arg("-indev")
+        .arg(iso_in)
+        .arg("-outdev")
+        .arg(iso_out)
+        .arg("-rm_r")
+        .arg(path.as_ref())
+        .output()?;
+
+    if !result.status.success() {
+        bail!(
+            "Error removing {path:?} from {iso_in:?}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+    Ok(())
+}
+
+struct PxeBootOption {
+    /// Unique, short, single-word identifier among all entries
+    id: &'static str,
+    /// What to show in parenthesis in the menu select
+    description: &'static str,
+    /// Extra parameters to append to the kernel commandline
+    extra_params: &'static str,
+}
+
+const DEFAULT_KERNEL_PARAMS: &str = "ramdisk_size=16777216 rw quiet";
+const PXE_BOOT_OPTIONS: &[PxeBootOption] = &[
+    PxeBootOption {
+        id: "auto",
+        description: "Automated",
+        extra_params: "splash=silent proxmox-start-auto-installer",
+    },
+    PxeBootOption {
+        id: "gui",
+        description: "Graphical",
+        extra_params: "splash=silent",
+    },
+    PxeBootOption {
+        id: "tui",
+        description: "Terminal UI",
+        extra_params: "splash=silent proxmox-tui-mode vga=788",
+    },
+    PxeBootOption {
+        id: "serial",
+        description: "Terminal UI, Serial Console",
+        extra_params: "splash=silent proxmox-tui-mode console=ttyS0,115200",
+    },
+    PxeBootOption {
+        id: "debug",
+        description: "Debug Mode",
+        extra_params: "splash=verbose proxmox-debug vga=788",
+    },
+    PxeBootOption {
+        id: "debugtui",
+        description: "Terminal UI, Debug Mode",
+        extra_params: "splash=verbose proxmox-debug proxmox-tui-mode vga=788",
+    },
+    PxeBootOption {
+        id: "serialdebug",
+        description: "Serial Console, Debug Mode",
+        extra_params: "splash=verbose proxmox-debug proxmox-tui-mode console=ttyS0,115200",
+    },
+];
+
+/// Creates a configuration file for the given PXE bootloader.
+///
+/// # Arguments
+///
+/// * `loader` - PXE bootloader to generate the configuration for
+/// * `cd_info` - Information loaded from the ISO
+/// * `iso_filename` - Final name of the ISO file, written to the PXE configuration
+/// * `out_dir` - Output path to write the file(s) to
+fn create_pxe_config_file(
+    loader: PxeLoader,
+    cd_info: &CdInfo,
+    iso_filename: &str,
+    out_dir: &Path,
+) -> Result<()> {
+    debug_assert!(fs::exists(out_dir).unwrap_or_default());
+
+    let (filename, contents) = match loader {
+        PxeLoader::Ipxe => {
+            let default_kernel =
+                format!("kernel vmlinuz {DEFAULT_KERNEL_PARAMS} initrd=initrd.img");
+
+            let menu_items = PXE_BOOT_OPTIONS
+                .iter()
+                .map(|opt| {
+                    format!(
+                        "item {} Install {} ({})\n",
+                        opt.id, cd_info.product_name, opt.description
+                    )
+                })
+                .collect::<String>();
+
+            let menu_options = PXE_BOOT_OPTIONS
+                .iter()
+                .map(|opt| {
+                    format!(
+                        r#":{}
+    echo Loading {} {} Installer ...
+    {default_kernel} {}
+    goto load
+
+"#,
+                        opt.id, cd_info.product_name, opt.description, opt.extra_params
+                    )
+                })
+                .collect::<String>();
+
+            let script = format!(
+                r#"#!ipxe
+
+dhcp
+
+menu Welcome to {} {}-{}
+{menu_items}
+choose --default auto --timeout 10000 target && goto ${{target}}
+
+{menu_options}
+:load
+initrd initrd.img
+initrd {iso_filename} proxmox.iso
+boot
+"#,
+                cd_info.product_name, cd_info.release, cd_info.isorelease
+            );
+
+            println!("Creating boot.ipxe for iPXE booting...");
+            ("boot.ipxe", script)
+        }
+    };
+
+    let target_path = out_dir.join(filename);
+    fs::create_dir_all(
+        target_path
+            .parent()
+            .ok_or_else(|| anyhow!("expected parent path"))?,
+    )?;
+
+    fs::write(target_path, contents)?;
     Ok(())
 }
 
@@ -946,4 +1349,62 @@ fn check_prepare_requirements(args: &CommandPrepareISOArgs) -> Result<()> {
     };
 
     Ok(())
+}
+
+/// Parses the simple key='value' .cd-info format as shipped in the installer.
+///
+/// # Parameters
+///
+/// * `raw_cd_info` - .cd-info file contents.
+///
+/// # Returns
+///
+/// If successful, a struct containing the long product name, the product version and ISO release
+/// iteration.
+fn parse_cd_info(raw_cd_info: &str) -> Result<CdInfo> {
+    let mut info = CdInfo {
+        product_name: "Proxmox VE".into(),
+        release: String::new(),
+        isorelease: String::new(),
+    };
+
+    for line in raw_cd_info.lines() {
+        match line.split_once('=') {
+            Some(("PRODUCTLONG", val)) => info.product_name = val.trim_matches('\'').parse()?,
+            Some(("RELEASE", val)) => info.release = val.trim_matches('\'').to_owned(),
+            Some(("ISORELEASE", val)) => info.isorelease = val.trim_matches('\'').to_owned(),
+            Some(_) => {}
+            None if line.is_empty() => {}
+            _ => bail!("invalid cd-info line: {line}"),
+        }
+    }
+
+    Ok(info)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CdInfo, parse_cd_info};
+    use anyhow::Result;
+
+    #[test]
+    fn parse_cdinfo() -> Result<()> {
+        let s = r#"
+PRODUCT='pve'
+PRODUCTLONG='Proxmox VE'
+RELEASE='42.1'
+ISORELEASE='1'
+ISONAME='proxmox-ve'
+"#;
+
+        assert_eq!(
+            parse_cd_info(s)?,
+            CdInfo {
+                product_name: "Proxmox VE".into(),
+                release: "42.1".into(),
+                isorelease: "1".into(),
+            }
+        );
+        Ok(())
+    }
 }
