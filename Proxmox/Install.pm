@@ -1478,7 +1478,7 @@ _EOD
 
         my $kapi;
         foreach my $fn (<$targetdir/lib/modules/*>) {
-            if ($fn =~ m!/(\d+\.\d+\.\d+-\d+-pve)$!) {
+            if ($fn =~ m!/(\d+\.\d+\.\d+-\d+(?:-\w+)?-pve)$!) {
                 die "found multiple kernels\n" if defined($kapi);
                 $kapi = $1;
             }
