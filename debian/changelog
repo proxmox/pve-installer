@@ -1,3 +1,29 @@
+proxmox-installer (9.1.7) trixie; urgency=medium
+
+  * add missing util-linux-extra dependency, which provides `waitpid` needed
+    in the debug shell's reboot handler.
+
+  * add experimental arm64/aarch64 support: detect architecture at runtime via
+    dpkg, adapt bootloader installation (grub target, shim/BOOT EFI filenames,
+    skip BIOS boot), skip EF02 partition on arm64, handle ARM serial consoles
+    (ttyAMA*), and support ARM cpuinfo and kernel version extraction in the
+    post-install hook.
+
+  * auto-installer: fix network interface pinning with uppercase MAC addresses
+    by normalizing to lowercase during parsing.
+
+  * post-hook: save sent data to /run/proxmox-installer for easier inspection
+    when debugging failed or rejected post-hook calls.
+
+  * unconfigured: catch Ctrl+C (INT signal) and drop into debug shell instead
+    of causing a kernel panic.
+
+  * assistant: add support for splitting ISO into (i)PXE-compatible files,
+    extracting vmlinuz and initrd for network booting. A configuration file
+    for iPXE can optionally be generated via --pxe-loader.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 31 Mar 2026 22:40:37 +0200
+
 proxmox-installer (9.1.6) trixie; urgency=medium
 
   * pdm: refine wording for enterprise repo access.
