@@ -502,6 +502,15 @@ impl NetworkInterfacePinningOptions {
     /// - only contains ASCII alphanumeric characters and underscore, as
     ///   enforced by our `pve-iface` json schema.
     pub fn verify(&self) -> Result<()> {
+        // Mimicking the `pve-iface` schema verification
+        static RE: OnceLock<Regex> = OnceLock::new();
+        let re = RE.get_or_init(|| {
+            RegexBuilder::new(r"^[a-z][a-z0-9_]{1,20}([:\.]\d+)?$")
+                .case_insensitive(true)
+                .build()
+                .unwrap()
+        });
+
         let mut reverse_mapping = HashMap::<String, String>::new();
         for (mac, name) in self.mapping.iter() {
             if name.len() < MIN_IFNAME_LEN {
@@ -516,15 +525,6 @@ impl NetworkInterfacePinningOptions {
                     MAX_IFNAME_LEN
                 );
             }
-
-            // Mimicking the `pve-iface` schema verification
-            static RE: OnceLock<Regex> = OnceLock::new();
-            let re = RE.get_or_init(|| {
-                RegexBuilder::new(r"^[a-z][a-z0-9_]{1,20}([:\.]\d+)?$")
-                    .case_insensitive(true)
-                    .build()
-                    .unwrap()
-            });
 
             if !re.is_match(name) {
                 bail!(
