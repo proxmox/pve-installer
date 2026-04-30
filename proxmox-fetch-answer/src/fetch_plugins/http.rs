@@ -1,14 +1,14 @@
 use anyhow::{Result, bail};
 use log::info;
-use serde::Serialize;
 use std::{
     fs::{self, read_to_string},
     process::Command,
 };
 
 use proxmox_auto_installer::{sysinfo, utils::HttpOptions};
-use proxmox_installer_common::http::{self, header::HeaderMap};
-use proxmox_installer_types::SystemInfo;
+use proxmox_installer_common::http::{self, header::HeaderMap,
+};
+use proxmox_installer_types::answer::fetch::{AnswerFetchData, AnswerFetchDataSchema};
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -30,67 +30,6 @@ static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint
 static DHCP_URL_OPTION: &str = "proxmox-auto-installer-manifest-url";
 static DHCP_CERT_FP_OPTION: &str = "proxmox-auto-installer-cert-fingerprint";
 static DHCP_LEASE_FILE: &str = "/var/lib/dhcp/dhclient.leases";
-
-/// Metadata of the HTTP POST payload, such as schema version of the document.
-#[derive(Serialize)]
-#[serde(rename_all = "kebab-case")]
-struct HttpFetchInfoSchema {
-    /// major.minor version describing the schema version of this document, in a semanticy-version
-    /// way.
-    ///
-    /// major: Incremented for incompatible/breaking API changes, e.g. removing an existing
-    /// field.
-    /// minor: Incremented when adding functionality in a backwards-compatible matter, e.g.
-    /// adding a new field.
-    version: String,
-}
-
-impl HttpFetchInfoSchema {
-    const SCHEMA_VERSION: &str = "1.0";
-}
-
-impl Default for HttpFetchInfoSchema {
-    fn default() -> Self {
-        Self {
-            version: Self::SCHEMA_VERSION.to_owned(),
-        }
-    }
-}
-
-/// All data sent as request payload with the answerfile fetch POST request.
-///
-/// NOTE: The format is versioned through `schema.version` (`$schema.version` in the
-/// resulting JSON), ensure you update it when this struct or any of its members gets modified.
-#[derive(Serialize)]
-#[serde(rename_all = "kebab-case")]
-struct HttpFetchPayload {
-    /// Metadata for the answerfile fetch payload
-    // This field is prefixed by `$` on purpose, to indicate that it is document metadata and not
-    // part of the actual content itself. (E.g. JSON Schema uses a similar naming scheme)
-    #[serde(rename = "$schema")]
-    schema: HttpFetchInfoSchema,
-    /// Information about the running system, flattened into this structure directly.
-    #[serde(flatten)]
-    sysinfo: SystemInfo,
-}
-
-impl HttpFetchPayload {
-    /// Retrieves the required information from the system and constructs the
-    /// full payload including meta data.
-    fn get() -> Result<Self> {
-        Ok(Self {
-            schema: HttpFetchInfoSchema::default(),
-            sysinfo: sysinfo::get()?,
-        })
-    }
-
-    /// Retrieves the required information from the system and constructs the
-    /// full payload including meta data, serialized as JSON.
-    pub fn as_json() -> Result<String> {
-        let info = Self::get()?;
-        Ok(serde_json::to_string(&info)?)
-    }
-}
 
 pub struct FetchFromHTTP;
 
@@ -129,7 +68,10 @@ impl FetchFromHTTP {
         }
 
         info!("Gathering system information.");
-        let payload = HttpFetchPayload::as_json()?;
+        let payload = serde_json::to_string(&AnswerFetchData {
+            schema: AnswerFetchDataSchema::default(),
+            sysinfo: sysinfo::get()?,
+        })?;
 
         info!("Sending POST request to '{answer_url}'.");
 
