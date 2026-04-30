@@ -3,11 +3,12 @@ use log::{LevelFilter, error, info};
 use std::{
     env,
     fs::{self, File},
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     process::ExitCode,
 };
 
+use proxmox_auto_installer::{log::AutoInstLogger, utils::parse_answer};
 use proxmox_installer_common::{
     FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, RUNTIME_DIR, http,
     setup::{
@@ -15,12 +16,9 @@ use proxmox_installer_common::{
         spawn_low_level_installer,
     },
 };
-
-use proxmox_auto_installer::{
-    answer::{Answer, FirstBootHookInfo, FirstBootHookSourceMode, RebootMode},
-    log::AutoInstLogger,
-    udevinfo::UdevInfo,
-    utils::parse_answer,
+use proxmox_installer_types::{
+    UdevInfo,
+    answer::{AutoInstallerConfig, FirstBootHookInfo, FirstBootHookSourceMode, RebootMode},
 };
 
 static LOGGER: AutoInstLogger = AutoInstLogger;
@@ -70,7 +68,7 @@ fn setup_first_boot_executable(first_boot: &FirstBootHookInfo) -> Result<()> {
     }
 }
 
-fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
+fn auto_installer_setup(in_test_mode: bool) -> Result<(AutoInstallerConfig, UdevInfo)> {
     let base_path = if in_test_mode { "./testdir" } else { "/" };
     let mut path = PathBuf::from(base_path);
 
@@ -85,7 +83,9 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(Answer, UdevInfo)> {
             .map_err(|err| format_err!("Failed to retrieve udev info details: {err}"))?
     };
 
-    let answer = Answer::try_from_reader(std::io::stdin().lock())?;
+    let mut raw_toml = String::new();
+    std::io::stdin().read_to_string(&mut raw_toml)?;
+    let answer: AutoInstallerConfig = toml::from_str(&raw_toml)?;
 
     if let Some(first_boot) = &answer.first_boot {
         setup_first_boot_executable(first_boot)?;
@@ -151,7 +151,7 @@ fn main() -> ExitCode {
 }
 
 fn run_installation(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     locales: &LocaleInfo,
     runtime_info: &RuntimeInfo,
     udevadm_info: &UdevInfo,

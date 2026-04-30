@@ -6,10 +6,11 @@ use std::{
     net::IpAddr,
 };
 
-use proxmox_installer_common::options::{
-    BtrfsCompressOption, NetworkInterfacePinningOptions, ZfsChecksumOption, ZfsCompressOption,
+use proxmox_installer_common::options::NetworkInterfacePinningOptions;
+use proxmox_installer_types::answer::{
+    BtrfsCompressOption, BtrfsRaidLevel, FilesystemType, ZfsChecksumOption, ZfsCompressOption,
+    ZfsRaidLevel,
 };
-use proxmox_installer_types::answer::{BtrfsRaidLevel, FilesystemType, ZfsRaidLevel};
 use proxmox_network_types::{Cidr, fqdn::Fqdn};
 
 // NOTE New answer file properties must use kebab-case, but should allow snake_case for backwards

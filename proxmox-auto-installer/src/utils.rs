@@ -6,32 +6,39 @@ use std::{
     process::Command,
 };
 
-use crate::{
+use proxmox_installer_types::{
+    UdevInfo,
     answer::{
-        self, Answer, DiskSelection, FirstBootHookSourceMode, FqdnConfig, FqdnExtendedConfig,
-        FqdnSourceMode, Network,
+        AutoInstallerConfig, DiskSelection, Filesystem, FilesystemOptions, FilesystemType,
+        FilterMatch, FirstBootHookSourceMode, FqdnConfig, FqdnFromDhcpConfig, FqdnSourceMode,
+        NetworkConfig,
     },
-    udevinfo::UdevInfo,
 };
+
 use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
     disk_checks::check_swapsize,
-    options::{NetworkOptions, RaidLevel, ZfsChecksumOption, ZfsCompressOption, email_validate},
+    options::{FilesystemDiskInfo, NetworkInterfacePinningOptions, NetworkOptions, email_validate},
     setup::{
         InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
         InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
 };
-use proxmox_installer_types::answer::FilesystemType;
+
 use serde::{Deserialize, Serialize};
 
 fn get_network_settings(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
     setup_info: &SetupInfo,
 ) -> Result<NetworkOptions> {
     info!("Setting up network configuration");
+
+    let pinning_opts = answer
+        .network
+        .interface_name_pinning()
+        .map(|answer| answer.into());
 
     let mut network_options = match &answer.global.fqdn {
         // If the user set a static FQDN in the answer file, override it
@@ -40,12 +47,12 @@ fn get_network_settings(
                 setup_info,
                 &runtime_info.network,
                 None,
-                answer.network.interface_name_pinning.as_ref(),
+                pinning_opts.as_ref(),
             );
             opts.fqdn = name.to_owned();
             opts
         }
-        FqdnConfig::Extended(FqdnExtendedConfig {
+        FqdnConfig::FromDhcp(FqdnFromDhcpConfig {
             source: FqdnSourceMode::FromDhcp,
             domain,
         }) => {
@@ -68,12 +75,12 @@ fn get_network_settings(
                 setup_info,
                 &runtime_info.network,
                 domain.as_deref(),
-                answer.network.interface_name_pinning.as_ref(),
+                pinning_opts.as_ref(),
             )
         }
     };
 
-    if let answer::NetworkSettings::Manual(settings) = &answer.network.network_settings {
+    if let NetworkConfig::FromAnswer(settings) = &answer.network {
         network_options.address = settings.cidr;
         network_options.dns_server = settings.dns;
         network_options.gateway = settings.gateway;
@@ -206,7 +213,7 @@ pub fn get_matched_udev_indexes(
 }
 
 fn set_disks(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
     config: &mut InstallConfig,
@@ -222,13 +229,13 @@ fn set_disks(
 }
 
 fn set_single_disk(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
     config: &mut InstallConfig,
 ) -> Result<()> {
-    match &answer.disks.disk_selection {
-        answer::DiskSelection::Selection(disk_list) => {
+    match answer.disks.disk_selection()? {
+        DiskSelection::Selection(disk_list) => {
             let disk_name = disk_list[0].clone();
             let disk = runtime_info
                 .disks
@@ -239,8 +246,8 @@ fn set_single_disk(
                 None => bail!("disk in 'disk-selection' not found"),
             }
         }
-        answer::DiskSelection::Filter(filter) => {
-            let disk_index = get_single_udev_index(filter, &udev_info.disks)?;
+        DiskSelection::Filter(filter) => {
+            let disk_index = get_single_udev_index(&filter, &udev_info.disks)?;
             let disk = runtime_info
                 .disks
                 .iter()
@@ -253,13 +260,13 @@ fn set_single_disk(
 }
 
 fn set_selected_disks(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
     config: &mut InstallConfig,
 ) -> Result<()> {
-    match &answer.disks.disk_selection {
-        answer::DiskSelection::Selection(disk_list) => {
+    match answer.disks.disk_selection()? {
+        DiskSelection::Selection(disk_list) => {
             info!("Disk selection found");
             for disk_name in disk_list.clone() {
                 let disk = runtime_info
@@ -273,17 +280,13 @@ fn set_selected_disks(
                 }
             }
         }
-        answer::DiskSelection::Filter(filter) => {
+        DiskSelection::Filter(filter) => {
             info!("No disk list found, looking for disk filters");
-            let filter_match = answer
-                .disks
-                .filter_match
-                .clone()
-                .unwrap_or(answer::FilterMatch::Any);
+            let filter_match = answer.disks.filter_match.unwrap_or_default();
             let selected_disk_indexes = get_matched_udev_indexes(
-                filter,
+                &filter,
                 &udev_info.disks,
-                filter_match == answer::FilterMatch::All,
+                filter_match == FilterMatch::All,
             )?;
 
             for i in selected_disk_indexes.into_iter() {
@@ -336,19 +339,23 @@ fn get_first_selected_disk(config: &InstallConfig) -> usize {
         .expect("could not parse key to usize")
 }
 
-fn verify_filesystem_settings(answer: &Answer, setup_info: &SetupInfo) -> Result<()> {
+fn verify_filesystem_settings(
+    answer: &AutoInstallerConfig,
+    setup_info: &SetupInfo,
+) -> Result<FilesystemOptions> {
     info!("Verifying filesystem settings");
 
-    if answer.disks.fs_type.is_btrfs() && !setup_info.config.enable_btrfs {
+    let fs_options = answer.disks.filesystem_details()?;
+    if answer.disks.filesystem == Filesystem::Btrfs && !setup_info.config.enable_btrfs {
         bail!(
             "BTRFS is not supported as a root filesystem for the product or the release of this ISO."
         );
     }
 
-    Ok(())
+    Ok(fs_options)
 }
 
-pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<()> {
+pub fn verify_locale_settings(answer: &AutoInstallerConfig, locales: &LocaleInfo) -> Result<()> {
     info!("Verifying locale settings");
     if !locales
         .countries
@@ -385,7 +392,7 @@ pub fn verify_locale_settings(answer: &Answer, locales: &LocaleInfo) -> Result<(
 ///
 /// Ensures that the provided email-address is of valid format and that one
 /// of the two root password options is set appropriately.
-pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
+pub fn verify_email_and_root_password_settings(answer: &AutoInstallerConfig) -> Result<()> {
     info!("Verifying email and root password settings");
 
     email_validate(&answer.global.mailto).with_context(|| answer.global.mailto.clone())?;
@@ -411,40 +418,41 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
     }
 }
 
-pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
-    if let DiskSelection::Selection(selection) = &answer.disks.disk_selection {
-        let min_disks = match answer.disks.fs_type {
-            FilesystemType::Ext4 | FilesystemType::Xfs => 1,
-            FilesystemType::Zfs(level) => level.get_min_disks(),
-            FilesystemType::Btrfs(level) => level.get_min_disks(),
-        };
+pub fn verify_disks_settings(answer: &AutoInstallerConfig) -> Result<()> {
+    let fs_options = answer.disks.filesystem_details()?;
+
+    if let DiskSelection::Selection(selection) = answer.disks.disk_selection()? {
+        let min_disks = fs_options.to_type().get_min_disks();
 
         if selection.len() < min_disks {
             bail!(
                 "{}: need at least {} disks",
-                answer.disks.fs_type,
+                fs_options.to_type(),
                 min_disks
             );
         }
 
         let mut disk_set = HashSet::new();
-        for disk in selection {
+        for disk in &selection {
             if !disk_set.insert(disk) {
                 bail!("List of disks contains duplicate device {disk}");
             }
         }
     }
 
-    if let answer::FsOptions::LVM(lvm) = &answer.disks.fs_options
-        && let Some((swapsize, hdsize)) = lvm.swapsize.zip(lvm.hdsize)
-    {
-        check_swapsize(swapsize, hdsize)?;
+    match fs_options {
+        FilesystemOptions::Ext4(lvm) | FilesystemOptions::Xfs(lvm) => {
+            if let Some((swapsize, hdsize)) = lvm.swapsize.zip(lvm.hdsize) {
+                check_swapsize(swapsize, hdsize)?;
+            }
+        }
+        _ => {}
     }
 
     Ok(())
 }
 
-pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
+pub fn verify_first_boot_settings(answer: &AutoInstallerConfig) -> Result<()> {
     info!("Verifying first boot settings");
 
     if let Some(first_boot) = &answer.first_boot
@@ -457,10 +465,16 @@ pub fn verify_first_boot_settings(answer: &Answer) -> Result<()> {
     Ok(())
 }
 
-pub fn verify_network_settings(network: &Network, run_env: Option<&RuntimeInfo>) -> Result<()> {
+pub fn verify_network_settings(
+    network: &NetworkConfig,
+    run_env: Option<&RuntimeInfo>,
+) -> Result<()> {
     info!("Verifying network settings");
 
-    if let Some(pin_opts) = &network.interface_name_pinning {
+    let pin_opts: Option<NetworkInterfacePinningOptions> =
+        network.interface_name_pinning().map(|v| v.into());
+
+    if let Some(pin_opts) = pin_opts {
         pin_opts.verify()?;
 
         if let Some(run_env) = run_env {
@@ -483,7 +497,7 @@ pub fn verify_network_settings(network: &Network, run_env: Option<&RuntimeInfo>)
 }
 
 pub fn parse_answer(
-    answer: &Answer,
+    answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
     runtime_info: &RuntimeInfo,
     locales: &LocaleInfo,
@@ -491,11 +505,10 @@ pub fn parse_answer(
 ) -> Result<InstallConfig> {
     info!("Parsing answer file");
 
-    verify_filesystem_settings(answer, setup_info)?;
+    let fs_options = verify_filesystem_settings(answer, setup_info)?;
 
     info!("Setting File system");
-    let filesystem = answer.disks.fs_type;
-    info!("File system selected: {}", filesystem);
+    info!("File system selected: {}", fs_options.to_type());
 
     let network_settings = get_network_settings(answer, udev_info, runtime_info, setup_info)?;
 
@@ -517,7 +530,7 @@ pub fn parse_answer(
 
     let mut config = InstallConfig {
         autoreboot: 1_usize,
-        filesys: filesystem,
+        filesys: fs_options.to_type(),
         hdsize: 0.,
         swapsize: None,
         maxroot: None,
@@ -553,8 +566,8 @@ pub fn parse_answer(
     };
 
     set_disks(answer, udev_info, runtime_info, &mut config)?;
-    match &answer.disks.fs_options {
-        answer::FsOptions::LVM(lvm) => {
+    match fs_options {
+        FilesystemOptions::Ext4(lvm) | FilesystemOptions::Xfs(lvm) => {
             let disk = runtime_info
                 .disks
                 .iter()
@@ -568,21 +581,24 @@ pub fn parse_answer(
             config.maxvz = lvm.maxvz;
             config.minfree = lvm.minfree;
         }
-        answer::FsOptions::ZFS(zfs) => {
+        FilesystemOptions::Zfs(zfs) => {
             let first_selected_disk = get_first_selected_disk(&config);
 
             config.hdsize = zfs
                 .hdsize
                 .unwrap_or(runtime_info.disks[first_selected_disk].size);
             config.zfs_opts = Some(InstallZfsOption {
-                ashift: zfs.ashift.unwrap_or(12),
-                arc_max: zfs.arc_max.unwrap_or(runtime_info.default_zfs_arc_max),
-                compress: zfs.compress.unwrap_or(ZfsCompressOption::On),
-                checksum: zfs.checksum.unwrap_or(ZfsChecksumOption::On),
-                copies: zfs.copies.unwrap_or(1),
+                ashift: zfs.ashift.unwrap_or(12) as usize,
+                arc_max: zfs
+                    .arc_max
+                    .map(|v| v as usize)
+                    .unwrap_or(runtime_info.default_zfs_arc_max),
+                compress: zfs.compress.unwrap_or_default(),
+                checksum: zfs.checksum.unwrap_or_default(),
+                copies: zfs.copies.unwrap_or(1) as usize,
             });
         }
-        answer::FsOptions::BTRFS(btrfs) => {
+        FilesystemOptions::Btrfs(btrfs) => {
             let first_selected_disk = get_first_selected_disk(&config);
 
             config.hdsize = btrfs

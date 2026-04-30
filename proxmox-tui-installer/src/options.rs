@@ -1,10 +1,10 @@
 use crate::SummaryOption;
 
 use proxmox_installer_common::{
-    EMAIL_DEFAULT_PLACEHOLDER,
     options::{BootdiskOptions, NetworkOptions, TimezoneOptions},
     setup::LocaleInfo,
 };
+use proxmox_installer_types::EMAIL_DEFAULT_PLACEHOLDER;
 
 #[derive(Clone)]
 pub struct PasswordOptions {

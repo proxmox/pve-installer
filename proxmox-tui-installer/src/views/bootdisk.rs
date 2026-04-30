@@ -22,13 +22,19 @@ use proxmox_installer_common::{
         check_disks_4kn_legacy_boot, check_for_duplicate_disks, check_lvm_bootdisk_opts,
     },
     options::{
-        AdvancedBootdiskOptions, BTRFS_COMPRESS_OPTIONS, BootdiskOptions, BtrfsBootdiskOptions,
-        Disk, LvmBootdiskOptions, RaidLevel, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
-        ZfsBootdiskOptions,
+        AdvancedBootdiskOptions, BootdiskOptions, BtrfsBootdiskOptions, Disk, LvmBootdiskOptions,
+        RaidLevel, ZfsBootdiskOptions,
     },
-    setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
+    setup::RuntimeInfo,
 };
-use proxmox_installer_types::answer::{FILESYSTEM_TYPE_OPTIONS, FilesystemType};
+
+use proxmox_installer_types::{
+    BootType, ProductConfig, ProxmoxProduct,
+    answer::{
+        BTRFS_COMPRESS_OPTIONS, FILESYSTEM_TYPE_OPTIONS, FilesystemType, ZFS_CHECKSUM_OPTIONS,
+        ZFS_COMPRESS_OPTIONS,
+    },
+};
 
 /// OpenZFS specifies 64 MiB as the absolute minimum:
 /// <https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max>
@@ -328,7 +334,7 @@ struct LvmBootdiskOptionsView {
 
 impl LvmBootdiskOptionsView {
     fn new(disk: &Disk, options: &LvmBootdiskOptions, product_conf: &ProductConfig) -> Self {
-        let show_extra_fields = product_conf.product == ProxmoxProduct::PVE;
+        let show_extra_fields = product_conf.product == ProxmoxProduct::Pve;
 
         let view = FormView::new()
             .child(

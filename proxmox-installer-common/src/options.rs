@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use regex::{Regex, RegexBuilder};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{
     cmp,
     collections::HashMap,
@@ -12,7 +12,13 @@ use std::{
 use crate::disk_checks::check_raid_min_disks;
 use crate::net::{MAX_IFNAME_LEN, MIN_IFNAME_LEN};
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
-use proxmox_installer_types::answer::{BtrfsRaidLevel, FilesystemType, ZfsRaidLevel};
+use proxmox_installer_types::{
+    EMAIL_DEFAULT_PLACEHOLDER,
+    answer::{
+        BtrfsCompressOption, BtrfsRaidLevel, FilesystemType, NetworkInterfacePinningOptionsAnswer,
+        ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel,
+    },
+};
 use proxmox_network_types::{fqdn::Fqdn, ip_address::Cidr};
 
 pub trait RaidLevel {
@@ -123,34 +129,21 @@ impl LvmBootdiskOptions {
     }
 }
 
-/// See the accompanying mount option in btrfs(5).
-#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-#[serde(rename_all(deserialize = "lowercase"))]
-pub enum BtrfsCompressOption {
-    On,
-    #[default]
-    Off,
-    Zlib,
-    Lzo,
-    Zstd,
+pub trait FilesystemDiskInfo {
+    /// Returns the minimum number of disks needed for this filesystem.
+    fn get_min_disks(&self) -> usize;
 }
 
-impl fmt::Display for BtrfsCompressOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("{self:?}").to_lowercase())
+impl FilesystemDiskInfo for FilesystemType {
+    fn get_min_disks(&self) -> usize {
+        match self {
+            FilesystemType::Ext4 => 1,
+            FilesystemType::Xfs => 1,
+            FilesystemType::Zfs(level) => level.get_min_disks(),
+            FilesystemType::Btrfs(level) => level.get_min_disks(),
+        }
     }
 }
-
-impl From<&BtrfsCompressOption> for String {
-    fn from(value: &BtrfsCompressOption) -> Self {
-        value.to_string()
-    }
-}
-
-pub const BTRFS_COMPRESS_OPTIONS: &[BtrfsCompressOption] = {
-    use BtrfsCompressOption::*;
-    &[On, Off, Zlib, Lzo, Zstd]
-};
 
 #[derive(Clone, Debug)]
 pub struct BtrfsBootdiskOptions {
@@ -170,54 +163,6 @@ impl BtrfsBootdiskOptions {
         }
     }
 }
-
-#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ZfsCompressOption {
-    #[default]
-    On,
-    Off,
-    Lzjb,
-    Lz4,
-    Zle,
-    Gzip,
-    Zstd,
-}
-
-serde_plain::derive_display_from_serialize!(ZfsCompressOption);
-
-impl From<&ZfsCompressOption> for String {
-    fn from(value: &ZfsCompressOption) -> Self {
-        value.to_string()
-    }
-}
-
-pub const ZFS_COMPRESS_OPTIONS: &[ZfsCompressOption] = {
-    use ZfsCompressOption::*;
-    &[On, Off, Lzjb, Lz4, Zle, Gzip, Zstd]
-};
-
-#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ZfsChecksumOption {
-    #[default]
-    On,
-    Fletcher4,
-    Sha256,
-}
-
-serde_plain::derive_display_from_serialize!(ZfsChecksumOption);
-
-impl From<&ZfsChecksumOption> for String {
-    fn from(value: &ZfsChecksumOption) -> Self {
-        value.to_string()
-    }
-}
-
-pub const ZFS_CHECKSUM_OPTIONS: &[ZfsChecksumOption] = {
-    use ZfsChecksumOption::*;
-    &[On, Fletcher4, Sha256]
-};
 
 #[derive(Clone, Debug)]
 pub struct ZfsBootdiskOptions {
@@ -430,6 +375,24 @@ impl NetworkInterfacePinningOptions {
     }
 }
 
+impl From<&NetworkInterfacePinningOptionsAnswer> for NetworkInterfacePinningOptions {
+    fn from(answer: &NetworkInterfacePinningOptionsAnswer) -> Self {
+        if answer.enabled {
+            Self {
+                // convert all MAC addresses to lowercase before further usage,
+                // to enable easy comparison
+                mapping: answer
+                    .mapping
+                    .iter()
+                    .map(|(k, v)| (k.to_lowercase(), v.clone()))
+                    .collect(),
+            }
+        } else {
+            Self::default()
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct NetworkOptions {
     pub ifname: String,
@@ -453,11 +416,7 @@ impl NetworkOptions {
         // worse case nothing breaks down *completely*.
         let mut this = Self {
             ifname: String::new(),
-            fqdn: Self::construct_fqdn(
-                network,
-                setup.config.product.default_hostname(),
-                default_domain,
-            ),
+            fqdn: Self::construct_fqdn(network, &setup.config.product.to_string(), default_domain),
             // Safety: The provided IP address/mask is always valid.
             // These are the same as used in the GTK-based installer.
             address: Cidr::new_v4([192, 168, 100, 2], 24).unwrap(),
@@ -576,7 +535,7 @@ pub fn email_validate(email: &str) -> Result<()> {
 
     if !re.is_match(email) {
         bail!("Email does not look like a valid address (user@domain.tld)")
-    } else if email == crate::EMAIL_DEFAULT_PLACEHOLDER {
+    } else if email == EMAIL_DEFAULT_PLACEHOLDER {
         bail!("Invalid (default) email address")
     }
 

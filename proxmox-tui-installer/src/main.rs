@@ -13,17 +13,19 @@ use cursive::{
     },
 };
 
-mod options;
-use options::{InstallerOptions, PasswordOptions};
-
 use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
     options::{
         BootdiskOptions, NetworkInterfacePinningOptions, NetworkOptions, TimezoneOptions,
         email_validate,
     },
-    setup::{LocaleInfo, ProxmoxProduct, RuntimeInfo, SetupInfo, installer_setup},
+    setup::{LocaleInfo, RuntimeInfo, SetupInfo, installer_setup},
 };
+use proxmox_installer_types::ProxmoxProduct;
+
+mod options;
+use options::{InstallerOptions, PasswordOptions};
+
 mod setup;
 
 mod system;
@@ -213,7 +215,7 @@ fn installer_setup_late(siv: &mut Cursive) {
         );
     }
 
-    if state.setup_info.config.product == ProxmoxProduct::PVE && !state.runtime_info.hvm_supported {
+    if state.setup_info.config.product == ProxmoxProduct::Pve && !state.runtime_info.hvm_supported {
         display_setup_warning(
             siv,
             concat!(

@@ -19,9 +19,6 @@ pub mod net {
 
 pub const RUNTIME_DIR: &str = "/run/proxmox-installer";
 
-/// Default placeholder value for the administrator email address.
-pub const EMAIL_DEFAULT_PLACEHOLDER: &str = "mail@example.invalid";
-
 /// Name of the executable for the first-boot hook.
 pub const FIRST_BOOT_EXEC_NAME: &str = "proxmox-first-boot";
 

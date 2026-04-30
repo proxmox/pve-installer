@@ -14,8 +14,8 @@
   },
   "product": "pve",
   "product-cfg": {
-    "bridged_network": 1,
-    "enable_btrfs": 1,
+    "bridged_network": true,
+    "enable_btrfs": true,
     "fullname": "Proxmox VE",
     "port": "8006",
     "product": "pve"

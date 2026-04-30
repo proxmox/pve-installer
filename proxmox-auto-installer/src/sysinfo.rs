@@ -2,10 +2,7 @@ use anyhow::{Result, bail};
 use std::{fs, io, path::PathBuf};
 
 use crate::utils::get_nic_list;
-use proxmox_installer_common::{
-    RUNTIME_DIR,
-    setup::{ProxmoxProduct, SetupInfo},
-};
+use proxmox_installer_common::{RUNTIME_DIR, setup::SetupInfo};
 use proxmox_installer_types::{NetworkInterface, SystemInfo};
 
 pub fn get() -> Result<SystemInfo> {
@@ -20,20 +17,8 @@ pub fn get() -> Result<SystemInfo> {
     };
 
     Ok(SystemInfo {
-        product: proxmox_installer_types::ProductConfig {
-            fullname: setup_info.config.fullname,
-            product: match setup_info.config.product {
-                ProxmoxProduct::PVE => proxmox_installer_types::ProxmoxProduct::Pve,
-                ProxmoxProduct::PBS => proxmox_installer_types::ProxmoxProduct::Pbs,
-                ProxmoxProduct::PMG => proxmox_installer_types::ProxmoxProduct::Pmg,
-                ProxmoxProduct::PDM => proxmox_installer_types::ProxmoxProduct::Pdm,
-            },
-            enable_btrfs: setup_info.config.enable_btrfs,
-        },
-        iso: proxmox_installer_types::IsoInfo {
-            release: setup_info.iso_info.release,
-            isorelease: setup_info.iso_info.isorelease,
-        },
+        product: setup_info.config,
+        iso: setup_info.iso_info,
         network_interfaces: get_all_network_interfaces()?,
         dmi: proxmox_installer_common::dmi::get()?,
     })

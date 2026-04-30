@@ -2,13 +2,11 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use proxmox_auto_installer::answer::Answer;
-use proxmox_auto_installer::udevinfo::UdevInfo;
 use proxmox_auto_installer::utils::parse_answer;
-
 use proxmox_installer_common::setup::{
     LocaleInfo, RuntimeInfo, SetupInfo, load_installer_setup_files, read_json,
 };
+use proxmox_installer_types::{UdevInfo, answer::AutoInstallerConfig};
 
 fn get_test_resource_path() -> Result<PathBuf, String> {
     Ok(std::env::current_dir()
@@ -16,7 +14,7 @@ fn get_test_resource_path() -> Result<PathBuf, String> {
         .join("tests/resources"))
 }
 
-fn get_answer(path: impl AsRef<Path>) -> Result<Answer, String> {
+fn get_answer(path: impl AsRef<Path>) -> Result<AutoInstallerConfig, String> {
     let answer_raw = fs::read_to_string(path).unwrap();
     toml::from_str(&answer_raw)
         .map_err(|err| format!("error parsing answer.toml: {}", err.message()))

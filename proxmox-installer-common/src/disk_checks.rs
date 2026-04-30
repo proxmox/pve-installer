@@ -1,9 +1,8 @@
+use anyhow::ensure;
 use std::collections::HashSet;
 
-use anyhow::ensure;
-
 use crate::options::{Disk, LvmBootdiskOptions};
-use crate::setup::BootType;
+use proxmox_installer_types::BootType;
 
 /// Checks a list of disks for duplicate entries, using their index as key.
 ///

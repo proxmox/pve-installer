@@ -18,7 +18,6 @@ use std::{
 };
 
 use proxmox_auto_installer::{
-    answer::{Answer, FilterMatch},
     sysinfo,
     utils::{
         AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
@@ -28,6 +27,7 @@ use proxmox_auto_installer::{
     },
 };
 use proxmox_installer_common::{FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, cli};
+use proxmox_installer_types::answer::{AutoInstallerConfig, FilterMatch};
 
 static PROXMOX_ISO_FLAG: &str = "/auto-installer-capable";
 
@@ -95,7 +95,7 @@ impl cli::Subcommand for CommandDeviceMatchArgs {
     fn parse(args: &mut cli::Arguments) -> Result<Self> {
         let filter_match = args
             .opt_value_from_str("--filter-match")?
-            .unwrap_or(FilterMatch::Any);
+            .unwrap_or_default();
 
         let device_type = args.free_from_str().context("parsing device type")?;
         let mut filter = vec![];
@@ -630,7 +630,7 @@ fn validate_answer_file_keys(path: impl AsRef<Path> + fmt::Debug) -> Result<bool
     }
 }
 
-fn verify_hashed_password_interactive(answer: &Answer) -> Result<()> {
+fn verify_hashed_password_interactive(answer: &AutoInstallerConfig) -> Result<()> {
     if let Some(hashed) = &answer.global.root_password_hashed {
         println!("Verifying hashed root password.");
 
@@ -1313,7 +1313,7 @@ fn get_udev_properties(path: impl AsRef<Path> + fmt::Debug) -> Result<String> {
     Ok(String::from_utf8(udev_output.stdout)?)
 }
 
-fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<Answer> {
+fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<AutoInstallerConfig> {
     let mut file = match fs::File::open(&path) {
         Ok(file) => file,
         Err(err) => bail!("Opening answer file {path:?} failed: {err}"),

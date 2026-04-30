@@ -1,3 +1,4 @@
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::{
     cmp,
     collections::{BTreeMap, HashMap},
@@ -10,81 +11,14 @@ use std::{
     process::{self, Command, Stdio},
 };
 
-use proxmox_network_types::Cidr;
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-
 use crate::options::{
-    BtrfsBootdiskOptions, BtrfsCompressOption, Disk, NetworkInterfacePinningOptions,
-    ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
+    BtrfsBootdiskOptions, Disk, NetworkInterfacePinningOptions, ZfsBootdiskOptions,
 };
-use proxmox_installer_types::answer::FilesystemType;
-
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ProxmoxProduct {
-    PVE,
-    PBS,
-    PMG,
-    PDM,
-}
-
-impl ProxmoxProduct {
-    pub fn default_hostname(self) -> &'static str {
-        match self {
-            Self::PVE => "pve",
-            Self::PMG => "pmg",
-            Self::PBS => "pbs",
-            Self::PDM => "pdm",
-        }
-    }
-}
-
-impl fmt::Display for ProxmoxProduct {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::PVE => "pve",
-            Self::PMG => "pmg",
-            Self::PBS => "pbs",
-            Self::PDM => "pdm",
-        })
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ProductConfig {
-    pub fullname: String,
-    pub product: ProxmoxProduct,
-    #[serde(deserialize_with = "deserialize_bool_from_int")]
-    pub enable_btrfs: bool,
-}
-
-impl ProductConfig {
-    /// A mocked ProductConfig simulating a Proxmox VE environment.
-    pub fn mocked() -> Self {
-        Self {
-            fullname: String::from("Proxmox VE (mocked)"),
-            product: ProxmoxProduct::PVE,
-            enable_btrfs: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct IsoInfo {
-    pub release: String,
-    pub isorelease: String,
-}
-
-impl IsoInfo {
-    /// A mocked IsoInfo with some edge case to convey that this is not necessarily purely numeric.
-    pub fn mocked() -> Self {
-        Self {
-            release: String::from("42.1"),
-            isorelease: String::from("mocked-1"),
-        }
-    }
-}
+use proxmox_installer_types::{
+    BootType, IsoInfo, ProductConfig,
+    answer::{BtrfsCompressOption, FilesystemType, ZfsChecksumOption, ZfsCompressOption},
+};
+use proxmox_network_types::Cidr;
 
 /// Paths in the ISO environment containing installer data.
 #[derive(Clone, Deserialize)]
@@ -385,13 +319,6 @@ pub struct RuntimeInfo {
 
     /// Default upper limit for the ZFS ARC size, in MiB.
     pub default_zfs_arc_max: usize,
-}
-
-#[derive(Copy, Clone, Eq, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum BootType {
-    Bios,
-    Efi,
 }
 
 #[derive(Clone, Deserialize)]

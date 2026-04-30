@@ -36,12 +36,10 @@ mod detail {
 
     use proxmox_installer_common::{
         options::{Disk, NetworkOptions},
-        setup::{
-            InstallConfig, ProxmoxProduct, RuntimeInfo, SetupInfo, load_installer_setup_files,
-        },
+        setup::{InstallConfig, RuntimeInfo, SetupInfo, load_installer_setup_files},
     };
     use proxmox_installer_types::{
-        BootType, IsoInfo, UdevInfo,
+        ProxmoxProduct, UdevInfo,
         answer::{AutoInstallerConfig, FqdnConfig, FqdnFromDhcpConfig, FqdnSourceMode},
         post_hook::{
             BootInfo, CpuInfo, DiskInfo, KernelVersionInformation, NetworkInterfaceInfo,
@@ -119,16 +117,10 @@ mod detail {
             },
             debian_version: read_file("/etc/debian_version")?,
             product: gather_product_info(&setup_info, &run_cmd)?,
-            iso: IsoInfo {
-                release: setup_info.iso_info.release,
-                isorelease: setup_info.iso_info.isorelease,
-            },
+            iso: setup_info.iso_info,
             kernel_version: gather_kernel_version(&run_cmd, &open_file)?,
             boot_info: BootInfo {
-                mode: match run_env.boot_type {
-                    proxmox_installer_common::setup::BootType::Bios => BootType::Bios,
-                    proxmox_installer_common::setup::BootType::Efi => BootType::Efi,
-                },
+                mode: run_env.boot_type,
                 secureboot: run_env.secure_boot,
             },
             cpu_info: gather_cpu_info(&run_env)?,
@@ -271,10 +263,10 @@ mod detail {
         run_cmd: &dyn Fn(&[&str]) -> Result<String>,
     ) -> Result<ProductInfo> {
         let package = match setup_info.config.product {
-            ProxmoxProduct::PVE => "pve-manager",
-            ProxmoxProduct::PMG => "pmg-api",
-            ProxmoxProduct::PBS => "proxmox-backup-server",
-            ProxmoxProduct::PDM => "proxmox-datacenter-manager",
+            ProxmoxProduct::Pve => "pve-manager",
+            ProxmoxProduct::Pmg => "pmg-api",
+            ProxmoxProduct::Pbs => "proxmox-backup-server",
+            ProxmoxProduct::Pdm => "proxmox-datacenter-manager",
         };
 
         let version = run_cmd(&[
@@ -288,12 +280,7 @@ mod detail {
 
         Ok(ProductInfo {
             fullname: setup_info.config.fullname.clone(),
-            short: match setup_info.config.product {
-                ProxmoxProduct::PVE => proxmox_installer_types::ProxmoxProduct::Pve,
-                ProxmoxProduct::PBS => proxmox_installer_types::ProxmoxProduct::Pbs,
-                ProxmoxProduct::PMG => proxmox_installer_types::ProxmoxProduct::Pmg,
-                ProxmoxProduct::PDM => proxmox_installer_types::ProxmoxProduct::Pdm,
-            },
+            short: setup_info.config.product,
             version,
         })
     }
