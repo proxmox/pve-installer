@@ -6,8 +6,9 @@ use std::{
     process::Command,
 };
 
-use proxmox_auto_installer::{sysinfo::SysInfo, utils::HttpOptions};
+use proxmox_auto_installer::{sysinfo, utils::HttpOptions};
 use proxmox_installer_common::http::{self, header::HeaderMap};
+use proxmox_installer_types::SystemInfo;
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -70,7 +71,7 @@ struct HttpFetchPayload {
     schema: HttpFetchInfoSchema,
     /// Information about the running system, flattened into this structure directly.
     #[serde(flatten)]
-    sysinfo: SysInfo,
+    sysinfo: SystemInfo,
 }
 
 impl HttpFetchPayload {
@@ -79,7 +80,7 @@ impl HttpFetchPayload {
     fn get() -> Result<Self> {
         Ok(Self {
             schema: HttpFetchInfoSchema::default(),
-            sysinfo: SysInfo::get()?,
+            sysinfo: sysinfo::get()?,
         })
     }
 

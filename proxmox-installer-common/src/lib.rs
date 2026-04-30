@@ -2,7 +2,6 @@ pub mod disk_checks;
 pub mod dmi;
 pub mod options;
 pub mod setup;
-pub mod sysinfo;
 
 #[cfg(feature = "http")]
 pub mod http;

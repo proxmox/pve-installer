@@ -19,7 +19,7 @@ use std::{
 
 use proxmox_auto_installer::{
     answer::{Answer, FilterMatch},
-    sysinfo::SysInfo,
+    sysinfo,
     utils::{
         AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
         get_matched_udev_indexes, get_nic_list, get_single_udev_index, verify_disks_settings,
@@ -674,10 +674,9 @@ fn validate_answer(args: &CommandValidateAnswerArgs) -> Result<()> {
 }
 
 fn show_system_info(_args: &CommandSystemInfoArgs) -> Result<()> {
-    match SysInfo::as_json_pretty() {
-        Ok(res) => println!("{res}"),
-        Err(err) => eprintln!("Error fetching system info: {err}"),
-    }
+    let info = sysinfo::get().context("fetching system info")?;
+    println!("{}", serde_json::to_string_pretty(&info)?);
+
     Ok(())
 }
 
