@@ -535,11 +535,7 @@ pub fn parse_answer(
             .map(|o| o.mapping)
             .unwrap_or_default(),
 
-        hostname: network_settings
-            .fqdn
-            .host()
-            .unwrap_or(setup_info.config.product.default_hostname())
-            .to_string(),
+        hostname: network_settings.fqdn.host().to_owned(),
         domain: network_settings.fqdn.domain(),
         cidr: network_settings.address,
         gateway: network_settings.gateway,

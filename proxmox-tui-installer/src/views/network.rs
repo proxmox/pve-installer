@@ -12,13 +12,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::{CidrAddressEditView, FormView};
 use proxmox_installer_common::{
     net::MAX_IFNAME_LEN,
     options::{NetworkInterfacePinningOptions, NetworkOptions},
     setup::{Interface, NetworkInfo},
-    utils::{CidrAddress, Fqdn},
+    utils::CidrAddress,
 };
+use proxmox_network_types::fqdn::Fqdn;
+
+use super::{CidrAddressEditView, FormView};
 
 struct NetworkViewOptions {
     selected_mac: String,

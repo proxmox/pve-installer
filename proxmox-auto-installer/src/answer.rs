@@ -4,8 +4,10 @@ use proxmox_installer_common::{
         BtrfsCompressOption, BtrfsRaidLevel, FsType, NetworkInterfacePinningOptions,
         ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel,
     },
-    utils::{CidrAddress, Fqdn},
+    utils::CidrAddress,
 };
+use proxmox_network_types::fqdn::Fqdn;
+
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},

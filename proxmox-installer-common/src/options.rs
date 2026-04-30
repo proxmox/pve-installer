@@ -10,7 +10,8 @@ use std::{cmp, fmt};
 use crate::disk_checks::check_raid_min_disks;
 use crate::net::{MAX_IFNAME_LEN, MIN_IFNAME_LEN};
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
-use crate::utils::{CidrAddress, Fqdn};
+use crate::utils::CidrAddress;
+use proxmox_network_types::fqdn::Fqdn;
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]

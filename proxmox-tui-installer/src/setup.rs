@@ -36,10 +36,7 @@ impl From<InstallerOptions> for InstallConfig {
             mngmt_nic: options.network.ifname,
             network_interface_pin_map: pinning_opts.map(|o| o.mapping.clone()).unwrap_or_default(),
 
-            // Safety: At this point, it is know that we have a valid FQDN, as
-            // this is set by the TUI network panel, which only lets the user
-            // continue if a valid FQDN is provided.
-            hostname: options.network.fqdn.host().expect("valid FQDN").to_owned(),
+            hostname: options.network.fqdn.host().to_owned(),
             domain: options.network.fqdn.domain(),
             cidr: options.network.address,
             gateway: options.network.gateway,
