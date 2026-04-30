@@ -16,12 +16,13 @@ use crate::{
 use proxmox_installer_common::{
     ROOT_PASSWORD_MIN_LENGTH,
     disk_checks::check_swapsize,
-    options::{FsType, NetworkOptions, ZfsChecksumOption, ZfsCompressOption, email_validate},
+    options::{NetworkOptions, RaidLevel, ZfsChecksumOption, ZfsCompressOption, email_validate},
     setup::{
         InstallBtrfsOption, InstallConfig, InstallFirstBootSetup, InstallRootPassword,
         InstallZfsOption, LocaleInfo, RuntimeInfo, SetupInfo,
     },
 };
+use proxmox_installer_types::answer::FilesystemType;
 use serde::{Deserialize, Serialize};
 
 fn get_network_settings(
@@ -211,8 +212,10 @@ fn set_disks(
     config: &mut InstallConfig,
 ) -> Result<()> {
     match config.filesys {
-        FsType::Ext4 | FsType::Xfs => set_single_disk(answer, udev_info, runtime_info, config),
-        FsType::Zfs(_) | FsType::Btrfs(_) => {
+        FilesystemType::Ext4 | FilesystemType::Xfs => {
+            set_single_disk(answer, udev_info, runtime_info, config)
+        }
+        FilesystemType::Zfs(_) | FilesystemType::Btrfs(_) => {
             set_selected_disks(answer, udev_info, runtime_info, config)
         }
     }
@@ -410,7 +413,12 @@ pub fn verify_email_and_root_password_settings(answer: &Answer) -> Result<()> {
 
 pub fn verify_disks_settings(answer: &Answer) -> Result<()> {
     if let DiskSelection::Selection(selection) = &answer.disks.disk_selection {
-        let min_disks = answer.disks.fs_type.get_min_disks();
+        let min_disks = match answer.disks.fs_type {
+            FilesystemType::Ext4 | FilesystemType::Xfs => 1,
+            FilesystemType::Zfs(level) => level.get_min_disks(),
+            FilesystemType::Btrfs(level) => level.get_min_disks(),
+        };
+
         if selection.len() < min_disks {
             bail!(
                 "{}: need at least {} disks",

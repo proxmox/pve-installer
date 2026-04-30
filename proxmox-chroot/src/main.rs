@@ -5,20 +5,19 @@
 
 #![forbid(unsafe_code)]
 
+use anyhow::{Result, bail};
+use serde::Deserialize;
 use std::{
     env, fs, io,
     path::{self, Path, PathBuf},
     process::{self, Command},
-    str::FromStr,
 };
 
-use anyhow::{Result, bail};
 use proxmox_installer_common::{
     RUNTIME_DIR, cli,
-    options::FsType,
     setup::{InstallConfig, SetupInfo},
 };
-use serde::Deserialize;
+use proxmox_installer_types::answer::Filesystem;
 
 const ANSWER_MP: &str = "answer";
 static BINDMOUNTS: [&str; 4] = ["dev", "proc", "run", "sys"];
@@ -29,7 +28,7 @@ const ZPOOL_NAME: &str = "rpool";
 struct CommandPrepareArgs {
     /// Filesystem used for the installation. Will try to automatically detect it after a
     /// successful installation.
-    filesystem: Option<Filesystems>,
+    filesystem: Option<Filesystem>,
 
     /// Numerical ID of the `rpool` ZFS pool to import. Needed if multiple pools of name `rpool`
     /// are present.
@@ -74,7 +73,7 @@ OPTIONS:
 /// Arguments for the `cleanup` command.
 struct CommandCleanupArgs {
     /// Filesystem used for the installation. Will try to automatically detect it by default.
-    filesystem: Option<Filesystems>,
+    filesystem: Option<Filesystem>,
 }
 
 impl cli::Subcommand for CommandCleanupArgs {
@@ -102,39 +101,6 @@ OPTIONS:
 
     fn run(&self) -> Result<()> {
         cleanup(self)
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-enum Filesystems {
-    Zfs,
-    Ext4,
-    Xfs,
-    Btrfs,
-}
-
-impl From<FsType> for Filesystems {
-    fn from(fs: FsType) -> Self {
-        match fs {
-            FsType::Xfs => Self::Xfs,
-            FsType::Ext4 => Self::Ext4,
-            FsType::Zfs(_) => Self::Zfs,
-            FsType::Btrfs(_) => Self::Btrfs,
-        }
-    }
-}
-
-impl FromStr for Filesystems {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "ext4" => Ok(Filesystems::Ext4),
-            "xfs" => Ok(Filesystems::Xfs),
-            _ if s.starts_with("zfs") => Ok(Filesystems::Zfs),
-            _ if s.starts_with("btrfs") => Ok(Filesystems::Btrfs),
-            _ => bail!("unknown filesystem"),
-        }
     }
 }
 
@@ -171,10 +137,10 @@ fn prepare(args: &CommandPrepareArgs) -> Result<()> {
     fs::create_dir_all(TARGET_DIR)?;
 
     match fs {
-        Filesystems::Zfs => mount_zpool(args.rpool_id)?,
-        Filesystems::Xfs => mount_fs()?,
-        Filesystems::Ext4 => mount_fs()?,
-        Filesystems::Btrfs => mount_btrfs(args.btrfs_uuid.clone())?,
+        Filesystem::Zfs => mount_zpool(args.rpool_id)?,
+        Filesystem::Xfs => mount_fs()?,
+        Filesystem::Ext4 => mount_fs()?,
+        Filesystem::Btrfs => mount_btrfs(args.btrfs_uuid.clone())?,
     }
 
     if let Err(e) = bindmount() {
@@ -193,15 +159,15 @@ fn cleanup(args: &CommandCleanupArgs) -> Result<()> {
     }
 
     match fs {
-        Filesystems::Zfs => umount_zpool(),
-        Filesystems::Btrfs | Filesystems::Xfs | Filesystems::Ext4 => umount(Path::new(TARGET_DIR))?,
+        Filesystem::Zfs => umount_zpool(),
+        Filesystem::Btrfs | Filesystem::Xfs | Filesystem::Ext4 => umount(Path::new(TARGET_DIR))?,
     }
 
     println!("Chroot cleanup done. You can now reboot or leave the shell.");
     Ok(())
 }
 
-fn get_fs(filesystem: Option<Filesystems>) -> Result<Filesystems> {
+fn get_fs(filesystem: Option<Filesystem>) -> Result<Filesystem> {
     let fs = match filesystem {
         None => {
             let low_level_config = match get_low_level_config() {
@@ -210,7 +176,7 @@ fn get_fs(filesystem: Option<Filesystems>) -> Result<Filesystems> {
                     "Could not fetch config from previous installation. Please specify file system with -f."
                 ),
             };
-            Filesystems::from(low_level_config.filesys)
+            low_level_config.filesys.into()
         }
         Some(fs) => fs,
     };

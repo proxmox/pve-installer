@@ -10,6 +10,7 @@ homepage = "https://www.proxmox.com"
 [dependencies]
 proxmox-installer-common.workspace = true
 proxmox-network-types.workspace = true
+proxmox-installer-types.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 

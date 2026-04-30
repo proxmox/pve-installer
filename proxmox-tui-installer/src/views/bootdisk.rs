@@ -16,7 +16,6 @@ use cursive::{
 
 use super::{DiskSizeEditView, FormView, IntegerEditView, TabbedView};
 use crate::InstallerState;
-use crate::options::FS_TYPES;
 
 use proxmox_installer_common::{
     disk_checks::{
@@ -24,11 +23,12 @@ use proxmox_installer_common::{
     },
     options::{
         AdvancedBootdiskOptions, BTRFS_COMPRESS_OPTIONS, BootdiskOptions, BtrfsBootdiskOptions,
-        Disk, FsType, LvmBootdiskOptions, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
+        Disk, LvmBootdiskOptions, RaidLevel, ZFS_CHECKSUM_OPTIONS, ZFS_COMPRESS_OPTIONS,
         ZfsBootdiskOptions,
     },
     setup::{BootType, ProductConfig, ProxmoxProduct, RuntimeInfo},
 };
+use proxmox_installer_types::answer::{FILESYSTEM_TYPE_OPTIONS, FilesystemType};
 
 /// OpenZFS specifies 64 MiB as the absolute minimum:
 /// <https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Module%20Parameters.html#zfs-arc-max>
@@ -125,19 +125,19 @@ impl AdvancedBootdiskOptionsView {
         product_conf: ProductConfig,
     ) -> Self {
         let filter_btrfs =
-            |fstype: &&FsType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
+            |fstype: &&FilesystemType| -> bool { product_conf.enable_btrfs || !fstype.is_btrfs() };
         let options = options_ref.lock().unwrap();
 
         let fstype_select = SelectView::new()
             .popup()
             .with_all(
-                FS_TYPES
+                FILESYSTEM_TYPE_OPTIONS
                     .iter()
                     .filter(filter_btrfs)
                     .map(|t| (t.to_string(), *t)),
             )
             .selected(
-                FS_TYPES
+                FILESYSTEM_TYPE_OPTIONS
                     .iter()
                     .filter(filter_btrfs)
                     .position(|t| *t == options.fstype)
@@ -185,7 +185,11 @@ impl AdvancedBootdiskOptionsView {
     /// * `fstype` - The chosen filesystem type by the user, for which the UI should be
     ///   updated accordingly
     /// * `options_ref` - [`BootdiskOptionsRef`] where advanced disk options should be saved to
-    fn fstype_on_submit(siv: &mut Cursive, fstype: &FsType, options_ref: BootdiskOptionsRef) {
+    fn fstype_on_submit(
+        siv: &mut Cursive,
+        fstype: &FilesystemType,
+        options_ref: BootdiskOptionsRef,
+    ) {
         let state = siv.user_data::<InstallerState>().unwrap();
         let runinfo = state.runtime_info.clone();
         let product_conf = state.setup_info.config.clone();
@@ -208,16 +212,16 @@ impl AdvancedBootdiskOptionsView {
             {
                 view.remove_child(3);
                 match fstype {
-                    FsType::Ext4 | FsType::Xfs => {
+                    FilesystemType::Ext4 | FilesystemType::Xfs => {
                         view.add_child(LvmBootdiskOptionsView::new_with_defaults(
                             &selected_lvm_disk,
                             &product_conf,
                         ))
                     }
-                    FsType::Zfs(_) => {
+                    FilesystemType::Zfs(_) => {
                         view.add_child(ZfsBootdiskOptionsView::new_with_defaults(&runinfo))
                     }
-                    FsType::Btrfs(_) => {
+                    FilesystemType::Btrfs(_) => {
                         view.add_child(BtrfsBootdiskOptionsView::new_with_defaults(&runinfo))
                     }
                 }
@@ -236,7 +240,7 @@ impl AdvancedBootdiskOptionsView {
         siv.call_on_name(
             "bootdisk-options-target-disk",
             move |view: &mut FormView| match fstype {
-                FsType::Ext4 | FsType::Xfs => {
+                FilesystemType::Ext4 | FilesystemType::Xfs => {
                     view.replace_child(
                         0,
                         target_bootdisk_selectview(&runinfo.disks, options_ref, &selected_lvm_disk),
@@ -252,7 +256,7 @@ impl AdvancedBootdiskOptionsView {
             .view
             .get_child(1)
             .and_then(|v| v.downcast_ref::<FormView>())
-            .and_then(|v| v.get_value::<SelectView<FsType>, _>(0))
+            .and_then(|v| v.get_value::<SelectView<FilesystemType>, _>(0))
             .ok_or("Failed to retrieve filesystem type".to_owned())?;
 
         let advanced = self
@@ -279,7 +283,7 @@ impl AdvancedBootdiskOptionsView {
                 .get_values()
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
-            if let FsType::Zfs(level) = fstype {
+            if let FilesystemType::Zfs(level) = fstype {
                 level
                     .check_raid_disks_setup(&disks)
                     .map_err(|err| format!("{fstype}: {err}"))?;
@@ -295,7 +299,7 @@ impl AdvancedBootdiskOptionsView {
                 .get_values()
                 .ok_or("Failed to retrieve advanced bootdisk options")?;
 
-            if let FsType::Btrfs(level) = fstype {
+            if let FilesystemType::Btrfs(level) = fstype {
                 level
                     .check_raid_disks_setup(&disks)
                     .map_err(|err| format!("{fstype}: {err}"))?;

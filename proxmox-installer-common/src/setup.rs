@@ -14,9 +14,10 @@ use proxmox_network_types::Cidr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::options::{
-    BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, NetworkInterfacePinningOptions,
+    BtrfsBootdiskOptions, BtrfsCompressOption, Disk, NetworkInterfacePinningOptions,
     ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
 };
+use proxmox_installer_types::answer::FilesystemType;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Serialize)]
@@ -565,7 +566,7 @@ pub fn spawn_low_level_installer(test_mode: bool) -> io::Result<process::Child> 
 pub struct InstallConfig {
     pub autoreboot: usize,
 
-    pub filesys: FsType,
+    pub filesys: FilesystemType,
     pub hdsize: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub swapsize: Option<f64>,

@@ -10,5 +10,6 @@ homepage = "https://www.proxmox.com"
 [dependencies]
 anyhow.workspace = true
 proxmox-installer-common = { workspace = true, features = [ "cli" ] }
+proxmox-installer-types.workspace = true
 serde = { workspace = true, features = [ "derive" ] }
 serde_json.workspace = true

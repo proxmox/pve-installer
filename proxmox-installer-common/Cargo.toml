@@ -14,6 +14,7 @@ serde = { workspace = true, features = [ "derive" ] }
 serde_json.workspace = true
 serde_plain.workspace = true
 proxmox-network-types.workspace = true
+proxmox-installer-types.workspace = true
 
 # `http` feature
 hex = { version = "0.4", optional = true }

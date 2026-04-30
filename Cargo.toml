@@ -28,8 +28,10 @@ toml = "0.8"
 proxmox-auto-installer.path = "./proxmox-auto-installer"
 proxmox-installer-common.path = "./proxmox-installer-common"
 proxmox-network-types = "1.0"
+proxmox-installer-types = { version = "0.1", features = ["legacy"] }
 
 # Local path overrides
 # NOTE: You must run `cargo update` after changing this for it to take effect!
 [patch.crates-io]
 # proxmox-network-types.path = "../proxmox/proxmox-network-types"
+# proxmox-installer-types.path = "../proxmox/proxmox-installer-types"

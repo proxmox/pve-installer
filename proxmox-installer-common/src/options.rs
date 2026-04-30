@@ -1,36 +1,23 @@
 use anyhow::{Result, bail};
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
-use std::str::FromStr;
-use std::sync::OnceLock;
-use std::{cmp, fmt};
+use std::{
+    cmp,
+    collections::HashMap,
+    fmt,
+    net::{IpAddr, Ipv4Addr},
+    sync::OnceLock,
+};
 
 use crate::disk_checks::check_raid_min_disks;
 use crate::net::{MAX_IFNAME_LEN, MIN_IFNAME_LEN};
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
+use proxmox_installer_types::answer::{BtrfsRaidLevel, FilesystemType, ZfsRaidLevel};
 use proxmox_network_types::{fqdn::Fqdn, ip_address::Cidr};
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
-pub enum BtrfsRaidLevel {
-    #[serde(alias = "RAID0")]
-    Raid0,
-    #[serde(alias = "RAID1")]
-    Raid1,
-    #[serde(alias = "RAID10")]
-    Raid10,
-}
-
-impl BtrfsRaidLevel {
-    pub fn get_min_disks(&self) -> usize {
-        match self {
-            BtrfsRaidLevel::Raid0 => 1,
-            BtrfsRaidLevel::Raid1 => 2,
-            BtrfsRaidLevel::Raid10 => 4,
-        }
-    }
+pub trait RaidLevel {
+    /// Returns the minimum number of disks needed for this RAID level.
+    fn get_min_disks(&self) -> usize;
 
     /// Checks whether a user-supplied Btrfs RAID setup is valid or not, such as minimum
     /// number of disks.
@@ -38,42 +25,31 @@ impl BtrfsRaidLevel {
     /// # Arguments
     ///
     /// * `disks` - List of disks designated as RAID targets.
-    pub fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
+    fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String>;
+
+    /// Checks whether the given disk sizes are compatible for the RAID level, if it is a mirror.
+    fn check_mirror_size(&self, _disk1: &Disk, _disk2: &Disk) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl RaidLevel for BtrfsRaidLevel {
+    fn get_min_disks(&self) -> usize {
+        match self {
+            Self::Raid0 => 1,
+            Self::Raid1 => 2,
+            Self::Raid10 => 4,
+        }
+    }
+
+    fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
         check_raid_min_disks(disks, self.get_min_disks())?;
         Ok(())
     }
 }
 
-serde_plain::derive_display_from_serialize!(BtrfsRaidLevel);
-
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
-pub enum ZfsRaidLevel {
-    #[serde(alias = "RAID0")]
-    Raid0,
-    #[serde(alias = "RAID1")]
-    Raid1,
-    #[serde(alias = "RAID10")]
-    Raid10,
-    #[serde(
-        alias = "RAIDZ-1",
-        rename(deserialize = "raidz-1", serialize = "RAIDZ-1")
-    )]
-    RaidZ,
-    #[serde(
-        alias = "RAIDZ-2",
-        rename(deserialize = "raidz-2", serialize = "RAIDZ-2")
-    )]
-    RaidZ2,
-    #[serde(
-        alias = "RAIDZ-3",
-        rename(deserialize = "raidz-3", serialize = "RAIDZ-3")
-    )]
-    RaidZ3,
-}
-
-impl ZfsRaidLevel {
-    pub fn get_min_disks(&self) -> usize {
+impl RaidLevel for ZfsRaidLevel {
+    fn get_min_disks(&self) -> usize {
         match self {
             ZfsRaidLevel::Raid0 => 1,
             ZfsRaidLevel::Raid1 => 2,
@@ -84,23 +60,7 @@ impl ZfsRaidLevel {
         }
     }
 
-    fn check_mirror_size(&self, disk1: &Disk, disk2: &Disk) -> Result<(), String> {
-        if (disk1.size - disk2.size).abs() > disk1.size / 10. {
-            Err(format!(
-                "Mirrored disks must have same size:\n\n  * {disk1}\n  * {disk2}"
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Checks whether a user-supplied ZFS RAID setup is valid or not, such as disk sizes andminimum
-    /// number of disks.
-    ///
-    /// # Arguments
-    ///
-    /// * `disks` - List of disks designated as RAID targets.
-    pub fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
+    fn check_raid_disks_setup(&self, disks: &[Disk]) -> Result<(), String> {
         check_raid_min_disks(disks, self.get_min_disks())?;
 
         match self {
@@ -130,92 +90,17 @@ impl ZfsRaidLevel {
 
         Ok(())
     }
-}
 
-serde_plain::derive_display_from_serialize!(ZfsRaidLevel);
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum FsType {
-    Ext4,
-    Xfs,
-    Zfs(ZfsRaidLevel),
-    Btrfs(BtrfsRaidLevel),
-}
-
-impl FsType {
-    pub fn is_btrfs(&self) -> bool {
-        matches!(self, FsType::Btrfs(_))
-    }
-
-    /// Returns true if the filesystem is used on top of LVM, e.g. ext4 or XFS.
-    pub fn is_lvm(&self) -> bool {
-        matches!(self, FsType::Ext4 | FsType::Xfs)
-    }
-
-    pub fn get_min_disks(&self) -> usize {
-        match self {
-            FsType::Ext4 => 1,
-            FsType::Xfs => 1,
-            FsType::Zfs(level) => level.get_min_disks(),
-            FsType::Btrfs(level) => level.get_min_disks(),
+    fn check_mirror_size(&self, disk1: &Disk, disk2: &Disk) -> Result<(), String> {
+        if (disk1.size - disk2.size).abs() > disk1.size / 10. {
+            Err(format!(
+                "Mirrored disks must have same size:\n\n  * {disk1}\n  * {disk2}"
+            ))
+        } else {
+            Ok(())
         }
     }
 }
-
-impl fmt::Display for FsType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Values displayed to the user in the installer UI
-        match self {
-            FsType::Ext4 => write!(f, "ext4"),
-            FsType::Xfs => write!(f, "XFS"),
-            FsType::Zfs(level) => write!(f, "ZFS ({level})"),
-            FsType::Btrfs(level) => write!(f, "BTRFS ({level})"),
-        }
-    }
-}
-
-impl Serialize for FsType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        // These values must match exactly what the low-level installer expects
-        let value = match self {
-            // proxinstall::$fssetup
-            FsType::Ext4 => "ext4",
-            FsType::Xfs => "xfs",
-            // proxinstall::get_zfs_raid_setup()
-            FsType::Zfs(level) => &format!("zfs ({level})"),
-            // proxinstall::get_btrfs_raid_setup()
-            FsType::Btrfs(level) => &format!("btrfs ({level})"),
-        };
-
-        serializer.collect_str(value)
-    }
-}
-
-impl FromStr for FsType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "ext4" => Ok(FsType::Ext4),
-            "xfs" => Ok(FsType::Xfs),
-            "zfs (RAID0)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid0)),
-            "zfs (RAID1)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid1)),
-            "zfs (RAID10)" => Ok(FsType::Zfs(ZfsRaidLevel::Raid10)),
-            "zfs (RAIDZ-1)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ)),
-            "zfs (RAIDZ-2)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ2)),
-            "zfs (RAIDZ-3)" => Ok(FsType::Zfs(ZfsRaidLevel::RaidZ3)),
-            "btrfs (RAID0)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid0)),
-            "btrfs (RAID1)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid1)),
-            "btrfs (RAID10)" => Ok(FsType::Btrfs(BtrfsRaidLevel::Raid10)),
-            _ => Err(format!("Could not find file system: {s}")),
-        }
-    }
-}
-
-serde_plain::derive_deserialize_from_fromstr!(FsType, "valid filesystem");
 
 #[derive(Clone, Debug)]
 pub struct LvmBootdiskOptions {
@@ -426,7 +311,7 @@ impl cmp::Ord for Disk {
 #[derive(Clone, Debug)]
 pub struct BootdiskOptions {
     pub disks: Vec<Disk>,
-    pub fstype: FsType,
+    pub fstype: FilesystemType,
     pub advanced: AdvancedBootdiskOptions,
 }
 
@@ -434,7 +319,7 @@ impl BootdiskOptions {
     pub fn defaults_from(disk: &Disk) -> Self {
         Self {
             disks: vec![disk.clone()],
-            fstype: FsType::Ext4,
+            fstype: FilesystemType::Ext4,
             advanced: AdvancedBootdiskOptions::Lvm(LvmBootdiskOptions::defaults_from(disk)),
         }
     }

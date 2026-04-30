@@ -2,27 +2,8 @@ use crate::SummaryOption;
 
 use proxmox_installer_common::{
     EMAIL_DEFAULT_PLACEHOLDER,
-    options::{
-        BootdiskOptions, BtrfsRaidLevel, FsType, NetworkOptions, TimezoneOptions, ZfsRaidLevel,
-    },
+    options::{BootdiskOptions, NetworkOptions, TimezoneOptions},
     setup::LocaleInfo,
-};
-
-pub const FS_TYPES: &[FsType] = {
-    use FsType::*;
-    &[
-        Ext4,
-        Xfs,
-        Zfs(ZfsRaidLevel::Raid0),
-        Zfs(ZfsRaidLevel::Raid1),
-        Zfs(ZfsRaidLevel::Raid10),
-        Zfs(ZfsRaidLevel::RaidZ),
-        Zfs(ZfsRaidLevel::RaidZ2),
-        Zfs(ZfsRaidLevel::RaidZ3),
-        Btrfs(BtrfsRaidLevel::Raid0),
-        Btrfs(BtrfsRaidLevel::Raid1),
-        Btrfs(BtrfsRaidLevel::Raid10),
-    ]
 };
 
 #[derive(Clone)]

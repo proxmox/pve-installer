@@ -7,9 +7,9 @@ use std::{
 };
 
 use proxmox_installer_common::options::{
-    BtrfsCompressOption, BtrfsRaidLevel, FsType, NetworkInterfacePinningOptions, ZfsChecksumOption,
-    ZfsCompressOption, ZfsRaidLevel,
+    BtrfsCompressOption, NetworkInterfacePinningOptions, ZfsChecksumOption, ZfsCompressOption,
 };
+use proxmox_installer_types::answer::{BtrfsRaidLevel, FilesystemType, ZfsRaidLevel};
 use proxmox_network_types::{Cidr, fqdn::Fqdn};
 
 // NOTE New answer file properties must use kebab-case, but should allow snake_case for backwards
@@ -314,7 +314,7 @@ pub struct DiskSetup {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(try_from = "DiskSetup", deny_unknown_fields)]
 pub struct Disks {
-    pub fs_type: FsType,
+    pub fs_type: FilesystemType,
     pub disk_selection: DiskSelection,
     pub filter_match: Option<FilterMatch>,
     pub fs_options: FsOptions,
@@ -351,11 +351,17 @@ impl TryFrom<DiskSetup> for Disks {
         let (fs, fs_options) = match source.filesystem {
             Filesystem::Xfs => {
                 lvm_checks(&source)?;
-                (FsType::Xfs, FsOptions::LVM(source.lvm.unwrap_or_default()))
+                (
+                    FilesystemType::Xfs,
+                    FsOptions::LVM(source.lvm.unwrap_or_default()),
+                )
             }
             Filesystem::Ext4 => {
                 lvm_checks(&source)?;
-                (FsType::Ext4, FsOptions::LVM(source.lvm.unwrap_or_default()))
+                (
+                    FilesystemType::Ext4,
+                    FsOptions::LVM(source.lvm.unwrap_or_default()),
+                )
             }
             Filesystem::Zfs => {
                 if source.lvm.is_some() || source.btrfs.is_some() {
@@ -365,7 +371,10 @@ impl TryFrom<DiskSetup> for Disks {
                     None | Some(ZfsOptions { raid: None, .. }) => {
                         return Err("ZFS raid level 'zfs.raid' must be set");
                     }
-                    Some(opts) => (FsType::Zfs(opts.raid.unwrap()), FsOptions::ZFS(opts)),
+                    Some(opts) => (
+                        FilesystemType::Zfs(opts.raid.unwrap()),
+                        FsOptions::ZFS(opts),
+                    ),
                 }
             }
             Filesystem::Btrfs => {
@@ -376,7 +385,10 @@ impl TryFrom<DiskSetup> for Disks {
                     None | Some(BtrfsOptions { raid: None, .. }) => {
                         return Err("BTRFS raid level 'btrfs.raid' must be set");
                     }
-                    Some(opts) => (FsType::Btrfs(opts.raid.unwrap()), FsOptions::BTRFS(opts)),
+                    Some(opts) => (
+                        FilesystemType::Btrfs(opts.raid.unwrap()),
+                        FsOptions::BTRFS(opts),
+                    ),
                 }
             }
         };
