@@ -52,18 +52,18 @@ fn fetch_answer(install_settings: &AutoInstSettings) -> Result<String> {
             let answer_path = PathBuf::from("/cdrom/answer.toml");
             match fs::read_to_string(answer_path) {
                 Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file from ISO failed: {err}"),
+                Err(err) => info!("Fetching answer file from ISO failed: {err:#}"),
             }
         }
         FetchAnswerFrom::Partition => {
             match FetchFromPartition::get_answer(&install_settings.partition_label) {
                 Ok(answer) => return Ok(answer),
-                Err(err) => info!("Fetching answer file from partition failed: {err}"),
+                Err(err) => info!("Fetching answer file from partition failed: {err:#}"),
             }
         }
         FetchAnswerFrom::Http => match FetchFromHTTP::get_answer(&install_settings.http) {
             Ok(answer) => return Ok(answer),
-            Err(err) => info!("Fetching answer file via HTTP failed: {err}"),
+            Err(err) => info!("Fetching answer file via HTTP failed: {err:#}"),
         },
     }
     bail!("Could not find any answer file!");
