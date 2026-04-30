@@ -131,6 +131,8 @@ pub struct HttpOptions {
     pub url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cert_fingerprint: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

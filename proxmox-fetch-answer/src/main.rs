@@ -98,6 +98,7 @@ fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
         http: HttpOptions {
             url: args.get(2).cloned(),
             cert_fingerprint: args.get(3).cloned(),
+            token: None,
         },
     })
 }

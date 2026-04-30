@@ -271,6 +271,13 @@ struct CommandPrepareISOArgs {
     ///
     /// Implies '--pxe'.
     pxe_loader: Option<PxeLoader>,
+
+    /// Only useful in combination with '--fetch-from http'. Token the automated installer should
+    /// use for retrieving an answer file.
+    ///
+    /// If set, the automated installer will include an 'Authorization' header in the HTTP POST
+    /// for retrieving the answer, in the format 'Authorization: Bearer <TOKEN>'.
+    answer_auth_token: Option<String>,
 }
 
 impl cli::Subcommand for CommandPrepareISOArgs {
@@ -290,6 +297,7 @@ impl cli::Subcommand for CommandPrepareISOArgs {
             on_first_boot: args.opt_value_from_str("--on-first-boot")?,
             pxe: args.contains("--pxe") || pxe_loader.is_some(),
             pxe_loader,
+            answer_auth_token: args.opt_value_from_str("--answer-auth-token")?,
             // Needs to be last
             input: args.free_from_str()?,
         })
@@ -381,6 +389,15 @@ OPTIONS:
           file is additionally produced for the specified PXE loader.
 
           Implies '--pxe'.
+
+      --answer-auth-token <TOKEN>
+          Only useful in combination with '--fetch-from http'. Token the automated installer should
+          use for retrieving an answer file.
+
+          <TOKEN> must be of format '<name>:<secret>'.
+
+          If set, the automated installer will include an 'Authorization' header in the HTTP POST
+          for retrieving the answer, in the format 'Authorization: Bearer <TOKEN>'.
 
   -h, --help         Print this help
   -V, --version      Print version
@@ -744,6 +761,7 @@ fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
         http: HttpOptions {
             url: args.url.clone(),
             cert_fingerprint: args.cert_fingerprint.clone(),
+            token: args.answer_auth_token.clone(),
         },
     };
     let mut instmode_file_tmp = tmp_base.clone();
