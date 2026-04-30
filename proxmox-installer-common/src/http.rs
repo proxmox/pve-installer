@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use rustls::{ClientConfig, ClientConnection, StreamOwned};
 use sha2::{Digest, Sha256};
@@ -8,6 +8,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use ureq::Agent;
+use ureq::http::StatusCode;
 use ureq::unversioned::resolver::DefaultResolver;
 use ureq::unversioned::transport::{
     Buffers, ConnectionDetails, Connector, Either, LazyBuffers, NextTimeout, TcpConnector,
@@ -142,7 +143,8 @@ pub struct Response {
 ///
 /// # Returns
 ///
-/// A [`Response`] holding the body contents and the `Content-Type` header, if present.
+/// If the request was successful with 200 OK or 201 CREATED, a [`Response`] holding the body
+/// contents and the `Content-Type` header, if present.
 pub fn post(
     url: &str,
     fingerprint: Option<&str>,
@@ -153,7 +155,12 @@ pub fn post(
 
     let mut request = build_agent(fingerprint)?
         .post(url)
-        .header("Content-Type", "application/json; charset=utf-8");
+        .header("Content-Type", "application/json; charset=utf-8")
+        .config()
+        // don't treat 4xx and 5xx statuses as error, so we can extract the
+        // error message from the body
+        .http_status_as_error(false)
+        .build();
 
     for (name, value) in headers.iter() {
         request = request.header(name, value);
@@ -161,6 +168,7 @@ pub fn post(
 
     let mut response = request.send(&payload)?;
 
+    let body = response.body_mut().read_to_string()?;
     let content_type = response
         .headers()
         .get(header::CONTENT_TYPE)
@@ -168,10 +176,10 @@ pub fn post(
         .map(ContentType::from_str)
         .transpose()?;
 
-    Ok(Response {
-        body: response.body_mut().read_to_string()?,
-        content_type,
-    })
+    match response.status() {
+        StatusCode::OK | StatusCode::CREATED => Ok(Response { body, content_type }),
+        other => bail!("http error: {other}: {body}"),
+    }
 }
 
 #[derive(Debug)]
