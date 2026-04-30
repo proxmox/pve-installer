@@ -6,9 +6,14 @@ use std::{
 };
 
 use proxmox_auto_installer::{sysinfo, utils::HttpOptions};
-use proxmox_installer_common::http::{self, header::HeaderMap,
+use proxmox_installer_common::http::{
+    self,
+    header::{HeaderMap, HeaderValue},
 };
-use proxmox_installer_types::answer::fetch::{AnswerFetchData, AnswerFetchDataSchema};
+use proxmox_installer_types::answer::{
+    AutoInstallerConfig,
+    fetch::{AnswerFetchData, AnswerFetchDataSchema},
+};
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -40,6 +45,14 @@ impl FetchFromHTTP {
     /// needs to be either trusted by the root certs or a SHA256 fingerprint needs to be provided.
     /// The SHA256 SSL fingerprint can either be defined in the ISO, as DHCP option, or as DNS TXT
     /// record. If provided, the fingerprint provided in the ISO has preference.
+    ///
+    /// # Parameters
+    ///
+    /// * `settings` - HTTP fetch options from the baked-in auto-installer configuration.
+    ///
+    /// # Returns
+    ///
+    /// The TOML-formatted answer retrieved from the given server.
     pub fn get_answer(settings: &HttpOptions) -> Result<String> {
         let mut fingerprint: Option<String> = match settings.cert_fingerprint.clone() {
             Some(fp) => {
@@ -74,14 +87,26 @@ impl FetchFromHTTP {
         })?;
 
         info!("Sending POST request to '{answer_url}'.");
+        let mut headers = HeaderMap::new();
 
-        Ok(http::post(
-            &answer_url,
-            fingerprint.as_deref(),
-            HeaderMap::new(),
-            payload,
-        )?
-        .body)
+        // Prefer JSON answers over TOML by default, but also accept TOML from.
+        headers.insert(
+            http::header::ACCEPT,
+            HeaderValue::from_str("application/json, application/toml;q=0.5")?,
+        );
+
+        let http::Response { body, content_type } =
+            http::post(&answer_url, fingerprint.as_deref(), headers, payload)?;
+
+        if let Some(ct) = content_type
+            && ct == http::ContentType::Json
+        {
+            // do a round-trip with serde into TOML, if we received JSON from the server
+            let answer: AutoInstallerConfig = serde_json::from_str(&body)?;
+            Ok(toml::to_string(&answer)?)
+        } else {
+            Ok(body)
+        }
     }
 
     /// Fetches search domain from resolv.conf file
