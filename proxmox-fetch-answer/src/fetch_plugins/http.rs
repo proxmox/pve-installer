@@ -7,6 +7,7 @@ use std::{
 };
 
 use proxmox_auto_installer::{sysinfo::SysInfo, utils::HttpOptions};
+use proxmox_installer_common::http::{self, header::HeaderMap};
 
 static ANSWER_URL_SUBDOMAIN: &str = "proxmox-auto-installer";
 static ANSWER_CERT_FP_SUBDOMAIN: &str = "proxmox-auto-installer-cert-fingerprint";
@@ -130,9 +131,14 @@ impl FetchFromHTTP {
         let payload = HttpFetchPayload::as_json()?;
 
         info!("Sending POST request to '{answer_url}'.");
-        let answer =
-            proxmox_installer_common::http::post(&answer_url, fingerprint.as_deref(), payload)?;
-        Ok(answer)
+
+        Ok(http::post(
+            &answer_url,
+            fingerprint.as_deref(),
+            HeaderMap::new(),
+            payload,
+        )?
+        .body)
     }
 
     /// Fetches search domain from resolv.conf file

@@ -27,6 +27,7 @@ use proxmox_auto_installer::{
     },
     udevinfo::{UdevInfo, UdevProperties},
 };
+use proxmox_installer_common::http::{self, header::HeaderMap};
 use proxmox_installer_common::{
     options::{Disk, FsType, NetworkOptions},
     setup::{
@@ -727,9 +728,10 @@ fn do_main() -> Result<()> {
             );
         }
 
-        proxmox_installer_common::http::post(
+        http::post(
             url,
             cert_fingerprint.as_deref(),
+            HeaderMap::new(),
             serde_json::to_string(&info)?,
         )?;
     } else {

@@ -4,6 +4,7 @@ use rustls::{ClientConfig, ClientConnection, StreamOwned};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::io::{Read, Write};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use ureq::Agent;
@@ -12,6 +13,9 @@ use ureq::unversioned::transport::{
     Buffers, ConnectionDetails, Connector, Either, LazyBuffers, NextTimeout, TcpConnector,
     Transport, TransportAdapter,
 };
+
+// Re-export for conviencence when using post()
+pub use ureq::http::header;
 
 /// Builds an [`Agent`] with TLS suitable set up, depending whether a custom fingerprint was
 /// supplied or not. If a fingerprint was supplied, only matching certificates will be accepted.
@@ -88,6 +92,39 @@ pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Re
     Ok(result)
 }
 
+/// Content type of the body as returned in the `Content-Type` in the HTTP response, if present.
+#[derive(Clone, PartialEq, Eq)]
+pub enum ContentType {
+    /// application/json
+    Json,
+    /// application/toml
+    Toml,
+    /// Any other content type, unparsed.
+    Other(String),
+}
+
+impl FromStr for ContentType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with("application/json") {
+            Ok(ContentType::Json)
+        } else if s.starts_with("application/toml") {
+            Ok(ContentType::Toml)
+        } else {
+            Ok(ContentType::Other(s.to_owned()))
+        }
+    }
+}
+
+/// HTTP response of a successful HTTP POST request.
+pub struct Response {
+    /// Raw body content received.
+    pub body: String,
+    /// Content type, as given in the `Content-Type` response header, if present.
+    pub content_type: Option<ContentType>,
+}
+
 /// Issues a POST request with the payload (JSON). Optionally a SHA256 fingerprint can be used to
 /// check the cert against it, instead of the regular cert validation.
 /// To gather the sha256 fingerprint you can use the following command:
@@ -95,18 +132,46 @@ pub fn get_as_bytes(url: &str, fingerprint: Option<&str>, max_size: usize) -> Re
 /// openssl s_client -connect <host>:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha256  -noout -in /dev/stdin
 /// ```
 ///
+/// The `Content-Type` header is automatically set to `application/json` for the request.
+///
 /// # Arguments
 /// * `url` - URL to call
 /// * `fingerprint` - SHA256 cert fingerprint if certificate pinning should be used. Optional.
+/// * `headers` - Additional headers to add to the request.
 /// * `payload` - The payload to send to the server. Expected to be a JSON formatted string.
-pub fn post(url: &str, fingerprint: Option<&str>, payload: String) -> Result<String> {
+///
+/// # Returns
+///
+/// A [`Response`] holding the body contents and the `Content-Type` header, if present.
+pub fn post(
+    url: &str,
+    fingerprint: Option<&str>,
+    headers: header::HeaderMap,
+    payload: String,
+) -> Result<Response> {
     // TODO: read_to_string limits the size to 10 MB, should be increase that?
-    Ok(build_agent(fingerprint)?
+
+    let mut request = build_agent(fingerprint)?
         .post(url)
-        .header("Content-Type", "application/json; charset=utf-8")
-        .send(&payload)?
-        .body_mut()
-        .read_to_string()?)
+        .header("Content-Type", "application/json; charset=utf-8");
+
+    for (name, value) in headers.iter() {
+        request = request.header(name, value);
+    }
+
+    let mut response = request.send(&payload)?;
+
+    let content_type = response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|h| h.to_str().ok())
+        .map(ContentType::from_str)
+        .transpose()?;
+
+    Ok(Response {
+        body: response.body_mut().read_to_string()?,
+        content_type,
+    })
 }
 
 #[derive(Debug)]
