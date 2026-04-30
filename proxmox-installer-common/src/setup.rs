@@ -10,14 +10,12 @@ use std::{
     process::{self, Command, Stdio},
 };
 
+use proxmox_network_types::Cidr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::{
-    options::{
-        BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, NetworkInterfacePinningOptions,
-        ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
-    },
-    utils::CidrAddress,
+use crate::options::{
+    BtrfsBootdiskOptions, BtrfsCompressOption, Disk, FsType, NetworkInterfacePinningOptions,
+    ZfsBootdiskOptions, ZfsChecksumOption, ZfsCompressOption,
 };
 
 #[allow(clippy::upper_case_acronyms)]
@@ -314,14 +312,14 @@ where
         .collect())
 }
 
-fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<CidrAddress>, D::Error>
+fn deserialize_cidr_list<'de, D>(deserializer: D) -> Result<Vec<Cidr>, D::Error>
 where
     D: Deserializer<'de>,
 {
     #[derive(Deserialize)]
     struct CidrDescriptor {
         address: String,
-        prefix: usize,
+        prefix: u8,
         // family is implied anyway by parsing the address
     }
 
@@ -335,7 +333,7 @@ where
             .map_err(|err| de::Error::custom(format!("{:?}", err)))?;
 
         result.push(
-            CidrAddress::new(ip_addr, desc.prefix)
+            Cidr::new(ip_addr, desc.prefix)
                 .map_err(|err| de::Error::custom(format!("{:?}", err)))?,
         );
     }
@@ -478,7 +476,7 @@ pub struct Interface {
 
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_cidr_list")]
-    pub addresses: Vec<CidrAddress>,
+    pub addresses: Vec<Cidr>,
 }
 
 impl Interface {
@@ -613,8 +611,7 @@ pub struct InstallConfig {
 
     pub hostname: String,
     pub domain: String,
-    #[serde(serialize_with = "serialize_as_display")]
-    pub cidr: CidrAddress,
+    pub cidr: Cidr,
     pub gateway: IpAddr,
     pub dns: IpAddr,
 

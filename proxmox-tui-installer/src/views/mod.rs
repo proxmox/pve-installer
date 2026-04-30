@@ -8,8 +8,6 @@ use cursive::{
     views::{EditView, LinearLayout, NamedView, ResizedView, SelectView, TextView},
 };
 
-use proxmox_installer_common::utils::CidrAddress;
-
 mod bootdisk;
 pub use bootdisk::*;
 
@@ -20,6 +18,7 @@ mod network;
 pub use network::*;
 
 mod tabbed_view;
+use proxmox_network_types::ip_address::Cidr;
 pub use tabbed_view::*;
 
 mod table_view;
@@ -391,9 +390,9 @@ where
     }
 }
 
-impl FormViewGetValue<(IpAddr, usize)> for CidrAddressEditView {
-    // FIXME: return CidrAddress (again) with proper error handling through Result
-    fn get_value(&self) -> Option<(IpAddr, usize)> {
+impl FormViewGetValue<(IpAddr, u8)> for CidrAddressEditView {
+    // FIXME: return Cidr (again) with proper error handling through Result
+    fn get_value(&self) -> Option<(IpAddr, u8)> {
         self.get_values()
     }
 }
@@ -572,14 +571,14 @@ impl CidrAddressEditView {
         Self { view }
     }
 
-    pub fn content(mut self, cidr: CidrAddress) -> Self {
+    pub fn content(mut self, cidr: Cidr) -> Self {
         if let Some(view) = self
             .view
             .get_child_mut(0)
             .and_then(|v| v.downcast_mut::<ResizedView<EditView>>())
         {
             *view = EditView::new()
-                .content(cidr.addr().to_string())
+                .content(cidr.address().to_string())
                 .full_width();
         }
 
@@ -594,15 +593,15 @@ impl CidrAddressEditView {
         self
     }
 
-    fn mask_edit_view(content: usize) -> ResizedView<IntegerEditView> {
+    fn mask_edit_view(content: u8) -> ResizedView<IntegerEditView> {
         IntegerEditView::new()
             .max_value(128)
             .max_content_width(3)
-            .content(content)
+            .content(content.into())
             .fixed_width(4)
     }
 
-    fn get_values(&self) -> Option<(IpAddr, usize)> {
+    fn get_values(&self) -> Option<(IpAddr, u8)> {
         let addr = self
             .view
             .get_child(0)?
@@ -620,7 +619,7 @@ impl CidrAddressEditView {
             .get_content()
             .ok()?;
 
-        Some((addr, mask))
+        Some((addr, mask as u8))
     }
 }
 

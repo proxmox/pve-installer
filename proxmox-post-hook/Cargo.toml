@@ -14,5 +14,6 @@ homepage = "https://www.proxmox.com"
 anyhow.workspace = true
 proxmox-auto-installer.workspace = true
 proxmox-installer-common = { workspace = true, features = ["http"] }
+proxmox-network-types.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

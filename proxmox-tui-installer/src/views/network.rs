@@ -16,9 +16,8 @@ use proxmox_installer_common::{
     net::MAX_IFNAME_LEN,
     options::{NetworkInterfacePinningOptions, NetworkOptions},
     setup::{Interface, NetworkInfo},
-    utils::CidrAddress,
 };
-use proxmox_network_types::fqdn::Fqdn;
+use proxmox_network_types::{fqdn::Fqdn, ip_address::Cidr};
 
 use super::{CidrAddressEditView, FormView};
 
@@ -85,7 +84,7 @@ impl NetworkOptionsView {
             )
             .child(
                 "IP address (CIDR)",
-                CidrAddressEditView::new().content(options.address.clone()),
+                CidrAddressEditView::new().content(options.address),
             )
             .child(
                 "Gateway address",
@@ -169,9 +168,7 @@ impl NetworkOptionsView {
         let address = form
             .get_value::<CidrAddressEditView, _>(2)
             .ok_or("failed to retrieve host address".to_string())
-            .and_then(|(ip_addr, mask)| {
-                CidrAddress::new(ip_addr, mask).map_err(|err| err.to_string())
-            })?;
+            .and_then(|(ip_addr, mask)| Cidr::new(ip_addr, mask).map_err(|err| err.to_string()))?;
 
         let gateway = form
             .get_value::<EditView, _>(3)
@@ -199,9 +196,9 @@ impl NetworkOptionsView {
             iface.name
         };
 
-        if address.addr().is_ipv4() != gateway.is_ipv4() {
+        if address.address().is_ipv4() != gateway.is_ipv4() {
             Err("host and gateway IP address version must not differ".to_owned())
-        } else if address.addr().is_ipv4() != dns_server.is_ipv4() {
+        } else if address.address().is_ipv4() != dns_server.is_ipv4() {
             Err("host and DNS IP address version must not differ".to_owned())
         } else if fqdn.to_string().ends_with(".invalid") {
             Err("hostname does not look valid".to_owned())

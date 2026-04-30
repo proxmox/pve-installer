@@ -73,7 +73,7 @@ fn get_network_settings(
     };
 
     if let answer::NetworkSettings::Manual(settings) = &answer.network.network_settings {
-        network_options.address = settings.cidr.clone();
+        network_options.address = settings.cidr;
         network_options.dns_server = settings.dns;
         network_options.gateway = settings.gateway;
         network_options.ifname = get_single_udev_index(&settings.filter, &udev_info.nics)?;

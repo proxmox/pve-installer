@@ -9,6 +9,8 @@
 //! Relies on `proxmox-chroot` as an external dependency to (bind-)mount the
 //! previously installed system.
 
+use anyhow::{Context, Result, anyhow, bail};
+use serde::Serialize;
 use std::{
     collections::HashSet,
     ffi::CStr,
@@ -19,7 +21,6 @@ use std::{
     process::{Command, ExitCode},
 };
 
-use anyhow::{Context, Result, anyhow, bail};
 use proxmox_auto_installer::{
     answer::{
         Answer, FqdnConfig, FqdnExtendedConfig, FqdnSourceMode, PostNotificationHookInfo,
@@ -27,17 +28,16 @@ use proxmox_auto_installer::{
     },
     udevinfo::{UdevInfo, UdevProperties},
 };
-use proxmox_installer_common::http::{self, header::HeaderMap};
 use proxmox_installer_common::{
+    http::{self, header::HeaderMap},
     options::{Disk, FsType, NetworkOptions},
     setup::{
         BootType, InstallConfig, IsoInfo, ProxmoxProduct, RuntimeInfo, SetupInfo,
         load_installer_setup_files,
     },
     sysinfo::SystemDMI,
-    utils::CidrAddress,
 };
-use serde::Serialize;
+use proxmox_network_types::ip_address::Cidr;
 
 /// Information about the system boot status.
 #[derive(Serialize)]
@@ -83,7 +83,7 @@ struct NetworkInterfaceInfo {
     mac: String,
     /// (Designated) IP address of the interface
     #[serde(skip_serializing_if = "Option::is_none")]
-    address: Option<CidrAddress>,
+    address: Option<Cidr>,
     /// Set to true if the interface is the chosen management interface during
     /// installation.
     #[serde(skip_serializing_if = "bool_is_false")]
@@ -406,7 +406,7 @@ impl PostHookInfo {
                     mac: nic.mac.clone(),
                     // Use the actual IP address from the low-level install config, as the runtime info
                     // contains the original IP address from DHCP.
-                    address: is_management.then_some(config.cidr.clone()),
+                    address: is_management.then_some(config.cidr),
                     is_management,
                     is_pinned,
                     udev_properties,

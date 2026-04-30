@@ -1,19 +1,16 @@
 use anyhow::{Result, bail, format_err};
-use proxmox_installer_common::{
-    options::{
-        BtrfsCompressOption, BtrfsRaidLevel, FsType, NetworkInterfacePinningOptions,
-        ZfsChecksumOption, ZfsCompressOption, ZfsRaidLevel,
-    },
-    utils::CidrAddress,
-};
-use proxmox_network_types::fqdn::Fqdn;
-
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     io::BufRead,
     net::IpAddr,
 };
+
+use proxmox_installer_common::options::{
+    BtrfsCompressOption, BtrfsRaidLevel, FsType, NetworkInterfacePinningOptions, ZfsChecksumOption,
+    ZfsCompressOption, ZfsRaidLevel,
+};
+use proxmox_network_types::{Cidr, fqdn::Fqdn};
 
 // NOTE New answer file properties must use kebab-case, but should allow snake_case for backwards
 // compatibility. TODO Remove the snake_cased variants in a future major version (e.g. PVE 10).
@@ -201,7 +198,7 @@ pub struct NetworkInterfacePinningOptionsAnswer {
 struct NetworkInAnswer {
     #[serde(default)]
     pub source: NetworkConfigMode,
-    pub cidr: Option<CidrAddress>,
+    pub cidr: Option<Cidr>,
     pub dns: Option<IpAddr>,
     pub gateway: Option<IpAddr>,
     #[serde(default)]
@@ -293,7 +290,7 @@ pub enum NetworkSettings {
 
 #[derive(Clone, Debug)]
 pub struct NetworkManual {
-    pub cidr: CidrAddress,
+    pub cidr: Cidr,
     pub dns: IpAddr,
     pub gateway: IpAddr,
     pub filter: BTreeMap<String, String>,

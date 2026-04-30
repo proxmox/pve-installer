@@ -10,8 +10,7 @@ use std::{cmp, fmt};
 use crate::disk_checks::check_raid_min_disks;
 use crate::net::{MAX_IFNAME_LEN, MIN_IFNAME_LEN};
 use crate::setup::{LocaleInfo, NetworkInfo, RuntimeInfo, SetupInfo};
-use crate::utils::CidrAddress;
-use proxmox_network_types::fqdn::Fqdn;
+use proxmox_network_types::{fqdn::Fqdn, ip_address::Cidr};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all(deserialize = "lowercase", serialize = "UPPERCASE"))]
@@ -550,7 +549,7 @@ impl NetworkInterfacePinningOptions {
 pub struct NetworkOptions {
     pub ifname: String,
     pub fqdn: Fqdn,
-    pub address: CidrAddress,
+    pub address: Cidr,
     pub gateway: IpAddr,
     pub dns_server: IpAddr,
     pub pinning_opts: Option<NetworkInterfacePinningOptions>,
@@ -576,7 +575,7 @@ impl NetworkOptions {
             ),
             // Safety: The provided IP address/mask is always valid.
             // These are the same as used in the GTK-based installer.
-            address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
+            address: Cidr::new_v4([192, 168, 100, 2], 24).unwrap(),
             gateway: Ipv4Addr::new(192, 168, 100, 1).into(),
             dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
             pinning_opts: pinning_opts.cloned(),
@@ -602,7 +601,7 @@ impl NetworkOptions {
 
             if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
                 this.gateway = gw.gateway;
-                this.address = addr.clone();
+                this.address = *addr;
             } else if let Some(gw) = &routes.gateway6
                 && let Some(iface) = network.interfaces.get(&gw.dev)
                 && let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6())
@@ -617,7 +616,7 @@ impl NetworkOptions {
                 }
 
                 this.gateway = gw.gateway;
-                this.address = addr.clone();
+                this.address = *addr;
             }
         }
 
@@ -702,10 +701,7 @@ pub fn email_validate(email: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        setup::{Dns, Gateway, Interface, InterfaceState, NetworkInfo, Routes, SetupInfo},
-        utils::CidrAddress,
-    };
+    use crate::setup::{Dns, Gateway, Interface, InterfaceState, NetworkInfo, Routes, SetupInfo};
     use std::collections::BTreeMap;
     use std::net::{IpAddr, Ipv4Addr};
 
@@ -775,7 +771,7 @@ mod tests {
                 state: InterfaceState::Up,
                 driver: "dummy".to_owned(),
                 mac: "01:23:45:67:89:ab".to_owned(),
-                addresses: vec![CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap()],
+                addresses: vec![Cidr::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap()],
             },
         );
 
@@ -807,7 +803,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -820,7 +816,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.bar.com").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -833,7 +829,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -846,7 +842,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.example.invalid").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -863,7 +859,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.bar.com").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -876,7 +872,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -889,7 +885,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("foo.custom.local").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 0, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
@@ -930,7 +926,7 @@ mod tests {
             NetworkOptions {
                 ifname: "eth0".to_owned(),
                 fqdn: Fqdn::from("pve.example.invalid").unwrap(),
-                address: CidrAddress::new(Ipv4Addr::new(192, 168, 100, 2), 24).unwrap(),
+                address: Cidr::new_v4([192, 168, 100, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 100, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
                 pinning_opts: None,
