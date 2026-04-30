@@ -95,6 +95,14 @@ impl FetchFromHTTP {
             HeaderValue::from_str("application/json, application/toml;q=0.5")?,
         );
 
+        if let Some(token) = &settings.token {
+            info!("Authentication token provided through ISO.");
+            headers.insert(
+                http::header::AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {token}"))?,
+            );
+        }
+
         let http::Response { body, content_type } =
             http::post(&answer_url, fingerprint.as_deref(), headers, payload)?;
 

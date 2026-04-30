@@ -23,8 +23,13 @@ const CLI_USAGE_HELPTEXT: &str = concat!(
 
 Commands:
   iso         Fetch the builtin answer file from the ISO
+
   http        Fetch the answer file via HTTP(S)
-              Additional parameters: [<http-url>] [<tls-cert-fingerprint>]
+              Additional parameters: [<http-url>] [<tls-cert-fingerprint>] [<auth-token>]
+
+              To provide an authentication token without a certificate fingerprint, pass an
+              empty string to <tls-cert-fingerprint>.
+
   partition   Fetch the answer file from a mountable partition
               Additional parameters: [<partition-label>]
 
@@ -80,8 +85,8 @@ fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
         FetchAnswerFrom::Iso if args.len() > 2 => {
             bail!("'iso' mode does not take any additional arguments")
         }
-        FetchAnswerFrom::Http if args.len() > 4 => {
-            bail!("'http' mode takes at most 2 additional arguments")
+        FetchAnswerFrom::Http if args.len() > 5 => {
+            bail!("'http' mode takes at most 3 additional arguments")
         }
         FetchAnswerFrom::Partition if args.len() > 3 => {
             bail!("'partition' mode takes at most 1 additional argument")
@@ -97,8 +102,9 @@ fn settings_from_cli_args(args: &[String]) -> Result<AutoInstSettings> {
             .cloned()?,
         http: HttpOptions {
             url: args.get(2).cloned(),
-            cert_fingerprint: args.get(3).cloned(),
-            token: None,
+            // treat empty value as not existing
+            cert_fingerprint: args.get(3).cloned().filter(|s| !s.is_empty()),
+            token: args.get(4).cloned(),
         },
     })
 }
