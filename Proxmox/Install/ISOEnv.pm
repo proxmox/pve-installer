@@ -16,26 +16,26 @@ my $product_cfg = {
     pve => {
         fullname => 'Proxmox VE',
         port => '8006',
-        enable_btrfs => 1,
-        bridged_network => 1,
+        enable_btrfs => JSON::true,
+        bridged_network => JSON::true,
     },
     pmg => {
         fullname => 'Proxmox Mail Gateway',
         port => '8006',
-        enable_btrfs => 0,
-        bridged_network => 0,
+        enable_btrfs => JSON::false,
+        bridged_network => JSON::false,
     },
     pbs => {
         fullname => 'Proxmox Backup Server',
         port => '8007',
-        enable_btrfs => 0,
-        bridged_network => 0,
+        enable_btrfs => JSON::false,
+        bridged_network => JSON::false,
     },
     pdm => {
         fullname => 'Proxmox Datacenter Manager',
         port => '8443', # TODO: confirm
-        enable_btrfs => 0,
-        bridged_network => 0,
+        enable_btrfs => JSON::false,
+        bridged_network => JSON::false,
     },
 };
 
