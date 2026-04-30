@@ -641,16 +641,12 @@ impl PostHookInfo {
                     sockets.insert(value);
                 }
                 // x86: "flags", ARM64: "Features"
-                Some((key, value))
-                    if key.trim() == "flags"
-                        || key.trim() == "Features" =>
-                {
+                Some((key, value)) if key.trim() == "flags" || key.trim() == "Features" => {
                     value.trim().clone_into(&mut result.flags);
                 }
                 // x86: "model name", ARM64: "CPU implementer"
                 Some((key, value))
-                    if key.trim() == "model name"
-                        || key.trim() == "CPU implementer" =>
+                    if key.trim() == "model name" || key.trim() == "CPU implementer" =>
                 {
                     if result.model.is_empty() {
                         value.trim().clone_into(&mut result.model);
