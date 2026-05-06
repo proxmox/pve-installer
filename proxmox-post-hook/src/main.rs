@@ -738,6 +738,7 @@ fn do_main() -> Result<()> {
     if let Some(PostNotificationHookInfo {
         url,
         cert_fingerprint,
+        auth_token,
     }) = &answer.post_installation_webhook
     {
         println!("Found post-installation-webhook; sending POST request to '{url}'.");
@@ -753,11 +754,18 @@ fn do_main() -> Result<()> {
             );
         }
 
+        let mut body = serde_json::to_value(&info)?;
+        if let Some(token) = auth_token {
+            // The receiving side may require an opaque token for authenticating
+            // the callback; pass it through alongside the gathered info.
+            body["token"] = serde_json::Value::String(token.clone());
+        }
+
         http::post(
             url,
             cert_fingerprint.as_deref(),
             HeaderMap::new(),
-            serde_json::to_string(&info)?,
+            serde_json::to_string(&body)?,
         )?;
     } else {
         println!("No post-installation-webhook configured; skipping");
