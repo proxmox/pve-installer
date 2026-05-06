@@ -27,7 +27,7 @@ serde_plain = "1.0"
 toml = "0.8"
 proxmox-auto-installer.path = "./proxmox-auto-installer"
 proxmox-installer-common.path = "./proxmox-installer-common"
-proxmox-network-types = "1.0"
+proxmox-network-types = "1.1"
 proxmox-installer-types = { version = "0.1", features = ["legacy"] }
 
 # Local path overrides
