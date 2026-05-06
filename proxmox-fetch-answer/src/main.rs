@@ -30,6 +30,11 @@ Commands:
               To provide an authentication token without a certificate fingerprint, pass an
               empty string to <tls-cert-fingerprint>.
 
+              Note: passing the auth token on the command line makes it visible via
+              /proc/<pid>/cmdline. This is intended for use in the minimal installer
+              live environment, which has no network daemons or other users; outside
+              of that environment, prefer embedding the token via the assistant.
+
   partition   Fetch the answer file from a mountable partition
               Additional parameters: [<partition-label>]
 
