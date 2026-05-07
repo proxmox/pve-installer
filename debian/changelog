@@ -1,3 +1,46 @@
+proxmox-installer (9.2.0) trixie; urgency=medium
+
+  * auto-installer: assistant: support embedding an HTTP authorization token
+    into the prepared ISO via a new `--answer-auth-token` flag, which
+    proxmox-fetch-answer then sends as an HTTP Bearer header when retrieving
+    the answer file. Allows an answer server such as Proxmox Datacenter
+    Manager to authenticate which ISO is asking for which answer.
+
+  * auto-installer: fetch-answer: prefer JSON over TOML answers via Accept
+    header negotiation, with TOML kept as a lower-priority fallback so
+    existing TOML-only answer servers keep working unchanged.
+
+  * auto-installer: post-hook: forward an optional authentication token,
+    carried along the answer's webhook info, as a `token` field in the JSON
+    callback body, so a receiving server can authenticate the post-
+    installation callback against state it kept for that installation.
+
+  * auto-installer: fetch-answer: include the full server response body in the
+    failure log and stderr output, so operators can debug an unhealthy answer
+    endpoint without having to instrument it from the live installer.
+
+  * tree-wide: switch to the new proxmox-installer-types crate and the moved
+    Fqdn/CIDR types from proxmox-network-types for the answer file, the
+    system-information payload and the post-install webhook payload. The wire
+    formats are unchanged; this removes duplication so other consumers like
+    Proxmox Datacenter Manager can produce and consume the same schemas
+    without copying them.
+
+  * auto-installer: pick up an optional `subscription-key` from the answer
+    file's [global] section and stage it on the target system for activation
+    on first boot, so an automated install ends up with a fully registered
+    subscription without an operator step.
+
+  * first-boot: add a small subscription activator (proxmox-first-boot-
+    subscription) that picks up the staged key after network-online, picks
+    the per-product activation CLI (pvesubscription / proxmox-backup-manager
+    / pmgsubscription) by the key's prefix, and runs once. The staged key
+    is removed regardless of activation outcome; a failure leaves the unit
+    in 'failed' state with full context in the journal for the operator to
+    follow up by hand.
+
+ -- Proxmox Support Team <support@proxmox.com>  Thu, 07 May 2026 02:04:22 +0200
+
 proxmox-installer (9.1.7) trixie; urgency=medium
 
   * add missing util-linux-extra dependency, which provides `waitpid` needed
