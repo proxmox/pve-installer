@@ -526,6 +526,8 @@ pub struct InstallConfig {
     pub mailto: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub root_ssh_keys: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscription_key: Option<String>,
 
     pub mngmt_nic: String,
     // Maps MAC addresses -> custom name. If set, enables pinning for all

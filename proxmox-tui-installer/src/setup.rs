@@ -32,6 +32,7 @@ impl From<InstallerOptions> for InstallConfig {
             root_password: InstallRootPassword::Plain(options.password.root_password),
             mailto: options.password.email,
             root_ssh_keys: vec![],
+            subscription_key: None,
 
             mngmt_nic: options.network.ifname,
             network_interface_pin_map: pinning_opts.map(|o| o.mapping.clone()).unwrap_or_default(),

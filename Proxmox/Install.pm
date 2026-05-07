@@ -705,6 +705,23 @@ my sub setup_root_password {
     }
 }
 
+my sub stage_subscription_key {
+    my ($targetdir) = @_;
+
+    my $key = Proxmox::Install::Config::get_subscription_key();
+    return if !defined($key) || $key eq '';
+
+    # Drop the bare key into a fixed product-agnostic path; the proxmox-first-boot-subscription
+    # service picks it up after network-online and forwards it to the per-product activation CLI.
+    my $statedir = "$targetdir/var/lib/proxmox-first-boot";
+    syscmd("mkdir -p $statedir") == 0
+        || die "failed to create $statedir directory\n";
+
+    file_write_all("$statedir/subscription-key", "$key\n");
+    chmod(0600, "$statedir/subscription-key")
+        || warn "failed to restrict permissions on subscription-key: $!\n";
+}
+
 my sub setup_proxmox_first_boot_service {
     my ($targetdir) = @_;
 
@@ -1430,6 +1447,7 @@ _EOD
         update_progress(0.8, 0.95, 1, "make system bootable$ask_for_patience");
 
         setup_proxmox_first_boot_service($targetdir);
+        stage_subscription_key($targetdir);
 
         my $target_cmdline = '';
         if ($target_cmdline = Proxmox::Install::Config::get_target_cmdline()) {

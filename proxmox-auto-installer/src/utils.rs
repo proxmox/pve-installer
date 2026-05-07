@@ -549,6 +549,7 @@ pub fn parse_answer(
         root_password,
         mailto: answer.global.mailto.clone(),
         root_ssh_keys: answer.global.root_ssh_keys.clone(),
+        subscription_key: answer.global.subscription_key.clone(),
 
         mngmt_nic: network_settings.ifname,
         network_interface_pin_map: network_settings

@@ -98,6 +98,7 @@ my sub init_cfg {
         root_password => undef,
         mailto => 'mail@example.invalid',
         root_ssh_keys => [],
+        subscription_key => undef,
 
         # network related
         mngmt_nic => undef,
@@ -249,6 +250,9 @@ sub get_mailto { return get('mailto'); }
 
 sub set_root_ssh_keys { set_key('root_ssh_keys', $_[0]); }
 sub get_root_ssh_keys { return get('root_ssh_keys'); }
+
+sub set_subscription_key { set_key('subscription_key', $_[0]); }
+sub get_subscription_key { return get('subscription_key'); }
 
 sub set_mngmt_nic { set_key('mngmt_nic', $_[0]); }
 sub get_mngmt_nic { return get('mngmt_nic'); }
