@@ -665,7 +665,8 @@ sub prepare_grub_efi_boot_esp {
         syscmd("cp $targetdir/boot/efi/EFI/proxmox/*.efi $targetdir/boot/efi/EFI/BOOT/") == 0
             || die "unable to copy efi boot loader\n";
 
-        my ($shim_src, $boot_dst) = $run_env->{arch} eq 'arm64'
+        my ($shim_src, $boot_dst) =
+            $run_env->{arch} eq 'arm64'
             ? ('shimaa64.efi', 'BOOTAA64.efi')
             : ('shimx64.efi', 'BOOTx64.efi');
         syscmd(
@@ -1302,10 +1303,8 @@ sub extract_data {
             $grub_debconfig .=
                 "grub-pc grub-pc/install_devices select $grub_install_devices_txt\n";
         }
-        my $grub_efi_pkg = $run_env->{arch} eq 'arm64'
-            ? 'grub-efi-arm64' : 'grub-efi-amd64';
-        $grub_debconfig .=
-            "$grub_efi_pkg grub2/force_efi_extra_removable boolean true\n";
+        my $grub_efi_pkg = $run_env->{arch} eq 'arm64' ? 'grub-efi-arm64' : 'grub-efi-amd64';
+        $grub_debconfig .= "$grub_efi_pkg grub2/force_efi_extra_removable boolean true\n";
 
         debconfig_set($targetdir, <<_EOD);
 locales locales/default_environment_locale select en_US.UTF-8
@@ -1333,7 +1332,9 @@ _EOD
             # the grub-pc/grub-efi packages (w/o -bin) are the ones actually updating
             # grub upon upgrade - and conflict with each other - install the fitting one
             # only; arm64 is EFI-only and never has grub-pc
-            next if $deb =~ /grub-pc_/ && ($run_env->{boot_type} ne 'bios' || $run_env->{arch} eq 'arm64');
+            next
+                if $deb =~ /grub-pc_/
+                && ($run_env->{boot_type} ne 'bios' || $run_env->{arch} eq 'arm64');
             next if $deb =~ /grub-efi-amd64_/ && $run_env->{arch} ne 'amd64';
             next if $deb =~ /grub-efi-arm64_/ && $run_env->{arch} ne 'arm64';
             next if $deb =~ /grub-efi-(?:amd64|arm64)_/ && $run_env->{boot_type} ne 'efi';

@@ -62,22 +62,22 @@ sub query_cpu_info : prototype() {
     my $arch = query_arch();
 
     if ($arch eq 'arm64') {
-	# ARM has no vendor_id/flags in /proc/cpuinfo, check /dev/kvm for
-	# virtualization support instead
-	$cpu_info->{hvm_supported} = -e '/dev/kvm' ? 1 : 0;
-	$cpu_info->{vendor_id} = 'ARM';
+        # ARM has no vendor_id/flags in /proc/cpuinfo, check /dev/kvm for
+        # virtualization support instead
+        $cpu_info->{hvm_supported} = -e '/dev/kvm' ? 1 : 0;
+        $cpu_info->{vendor_id} = 'ARM';
     } else {
-	open(my $CPUINFO_FD, '<', '/proc/cpuinfo');
-	while (my $line = <$CPUINFO_FD>) {
-	    if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
-		$cpu_info->{hvm_supported} = 1;
-	    } elsif ($line =~ /^vendor_id\s*:\s*(GenuineIntel|AuthenticAMD)/) {
-		$cpu_info->{vendor_id} = $1;
-	    } elsif ($line eq "") {
-		last;
-	    }
-	}
-	close($CPUINFO_FD);
+        open(my $CPUINFO_FD, '<', '/proc/cpuinfo');
+        while (my $line = <$CPUINFO_FD>) {
+            if ($line =~ /^flags\s*:.*(vmx|svm)/m) {
+                $cpu_info->{hvm_supported} = 1;
+            } elsif ($line =~ /^vendor_id\s*:\s*(GenuineIntel|AuthenticAMD)/) {
+                $cpu_info->{vendor_id} = $1;
+            } elsif ($line eq "") {
+                last;
+            }
+        }
+        close($CPUINFO_FD);
     }
 
     $_cached_cpu_info = $cpu_info;
