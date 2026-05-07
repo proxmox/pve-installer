@@ -76,7 +76,10 @@ Description: Assistant to help with automated installations
 
 Package: proxmox-first-boot
 Architecture: any
-Depends: ${misc:Depends},
-Description: Service which runs on the first system boot for additional setup
- Provides a service which will run on the first boot if the a script was
- configured through the auto-installer.
+Depends: ${misc:Depends}, ${perl:Depends},
+Description: Services that run on the first system boot for additional setup
+ Provides services that run on the first boot of an installation. Currently:
+ a hook for an auto-installer-supplied script that runs in one of three boot
+ phases, and a one-shot subscription activator that picks up a subscription
+ key staged by the installer and forwards it to the per-product activation
+ CLI once the network is online.

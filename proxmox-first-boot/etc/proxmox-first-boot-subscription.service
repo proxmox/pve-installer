@@ -1,0 +1,14 @@
+[Unit]
+Description=Proxmox First Boot Subscription Activation
+After=systemd-remount-fs.service
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/var/lib/proxmox-first-boot/subscription-key
+ConditionPathIsReadWrite=/var/lib
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/proxmox/proxmox-first-boot-subscription
+
+[Install]
+WantedBy=multi-user.target

@@ -1,3 +1,5 @@
 usr/lib/systemd/system/proxmox-first-boot-multi-user.service
 usr/lib/systemd/system/proxmox-first-boot-network-online.service
 usr/lib/systemd/system/proxmox-first-boot-network-pre.service
+usr/lib/systemd/system/proxmox-first-boot-subscription.service
+usr/libexec/proxmox/proxmox-first-boot-subscription

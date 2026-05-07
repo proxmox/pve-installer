@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+# Pick up a subscription key staged at install time and hand it to the product-specific subscription
+# CLI for activation once the network is online on first boot.
+
+use v5.36;
+
+# Where the installer drops the subscription key on the target system.
+# The first non-empty line is the bare key, everything else is ignored.
+my $STAGED_KEY_PATH = '/var/lib/proxmox-first-boot/subscription-key';
+
+# adapted from proxmox_installer_types::answer::SUBSCRIPTION_KEY_REGEX.
+my $KEY_RE = qr/^(?:pve[0-9]+|pbs|pmg)[cbsp]-[0-9a-f]{10}$/;
+
+# product to 'subscription set <key>' CLI tool map.
+my %PRODUCT_CLI = (
+    pve => ['pvesubscription', 'set'],
+    pbs => ['proxmox-backup-manager', 'subscription', 'set'],
+    pmg => ['pmgsubscription', 'set'],
+);
+
+# Only done on first-boot, so always drop the staged key, regardless of whether activation
+# succeeded for now.
+END {
+    if (-e $STAGED_KEY_PATH) {
+        unlink $STAGED_KEY_PATH
+            or print STDERR "warning: failed to remove $STAGED_KEY_PATH: $!\n";
+    }
+}
+
+sub fail {
+    my ($msg) = @_;
+    print STDERR "subscription activation failed: $msg\n";
+    exit 1;
+}
+
+sub read_staged_key {
+    open(my $fh, '<', $STAGED_KEY_PATH)
+        or fail("opening $STAGED_KEY_PATH: $!");
+    while (my $line = <$fh>) {
+        chomp $line;
+        $line =~ s/^\s+|\s+$//g;
+        next if $line eq '';
+        close $fh;
+        return $line;
+    }
+    close $fh;
+    fail("staged key file $STAGED_KEY_PATH contains no key");
+}
+
+my $key = read_staged_key();
+
+if ($key !~ $KEY_RE) {
+    fail("staged key does not match a known Proxmox key format, refusing to forward");
+}
+
+my ($prefix) = $key =~ /^([a-z]{3})/;
+my $cmd = $PRODUCT_CLI{$prefix}
+    or fail("staged key prefix '$prefix' has no known activation CLI");
+
+print "activating subscription via '$cmd->@* <key>'\n";
+
+my $rc = system($cmd->@*, $key);
+if ($rc == -1) {
+    fail("could not execute $cmd->@*: $!");
+} elsif ($rc != 0) {
+    my $exit = $rc >> 8;
+    fail("$cmd->@* <key> exited with status $exit");
+}
+
+print "subscription activated\n";
+exit 0;
