@@ -144,7 +144,7 @@ sub parse_ip_mask {
     my ($text, $ip_version) = @_;
     $text =~ s/^\s+//;
     $text =~ s/\s+$//;
-    if ($ip_version == 6 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 126) {
+    if ($ip_version == 6 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 128) {
         return $text;
     } elsif ($ip_version == 4 && ($text =~ m/^(\d+)$/) && $1 >= 8 && $1 <= 32) {
         return $text;
