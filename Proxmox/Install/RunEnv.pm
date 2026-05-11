@@ -136,7 +136,6 @@ my sub detect_country_tracing_to : prototype($$) {
 # {
 #     arch => <dpkg architecture, e.g. 'amd64' or 'arm64'>,
 #     country => <short country>,
-#     ipconf = <see Proxmox::Sys::Net::get_ip_config()>,
 #     kernel_cmdline = <contents of /proc/cmdline>,
 #     total_memory = <memory size in MiB>,
 #     hvm_supported = <1 if the CPU supports hardware-accelerated virtualization>,
@@ -186,11 +185,6 @@ sub query_installation_environment : prototype() {
 
         $output->{network}->{hostname} = $fqdn;
     }
-
-    # FIXME: move whatever makes sense over to Proxmox::Sys::Net:: and keep that as single source,
-    # it can then use some different structure just fine (after adapting the GTK GUI to that) but
-    # **never** to (slightly different!) things for the same stuff...
-    $output->{ipconf} = Proxmox::Sys::Net::get_ip_config();
 
     $output->{kernel_cmdline} = file_read_firstline("/proc/cmdline");
     $output->{total_memory} = query_total_memory();

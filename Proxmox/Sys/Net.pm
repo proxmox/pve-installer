@@ -186,78 +186,11 @@ sub get_pin_link_file_content {
     return sprintf($LINK_FILE_TEMPLATE, $mac, $pin_name);
 }
 
-sub get_ip_config {
-    my $ifaces = {};
-    my $default;
-    my $pinned_counter = 0;
-
-    my $links = `ip -o l`;
-    foreach my $l (split /\n/, $links) {
-        my ($index, $name, $flags, $state, $mac) =
-            $l =~ m/^(\d+):\s+(\S+):\s+<(\S+)>.*\s+state\s+(\S+)\s+.*\s+link\/ether\s+(\S+)\s+/;
-        next if !$name || $name eq 'lo';
-
-        my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
-        $driver =~ s!^.*/!!;
-
-        $ifaces->{"$index"} = {
-            name => $name,
-            pinned_id => "${pinned_counter}",
-            driver => $driver,
-            flags => $flags,
-            state => $state,
-            mac => $mac,
-        };
-        $pinned_counter++;
-
-        my $addresses = `ip -o a s $name`;
-        for my $addr_line (split /\n/, $addresses) {
-            my ($family, $ip, $prefix) =
-                $addr_line =~ m/^\Q$index\E:\s+\Q$name\E\s+(inet|inet6)\s+($IPRE)\/(\d+)\s+/;
-            next if !$ip;
-            next if $addr_line =~ /scope\s+link/; # ignore link local
-
-            my $mask = $prefix;
-
-            if ($family eq 'inet') {
-                next if !$ip =~ /$IPV4RE/;
-                next if $prefix < 8 || $prefix > 32;
-                $mask = @$ipv4_reverse_mask[$prefix];
-            } else {
-                next if !$ip =~ /$IPV6RE/;
-            }
-
-            $default = $index if !$default;
-
-            $ifaces->{"$index"}->{"$family"} = {
-                prefix => $prefix,
-                mask => $mask,
-                addr => $ip,
-            };
-        }
-    }
-
-    my $route = `ip route`;
-    my ($gateway) = $route =~ m/^default\s+via\s+(\S+)\s+/m;
-
-    my $resolvconf = `cat /etc/resolv.conf`;
-    my ($dnsserver) = $resolvconf =~ m/^nameserver\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/m;
-    my ($domain) = $resolvconf =~ m/^domain\s+(\S+)$/m;
-
-    return {
-        default => $default,
-        ifaces => $ifaces,
-        gateway => $gateway,
-        dnsserver => $dnsserver,
-        domain => $domain,
-    };
-}
-
 sub udevadm_netdev_details {
-    my $ip_config = get_ip_config();
+    my $ifaces = query_netdevs();
 
     my $result = {};
-    for my $dev (values $ip_config->{ifaces}->%*) {
+    for my $dev (values $ifaces->%*) {
         my $name = $dev->{name};
         $result->{$name} = Proxmox::Sys::Udev::get_udev_properties("/sys/class/net/$name");
     }
