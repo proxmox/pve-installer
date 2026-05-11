@@ -425,59 +425,58 @@ impl NetworkOptions {
             pinning_opts: pinning_opts.cloned(),
         };
 
-        if let Some(ip) = network.dns.dns.first() {
-            this.dns_server = *ip;
-        }
-
-        if let Some(routes) = &network.routes
-            && let Some(gw) = &routes.gateway4
-            && let Some(iface) = network.interfaces.get(&gw.dev)
-        {
-            // we got some ipv4 connectivity, so use that
-
-            if let Some(opts) = pinning_opts
-                && let Some(pinned) = iface.to_pinned(opts)
-            {
-                this.ifname.clone_from(&pinned.name);
-            } else {
-                this.ifname.clone_from(&iface.name);
-            }
-
-            if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
-                this.gateway = gw.gateway;
-                this.address = *addr;
-            } else if let Some(gw) = &routes.gateway6
+        let iface = if let Some(routes) = &network.routes {
+            if let Some(gw) = &routes.gateway4
                 && let Some(iface) = network.interfaces.get(&gw.dev)
-                && let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6())
             {
-                // no ipv4, but ipv6 connectivity
-                if let Some(opts) = pinning_opts
-                    && let Some(pinned) = iface.to_pinned(opts)
-                {
-                    this.ifname.clone_from(&pinned.name);
-                } else {
-                    this.ifname.clone_from(&iface.name);
+                this.gateway = gw.gateway;
+
+                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
+                    this.address = *addr;
                 }
 
-                this.gateway = gw.gateway;
-                this.address = *addr;
-            }
-        }
+                if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv4()) {
+                    this.dns_server = *addr;
+                }
 
-        // In case no there are no routes defined at all (e.g. no DHCP lease),
-        // try to set the interface name to *some* valid values. At least one
-        // NIC should always be present here, as the installation will abort
-        // earlier in that case, so use the first one enumerated.
-        if this.ifname.is_empty()
-            && let Some(iface) = network.interfaces.values().min_by_key(|v| v.index)
-        {
-            if let Some(opts) = pinning_opts
-                && let Some(pinned) = iface.to_pinned(opts)
+                Some(iface)
+            } else if let Some(gw) = &routes.gateway6
+                && let Some(iface) = network.interfaces.get(&gw.dev)
             {
-                this.ifname.clone_from(&pinned.name);
+                this.gateway = gw.gateway;
+
+                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
+                    this.address = *addr;
+                }
+
+                if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv6()) {
+                    this.dns_server = *addr;
+                }
+
+                Some(iface)
             } else {
-                this.ifname.clone_from(&iface.name);
+                None
             }
+        } else {
+            None
+        }
+        .unwrap_or_else(|| {
+            // Safety: In case no there are no routes defined at all (e.g. no DHCP lease), try to
+            // set the interface name to *some* valid values. At least one NIC must always be
+            // present here, as the installation will abort earlier otherwise, so use the first one
+            // enumerated.
+            network
+                .interfaces
+                .values()
+                .min_by_key(|v| v.index)
+                .expect("at least one NIC must be present")
+        });
+
+        // Use pinned network interface name, if enabled
+        if let Some(pinned) = pinning_opts.and_then(|opts| iface.to_pinned(opts)) {
+            this.ifname.clone_from(&pinned.name);
+        } else {
+            this.ifname.clone_from(&iface.name);
         }
 
         if let Some(ref mut opts) = this.pinning_opts {
