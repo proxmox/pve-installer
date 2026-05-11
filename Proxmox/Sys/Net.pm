@@ -10,6 +10,7 @@ use JSON qw(from_json);
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(
+    ip_get_version
     parse_ip_address
     parse_ip_mask
     parse_fqdn
@@ -132,6 +133,11 @@ sub parse_ip_address {
         return ($1, 6);
     }
     return (undef, undef);
+}
+
+sub ip_get_version {
+    my (undef, $ver) = parse_ip_address($_[0]);
+    return $ver;
 }
 
 sub parse_ip_mask {

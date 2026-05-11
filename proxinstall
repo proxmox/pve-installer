@@ -37,7 +37,9 @@ use Proxmox::Sys;
 use Proxmox::Sys::Block qw(get_cached_disks);
 use Proxmox::Sys::Command qw(syscmd);
 use Proxmox::Sys::File qw(file_read_all file_write_all);
-use Proxmox::Sys::Net qw(parse_ip_address parse_ip_mask validate_link_pin_map DEFAULT_PIN_PREFIX);
+use Proxmox::Sys::Net qw(
+    parse_ip_address ip_get_version parse_ip_mask validate_link_pin_map DEFAULT_PIN_PREFIX
+);
 use Proxmox::UI;
 
 my $step_number = 0; # Init number for global function list
@@ -430,7 +432,24 @@ sub create_ipconf_view {
     Proxmox::UI::display_html('ipconf.htm');
 
     my $run_env = Proxmox::Install::RunEnv::get();
-    my $ipconf = $run_env->{ipconf};
+    my $network = $run_env->{network};
+
+    # prefer ipv4 gateway and fallback to ipv6
+    my $routes = $network->{routes} // {};
+    my $default_gateway = $routes->{gateway4} // $routes->{gateway6};
+
+    my $default_gateway_ipversion;
+    if (defined($default_gateway) && defined($default_gateway->{gateway})) {
+        $default_gateway_ipversion = ip_get_version($default_gateway->{gateway});
+    }
+
+    my $default_dns = undef;
+    if (defined($default_gateway)) {
+        # try to retrieve the first dns server matching the IP version of the gateway
+        ($default_dns) = grep {
+            ip_get_version($_) == $default_gateway_ipversion
+        } @{ $network->{dns}->{dns} };
+    }
 
     my $grid = &$create_basic_grid();
     $grid->set_row_spacing(10);
@@ -463,20 +482,20 @@ sub create_ipconf_view {
 
         my $mapping = Proxmox::Install::Config::get_network_interface_pin_map();
         my $i = 0;
-        for my $index (sort keys $ipconf->{ifaces}->%*) {
-            my $iface = $ipconf->{ifaces}->{$index};
+        for my $name (sort keys $network->{interfaces}->%*) {
+            my $iface = $network->{interfaces}->{$name};
             my $iter = $device_model->append();
 
             my $symbol = "$iface->{state}" eq "UP" ? "\x{25CF}" : ' ';
-            my $name =
+            my $label =
                 $gtk_state->{network_pinning_enabled} && defined($mapping->{ $iface->{mac} })
                 ? $mapping->{ $iface->{mac} }
-                : $iface->{name};
+                : $name;
 
             $device_model->set(
                 $iter,
                 0 => $symbol,
-                1 => "$name - $iface->{mac} ($iface->{driver})",
+                1 => "$label - $iface->{mac} ($iface->{driver})",
             );
             $i++;
         }
@@ -513,31 +532,51 @@ sub create_ipconf_view {
         return if $current->get_active() == -1;
 
         my $new = $device_active_map->{ $current->get_active() };
-        my $iface = $ipconf->{ifaces}->{$new};
+        my $iface = $network->{interfaces}->{$new};
 
         my $selected = Proxmox::Install::Config::get_mngmt_nic();
         return if defined($selected) && $iface->{name} eq $selected;
 
         Proxmox::Install::Config::set_mngmt_nic($iface->{name});
 
-        $ipconf_entry_addr->set_text($iface->{inet}->{addr} || $iface->{inet6}->{addr})
-            if $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-        $ipconf_entry_mask->set_text($iface->{inet}->{prefix} || $iface->{inet6}->{prefix})
-            if $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
+        # try to find an address that matches the IP version of the gateway,
+        # otherwise fall back to the first address on the interface
+        my $addrs = $iface->{addresses} // [];
+        my ($addr) = grep {
+            ip_get_version($_->{address}) == $default_gateway_ipversion
+        } @$addrs;
+        $addr //= $addrs->[0];
+
+        if (defined($addr)) {
+            $ipconf_entry_addr->set_text($addr->{address});
+            $ipconf_entry_mask->set_text($addr->{prefix});
+        }
     };
 
     my ($initial_active_device_pos, $initial_addr, $initial_mask) = (0, undef, undef);
 
     my $i = 0;
-    for my $index (sort keys $ipconf->{ifaces}->%*) {
-        my $iface = $ipconf->{ifaces}->{$index};
-        $device_active_map->{$i} = $index;
-        $device_active_reverse_map->{ $iface->{name} } = $i;
+    for my $name (sort keys $network->{interfaces}->%*) {
+        my $iface = $network->{interfaces}->{$name};
+        $device_active_map->{$i} = $name;
+        $device_active_reverse_map->{$name} = $i;
 
-        if (defined($ipconf->{default}) && $index == $ipconf->{default}) {
+        if (defined($default_gateway) && $name eq $default_gateway->{dev}) {
+            # the chosen gateway is on this interface
             $initial_active_device_pos = $i;
-            $initial_addr = $iface->{inet}->{addr} || $iface->{inet6}->{addr};
-            $initial_mask = $iface->{inet}->{prefix} || $iface->{inet6}->{prefix};
+
+            # try to find an address that matches the IP version of the gateway,
+            # otherwise fall back to the first address on the interface
+            my $addrs = $iface->{addresses} // [];
+            my ($addr) = grep {
+                ip_get_version($_->{address}) == $default_gateway_ipversion
+            } @$addrs;
+            $addr //= $addrs->[0];
+
+            if (defined($addr)) {
+                $initial_addr = $addr->{address};
+                $initial_mask = $addr->{prefix};
+            }
         }
         $i++;
     }
@@ -548,9 +587,8 @@ sub create_ipconf_view {
     if (my $nic = Proxmox::Install::Config::get_mngmt_nic()) {
         $initial_active_device_pos = $device_active_reverse_map->{$nic};
     } else {
-        my $iface_id = $device_active_map->{$initial_active_device_pos};
-        my $iface = $ipconf->{ifaces}->{$iface_id};
-        Proxmox::Install::Config::set_mngmt_nic($iface->{name});
+        my $iface_name = $device_active_map->{$initial_active_device_pos};
+        Proxmox::Install::Config::set_mngmt_nic($iface_name);
     }
 
     if (my $cidr = Proxmox::Install::Config::get_cidr()) {
@@ -574,7 +612,7 @@ sub create_ipconf_view {
 
     my $fqdn = Proxmox::Install::Config::get_fqdn();
     my $hostname = $run_env->{network}->{hostname} || $iso_env->{product};
-    my $domain = $ipconf->{domain} || "example.invalid";
+    my $domain = $network->{dns}->{domain} || "example.invalid";
     $fqdn //= "$hostname.$domain";
 
     my ($host_label, $hostentry) = create_text_input($fqdn, 'Hostname (FQDN)');
@@ -585,14 +623,15 @@ sub create_ipconf_view {
     $grid->attach($cidr_box, 1, 2, 2, 1);
 
     my $cfg_gateway = Proxmox::Install::Config::get_gateway();
-    my $gateway = $cfg_gateway // $ipconf->{gateway} || '192.168.100.1';
+    my $default_gw_addr = defined($default_gateway) ? $default_gateway->{gateway} : undef;
+    my $gateway = $cfg_gateway // $default_gw_addr || '192.168.100.1';
 
     my ($gw_label, $ipconf_entry_gw) = create_text_input($gateway, 'Gateway');
     $grid->attach($gw_label, 0, 3, 1, 1);
     $grid->attach($ipconf_entry_gw, 1, 3, 2, 1);
 
     my $cfg_dns = Proxmox::Install::Config::get_dns();
-    my $dnsserver = $cfg_dns // $ipconf->{dnsserver} || $gateway;
+    my $dnsserver = $cfg_dns // $default_dns || $gateway;
 
     my ($dns_label, $ipconf_entry_dns) = create_text_input($dnsserver, 'DNS Server');
 
@@ -1915,7 +1954,7 @@ my $initial_error = 0;
 }
 
 my $run_env = Proxmox::Install::RunEnv::get();
-if (!$initial_error && (scalar keys $run_env->{ipconf}->{ifaces}->%* == 0)) {
+if (!$initial_error && (scalar keys $run_env->{network}->{interfaces}->%* == 0)) {
     print STDERR "no network interfaces found\n";
     $initial_error = 1;
     Proxmox::UI::display_html("nonics.htm");
