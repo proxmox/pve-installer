@@ -334,7 +334,14 @@ sub query_dns : prototype() {
     my $domain;
     while (defined(my $line = <$fh>)) {
         if ($line =~ /^nameserver\s+(\S+)/) {
-            push @dns, $1;
+            # FIXME: handle IPv6 zone identifiers across the stack.
+            # For now, ignore all addresses containing them.
+            my $addr = $1;
+            if ($addr =~ /%\S+$/) {
+                log_warn("skipping nameserver $addr due to zone-id");
+            } else {
+                push @dns, $addr;
+            }
         } elsif (!defined($domain) && $line =~ /^domain\s+(\S+)/) {
             $domain = $1;
         }
