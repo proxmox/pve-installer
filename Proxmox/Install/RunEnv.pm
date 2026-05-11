@@ -80,154 +80,6 @@ sub query_cpu_info : prototype() {
     return $cpu_info;
 }
 
-# Returns a hash.
-#
-# {
-#     <ifname> => {
-#         mac => <mac address>,
-#         index => <index>,
-#         name => <ifname>,
-#         state => <UP|DOWN|LOWERLAYERDOWN|DORMANT|TESTING|NOTPRESENT|UNKNOWN>,
-#         pinned_id => <sequential numerical ID>,
-#         driver => <driver name>,
-#         addresses => [
-#             family => <inet|inet6>,
-#             address => <mac address>,
-#             prefix => <length>,
-#         ],
-#     },
-# }
-my sub query_netdevs : prototype() {
-    my $ifs = {};
-    my $default;
-
-    # FIXME: not the same as the battle proven way we used in the installer for years?
-    my $interfaces = from_json(qx/ip --details --json address show/, { utf8 => 1 });
-
-    my $pinned_counter = 0;
-    for my $if (@$interfaces) {
-        my ($index, $name, $state, $mac, $addresses) =
-            $if->@{qw(ifindex ifname operstate address addr_info)};
-
-        next if !$name || $name eq 'lo'; # could also check flags for LOOPBACK..
-        if (!$mac) {
-            log_info("skipped interface $name, no mac address detected");
-            next;
-        }
-
-        my @valid_addrs;
-        if (uc($state) eq 'UP') {
-            for my $addr (@$addresses) {
-                next if $addr->{scope} eq 'link';
-
-                my ($family, $addr, $prefix) = $addr->@{qw(family local prefixlen)};
-
-                push @valid_addrs,
-                    {
-                        family => $family,
-                        address => $addr,
-                        prefix => $prefix,
-                    };
-            }
-        }
-
-        my $driver = readlink "/sys/class/net/$name/device/driver" || 'unknown';
-        $driver =~ s!^.*/!!;
-
-        $ifs->{$name} = {
-            index => $index,
-            name => $name,
-            mac => $mac,
-            state => uc($state),
-            driver => $driver,
-        };
-        $ifs->{$name}->{addresses} = \@valid_addrs if @valid_addrs;
-
-        # only set the `pinned_id` property if the interface actually can be pinned,
-        # i.e. is a physical link
-        my $is_pinnable =
-            Proxmox::Sys::Net::ip_link_is_physical($if) && !Proxmox::Sys::Net::iface_is_vf($name);
-        if ($is_pinnable) {
-            $ifs->{$name}->{pinned_id} = "${pinned_counter}";
-            $pinned_counter++;
-        }
-    }
-
-    return $ifs;
-}
-
-# Returns a hash.
-#
-# {
-#     gateway4 => {
-#         dst => "default",
-#         gateway => <ipv4>,
-#         dev => <ifname>,
-#     },
-#     gateway6 => {
-#         dst => "default",
-#         gateway => <ipv6>,
-#         dev => <ifname>,
-#     },
-# }
-my sub query_routes : prototype() {
-    my ($gateway4, $gateway6);
-
-    log_info("query routes");
-    my $route4 = from_json(qx/ip -4 --json route show/, { utf8 => 1 });
-    for my $route (@$route4) {
-        if ($route->{dst} eq 'default') {
-            $gateway4 = {
-                dev => $route->{dev},
-                gateway => $route->{gateway},
-            };
-            last;
-        }
-    }
-
-    my $route6 = from_json(qx/ip -6 --json route show/, { utf8 => 1 });
-    for my $route (@$route6) {
-        if ($route->{dst} eq 'default') {
-            $gateway6 = {
-                dev => $route->{dev},
-                gateway => $route->{gateway},
-            };
-            last;
-        }
-    }
-
-    my $routes;
-    $routes->{gateway4} = $gateway4 if $gateway4;
-    $routes->{gateway6} = $gateway6 if $gateway6;
-
-    return $routes;
-}
-
-# If `/etc/resolv.conf` fails to open this returns nothing.
-# Otherwise it returns a hash:
-# {
-#     dns => <first dns entry>,
-#
-my sub query_dns : prototype() {
-    log_info("query DNS from resolv.conf (managed by DHCP client)");
-    open my $fh, '<', '/etc/resolv.conf' or return;
-
-    my @dns;
-    my $domain;
-    while (defined(my $line = <$fh>)) {
-        if ($line =~ /^nameserver\s+(\S+)/) {
-            push @dns, $1;
-        } elsif (!defined($domain) && $line =~ /^domain\s+(\S+)/) {
-            $domain = $1;
-        }
-    }
-
-    my $output = {
-        domain => $domain,
-        @dns ? (dns => \@dns) : (),
-    };
-}
-
 # Uses `traceroute` and `geoiplookup`/`geoiplookup6` to figure out the current country.
 # Has a 10s timeout and uses the stops at the first entry found in the geoip database.
 my sub detect_country_tracing_to : prototype($$) {
@@ -294,9 +146,9 @@ my sub detect_country_tracing_to : prototype($$) {
 #     default_zfs_arc_max => <default upper limit for the ZFS ARC size in MiB>,
 #     disks => <see Proxmox::Sys::Block::hd_list()>,
 #     network => {
-#         interfaces => <see query_netdevs()>,
-#         routes => <see query_routes()>,
-#         dns => <see query_dns()>,
+#         interfaces => <see Proxmox::Sys::Net::query_netdevs()>,
+#         routes => <see Proxmox::Sys::Net::query_routes()>,
+#         dns => <see Proxmox::Sys::Net::query_dns()>,
 #     },
 # }
 sub query_installation_environment : prototype() {
@@ -315,14 +167,14 @@ sub query_installation_environment : prototype() {
     # else re-query everything
     my $output = {};
 
-    my $routes = query_routes();
+    my $routes = Proxmox::Sys::Net::query_routes();
 
     log_info("query block devices");
     $output->{disks} = Proxmox::Sys::Block::get_cached_disks();
     $output->{network} = {
-        interfaces => query_netdevs(),
+        interfaces => Proxmox::Sys::Net::query_netdevs(),
         routes => $routes,
-        dns => query_dns(),
+        dns => Proxmox::Sys::Net::query_dns(),
     };
 
     # avoid serializing out null or an empty string, that can trip up the UIs
