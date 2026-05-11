@@ -1183,9 +1183,9 @@ sub extract_data {
                 . "\tgateway $gateway\n";
         }
 
-        my $ipconf = $run_env->{ipconf};
-        foreach my $iface (sort keys %{ $ipconf->{ifaces} }) {
-            my $if = $ipconf->{ifaces}->{$iface};
+        my $interfaces = $run_env->{network}->{interfaces};
+        foreach my $iface (sort keys $interfaces->%*) {
+            my $if = $interfaces->{$iface};
             my $name = defined($netif_pin_map) ? $netif_pin_map->{ $if->{mac} } : $if->{name};
 
             next if $name eq $ethdev;
