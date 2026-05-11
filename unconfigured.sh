@@ -218,6 +218,16 @@ handle_wireless() {
     fi
 }
 
+# Iterates over all UP interfaces and sends a router solicitation on each.
+ipv6_send_router_solicitation() {
+    local devs
+    devs="$(ip -6 addr show scope link up | grep -oP '^\d+: \K\S+(?=:)')"
+
+    for dev in $devs; do
+        rdisc6 -1 --retry 1 "$dev" || true
+    done
+}
+
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/X11R6/bin
 
 echo "Starting Proxmox installation"
@@ -310,6 +320,23 @@ fi
 echo -n "Attempting to get DHCP leases... "
 dhclient -v
 echo "done"
+
+# start rdnssd in the background first
+# the default merge hook just appends it to /etc/resolv.conf, which is what we want
+# also need to create the run-directory for rdnssd, otherwise it will silently
+# fail to write out new entries
+echo "Starting rdnssd for retrieving IPv6 nameservers..."
+mkdir -p /run/rdnssd
+rdnssd --merge-hook /etc/rdnssd/merge-hook --user root || echo "starting rdnssd failed ($?)"
+
+# check for IPv6 SLAAC by sending a router solicitation
+# rdnssd will pick up any nameservers, and the kernel interface addresses
+echo "Sending IPv6 router solicitations..."
+ipv6_send_router_solicitation
+# give routers a reasonable window to respond, so that
+# `proxmox-low-level-installer dump-env` can pick them up
+sleep 2
+echo "Done sending IPv6 router solicitations."
 
 echo "Starting chrony for opportunistic time-sync... "
 chronyd || echo "starting chrony failed ($?)"
