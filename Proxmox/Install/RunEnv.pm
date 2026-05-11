@@ -14,10 +14,6 @@ use Proxmox::Sys::Net;
 
 use Proxmox::Install::ISOEnv;
 
-my sub fromjs : prototype($) {
-    return from_json($_[0], { utf8 => 1 });
-}
-
 my $_cached_arch = undef;
 
 sub query_arch : prototype() {
@@ -106,7 +102,7 @@ my sub query_netdevs : prototype() {
     my $default;
 
     # FIXME: not the same as the battle proven way we used in the installer for years?
-    my $interfaces = fromjs(qx/ip --details --json address show/);
+    my $interfaces = from_json(qx/ip --details --json address show/, { utf8 => 1 });
 
     my $pinned_counter = 0;
     for my $if (@$interfaces) {
@@ -178,7 +174,7 @@ my sub query_routes : prototype() {
     my ($gateway4, $gateway6);
 
     log_info("query routes");
-    my $route4 = fromjs(qx/ip -4 --json route show/);
+    my $route4 = from_json(qx/ip -4 --json route show/, { utf8 => 1 });
     for my $route (@$route4) {
         if ($route->{dst} eq 'default') {
             $gateway4 = {
@@ -189,7 +185,7 @@ my sub query_routes : prototype() {
         }
     }
 
-    my $route6 = fromjs(qx/ip -6 --json route show/);
+    my $route6 = from_json(qx/ip -6 --json route show/, { utf8 => 1 });
     for my $route (@$route6) {
         if ($route->{dst} eq 'default') {
             $gateway6 = {
@@ -310,7 +306,7 @@ sub query_installation_environment : prototype() {
         log_info("re-using cached runtime env from $run_env_file");
         my $cached_env = eval {
             my $run_env_raw = Proxmox::Sys::File::file_read_all($run_env_file);
-            return fromjs($run_env_raw); # returns from eval
+            return from_json($run_env_raw, { utf8 => 1 }); # returns from eval
         };
         log_error("failed to parse cached runtime env - $@") if $@;
         return $cached_env if defined($cached_env) && scalar keys $cached_env->%*;
