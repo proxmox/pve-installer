@@ -546,7 +546,7 @@ mod tests {
     use super::*;
     use crate::setup::{Dns, Gateway, Interface, InterfaceState, NetworkInfo, Routes, SetupInfo};
     use std::collections::BTreeMap;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     fn dummy_disks(num: usize) -> Vec<Disk> {
         (0..num).map(Disk::dummy).collect()
@@ -688,6 +688,59 @@ mod tests {
                 address: Cidr::new_v4([192, 168, 0, 2], 24).unwrap(),
                 gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 dns_server: Ipv4Addr::new(192, 168, 100, 1).into(),
+                pinning_opts: None,
+            }
+        );
+    }
+
+    fn mock_setup_network_v6_only() -> (SetupInfo, NetworkInfo) {
+        let mut interfaces = BTreeMap::new();
+        interfaces.insert(
+            "eth0".to_owned(),
+            Interface {
+                name: "eth0".to_owned(),
+                index: 0,
+                pinned_id: Some("0".to_owned()),
+                state: InterfaceState::Up,
+                driver: "dummy".to_owned(),
+                mac: "01:23:45:67:89:ab".to_owned(),
+                addresses: vec![
+                    Cidr::new(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 2), 64).unwrap(),
+                ],
+            },
+        );
+
+        let info = NetworkInfo {
+            dns: Dns {
+                domain: Some("bar.com".to_owned()),
+                dns: vec![IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0x53))],
+            },
+            routes: Some(Routes {
+                gateway4: None,
+                gateway6: Some(Gateway {
+                    dev: "eth0".to_owned(),
+                    gateway: IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)),
+                }),
+            }),
+            interfaces,
+            hostname: Some("foo".to_owned()),
+        };
+
+        (SetupInfo::mocked(), info)
+    }
+
+    #[test]
+    fn network_options_from_setup_network_info_ipv6_only() {
+        let (setup, info) = mock_setup_network_v6_only();
+
+        pretty_assertions::assert_eq!(
+            NetworkOptions::defaults_from(&setup, &info, None, None),
+            NetworkOptions {
+                ifname: "eth0".to_owned(),
+                fqdn: Fqdn::from("foo.bar.com").unwrap(),
+                address: Cidr::new_v6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 2), 64).unwrap(),
+                gateway: IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)),
+                dns_server: IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0x53)),
                 pinning_opts: None,
             }
         );
