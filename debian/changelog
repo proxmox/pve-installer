@@ -1,3 +1,28 @@
+proxmox-installer (9.2.1) trixie; urgency=medium
+
+  * gui, tui, auto-installer: handle IPv6-only setups by selecting the
+    management interface, address, gateway, and DNS based on the default
+    route's IP family, rather than falling back to the 192.168.100.x dummy
+    defaults.
+
+  * unconfigured: send IPv6 router solicitations via rdisc6 and run rdnssd
+    at startup, so SLAAC-assigned addresses and router-advertised DNS
+    resolvers are picked up on networks without DHCPv4. Adds ndisc6 and
+    rdnssd as runtime dependencies.
+
+  * sys: net: accept up to /128 prefix lengths for IPv6 addresses, aligning
+    with the rest of the stack which already accepted /127 and /128.
+
+  * sys: net: ignore IPv6 nameservers carrying a zone identifier (e.g.
+    `fe80::1%eth0`) in `/etc/resolv.conf`, as the rest of the stack does
+    not yet handle them; avoids follow-up failures further down the path.
+
+  * install: parse network discovery (interfaces, routes, DNS) from
+    `ip --json` output instead of regex-parsing `ip -o l` / `ip -o a`. Same
+    information, but more robust against future iproute2 output changes.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 12 May 2026 04:32:24 +0200
+
 proxmox-installer (9.2.0) trixie; urgency=medium
 
   * auto-installer: assistant: support embedding an HTTP authorization token
