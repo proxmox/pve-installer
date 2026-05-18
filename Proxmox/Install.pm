@@ -721,6 +721,14 @@ my sub stage_subscription_key {
     file_write_all("$statedir/subscription-key", "$key\n");
     chmod(0600, "$statedir/subscription-key")
         || warn "failed to restrict permissions on subscription-key: $!\n";
+
+    # The package ships all first-boot units disabled; wire up the activation symlink by hand.
+    my $linktarget = "/lib/systemd/system/proxmox-first-boot-subscription.service";
+    my $wantsdir = "$targetdir/etc/systemd/system/multi-user.target.wants";
+    syscmd("mkdir -p $wantsdir") == 0
+        || die "failed to create $wantsdir directory\n";
+    syscmd("ln -sf $linktarget $wantsdir/proxmox-first-boot-subscription.service") == 0
+        || die "failed to enable proxmox-first-boot-subscription.service\n";
 }
 
 my sub needs_first_boot_package {
