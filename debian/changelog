@@ -1,3 +1,11 @@
+proxmox-installer (9.2.4) trixie; urgency=medium
+
+  * first-boot: order the subscription-activation service after
+    pve-cluster.service and before the per-product daily-update services,
+    so the key is set before the first apt update runs.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 19 May 2026 01:14:00 +0200
+
 proxmox-installer (9.2.3) trixie; urgency=medium
 
   * install: enable the proxmox-first-boot-subscription.service in the target
