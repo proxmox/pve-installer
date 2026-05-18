@@ -443,6 +443,54 @@ OPTIONS:
     }
 }
 
+/// Arguments for the `inspect-iso` command.
+struct CommandInspectISOArgs {
+    /// Path to the ISO to inspect.
+    input: PathBuf,
+    /// Print sensitive fields verbatim instead of redacting them.
+    show_sensitive: bool,
+}
+
+impl cli::Subcommand for CommandInspectISOArgs {
+    fn parse(args: &mut cli::Arguments) -> Result<Self> {
+        Ok(Self {
+            show_sensitive: args.contains("--show-sensitive"),
+            // Needs to be last
+            input: args.free_from_str()?,
+        })
+    }
+
+    fn print_usage() {
+        eprintln!(
+            r#"Inspect a Proxmox installer ISO and report whether it has been prepared for
+automated installation, which fetch mode it uses, and -- for fetch-from 'iso'
+-- the embedded answer file with sensitive fields redacted.
+
+The embedded answer file is always re-serialized through the TOML formatter
+so its on-screen shape stays consistent regardless of '--show-sensitive';
+comments and the original key ordering are not preserved.
+
+USAGE:
+  {} inspect-iso [OPTIONS] <INPUT>
+
+ARGUMENTS:
+  <INPUT>  Path to the ISO to inspect.
+
+OPTIONS:
+      --show-sensitive  Print sensitive fields (root password, subscription key,
+                        HTTP auth token) verbatim instead of as <redacted>.
+  -h, --help            Print this help
+  -V, --version         Print version
+"#,
+            env!("CARGO_PKG_NAME")
+        );
+    }
+
+    fn run(&self) -> Result<()> {
+        inspect_iso(self)
+    }
+}
+
 #[derive(PartialEq)]
 enum AllDeviceTypes {
     All,
@@ -492,6 +540,7 @@ USAGE:
 
 COMMANDS:
   prepare-iso      Prepare an ISO for automated installation
+  inspect-iso      Inspect an ISO and report its automated installation configuration
   validate-answer  Validate if an answer file is formatted correctly
   device-match     Test which devices the given filter matches against
   device-info      Show device information that can be used for filters
@@ -505,6 +554,7 @@ GLOBAL OPTIONS:
         ),
         on_command: |s, args| match s {
             Some("prepare-iso") => cli::handle_command::<CommandPrepareISOArgs>(args),
+            Some("inspect-iso") => cli::handle_command::<CommandInspectISOArgs>(args),
             Some("validate-answer") => cli::handle_command::<CommandValidateAnswerArgs>(args),
             Some("device-match") => cli::handle_command::<CommandDeviceMatchArgs>(args),
             Some("device-info") => cli::handle_command::<CommandDeviceInfoArgs>(args),
@@ -678,6 +728,185 @@ fn show_system_info(_args: &CommandSystemInfoArgs) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(&info)?);
 
     Ok(())
+}
+
+const REDACTED: &str = "<redacted>";
+
+/// Per-section answer-file fields that hold secrets and must be redacted unless `--show-sensitive`.
+/// Each section lists both the canonical kebab-case key and the legacy snake_case alias.
+const ANSWER_SENSITIVE_FIELDS: &[(&str, &[&str])] = &[
+    (
+        "global",
+        &[
+            "root-password",
+            "root_password",
+            "root-password-hashed",
+            "root_password_hashed",
+            "subscription-key",
+            "subscription_key",
+        ],
+    ),
+    (
+        "post-installation-webhook",
+        &["auth-token", "auth_token"],
+    ),
+];
+
+fn inspect_iso(args: &CommandInspectISOArgs) -> Result<()> {
+    if !fs::exists(&args.input).context("checking if input ISO exists")? {
+        bail!("input ISO {:?} does not exist", args.input);
+    }
+
+    println!("Source ISO:    {}", args.input.display());
+
+    // Random name + O_EXCL + 0700 + RAII cleanup defeats the predictable-name and symlink-replace
+    // attack surface; xorriso fundamentally needs a real path, so memfd/pipe are not an option.
+    let tmp_dir = tempfile::Builder::new()
+        .prefix("proxmox-inspect-iso.")
+        .tempdir()
+        .context("creating temp dir for ISO extraction")?;
+    inspect_iso_inner(args, tmp_dir.path())
+}
+
+fn inspect_iso_inner(args: &CommandInspectISOArgs, tmp_dir: &Path) -> Result<()> {
+    let disk_info_raw = try_extract_iso_text(&args.input, "/.disk/info", tmp_dir)
+        .context("reading /.disk/info to identify ISO")?
+        .ok_or_else(|| {
+            anyhow!(
+                "/.disk/info is missing; {:?} is not a recognized installer ISO",
+                args.input,
+            )
+        })?;
+    let info = parse_disk_info_kv(&disk_info_raw);
+    let product_long = info.get("PRODUCTLONG").map(String::as_str).unwrap_or("");
+    if !product_long.starts_with("Proxmox") {
+        bail!(
+            "PRODUCTLONG={product_long:?} in /.disk/info does not look like a Proxmox installer ISO",
+        );
+    }
+    let release = info.get("RELEASE").map(String::as_str).unwrap_or("?");
+    let iso_release = info
+        .get("ISORELEASE")
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("-{s}"))
+        .unwrap_or_default();
+    println!("Product:       {product_long} {release}{iso_release}");
+
+    let Some(mode_toml) = try_extract_iso_text(&args.input, "/auto-installer-mode.toml", tmp_dir)
+        .context("reading /auto-installer-mode.toml")?
+    else {
+        println!("Auto-install:  not configured (use 'prepare-iso' to enable)");
+        return Ok(());
+    };
+    println!("Auto-install:  enabled");
+
+    let settings: AutoInstSettings =
+        toml::from_str(&mode_toml).context("parsing /auto-installer-mode.toml")?;
+    let mode_str = match settings.mode {
+        FetchAnswerFrom::Iso => "iso",
+        FetchAnswerFrom::Http => "http",
+        FetchAnswerFrom::Partition => "partition",
+    };
+    println!("Fetch mode:    {mode_str}");
+    if settings.partition_label != default_partition_label() {
+        println!("Partition label: {}", settings.partition_label);
+    }
+    if let Some(url) = &settings.http.url {
+        println!("HTTP URL:      {url}");
+    }
+    if let Some(fp) = &settings.http.cert_fingerprint {
+        println!("HTTP cert fingerprint: {fp}");
+    }
+    if let Some(token) = &settings.http.token {
+        let shown = if args.show_sensitive {
+            token.as_str()
+        } else {
+            REDACTED
+        };
+        println!("HTTP auth token: {shown}");
+    }
+
+    if settings.mode == FetchAnswerFrom::Iso {
+        let answer_toml = try_extract_iso_text(&args.input, "/answer.toml", tmp_dir)
+            .context("reading /answer.toml")?
+            .ok_or_else(|| {
+                anyhow!("auto-install mode is 'iso' but /answer.toml is not present in the ISO")
+            })?;
+        let displayed = format_answer_toml(&answer_toml, !args.show_sensitive)
+            .context("formatting answer file")?;
+        println!();
+        println!("Embedded answer file (/answer.toml):");
+        print!("{displayed}");
+        if !displayed.ends_with('\n') {
+            println!();
+        }
+    }
+
+    Ok(())
+}
+
+/// Parse the shell-env-style `KEY='value'` lines that the cd-builder writes
+/// into `/.disk/info`. Unknown lines are ignored; quoting variants are accepted.
+fn parse_disk_info_kv(s: &str) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for line in s.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let value = value.trim().trim_matches(|c| c == '\'' || c == '"');
+        out.insert(key.trim().to_string(), value.to_string());
+    }
+    out
+}
+
+/// Extract `iso_path` from `iso` into `tmp_dir/<basename>` and return its UTF-8 contents.
+/// `Ok(None)` only on xorriso's "not in ISO" diagnostic; any other failure propagates as an error.
+fn try_extract_iso_text(iso: &Path, iso_path: &str, tmp_dir: &Path) -> Result<Option<String>> {
+    let base_name = Path::new(iso_path)
+        .file_name()
+        .ok_or_else(|| anyhow!("invalid ISO-internal path {iso_path:?}: no file component"))?;
+    let out_path = tmp_dir.join(base_name);
+    let _ = fs::remove_file(&out_path);
+
+    if let Err(err) = extract_file_from_iso(iso, Path::new(iso_path), &out_path) {
+        // xorriso prints "Cannot determine attributes of (ISO) source file" for paths absent from
+        // the ISO; treat that as not-present and propagate everything else so real errors surface.
+        let err_text = err.to_string();
+        if err_text.contains("Cannot determine attributes of (ISO) source file") {
+            return Ok(None);
+        }
+        return Err(err);
+    }
+    let content =
+        fs::read_to_string(&out_path).with_context(|| format!("reading extracted {out_path:?}"))?;
+    let _ = fs::remove_file(&out_path);
+    Ok(Some(content))
+}
+
+/// Re-serialize the answer file through the TOML formatter, optionally redacting known-sensitive
+/// fields. The output shape stays identical regardless of `--show-sensitive`; comments are lost.
+fn format_answer_toml(content: &str, redact: bool) -> Result<String> {
+    let mut value: toml::Value = toml::from_str(content).context("parsing answer file as TOML")?;
+    if redact {
+        for (section, keys) in ANSWER_SENSITIVE_FIELDS {
+            let Some(table) = value.get_mut(*section).and_then(|v| v.as_table_mut()) else {
+                continue;
+            };
+            for key in *keys {
+                if table.contains_key(*key) {
+                    table.insert(
+                        (*key).to_string(),
+                        toml::Value::String(REDACTED.to_string()),
+                    );
+                }
+            }
+        }
+    }
+    Ok(toml::to_string_pretty(&value)?)
 }
 
 fn prepare_iso(args: &CommandPrepareISOArgs) -> Result<()> {
