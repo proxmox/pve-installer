@@ -723,6 +723,15 @@ my sub stage_subscription_key {
         || warn "failed to restrict permissions on subscription-key: $!\n";
 }
 
+my sub needs_first_boot_package {
+    my $key = Proxmox::Install::Config::get_subscription_key();
+    if (defined($key)) {
+        $key =~ s/^\s+|\s+$//g;
+        return 1 if $key ne '';
+    }
+    return Proxmox::Install::Config::get_first_boot_opt('enabled');
+}
+
 my sub setup_proxmox_first_boot_service {
     my ($targetdir) = @_;
 
@@ -1340,9 +1349,7 @@ _EOD
             next if $deb =~ /grub-efi-(?:amd64|arm64)_/ && $run_env->{boot_type} ne 'efi';
             next if ($deb =~ /^proxmox-grub/ && $run_env->{boot_type} ne 'efi');
             next if ($deb =~ /^proxmox-secure-boot-support_/ && !$run_env->{secure_boot});
-            next
-                if ($deb =~ /^proxmox-first-boot/
-                    && !Proxmox::Install::Config::get_first_boot_opt('enabled'));
+            next if $deb =~ /^proxmox-first-boot/ && !needs_first_boot_package();
 
             # CPU microcode packages are x86-only
             next if $deb =~ /^amd64-microcode_/ && $run_env->{cpu_vendor_id} ne 'AuthenticAMD';
