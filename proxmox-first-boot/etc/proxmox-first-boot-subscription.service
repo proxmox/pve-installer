@@ -3,6 +3,13 @@ Description=Proxmox First Boot Subscription Activation
 After=systemd-remount-fs.service
 After=network-online.target
 Wants=network-online.target
+# pvesubscription writes through pmxcfs; harmless ordering on PBS/PMG where the unit does not exist
+After=pve-cluster.service
+# All four products are listed so the right one wins per install; systemd ignores unknown units
+Before=pve-daily-update.service
+Before=proxmox-backup-daily-update.service
+Before=proxmox-datacenter-manager-daily-update.service
+Before=pmg-daily.service
 ConditionPathExists=/var/lib/proxmox-first-boot/subscription-key
 ConditionPathIsReadWrite=/var/lib
 
