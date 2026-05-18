@@ -1,3 +1,16 @@
+proxmox-installer (9.2.2) trixie; urgency=medium
+
+  * install: keep the proxmox-first-boot package in the target install set
+    when an answer file sets a subscription key, so the staged key actually
+    gets activated on first boot.
+
+  * auto-installer: assistant: add an `inspect-iso` subcommand that reports a
+    prepared ISO's auto-installer configuration and prints the embedded answer
+    file with sensitive fields redacted by default; use `--show-sensitive` for
+    verbatim output.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 18 May 2026 23:20:00 +0200
+
 proxmox-installer (9.2.1) trixie; urgency=medium
 
   * gui, tui, auto-installer: handle IPv6-only setups by selecting the
