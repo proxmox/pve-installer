@@ -1,3 +1,16 @@
+proxmox-installer (9.2.5) trixie; urgency=medium
+
+  * post-hook: select the last-listed installed kernel package, so the kernel
+    image path is still found after the kernel meta-package changed its
+    architecture from "all" to the host architecture, which previously made
+    the post-installation webhook fail entirely.
+
+  * post-hook: tolerate failures while gathering individual system details by
+    logging an error and using a placeholder value, so a single failing
+    command no longer aborts the whole post-installation webhook.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 20 May 2026 13:00:00 +0200
+
 proxmox-installer (9.2.4) trixie; urgency=medium
 
   * first-boot: order the subscription-activation service after
