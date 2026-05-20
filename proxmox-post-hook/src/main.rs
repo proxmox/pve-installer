@@ -25,7 +25,7 @@ const POST_HOOK_SCHEMA_VERSION: &str = "1.2";
 mod detail {
     use anyhow::{Context, Result, anyhow, bail};
     use std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         ffi::CStr,
         fs::{self, File},
         io::BufReader,
@@ -39,7 +39,7 @@ mod detail {
         setup::{InstallConfig, RuntimeInfo, SetupInfo, load_installer_setup_files},
     };
     use proxmox_installer_types::{
-        ProxmoxProduct, UdevInfo,
+        ProxmoxProduct, SystemDMI, UdevInfo,
         answer::{AutoInstallerConfig, FqdnConfig, FqdnFromDhcpConfig, FqdnSourceMode},
         post_hook::{
             BootInfo, CpuInfo, DiskInfo, KernelVersionInformation, NetworkInterfaceInfo,
@@ -115,25 +115,71 @@ mod detail {
             schema: PostHookInfoSchema {
                 version: super::POST_HOOK_SCHEMA_VERSION.to_owned(),
             },
-            debian_version: read_file("/etc/debian_version")?,
+            debian_version: read_file("/etc/debian_version").unwrap_or_else(|e| {
+                eprintln!("could not gather debian version: {e:#}");
+                "unknown".to_string()
+            }),
             product: gather_product_info(&setup_info, &run_cmd)?,
             iso: setup_info.iso_info,
-            kernel_version: gather_kernel_version(&run_cmd, &open_file)?,
+            kernel_version: gather_kernel_version(&run_cmd, &open_file).unwrap_or_else(|e| {
+                eprintln!("could not gather kernel version: {e:#}");
+                KernelVersionInformation {
+                    sysname: "unknown".to_string(),
+                    release: "unknown".to_string(),
+                    version: "unknown".to_string(),
+                    machine: "unknown".to_string(),
+                }
+            }),
             boot_info: BootInfo {
                 mode: run_env.boot_type,
                 secureboot: run_env.secure_boot,
             },
-            cpu_info: gather_cpu_info(&run_env)?,
-            dmi: proxmox_installer_common::dmi::get()?,
+            cpu_info: gather_cpu_info(&run_env).unwrap_or_else(|e| {
+                eprintln!("could not gather cpu info: {e:#}");
+                CpuInfo {
+                    cores: 0,
+                    cpus: 0,
+                    flags: "unknown".to_string(),
+                    hvm: false,
+                    model: "unknown".to_string(),
+                    sockets: 0,
+                }
+            }),
+            dmi: proxmox_installer_common::dmi::get().unwrap_or_else(|e| {
+                eprintln!("could not gather dmi: {e:#}");
+                SystemDMI {
+                    baseboard: HashMap::new(),
+                    chassis: HashMap::new(),
+                    system: HashMap::new(),
+                }
+            }),
             filesystem: answer.disks.filesystem_details()?.to_type(),
             fqdn,
-            machine_id: read_file("/etc/machine-id")?,
-            disks: gather_disks(&config, &run_env, &udev)?,
-            network_interfaces: gather_nic(&config, &run_env, &udev)?,
+            machine_id: read_file("/etc/machine-id").unwrap_or_else(|e| {
+                eprintln!("could not gather machine-id: {e:#}");
+                "unknown".to_string()
+            }),
+            disks: gather_disks(&config, &run_env, &udev).unwrap_or_else(|e| {
+                eprintln!("could not gather disks: {e:#}");
+                Vec::new()
+            }),
+            network_interfaces: gather_nic(&config, &run_env, &udev).unwrap_or_else(|e| {
+                eprintln!("could not gather network interfaces: {e:#}");
+                Vec::new()
+            }),
             ssh_public_host_keys: SshPublicHostKeys {
-                ecdsa: read_file("/etc/ssh/ssh_host_ecdsa_key.pub")?,
-                ed25519: read_file("/etc/ssh/ssh_host_ed25519_key.pub")?,
-                rsa: read_file("/etc/ssh/ssh_host_rsa_key.pub")?,
+                ecdsa: read_file("/etc/ssh/ssh_host_ecdsa_key.pub").unwrap_or_else(|e| {
+                    eprintln!("could not gather ecdsa SSH key: {e:#}");
+                    "unknown".to_string()
+                }),
+                ed25519: read_file("/etc/ssh/ssh_host_ed25519_key.pub").unwrap_or_else(|e| {
+                    eprintln!("could not gather ed25519 SSH key: {e:#}");
+                    "unknown".to_string()
+                }),
+                rsa: read_file("/etc/ssh/ssh_host_rsa_key.pub").unwrap_or_else(|e| {
+                    eprintln!("could not gather rsa SSH key: {e:#}");
+                    "unknown".to_string()
+                }),
             },
             reboot_mode: answer.global.reboot_mode,
         })
