@@ -746,10 +746,7 @@ const ANSWER_SENSITIVE_FIELDS: &[(&str, &[&str])] = &[
             "subscription_key",
         ],
     ),
-    (
-        "post-installation-webhook",
-        &["auth-token", "auth_token"],
-    ),
+    ("post-installation-webhook", &["auth-token", "auth_token"]),
 ];
 
 fn inspect_iso(args: &CommandInspectISOArgs) -> Result<()> {

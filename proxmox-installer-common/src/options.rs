@@ -713,7 +713,9 @@ mod tests {
         let info = NetworkInfo {
             dns: Dns {
                 domain: Some("bar.com".to_owned()),
-                dns: vec![IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0x53))],
+                dns: vec![IpAddr::V6(Ipv6Addr::new(
+                    0x2001, 0xdb8, 0, 0, 0, 0, 0, 0x53,
+                ))],
             },
             routes: Some(Routes {
                 gateway4: None,
