@@ -427,6 +427,8 @@ mod detail {
         //   ii |all|proxmox-kernel-6.8
         //   un ||proxmox-kernel-6.8.8-2-pve
         //   ii |amd64|proxmox-kernel-6.8.8-2-pve-signed
+        let mut to_return = Err(anyhow!("failed to find installed kernel package"));
+
         for pkg in kernel_pkgs.lines() {
             let parts = pkg.split('|').collect::<Vec<&str>>();
 
@@ -434,11 +436,11 @@ mod detail {
                 && status.trim() == "ii"
                 && arch.trim() == dpkg_arch
             {
-                return Ok(name.trim().to_owned());
+                to_return = Ok(name.trim().to_owned());
             }
         }
 
-        bail!("failed to find installed kernel package")
+        to_return
     }
 
     /// Retrieves some basic information about the CPU in the running system,
@@ -532,6 +534,37 @@ ii |amd64|proxmox-kernel-6.8.8-2-pve-signed
             assert_eq!(
                 find_kernel_package_name(&mocked_run_cmd).unwrap(),
                 "proxmox-kernel-6.8.8-2-pve-signed"
+            );
+        }
+
+        #[test]
+        fn finds_correct_kernel_package_name_when_meta_package_architecture_matches() {
+            let mocked_run_cmd = |cmd: &[&str]| {
+                if cmd[0] == "dpkg" {
+                    assert_eq!(cmd, &["dpkg", "--print-architecture"]);
+                    Ok("amd64\n".to_owned())
+                } else {
+                    assert_eq!(
+                        cmd,
+                        &[
+                            "dpkg-query",
+                            "--showformat",
+                            "${db:Status-Abbrev}|${Architecture}|${Package}\\n",
+                            "--show",
+                            "proxmox-kernel-[0-9]*",
+                        ]
+                    );
+                    Ok(r#"ii |amd64|proxmox-kernel-7.0
+un ||proxmox-kernel-7.0.2-5-pve
+ii |amd64|proxmox-kernel-7.0.2-5-pve-signed
+                "#
+                    .to_owned())
+                }
+            };
+
+            assert_eq!(
+                find_kernel_package_name(&mocked_run_cmd).unwrap(),
+                "proxmox-kernel-7.0.2-5-pve-signed"
             );
         }
 
