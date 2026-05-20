@@ -479,11 +479,10 @@ mod detail {
                 }
                 // x86: "model name", ARM64: "CPU implementer"
                 Some((key, value))
-                    if key.trim() == "model name" || key.trim() == "CPU implementer" =>
+                    if (key.trim() == "model name" || key.trim() == "CPU implementer")
+                        && result.model.is_empty() =>
                 {
-                    if result.model.is_empty() {
-                        value.trim().clone_into(&mut result.model);
-                    }
+                    value.trim().clone_into(&mut result.model);
                 }
                 _ => {}
             }
