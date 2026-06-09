@@ -28,7 +28,7 @@ toml = "0.8"
 proxmox-auto-installer.path = "./proxmox-auto-installer"
 proxmox-installer-common.path = "./proxmox-installer-common"
 proxmox-network-types = "1.1"
-proxmox-installer-types = { version = "0.1", features = ["legacy"] }
+proxmox-installer-types = { version = "0.1.1", features = ["legacy"] }
 
 # Local path overrides
 # NOTE: You must run `cargo update` after changing this for it to take effect!
