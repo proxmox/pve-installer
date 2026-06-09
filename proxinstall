@@ -1651,6 +1651,7 @@ sub create_hdoption_view {
     $dialog->show();
 
     $dialog->run();
+    $gtk_state->{window}->queue_draw();
 
     my $get_float = sub {
         my ($entry) = @_;
