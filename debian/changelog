@@ -1,3 +1,17 @@
+proxmox-installer (9.2.6) trixie; urgency=medium
+
+  * pdm: user credential step: do not promise alert notifications PDM cannot
+    yet send.
+
+  * pmg: ensure newer clamav-daemon gets actively enabled on installation.
+
+  * auto-installer: reject an odd number of explicitly listed disks for a
+    ZFS or Btrfs RAID10 setup already while parsing the answer file, so the
+    misconfiguration is caught up front with a clear error instead of only
+    failing later during the installation.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 09 Jun 2026 13:06:31 +0200
+
 proxmox-installer (9.2.5) trixie; urgency=medium
 
   * post-hook: select the last-listed installed kernel package, so the kernel
