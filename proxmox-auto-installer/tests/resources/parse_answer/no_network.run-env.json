@@ -1,0 +1,45 @@
+{
+  "boot_type": "efi",
+  "country": "at",
+  "disks": [
+    [
+      0,
+      "/dev/sda",
+      468862128,
+      "SAMSUNG MZ7KM240",
+      512,
+      "/sys/block/sda"
+    ]
+  ],
+  "hvm_supported": 1,
+  "kernel_cmdline": "BOOT_IMAGE=/boot/linux26 ro ramdisk_size=16777216 rw splash=verbose proxdebug vga=788",
+  "network": {
+    "hostname": "no-gateways.test",
+    "dns": {
+      "dns": [],
+      "domain": "test.local"
+    },
+    "interfaces": {
+      "eno1": {
+        "addresses": [],
+        "index": 4,
+        "mac": "b4:2e:99:ac:ad:b4",
+        "name": "eno1",
+        "state": "UP",
+        "driver": "igb",
+        "pinned_id": "0"
+      },
+      "eno2": {
+        "index": 6,
+        "mac": "b4:2e:99:ac:ad:b5",
+        "name": "eno2",
+        "state": "UP",
+        "driver": "igb",
+        "pinned_id": "1"
+      }
+    },
+    "routes": {}
+  },
+  "total_memory": 257597,
+  "default_zfs_arc_max": 128798
+}

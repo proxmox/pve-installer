@@ -435,7 +435,7 @@ sub create_ipconf_view {
     my $network = $run_env->{network};
 
     # prefer ipv4 gateway and fallback to ipv6
-    my $routes = $network->{routes} // {};
+    my $routes = $network->{routes};
     my $default_gateway = $routes->{gateway4} // $routes->{gateway6};
 
     my $default_gateway_ipversion;

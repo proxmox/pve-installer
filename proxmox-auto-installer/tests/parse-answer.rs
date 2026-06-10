@@ -130,6 +130,7 @@ mod tests {
             network_interface_pinning,
             network_interface_pinning_uppercase_mac_address,
             nic_matching,
+            no_network,
             specific_nic,
             zfs,
             zfs_raid_level_uppercase,

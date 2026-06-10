@@ -324,7 +324,7 @@ pub struct RuntimeInfo {
 #[derive(Clone, Deserialize)]
 pub struct NetworkInfo {
     pub dns: Dns,
-    pub routes: Option<Routes>,
+    pub routes: Routes,
 
     /// Maps devices to their configuration, if it has a usable configuration.
     /// (Contains no entries for devices with only link-local addresses.)

@@ -425,38 +425,34 @@ impl NetworkOptions {
             pinning_opts: pinning_opts.cloned(),
         };
 
-        let iface = if let Some(routes) = &network.routes {
-            if let Some(gw) = &routes.gateway4
-                && let Some(iface) = network.interfaces.get(&gw.dev)
-            {
-                this.gateway = gw.gateway;
+        let iface = if let Some(gw) = &network.routes.gateway4
+            && let Some(iface) = network.interfaces.get(&gw.dev)
+        {
+            this.gateway = gw.gateway;
 
-                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
-                    this.address = *addr;
-                }
-
-                if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv4()) {
-                    this.dns_server = *addr;
-                }
-
-                Some(iface)
-            } else if let Some(gw) = &routes.gateway6
-                && let Some(iface) = network.interfaces.get(&gw.dev)
-            {
-                this.gateway = gw.gateway;
-
-                if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
-                    this.address = *addr;
-                }
-
-                if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv6()) {
-                    this.dns_server = *addr;
-                }
-
-                Some(iface)
-            } else {
-                None
+            if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv4()) {
+                this.address = *addr;
             }
+
+            if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv4()) {
+                this.dns_server = *addr;
+            }
+
+            Some(iface)
+        } else if let Some(gw) = &network.routes.gateway6
+            && let Some(iface) = network.interfaces.get(&gw.dev)
+        {
+            this.gateway = gw.gateway;
+
+            if let Some(addr) = iface.addresses.iter().find(|addr| addr.is_ipv6()) {
+                this.address = *addr;
+            }
+
+            if let Some(addr) = network.dns.dns.iter().find(|addr| addr.is_ipv6()) {
+                this.dns_server = *addr;
+            }
+
+            Some(iface)
         } else {
             None
         }
@@ -623,13 +619,13 @@ mod tests {
                 domain: Some("bar.com".to_owned()),
                 dns: Vec::new(),
             },
-            routes: Some(Routes {
+            routes: Routes {
                 gateway4: Some(Gateway {
                     dev: "eth0".to_owned(),
                     gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 }),
                 gateway6: None,
-            }),
+            },
             interfaces,
             hostname: Some("foo".to_owned()),
         };
@@ -717,13 +713,13 @@ mod tests {
                     0x2001, 0xdb8, 0, 0, 0, 0, 0, 0x53,
                 ))],
             },
-            routes: Some(Routes {
+            routes: Routes {
                 gateway4: None,
                 gateway6: Some(Gateway {
                     dev: "eth0".to_owned(),
                     gateway: IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)),
                 }),
-            }),
+            },
             interfaces,
             hostname: Some("foo".to_owned()),
         };
@@ -812,7 +808,10 @@ mod tests {
                 domain: None,
                 dns: vec![],
             },
-            routes: None,
+            routes: Routes {
+                gateway4: None,
+                gateway6: None,
+            },
             interfaces,
             hostname: None,
         };

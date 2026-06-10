@@ -277,24 +277,22 @@ sub query_netdevs : prototype() {
 #
 # {
 #     gateway4 => {
-#         dst => "default",
 #         gateway => <ipv4>,
 #         dev => <ifname>,
 #     },
 #     gateway6 => {
-#         dst => "default",
 #         gateway => <ipv6>,
 #         dev => <ifname>,
 #     },
 # }
 sub query_routes : prototype() {
-    my ($gateway4, $gateway6);
+    my $routes = {};
 
     log_info("query routes");
     my $route4 = from_json(qx/ip -4 --json route show/, { utf8 => 1 });
     for my $route (@$route4) {
         if ($route->{dst} eq 'default') {
-            $gateway4 = {
+            $routes->{gateway4} = {
                 dev => $route->{dev},
                 gateway => $route->{gateway},
             };
@@ -305,17 +303,13 @@ sub query_routes : prototype() {
     my $route6 = from_json(qx/ip -6 --json route show/, { utf8 => 1 });
     for my $route (@$route6) {
         if ($route->{dst} eq 'default') {
-            $gateway6 = {
+            $routes->{gateway6} = {
                 dev => $route->{dev},
                 gateway => $route->{gateway},
             };
             last;
         }
     }
-
-    my $routes;
-    $routes->{gateway4} = $gateway4 if $gateway4;
-    $routes->{gateway6} = $gateway6 if $gateway6;
 
     return $routes;
 }
