@@ -1182,12 +1182,20 @@ sub extract_data {
             }
         }
 
-        # iproute2 omits the gateway and protocol keys for some routes
-        my $gw6 = $run_env->{network}->{routes}->{gateway6};
-        my $is_gateway6_from_ra =
-            defined($gw6)
-            && ($gw6->{gateway} // '') eq $gateway
-            && ($gw6->{protocol} // '') eq 'ra';
+        my $interfaces = $run_env->{network}->{interfaces};
+
+        # iproute2 omits the gateway and protocol keys for some routes; route devices are original
+        # kernel interface names, while $ethdev can be the pinned one
+        my $gateways6 = $run_env->{network}->{routes}->{gateways6} // [];
+        my $is_gateway6_from_ra = grep {
+            my $dev = $_->{dev} // '';
+            if (defined($netif_pin_map) && defined($interfaces->{$dev})) {
+                $dev = $netif_pin_map->{ $interfaces->{$dev}->{mac} } // $dev;
+            }
+            $dev eq $ethdev
+                && ($_->{gateway} // '') eq $gateway
+                && ($_->{protocol} // '') eq 'ra';
+        } $gateways6->@*;
 
         if ($iso_env->{cfg}->{bridged_network}) {
             $ifaces .= "iface $ethdev $ntype manual\n";
@@ -1209,7 +1217,6 @@ sub extract_data {
             }
         }
 
-        my $interfaces = $run_env->{network}->{interfaces};
         foreach my $iface (sort keys $interfaces->%*) {
             my $if = $interfaces->{$iface};
             my $name = defined($netif_pin_map) ? $netif_pin_map->{ $if->{mac} } : $if->{name};
