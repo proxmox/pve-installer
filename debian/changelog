@@ -1,3 +1,18 @@
+proxmox-installer (9.2.7) trixie; urgency=medium
+
+  * gui: redraw the main window after closing the disk setup dialog, which
+    previously left a gray rectangle behind until the next user interaction.
+
+  * install: do not write a static default gateway to the network
+    configuration of the installed system if the management interface
+    received that gateway through an IPv6 router advertisement. The kernel
+    keeps managing such a route on its own, and the static route caused an
+    error in the journal on every newly received advertisement, as the
+    default route already existed. This applies only to non-bridged setups,
+    so all products other than Proxmox VE.
+
+ -- Proxmox Support Team <support@proxmox.com>  Wed, 10 Jun 2026 16:55:39 +0200
+
 proxmox-installer (9.2.6) trixie; urgency=medium
 
   * pdm: user credential step: do not promise alert notifications PDM cannot
