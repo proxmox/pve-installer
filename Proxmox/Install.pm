@@ -1182,6 +1182,13 @@ sub extract_data {
             }
         }
 
+        # iproute2 omits the gateway and protocol keys for some routes
+        my $gw6 = $run_env->{network}->{routes}->{gateway6};
+        my $is_gateway6_from_ra =
+            defined($gw6)
+            && ($gw6->{gateway} // '') eq $gateway
+            && ($gw6->{protocol} // '') eq 'ra';
+
         if ($iso_env->{cfg}->{bridged_network}) {
             $ifaces .= "iface $ethdev $ntype manual\n";
 
@@ -1193,11 +1200,13 @@ sub extract_data {
                 . "\tbridge-stp off\n"
                 . "\tbridge-fd 0\n";
         } else {
-            $ifaces .=
-                "auto $ethdev\n"
-                . "iface $ethdev $ntype static\n"
-                . "\taddress $cidr\n"
-                . "\tgateway $gateway\n";
+            $ifaces .= "auto $ethdev\n" . #
+                "iface $ethdev $ntype static\n" . #
+                "\taddress $cidr\n";
+
+            if (!$is_gateway6_from_ra) {
+                $ifaces .= "\tgateway $gateway\n";
+            }
         }
 
         my $interfaces = $run_env->{network}->{interfaces};

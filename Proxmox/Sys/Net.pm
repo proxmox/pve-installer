@@ -279,12 +279,16 @@ sub query_netdevs : prototype() {
 #     gateway4 => {
 #         gateway => <ipv4>,
 #         dev => <ifname>,
+#         protocol => <protocol>,
 #     },
 #     gateway6 => {
 #         gateway => <ipv6>,
 #         dev => <ifname>,
+#         protocol => <protocol>,
 #     },
 # }
+#
+# <protocol> is the route origin reported by iproute2 ("kernel", "ra", ...), undef if omitted.
 sub query_routes : prototype() {
     my $routes = {};
 
@@ -295,6 +299,7 @@ sub query_routes : prototype() {
             $routes->{gateway4} = {
                 dev => $route->{dev},
                 gateway => $route->{gateway},
+                protocol => $route->{protocol},
             };
             last;
         }
@@ -306,6 +311,7 @@ sub query_routes : prototype() {
             $routes->{gateway6} = {
                 dev => $route->{dev},
                 gateway => $route->{gateway},
+                protocol => $route->{protocol},
             };
             last;
         }
