@@ -286,6 +286,7 @@ sub query_netdevs : prototype() {
 #         dev => <ifname>,
 #         protocol => <protocol>,
 #     },
+#     gateways6 => [ <all IPv6 default routes, same format as gateway6, which is the first> ],
 # }
 #
 # <protocol> is the route origin reported by iproute2 ("kernel", "ra", ...), undef if omitted.
@@ -305,17 +306,22 @@ sub query_routes : prototype() {
         }
     }
 
+    # the kernel adds an RA default route per receiving interface, so record all of them
+    my @gateways6;
     my $route6 = from_json(qx/ip -6 --json route show/, { utf8 => 1 });
     for my $route (@$route6) {
         if ($route->{dst} eq 'default') {
-            $routes->{gateway6} = {
-                dev => $route->{dev},
-                gateway => $route->{gateway},
-                protocol => $route->{protocol},
-            };
-            last;
+            push @gateways6,
+                {
+                    dev => $route->{dev},
+                    gateway => $route->{gateway},
+                    protocol => $route->{protocol},
+                };
         }
     }
+
+    $routes->{gateways6} = \@gateways6;
+    $routes->{gateway6} = $gateways6[0] if @gateways6;
 
     return $routes;
 }
