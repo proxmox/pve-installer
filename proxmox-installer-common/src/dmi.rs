@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, io::ErrorKind};
 
 use anyhow::{Result, bail};
 use proxmox_installer_types::SystemDMI;
@@ -28,8 +28,10 @@ fn get_dmi_infos_for(files: &[&str]) -> Result<HashMap<String, String>> {
     for file in files {
         let path = format!("{DMI_PATH}/{file}");
         let content = match fs::read_to_string(&path) {
-            Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(ref err) if err.kind() == std::io::ErrorKind::PermissionDenied => {
+            Err(ref err) if [ErrorKind::NotFound, ErrorKind::InvalidData].contains(&err.kind()) => {
+                continue;
+            }
+            Err(ref err) if err.kind() == ErrorKind::PermissionDenied => {
                 bail!("Could not read data. Are you running as root or with sudo?")
             }
             Err(err) => bail!("Error: '{err}' on '{path}'"),
