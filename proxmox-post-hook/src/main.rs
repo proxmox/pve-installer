@@ -98,7 +98,7 @@ mod detail {
                 .and_then(|r| Ok(String::from_utf8(r.stdout)?))
         };
 
-        let fqdn = match &answer.global.fqdn {
+        let fqdn = match &answer.global.fqdn.fqdn {
             FqdnConfig::Simple(name) => name.to_string(),
             FqdnConfig::FromDhcp(FqdnFromDhcpConfig {
                 source: FqdnSourceMode::FromDhcp,

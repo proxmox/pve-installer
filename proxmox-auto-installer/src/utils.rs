@@ -40,7 +40,7 @@ fn get_network_settings(
         .interface_name_pinning()
         .map(|answer| answer.into());
 
-    let mut network_options = match &answer.global.fqdn {
+    let mut network_options = match &answer.global.fqdn.fqdn {
         // If the user set a static FQDN in the answer file, override it
         FqdnConfig::Simple(name) => {
             let mut opts = NetworkOptions::defaults_from(
