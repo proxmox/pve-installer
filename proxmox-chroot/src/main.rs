@@ -352,7 +352,7 @@ fn get_btrfs_uuid() -> Result<String> {
     }
 
     let out: LsblkOutput = serde_json::from_slice(&output.stdout)?;
-    let uuids = out
+    let mut uuids = out
         .blockdevices
         .iter()
         .filter_map(|entry| match entry {
@@ -363,6 +363,9 @@ fn get_btrfs_uuid() -> Result<String> {
             _ => None,
         })
         .collect::<Vec<&String>>();
+    // every member device of a multi-disk file system is listed with the same UUID
+    uuids.sort();
+    uuids.dedup();
 
     match uuids.len() {
         0 => bail!("Could not find any BTRFS UUID"),
