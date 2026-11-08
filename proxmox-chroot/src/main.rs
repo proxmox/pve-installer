@@ -17,12 +17,13 @@ use proxmox_installer_common::{
     RUNTIME_DIR, cli,
     setup::{InstallConfig, SetupInfo},
 };
-use proxmox_installer_types::answer::Filesystem;
+use proxmox_installer_types::{ProxmoxProduct, answer::Filesystem};
 
 const ANSWER_MP: &str = "answer";
 static BINDMOUNTS: [&str; 4] = ["dev", "proc", "run", "sys"];
 const TARGET_DIR: &str = "/target";
 const ZPOOL_NAME: &str = "rpool";
+const CD_INFO_PATH: &str = "/cdrom/.cd-info";
 
 /// Arguments for the `prepare` command.
 struct CommandPrepareArgs {
@@ -198,6 +199,30 @@ fn get_iso_info() -> Result<SetupInfo> {
     Ok(setup_info)
 }
 
+/// The installer saves its environment only once it starts, so in a debug shell before that, the
+/// product comes from the info file of the installation medium.
+fn get_product() -> Result<ProxmoxProduct> {
+    if let Ok(setup_info) = get_iso_info() {
+        return Ok(setup_info.config.product);
+    }
+
+    let cd_info = fs::read_to_string(CD_INFO_PATH).map_err(|err| {
+        anyhow::anyhow!("could not determine the product, reading '{CD_INFO_PATH}' failed: {err}")
+    })?;
+    parse_cd_info_product(&cd_info)
+}
+
+fn parse_cd_info_product(cd_info: &str) -> Result<ProxmoxProduct> {
+    let product = cd_info
+        .lines()
+        .find_map(|line| line.strip_prefix("PRODUCT="))
+        .map(|value| value.trim().trim_matches('\''))
+        .ok_or_else(|| anyhow::anyhow!("'{CD_INFO_PATH}' does not name the product"))?;
+    product
+        .parse()
+        .map_err(|err| anyhow::anyhow!("unknown product '{product}' in '{CD_INFO_PATH}': {err}"))
+}
+
 fn mount_zpool(pool_id: Option<u64>) -> Result<()> {
     println!("importing ZFS pool to {TARGET_DIR}");
     let mut import = Command::new("zpool");
@@ -226,8 +251,8 @@ fn umount_zpool() {
 }
 
 fn mount_fs() -> Result<()> {
-    let iso_info = get_iso_info()?;
-    let product = iso_info.config.product;
+    // the volume group is named after the product
+    let product = get_product()?;
 
     println!("Activating VG '{product}'");
     let res = Command::new("vgchange")
@@ -449,4 +474,18 @@ fn bind_umount() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_cd_info_product;
+    use proxmox_installer_types::ProxmoxProduct;
+
+    #[test]
+    fn product_from_cd_info() {
+        let cd_info = "PRODUCT='pbs'\nPRODUCTLONG='Proxmox Backup Server'\nRELEASE='4.2'\n";
+        assert_eq!(parse_cd_info_product(cd_info).unwrap(), ProxmoxProduct::Pbs);
+        assert!(parse_cd_info_product("RELEASE='4.2'\n").is_err());
+        assert!(parse_cd_info_product("PRODUCT='nope'\n").is_err());
+    }
 }
