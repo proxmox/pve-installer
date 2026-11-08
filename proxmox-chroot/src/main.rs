@@ -226,7 +226,8 @@ fn parse_cd_info_product(cd_info: &str) -> Result<ProxmoxProduct> {
 fn mount_zpool(pool_id: Option<u64>) -> Result<()> {
     println!("importing ZFS pool to {TARGET_DIR}");
     let mut import = Command::new("zpool");
-    import.arg("import").args(["-R", TARGET_DIR]);
+    // forced, as the installed system has another host ID than the installation medium
+    import.arg("import").args(["-f", "-R", TARGET_DIR]);
     match pool_id {
         None => {
             import.arg(ZPOOL_NAME);
