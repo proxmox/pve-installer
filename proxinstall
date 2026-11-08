@@ -1314,7 +1314,7 @@ sub create_password_view {
     my $grid = &$create_basic_grid();
     $gtk_state->{inbox}->pack_start($grid, 0, 0, 0);
 
-    my $label = Gtk3::Label->new("Password");
+    my $label = Gtk3::Label->new("Root password");
     $label->set_size_request(150, -1);
     $label->set_xalign(1.0);
     $grid->attach($label, 0, 0, 1, 1);
