@@ -406,6 +406,9 @@ elif [ $start_auto_installer -ne 0 ]; then
     echo "Caching device info from udev"
     /usr/bin/proxmox-low-level-installer dump-udev
 
+    # it may hold secrets, and non-root daemons like chronyd run here too
+    install -m 0600 /dev/null /run/automatic-installer-answers
+
     if [ -f /cdrom/auto-installer-mode.toml ]; then
         echo "Fetching answers for automatic installation"
         /usr/bin/proxmox-fetch-answer >/run/automatic-installer-answers
