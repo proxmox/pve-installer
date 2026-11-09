@@ -670,6 +670,39 @@ pub fn verify_network_settings(
     Ok(())
 }
 
+/// Parses the TOML of an answer file. Errors give the position, but leave out the excerpt of the
+/// source that TOML errors usually include, as it may show a password or passphrase, and the value
+/// of the wrong type or out of range that serde names, for example a passphrase given in place of
+/// a section.
+pub fn parse_answer_toml<T: serde::de::DeserializeOwned>(raw: &str) -> Result<T> {
+    toml::from_str(raw).map_err(|err| {
+        let message = without_rejected_value(err.message().trim_end());
+        match err.span().and_then(|span| raw.get(..span.start)) {
+            Some(before) => {
+                let line = before.matches('\n').count() + 1;
+                let column = before.rsplit('\n').next().unwrap_or("").chars().count() + 1;
+                anyhow!("line {line}, column {column}: {message}")
+            }
+            None => anyhow!("{message}"),
+        }
+    })
+}
+
+/// Turns, for example, "invalid type: string \"secret\", expected u32" into "invalid type: string,
+/// expected u32". serde quotes the value with backticks, or double quotes for strings.
+fn without_rejected_value(message: &str) -> String {
+    for prefix in ["invalid type: ", "invalid value: "] {
+        if let Some(rest) = message.strip_prefix(prefix)
+            // the last one, as the value itself may contain the separator
+            && let Some((unexpected, expected)) = rest.rsplit_once(", expected ")
+        {
+            let kind = unexpected.split(['`', '"']).next().unwrap_or("").trim_end();
+            return format!("{prefix}{kind}, expected {expected}");
+        }
+    }
+    message.to_string()
+}
+
 pub fn parse_answer(
     answer: &AutoInstallerConfig,
     udev_info: &UdevInfo,
@@ -798,7 +831,51 @@ pub fn parse_answer(
 
 #[cfg(test)]
 mod tests {
-    use super::{AutoInstSettings, FetchAnswerFrom, HttpOptions, is_live_vlan_link};
+    use super::{
+        AutoInstSettings, FetchAnswerFrom, HttpOptions, is_live_vlan_link, parse_answer_toml,
+    };
+    use proxmox_installer_types::answer::AutoInstallerConfig;
+
+    #[test]
+    fn answer_parse_errors_leave_out_the_source() {
+        let raw = "[global]\nroot-password = \"secret-value\" trailing\n";
+        assert!(
+            toml::from_str::<toml::Value>(raw)
+                .unwrap_err()
+                .to_string()
+                .contains("secret-value")
+        );
+
+        let err = parse_answer_toml::<toml::Value>(raw).unwrap_err();
+        assert!(err.to_string().starts_with("line 2, column 32: "), "{err}");
+        assert!(!format!("{err:?}").contains("secret-value"), "{err:?}");
+
+        let err = parse_answer_toml::<AutoInstallerConfig>(raw).unwrap_err();
+        assert!(!format!("{err:?}").contains("secret-value"), "{err:?}");
+
+        let raw = "[global]\nroot-password = 12345678\n";
+        let err = parse_answer_toml::<AutoInstallerConfig>(raw).unwrap_err();
+        assert!(err.to_string().starts_with("line "), "{err}");
+        assert!(!err.to_string().contains("12345678"), "{err}");
+
+        #[derive(Debug, serde::Deserialize)]
+        struct Typed {
+            #[allow(dead_code)]
+            number: u8,
+        }
+        let err = parse_answer_toml::<Typed>("number = \"secret, expected x\"\n").unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "line 1, column 10: invalid type: string, expected u8"
+        );
+        let err = parse_answer_toml::<Typed>("number = 4321\n").unwrap_err();
+        assert!(!err.to_string().contains("4321"), "{err}");
+        assert!(
+            err.to_string()
+                .contains("invalid value: integer, expected u8"),
+            "{err}"
+        );
+    }
 
     #[test]
     fn auto_inst_settings_leave_out_an_unset_vlan_tag() {

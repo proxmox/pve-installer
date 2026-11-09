@@ -21,8 +21,8 @@ use proxmox_auto_installer::{
     sysinfo,
     utils::{
         AutoInstSettings, FetchAnswerFrom, HttpOptions, default_partition_label,
-        get_matched_udev_indexes, get_nic_list, get_single_udev_index, verify_disks_settings,
-        verify_email_and_root_password_settings, verify_first_boot_settings,
+        get_matched_udev_indexes, get_nic_list, get_single_udev_index, parse_answer_toml,
+        verify_disks_settings, verify_email_and_root_password_settings, verify_first_boot_settings,
         verify_locale_settings, verify_network_settings,
     },
 };
@@ -683,7 +683,7 @@ fn validate_answer_file_keys(path: impl AsRef<Path> + fmt::Debug) -> Result<bool
         valid
     }
 
-    let answers: toml::Value = toml::from_str(&contents).context("Error parsing answer file")?;
+    let answers: toml::Value = parse_answer_toml(&contents).context("Error parsing answer file")?;
 
     if validate(&[], answers) {
         Ok(true)
@@ -906,7 +906,8 @@ fn try_extract_iso_text(iso: &Path, iso_path: &str, tmp_dir: &Path) -> Result<Op
 /// Re-serialize the answer file through the TOML formatter, optionally redacting known-sensitive
 /// fields. The output shape stays identical regardless of `--show-sensitive`; comments are lost.
 fn format_answer_toml(content: &str, redact: bool) -> Result<String> {
-    let mut value: toml::Value = toml::from_str(content).context("parsing answer file as TOML")?;
+    let mut value: toml::Value =
+        parse_answer_toml(content).context("parsing answer file as TOML")?;
     if redact {
         for (section, keys) in ANSWER_SENSITIVE_FIELDS {
             let Some(table) = value.get_mut(*section).and_then(|v| v.as_table_mut()) else {
@@ -1612,7 +1613,7 @@ fn parse_answer(path: impl AsRef<Path> + fmt::Debug) -> Result<AutoInstallerConf
         bail!("Reading from file {path:?} failed: {err}");
     }
 
-    match toml::from_str(&contents) {
+    match parse_answer_toml(&contents) {
         Ok(answer) => {
             verify_locale_settings(&answer, &serde_json::from_str(LOCALE_INFO)?)?;
             verify_disks_settings(&answer)?;

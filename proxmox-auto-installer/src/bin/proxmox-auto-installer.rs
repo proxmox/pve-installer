@@ -8,7 +8,10 @@ use std::{
     process::ExitCode,
 };
 
-use proxmox_auto_installer::{log::AutoInstLogger, utils::parse_answer};
+use proxmox_auto_installer::{
+    log::AutoInstLogger,
+    utils::{parse_answer, parse_answer_toml},
+};
 use proxmox_installer_common::{
     FIRST_BOOT_EXEC_MAX_SIZE, FIRST_BOOT_EXEC_NAME, RUNTIME_DIR, http,
     setup::{
@@ -85,7 +88,8 @@ fn auto_installer_setup(in_test_mode: bool) -> Result<(AutoInstallerConfig, Udev
 
     let mut raw_toml = String::new();
     std::io::stdin().read_to_string(&mut raw_toml)?;
-    let answer: AutoInstallerConfig = toml::from_str(&raw_toml)?;
+    let answer: AutoInstallerConfig =
+        parse_answer_toml(&raw_toml).context("Error parsing answer file")?;
 
     if let Some(first_boot) = &answer.first_boot {
         setup_first_boot_executable(first_boot)?;
