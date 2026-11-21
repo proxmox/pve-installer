@@ -57,6 +57,16 @@ impl TabbedView {
         self.views.get_mut(index).map(|(_, view)| view.borrow_mut())
     }
 
+    /// Moves the focus into the content of the current tab, if it can take it.
+    fn focus_content(&mut self, source: Direction) -> Result<EventResult, CannotFocus> {
+        let result = self
+            .get_mut(self.current)
+            .ok_or(CannotFocus)?
+            .take_focus(source)?;
+        self.bar_has_focus = false;
+        Ok(result)
+    }
+
     /// Returns the width of the tab names header, as drawn by `print_tab_names()`.
     fn tab_bar_width(&self) -> usize {
         let names_len: usize = self.views.iter().map(|(name, _)| name.len() + 2).sum();
@@ -153,18 +163,18 @@ impl View for TabbedView {
                 };
                 EventResult::consumed()
             }
-            Event::Key(Key::Down) if self.bar_has_focus => {
-                self.bar_has_focus = false;
-                self.get_mut(self.current)
-                    .and_then(|v| v.take_focus(Direction::up()).ok())
-                    .unwrap_or(EventResult::Ignored)
-            }
+            Event::Key(Key::Down) if self.bar_has_focus => self
+                .focus_content(Direction::up())
+                .unwrap_or(EventResult::Ignored),
+            Event::Key(Key::Tab) if self.bar_has_focus => self
+                .focus_content(Direction::front())
+                .unwrap_or(EventResult::Ignored),
             Event::Key(Key::Up) if self.bar_has_focus => EventResult::Ignored,
             Event::FocusLost if self.bar_has_focus => {
                 self.bar_has_focus = false;
                 EventResult::consumed()
             }
-            Event::Key(Key::Up) if !self.bar_has_focus => {
+            Event::Key(Key::Up) | Event::Shift(Key::Tab) if !self.bar_has_focus => {
                 let result = self
                     .get_mut(self.current)
                     .map(|v| v.on_event(event))
@@ -203,8 +213,80 @@ impl View for TabbedView {
         }
     }
 
-    fn take_focus(&mut self, direction: Direction) -> Result<EventResult, CannotFocus> {
-        self.bar_has_focus = direction == Direction::up();
+    fn take_focus(&mut self, source: Direction) -> Result<EventResult, CannotFocus> {
+        // the tab bar comes first, so it takes the focus when entering from above or the front
+        if source != Direction::up()
+            && source != Direction::front()
+            && let Ok(result) = self.focus_content(source)
+        {
+            return Ok(result);
+        }
+
+        self.bar_has_focus = true;
         Ok(EventResult::consumed())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cursive::views::{Checkbox, LinearLayout};
+
+    use super::*;
+
+    fn focus_index(view: &TabbedView, tab: usize) -> usize {
+        view.get(tab)
+            .and_then(|v| v.downcast_ref::<LinearLayout>())
+            .expect("tab content is a linear layout")
+            .get_focus_index()
+    }
+
+    #[test]
+    fn keyboard_focus_order() {
+        let content = || {
+            LinearLayout::vertical()
+                .child(Checkbox::new())
+                .child(Checkbox::new())
+        };
+        let mut view = TabbedView::new().tab("a", content()).tab("b", content());
+
+        // Tab enters at the tab bar, where the arrow keys switch tabs
+        assert!(view.take_focus(Direction::front()).is_ok());
+        assert!(view.bar_has_focus);
+        assert!(view.on_event(Event::Key(Key::Right)).is_consumed());
+        assert_eq!(view.current, 1);
+
+        // then it walks through the content of the current tab and leaves the view at its end
+        assert!(view.on_event(Event::Key(Key::Tab)).is_consumed());
+        assert!(!view.bar_has_focus);
+        assert_eq!(focus_index(&view, 1), 0);
+        assert!(view.on_event(Event::Key(Key::Tab)).is_consumed());
+        assert_eq!(focus_index(&view, 1), 1);
+        assert!(matches!(
+            view.on_event(Event::Key(Key::Tab)),
+            EventResult::Ignored
+        ));
+
+        // entering from above stops at the tab bar as well
+        assert!(view.take_focus(Direction::up()).is_ok());
+        assert!(view.bar_has_focus);
+
+        // coming around again starts over at the tab bar and the first element
+        assert!(view.take_focus(Direction::front()).is_ok());
+        assert!(view.bar_has_focus);
+        assert!(view.on_event(Event::Key(Key::Tab)).is_consumed());
+        assert_eq!(focus_index(&view, 1), 0);
+
+        // Shift+Tab goes the other way, from the last element back to the tab bar
+        assert!(view.take_focus(Direction::back()).is_ok());
+        assert!(!view.bar_has_focus);
+        assert_eq!(focus_index(&view, 1), 1);
+        assert!(view.on_event(Event::Shift(Key::Tab)).is_consumed());
+        assert_eq!(focus_index(&view, 1), 0);
+        assert!(view.on_event(Event::Shift(Key::Tab)).is_consumed());
+        assert!(view.bar_has_focus);
+        assert!(matches!(
+            view.on_event(Event::Shift(Key::Tab)),
+            EventResult::Ignored
+        ));
     }
 }
