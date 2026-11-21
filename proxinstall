@@ -715,7 +715,7 @@ my sub create_network_advanced_options_view {
 
     my $dialog = Gtk3::Dialog->new();
     $dialog->set_title('Advanced Network Options');
-    $dialog->set_transient_for($gtk_state->{window});
+    # no transient parent, openbox would minimize or move the fullscreen main window along with it
     # run() makes the dialog modal only until the first response, which may be an invalid one
     $dialog->set_modal(1);
     $dialog->add_button('_OK', 'ok');
