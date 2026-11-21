@@ -5,7 +5,7 @@ use std::{collections::HashMap, env};
 use cursive::{
     Cursive, CursiveRunnable, ScreenId, View, XY,
     event::Event,
-    theme::{ColorStyle, Effect, Effects, PaletteColor, Style},
+    theme::{BaseColor, Color, ColorStyle, Effect, Effects, PaletteColor, PaletteStyle, Style},
     view::{Nameable, Offset, Resizable, ViewWrapper},
     views::{
         Button, Checkbox, Dialog, DummyView, EditView, Layer, LinearLayout, PaddedView, Panel,
@@ -150,6 +150,13 @@ struct InstallerState {
 
 fn main() {
     let mut siv = cursive::crossterm();
+
+    // cursive draws disabled views blue by default, like the background of enabled input fields
+    siv.with_theme(|theme| {
+        let disabled = Style::from(ColorStyle::front(Color::Light(BaseColor::Black)));
+        theme.palette[PaletteStyle::Secondary] = disabled;
+        theme.palette[PaletteStyle::EditableTextInactive] = disabled;
+    });
 
     let in_test_mode = match env::args().nth(1).as_deref() {
         Some("-t") => true,
