@@ -1,3 +1,47 @@
+proxmox-installer (9.2.10) trixie; urgency=medium
+
+  * proxmox-chroot: fix preparing the chroot of an installed system in more
+    cases:
+    - find the Btrfs file system of a multi-disk installation, instead of
+      failing unless '--btrfs-uuid' is given. For such installations, the
+      post-installation webhook reported the versions of the installed system
+      as unknown.
+    - find the volume group of an ext4 or xfs installation also in the debug
+      shell before the installer has started, as used to repair an existing
+      installation. It failed with "No such file or directory" there.
+    - import the ZFS pool of an existing installation, which ZFS refused
+      because the pool was last used by a system with another host ID.
+
+  * gtk ui: shorten the help on the password page. It no longer asks for a
+    mix of letters, numbers and symbols, which the installer does not
+    require. The password field is now labeled 'Root password', as in the
+    terminal UI.
+
+  * automated installer, proxmox-auto-install-assistant: keep the answer file
+    contents out of parse errors. These quoted the affected line, which may
+    hold the root password or another secret, on the console, in the log,
+    and in the output of 'validate-answer' and 'inspect-iso'. Errors now
+    only report the position and the problem.
+
+  * keep the fetched answer file and the saved installation config readable
+    by root only. Both can hold the root password, and some daemons of the
+    installation environment run as unprivileged users.
+
+  * gtk ui: keep the installer visible when the advanced network options
+    dialog is minimized or sent to another desktop through its window menu.
+    Both also hid the fullscreen installer window for good, a regression in
+    9.2.9.
+
+  * tui: let Tab and Shift+Tab reach the tab bar of the advanced network
+    options, and of the advanced disk options on narrow screens. Before, the
+    other tabs could only be reached with the arrow keys, and Tab got stuck
+    alternating between the last field and the Ok button.
+
+  * tui: show disabled options in dark grey instead of blue, which made them
+    look highlighted rather than unavailable.
+
+ -- Proxmox Support Team <support@proxmox.com>  Sun, 22 Nov 2026 01:14:17 +0100
+
 proxmox-installer (9.2.9) trixie; urgency=medium
 
   * fix #2164: allow setting up a bond and a VLAN for the management network
