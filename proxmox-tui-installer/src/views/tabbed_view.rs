@@ -106,7 +106,7 @@ impl TabbedView {
     /// Draws the active tab name to the printer `p`, with its highlighting
     /// additionally depending upon whether the tab bar currently has focus or not.
     fn print_active_tab_name(&self, name: &str, p: Printer) {
-        let background = if self.bar_has_focus {
+        let background = if self.bar_has_focus && p.focused {
             PaletteColor::Highlight
         } else {
             PaletteColor::HighlightInactive
