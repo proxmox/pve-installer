@@ -203,6 +203,15 @@ sub create_main_window {
         },
     );
 
+    # ending the installer reboots, so ask like Abort does until the installation has ended
+    $window->signal_connect(
+        'delete-event' => sub {
+            return 0 if !$abort->get_sensitive();
+            $abort->clicked();
+            return 1;
+        },
+    );
+
     my $vbox2 = Gtk3::Box->new('vertical', 0);
     $hbox->add($vbox2);
 
