@@ -2,6 +2,6 @@
 
 /usr/bin/xrdb -load /.Xdefaults
 /usr/bin/X11/xsetroot -solid grey
-openbox &
+openbox --config-file /var/lib/proxmox-installer/openbox-rc.xml &
 /.spice-vdagent.sh &
 /usr/bin/proxinstall

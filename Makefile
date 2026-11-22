@@ -54,6 +54,7 @@ $(BUILDDIR):
 	  banner/ \
 	  country.pl \
 	  html/ \
+	  openbox-rc.xml \
 	  proxinstall \
 	  proxmox-low-level-installer \
 	  proxmox-auto-installer/ \
@@ -131,6 +132,7 @@ install: $(INSTALLER_SOURCES) $(COMPILED_BINS)
 	install -D -m 755 proxinstall $(DESTDIR)/usr/bin/proxinstall
 	install -D -m 755 proxmox-low-level-installer $(DESTDIR)/$(BINDIR)/proxmox-low-level-installer
 	$(foreach i,$(USR_BIN), install -m755 $(CARGO_COMPILEDIR)/$(i) $(DESTDIR)$(BINDIR)/ ;)
+	install -D -m 644 openbox-rc.xml $(VARLIBDIR)/openbox-rc.xml
 	install -D -m 644 xinitrc $(DESTDIR)/.xinitrc
 	install -D -m 755 spice-vdagent.sh $(DESTDIR)/.spice-vdagent.sh
 	install -D -m 644 Xdefaults $(DESTDIR)/.Xdefaults
