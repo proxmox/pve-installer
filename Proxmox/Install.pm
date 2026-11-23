@@ -1501,6 +1501,20 @@ _EOD
             },
         );
 
+        # nvme-cli's own NVMe host identity comes from the ISO build host if nvme-cli is in the base
+        # image, and is derived from the DMI system UUID, which many boards share as placeholder
+        if (-x "$targetdir/usr/sbin/nvme") {
+            my $output = run_command(['systemd-id128', 'new', '--uuid']);
+            my ($uuid) = $output =~ m/^([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/m
+                or die "unable to create a new NVMe host ID\n";
+            # libnvme derives each from the other when one is missing, so keep them consistent
+            file_write_all(
+                "$targetdir/etc/nvme/hostnqn",
+                "nqn.2014-08.org.nvmexpress:uuid:$uuid\n",
+            );
+            file_write_all("$targetdir/etc/nvme/hostid", "$uuid\n");
+        }
+
         # set timezone
         my $timezone = Proxmox::Install::Config::get_timezone();
         unlink("$targetdir/etc/localtime");
