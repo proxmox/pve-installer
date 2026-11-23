@@ -1,3 +1,23 @@
+proxmox-installer (9.2.11) trixie; urgency=medium
+
+  * install: give each installation a random NVMe host NQN and a matching
+    host ID if nvme-cli is installed, instead of the identity of the ISO build
+    host, which all installations from that ISO shared. A reinstallation gets
+    a new NQN, so storage targets with NQN-based access control need to be
+    updated.
+
+  * gtk ui:
+    - ask for confirmation when the main window is closed, for example with
+      Alt+F4, instead of ending the installer and rebooting right away.
+    - drop the minimize button from dialog title bars. There is no taskbar to
+      easily restore a minimized dialog, and minimizing a message box also hid
+      the installer window.
+    - disable the Abort and Previous buttons on the error pages for missing
+      disks or network interfaces. Previous started the installation, which
+      deactivated all LVM volume groups and then failed.
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 23 Nov 2026 10:58:39 +0100
+
 proxmox-installer (9.2.10) trixie; urgency=medium
 
   * proxmox-chroot: fix preparing the chroot of an installed system in more
