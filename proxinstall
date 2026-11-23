@@ -2421,7 +2421,13 @@ if (!$initial_error && (scalar keys $run_env->{network}->{interfaces}->%* == 0))
     }
 }
 
-create_intro_view() if !$initial_error;
+if ($initial_error) {
+    # nothing can be installed, so only offer to reboot
+    $gtk_state->{abort_btn}->set_sensitive(0);
+    $gtk_state->{prev_btn}->set_sensitive(0);
+} else {
+    create_intro_view();
+}
 
 Gtk3->main;
 
