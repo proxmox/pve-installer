@@ -1,3 +1,25 @@
+proxmox-installer (9.2.13) trixie; urgency=medium
+
+  * network: name the management VLAN interface after the interface it is
+    on, for example 'vmbr0.10' instead of 'vlan10', as the network
+    documentation does. Only if that name would be longer than the 15
+    characters allowed for interface names, keep 'vlan10' with an explicit
+    raw device.
+
+  * network: reject pinned interface names with a VLAN or alias suffix, such
+    as 'nic0.5' or 'nic0:1', as a physical interface cannot use them. The
+    network configuration takes 'nic0.5' for a VLAN, and the kernel does not
+    allow a colon in interface names.
+
+  * gtk ui:
+    - do not show the context menu of the information view. Its reload entry
+      replaced the page of the current step with a listing of the directory
+      the installer pages are loaded from.
+    - show the website address on the success page as text, as clicking the
+      link replaced the next steps with the website or an error page.
+
+ -- Proxmox Support Team <support@proxmox.com>  Tue, 24 Nov 2026 16:35:04 +0100
+
 proxmox-installer (9.2.12) trixie; urgency=medium
 
   * gtk ui: remove what could hide the installer, as there is no taskbar to
