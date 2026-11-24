@@ -332,12 +332,12 @@ impl NetworkInterfacePinningOptions {
     /// - duplicate interface names
     /// - only contains ASCII alphanumeric characters and underscore, as
     ///   enforced by our `pve-iface` json schema.
-    /// - names of bonds, VLANs and bridges, as the products recognize them by their name
+    /// - names of bonds, VLANs, aliases and bridges, as the products recognize them by their name
     pub fn verify(&self) -> Result<()> {
-        // Mimicking the `pve-iface` schema verification
+        // Mimicking the `pve-iface` schema verification, without its suffix for VLANs and aliases
         static RE: OnceLock<Regex> = OnceLock::new();
         let re = RE.get_or_init(|| {
-            RegexBuilder::new(r"^[a-z][a-z0-9_]{1,20}([:\.]\d+)?$")
+            RegexBuilder::new(r"^[a-z][a-z0-9_]{1,20}$")
                 .case_insensitive(true)
                 .build()
                 .unwrap()
@@ -1052,6 +1052,23 @@ mod tests {
             res.unwrap_err().to_string(),
             "interface name '_a' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
         );
+    }
+
+    #[test]
+    fn network_interface_pinning_options_fail_on_vlan_or_alias_suffix() {
+        for name in ["nic0.5", "nic0:1"] {
+            let mut options = NetworkInterfacePinningOptions::default();
+            options
+                .mapping
+                .insert("ab:cd:ef:12:34:56".parse().unwrap(), name.to_owned());
+
+            assert_eq!(
+                options.verify().unwrap_err().to_string(),
+                format!(
+                    "interface name '{name}' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and contain only ascii characters, digits and underscores"
+                )
+            );
+        }
     }
 
     #[test]

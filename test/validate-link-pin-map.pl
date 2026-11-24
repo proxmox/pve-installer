@@ -67,6 +67,16 @@ is(
     "fully numeric name is rejected",
 );
 
+for my $name (qw(nic0.5 nic0:1)) {
+    eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => $name }) };
+    is(
+        $@,
+        "interface name '$name' for 'ab:cd:ef:12:34:56' is invalid: name must start with a letter and "
+            . "contain only ascii characters, digits and underscores\n",
+        "name '$name' of a VLAN or alias is rejected",
+    );
+}
+
 for my $name (qw(bond0 vlan100 vmbr0)) {
     eval { validate_link_pin_map({ 'ab:cd:ef:12:34:56' => $name }) };
     is(
