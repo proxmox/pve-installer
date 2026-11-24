@@ -217,6 +217,7 @@ sub create_main_window {
 
     my $html_view = Gtk3::WebKit2::WebView->new();
     $html_view->set_hexpand(1);
+    $html_view->signal_connect('context-menu' => sub { return 1; }); # avoid offering reload
     my $scrolls = Gtk3::ScrolledWindow->new();
     $scrolls->add($html_view);
 
