@@ -16,6 +16,7 @@ use Proxmox::Install::StorageConfig;
 use Proxmox::Sys::Block qw(get_cached_disks wipe_disk partition_bootable_disk);
 use Proxmox::Sys::Command qw(run_command syscmd);
 use Proxmox::Sys::File qw(file_read_firstline file_read_all file_write_all);
+use Proxmox::Sys::Net;
 use Proxmox::Sys::ZFS;
 use Proxmox::UI;
 
@@ -887,9 +888,16 @@ sub generate_ifupdown2_config {
     my $get_vlan_stanza = sub {
         my ($raw_device) = @_;
 
-        my $config = "auto vlan$vlan_id\niface vlan$vlan_id $ntype static\n\taddress $cidr\n";
+        my $devname = "$raw_device.$vlan_id";
+        my $long_if = length($devname) > Proxmox::Sys::Net::MAX_IFNAME_LEN;
+        $devname = "vlan$vlan_id" if $long_if;
+
+        my $config = "auto $devname\niface $devname $ntype static\n\taddress $cidr\n";
         $config .= "\tgateway $gateway\n" if !$is_gateway6_from_ra;
-        return [4, "vlan$vlan_id", $config . "\tvlan-raw-device $raw_device\n"];
+
+        $config .= "\tvlan-raw-device $raw_device\n" if $long_if;
+
+        return [4, $devname, $config];
     };
 
     if ($iso_env->{cfg}->{bridged_network} && defined($vlan_id)) {

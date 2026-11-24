@@ -152,11 +152,10 @@ is_generated(
 auto eno1
 iface eno1 inet manual
 
-auto vlan5
-iface vlan5 inet static
+auto eno1.5
+iface eno1.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device eno1
 
 iface eno2 inet manual
 EOT
@@ -194,11 +193,10 @@ iface bond0 inet manual
 	bond-miimon 100
 	bond-mode active-backup
 
-auto vlan5
-iface vlan5 inet static
+auto bond0.5
+iface bond0.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device bond0
 
 auto eno1
 iface eno1 inet manual
@@ -244,11 +242,10 @@ iface vmbr0 inet manual
 	bridge-vlan-aware yes
 	bridge-vids 2-4094
 
-auto vlan5
-iface vlan5 inet static
+auto vmbr0.5
+iface vmbr0.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device vmbr0
 EOT
     , 'host network setup',
 );
@@ -304,11 +301,10 @@ iface vmbr0 inet manual
 	bridge-vlan-aware yes
 	bridge-vids 2-4094
 
-auto vlan5
-iface vlan5 inet static
+auto vmbr0.5
+iface vmbr0.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device vmbr0
 EOT
     , 'host network setup',
 );
@@ -323,11 +319,10 @@ iface eno1 inet manual
 
 iface eno2 inet manual
 
-auto vlan5
-iface vlan5 inet static
+auto eno1.5
+iface eno1.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device eno1
 EOT
     , 'interfaces ordered like the network API',
 );
@@ -347,11 +342,10 @@ iface bond0 inet manual
 	bond-miimon 100
 	bond-mode active-backup
 
-auto vlan5
-iface vlan5 inet static
+auto bond0.5
+iface bond0.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device bond0
 EOT
     , 'interfaces ordered like the network API',
 );
@@ -363,11 +357,10 @@ is_generated(
 auto eno1
 iface eno1 inet manual
 
-auto vlan5
-iface vlan5 inet static
+auto eno1.5
+iface eno1.5 inet static
 	address 192.168.0.10/24
 	gateway 192.168.0.1
-	vlan-raw-device eno1
 
 iface eno2 inet manual
 EOT
@@ -749,11 +742,10 @@ iface bond0 inet6 manual
 	bond-miimon 100
 	bond-mode active-backup
 
-auto vlan5
-iface vlan5 inet6 static
+auto bond0.5
+iface bond0.5 inet6 static
 	address 2001:db8::1/64
 	gateway fe80::1
-	vlan-raw-device bond0
 
 auto eno1
 iface eno1 inet6 manual
@@ -797,10 +789,9 @@ is_generated(
 auto eno1
 iface eno1 inet6 manual
 
-auto vlan5
-iface vlan5 inet6 static
+auto eno1.5
+iface eno1.5 inet6 static
 	address 2001:db8::1/64
-	vlan-raw-device eno1
 
 iface eno2 inet6 manual
 EOT
@@ -822,10 +813,9 @@ iface vmbr0 inet6 manual
 	bridge-vlan-aware yes
 	bridge-vids 2-4094
 
-auto vlan5
-iface vlan5 inet6 static
+auto vmbr0.5
+iface vmbr0.5 inet6 static
 	address 2001:db8::1/64
-	vlan-raw-device vmbr0
 EOT
     , 'gateway learned from router advertisements on the management VLAN on a bridge is not configured',
 );
@@ -834,7 +824,7 @@ set_config(bridge => 0, bond => 0, vlan => 1);
 Proxmox::Install::Config::merge({ mngmt_vlan => { enabled => 1, vid => 200 } });
 like(
     Proxmox::Install::generate_ifupdown2_config(),
-    qr/^iface vlan200 inet6 static\n\taddress 2001:db8::1\/64\n\tgateway fe80::1\n/m,
+    qr/^iface eno1\.200 inet6 static\n\taddress 2001:db8::1\/64\n\tgateway fe80::1\n/m,
     'management VLAN other than the installation environment one gets the configured gateway',
 );
 
@@ -843,6 +833,75 @@ like(
     Proxmox::Install::generate_ifupdown2_config(),
     qr/^iface eno1 inet6 static\n\taddress 2001:db8::1\/64\n\tgateway fe80::1\n/m,
     'untagged management network with a tagged installation environment gets the configured gateway',
+);
+
+# handling of long predictable nic name
+$proxmox_install_runenv->redefine(
+    get => sub {
+        return {
+            network => {
+                interfaces => {
+                    enp129s0f1np1 => {
+                        mac => '12:34:56:ab:cd:ef',
+                        index => 1,
+                        name => 'enp129s0f1np1',
+                        pinned_id => '0',
+                    },
+                },
+            },
+        };
+    },
+);
+set_config(bridge => 0, bond => 0, vlan => 0);
+Proxmox::Install::Config::merge({
+    mngmt_nic => 'enp129s0f1np1',
+    cidr => '192.168.0.10/24',
+    gateway => '192.168.0.1',
+});
+is_generated(
+    <<EOT
+auto enp129s0f1np1
+iface enp129s0f1np1 inet static
+	address 192.168.0.10/24
+	gateway 192.168.0.1
+EOT
+    , 'direct config on a physical link with a long name',
+);
+
+set_config(bridge => 0, bond => 0, vlan => 1);
+Proxmox::Install::Config::merge({ mngmt_nic => 'enp129s0f1np1' });
+is_generated(
+    <<EOT
+auto enp129s0f1np1
+iface enp129s0f1np1 inet manual
+
+auto enp129s0f1np1.5
+iface enp129s0f1np1.5 inet static
+	address 192.168.0.10/24
+	gateway 192.168.0.1
+EOT
+    , 'VLAN on a physical link with a long name, at the interface name length limit',
+);
+
+set_config(bridge => 0, bond => 0, vlan => 1);
+Proxmox::Install::Config::merge({
+    mngmt_nic => 'enp129s0f1np1',
+    cidr => '192.168.0.10/24',
+    gateway => '192.168.0.1',
+    mngmt_vlan => { enabled => 1, vid => 4094 },
+});
+is_generated(
+    <<EOT
+auto enp129s0f1np1
+iface enp129s0f1np1 inet manual
+
+auto vlan4094
+iface vlan4094 inet static
+	address 192.168.0.10/24
+	gateway 192.168.0.1
+	vlan-raw-device enp129s0f1np1
+EOT
+    , 'VLAN on a physical link with a long name',
 );
 
 for my $id (0, 1, 4095, 'abc', '1.5') {
